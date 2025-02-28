@@ -1,0 +1,34 @@
+//Sections
+
+#app {
+    width: 100%;
+    position: relative;
+    z-index: 1;
+
+    section {
+        width: 100%;
+        min-height: 100vh;
+        position: relative;
+        z-index: 1;
+
+        &.height-200vh {
+            height: 200vh;
+        }
+
+        &.height-300vh {
+            height: 300vh;
+        }
+
+        &.height-400vh {
+            height: 400vh;
+        }
+
+        &.height-500vh {
+            height: 500vh;
+        }
+
+        &.height-600vh {
+            height: 600vh;
+        }
+    }
+}

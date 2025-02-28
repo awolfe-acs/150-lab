@@ -1,0 +1,169 @@
+@use './reset';
+@use './layout';
+@use './utilities';
+@use './animation';
+@use './components/background';
+@use './components/header';
+@use './components/countdown';
+@use './components/section-timeline';
+@use './typography';
+
+html {
+
+  *,
+  *:before,
+  *:after {
+    font-family: "Plus Jakarta Sans", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 600;
+    font-style: normal;
+    color: #fff;
+  }
+
+  body {
+    background: #060E15;
+    color: #fff;
+    font-family: sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    isolation: isolate;
+    overflow-x: hidden;
+
+    #app {
+
+      header {
+        z-index: 5;
+      }
+
+      div.section-timeline {
+        z-index: 3;
+      }
+
+      section {
+        z-index: 2;
+      }
+
+      canvas {
+        z-index: 1;
+      }
+    }
+  }
+
+}
+
+
+//Hero Area
+#hero-area {
+  position: relative;
+  z-index: 1;
+
+  h1 {
+    font-size: 4vw;
+    text-align: center;
+    font-weight: 200;
+    width: 60vw;
+    position: absolute;
+    z-index: 5;
+  }
+
+  #hero-number {
+    font-size: 20vw;
+    font-weight: 900;
+    z-index: 2;
+    letter-spacing: -0.5vw;
+    color: #FBE039;
+  }
+}
+
+
+.years {
+  position: relative;
+  color: #fff;
+  font-size: 10vw;
+  text-align: center;
+  font-weight: 100;
+}
+
+
+
+#anniversary-number {
+  font-size: 14vw;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+/* Added custom style to position #anniversary-area at the bottom of #years-travel-area */
+#anniversary-area {
+  margin-top: auto;
+  overflow: hidden;
+
+  #marquee {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    z-index: 2;
+
+    span {
+      white-space: nowrap;
+      font-size: 8vw;
+      line-height: 1;
+      font-weight: 900;
+      font-style: italic;
+      color: #fff;
+      mix-blend-mode: difference;
+    }
+  }
+}
+
+
+//Dat.GUI
+
+html {
+  .dg.ac {
+    z-index: 9999999;
+
+
+    li.has-slider {
+      max-height: 20px;
+    }
+
+    span.property-name {
+      font-size: 9px;
+      line-height: 2;
+    }
+
+    input[type="text"] {
+      max-height: 12px;
+    }
+
+    div.slider {
+      max-height: 12px;
+    }
+
+    .color {
+      input {
+        max-height: 20px;
+      }
+    }
+
+    // Fix for collapsible folder titles
+    .title {
+      cursor: pointer;
+      pointer-events: auto !important;
+    }
+
+    .closed .title {
+      background-position: 5px center !important;
+    }
+
+    .cr.boolean {
+      position: relative;
+      height: 27px;
+    }
+
+    .cr.function {
+      height: 27px;
+    }
+  }
+}

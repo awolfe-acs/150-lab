@@ -1,0 +1,63 @@
+#countdown {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    font-size: 48px;
+
+    .time-unit {
+        position: relative;
+        text-align: center;
+        white-space: nowrap;
+
+        &#hours,
+        &#minutes,
+        &#seconds {
+            .number {}
+        }
+    }
+
+    .colon {
+        opacity: 0.44;
+        font-weight: 220;
+        line-height: 1.44;
+        font-size: 48px;
+        //display: none;
+
+        @media (max-width:1024px) {
+            font-size: 32px;
+        }
+
+        @media (max-width:620px) {
+            font-size: 24px;
+        }
+    }
+
+    .number {
+        display: block;
+        perspective: 2000px;
+        transform-style: preserve-3d;
+        font-size: 8vw;
+        font-weight: 900;
+        white-space: nowrap;
+
+        .char {
+            display: inline-block;
+            font-weight: inherit;
+            font-size: inherit;
+            width: 5vw;
+        }
+    }
+
+    .label {
+        font-size: 14px;
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0.62;
+        font-weight: 320;
+
+        @media (max-width:620px) {
+            font-size: 10px;
+        }
+    }
+}

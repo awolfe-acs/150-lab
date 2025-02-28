@@ -1,0 +1,71 @@
+header.anniversary {
+    position: absolute;
+    z-index: 5;
+    width: 100%;
+    padding: 2vw 4vw;
+
+    div.logo {
+        svg {
+            height: 44px;
+        }
+    }
+
+    button.sound-toggle {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+
+        span {
+            font-weight: 300;
+        }
+
+        svg {
+            width: 20px;
+            height: 20px;
+            overflow: hidden;
+            transform: scaleX(1.2);
+        }
+
+        path {
+            fill: none;
+            stroke: #fff;
+            stroke-width: 5;
+        }
+    }
+
+    button.menu {
+        font-size: 12px;
+        font-weight: 200;
+        text-transform: uppercase;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #fff;
+        position: relative;
+        letter-spacing: 6px;
+        padding-right: 24px;
+        align-self: center;
+
+        &:before,
+        &:after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 1.5px;
+            background-color: #fff;
+            transition: all 0.3s ease;
+            transform: translateY(-50%);
+            right: 0;
+        }
+
+        &:before {
+            top: calc(50% - 3px);
+        }
+
+        &:after {
+            top: calc(50% + 5px);
+        }
+
+
+    }
+}

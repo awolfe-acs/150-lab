@@ -1,0 +1,131 @@
+.section-timeline {
+    position: absolute;
+    z-index: 1;
+    width: 2px;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0), #fff 8%, #fff 100%);
+    height: 100%;
+    left: 4vw;
+    top: 12vw;
+    z-index: 2;
+
+    .indicator-wrapper {
+        position: fixed;
+        top: 50%;
+        transform: translateY(-50%);
+        left: calc(4vw - 9.5px);
+        z-index: 3;
+        background: #113652;
+        border-radius: 50%;
+    }
+
+    .indicator {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        z-index: 3;
+
+        // Core glow with solid center
+        background:
+            // Solid center core to hide the line
+            radial-gradient(circle at center,
+                rgba(243, 255, 69, 1) 0%,
+                rgba(243, 255, 69, 1) 15%,
+                rgba(243, 255, 69, 0.8) 30%,
+                rgba(243, 255, 69, 0.4) 60%,
+                rgba(79, 159, 250, 0) 80%);
+
+        // Multiple layered shadows for depth and glow
+        box-shadow:
+            // Inner bright glow
+            0 0 8px 2px rgba(243, 255, 69, 0.8),
+            // Middle blue glow
+            0 0 12px 4px rgba(79, 159, 250, 0.6),
+            // Outer subtle glow
+            0 0 20px 6px rgba(79, 159, 250, 0.3);
+
+
+        // 3D effect with pseudo-elements
+        &::before,
+        &::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        // Inner highlight for 3D effect
+        &::before {
+            background: radial-gradient(circle at 30% 30%,
+                    rgba(255, 255, 255, 0.9) 0%,
+                    rgba(255, 255, 255, 0.5) 20%,
+                    rgba(255, 255, 255, 0) 50%);
+            z-index: 1;
+        }
+
+        // Outer pulsing glow
+        &::after {
+            background: radial-gradient(circle at center,
+                    rgba(79, 159, 250, 0.3) 0%,
+                    rgba(79, 159, 250, 0) 70%);
+            z-index: -1;
+            animation: pulse 2s infinite ease-in-out;
+        }
+
+        div {
+            transform: translateX(40px) translateY(-50%);
+            position: absolute;
+            top: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3;
+
+            span {
+                font-size: 12px;
+                font-weight: 200;
+                text-transform: uppercase;
+                letter-spacing: 6px;
+                white-space: nowrap;
+                transform: rotate(-90deg);
+                text-shadow: 0 0 5px rgba(243, 255, 69, 0.5);
+            }
+        }
+    }
+}
+
+// Animations
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 0.3;
+    }
+
+    50% {
+        transform: scale(1.4);
+        opacity: 0.1;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 0.3;
+    }
+}
+
+@keyframes float {
+    0% {
+        transform: translateY(-50%) translateZ(0);
+    }
+
+    50% {
+        transform: translateY(calc(-50% - 3px)) translateZ(0);
+    }
+
+    100% {
+        transform: translateY(-50%) translateZ(0);
+    }
+}
