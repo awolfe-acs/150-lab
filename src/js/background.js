@@ -24,7 +24,7 @@ export function initShaderBackground() {
 
   // Camera parameters with zoom control
   const cameraParams = {
-    zoom: 1.08,
+    zoom: 1.25,
     zPosition: 1,
   };
 
@@ -45,29 +45,31 @@ export function initShaderBackground() {
     time: { value: 0.0 },
     resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
     // Animation speed parameters
-    mainSpeed: { value: 0.0164 }, // Overall animation speed multiplier
-    waveSpeed: { value: 2.1 }, // Speed of the wave movement
-    noiseSpeed: { value: 3.0 }, // Speed of the noise animation
-    colorCycleSpeed: { value: 3.0 }, // Speed of color cycling/transitions
+    mainSpeed: { value: 0.03 }, // Overall animation speed multiplier
+    waveSpeed: { value: 8.0 }, // Controls how fast the waves animate
+    noiseSpeed: { value: 1.8 }, // Speed of the noise animation
+    colorCycleSpeed: { value: 8.0 }, // Speed of color cycling/transitions
     //Color parameters
     color1: { value: new THREE.Color(0x32c2d6) },
     color2: { value: new THREE.Color(0x004199) },
     colorDarkness: { value: 0.0 }, // Controls overall darkness of colors
-    colorWaveInfluence: { value: 0.5 }, // Controls how much colors affect wave patterns
-    colorFrequencyShift: { value: 1.0 }, // Controls how colors shift wave frequencies
-    colorAmplitudeEffect: { value: 1.0 }, // Controls how colors affect wave amplitude
+    colorWaveInfluence: { value: 0.4 }, // Controls how much colors affect wave patterns
+    colorFrequencyShift: { value: 0.3 }, // Controls how colors shift wave frequencies
+    colorAmplitudeEffect: { value: 0.5 }, // Controls how colors affect wave amplitude
     //Wave parameters
-    waveAmplitude: { value: 1.66 }, // Controls wave height
-    waveFrequency: { value: 5.0 }, // Controls wave frequency
-    waveDepth: { value: 1.0 }, // Controls perceived depth of waves
-    flowDirection: { value: new THREE.Vector2(-1.3, 0.4) }, // Direction of wave flow
-    noiseScale: { value: 0.1 }, // Scale of noise pattern
-    noiseInfluence: { value: 0.28 }, // How much noise affects the pattern
-    layerOffset: { value: 0.2 }, // Offset between color layers for depth
+    waveAmplitude: { value: 3.0 }, // Controls wave height
+    waveFrequency: { value: 2.2 }, // Controls wave frequency
+    waveDepth: { value: 0.9 }, // Controls perceived depth of waves
+    flowDirection: { value: new THREE.Vector2(-0.7, 0.82) }, // Controls the direction of wave movement
+    noiseScale: { value: 2.5 }, // Scale of noise pattern
+    noiseInfluence: { value: 0.0 }, // How much noise affects the pattern
+    layerOffset: { value: 0.4 }, // Offset between color layers for depth
     //Appearance parameters
-    yOffset: { value: 0.12 },
+    yOffset: { value: 0.145 },
     topEdgeSoftness: { value: 1.0 }, // Controls the softness of the top edge fade
     bottomEdgeSoftness: { value: 1.0 }, // Controls the softness of the bottom edge fade
+    leftEdgeSoftness: { value: 0.2 }, // Controls the softness of the left edge fade
+    rightEdgeSoftness: { value: 0.12 }, // Controls the softness of the right edge fade
     fadeWidth: { value: 1.0 }, // Controls the width of the fade area
     leftCornerRoundness: { value: 0.8 }, // Controls how much the fade rounds into left corners
     rightCornerRoundness: { value: 1.0 }, // Controls how much the fade rounds into right corners
@@ -75,21 +77,28 @@ export function initShaderBackground() {
     edgeNoiseScale: { value: 3.0 }, // Controls the scale of noise on the edges
     edgeDepth: { value: 0.86 }, // Controls how far the burn-in effect extends into the canvas
     edgeContrast: { value: 2.0 }, // Controls the contrast/sharpness of the edge transition
+    // Bottom wave edge parameters
+    bottomWaveEnabled: { value: true }, // Enable/disable the bottom wave edge
+    bottomWaveDepth: { value: 0.108 }, // Controls the depth/amplitude of the bottom wave
+    bottomWaveWidth: { value: 6.664 }, // Controls the width/frequency of the bottom wave
+    bottomWaveSpeed: { value: 1.78 }, // Controls the speed of the bottom wave animation
+    bottomWaveOffset: { value: 1.35 }, // Controls the horizontal offset of the bottom wave
     // Film noise parameters
-    filmNoiseIntensity: { value: 0.05 }, // Controls the intensity of the film noise
+    filmNoiseIntensity: { value: 0.1 }, // Controls the intensity of the film noise
     filmNoiseSpeed: { value: 0.00001 }, // Controls the speed of the film noise animation
     filmGrainSize: { value: 10.0 }, // Controls the size of the film grain
     filmScratchIntensity: { value: 0.0 }, // Controls the intensity of film scratches
     // Lighting parameters
     lightDirection: { value: new THREE.Vector3(0.5, 0.5, 1.0).normalize() },
-    ambientLight: { value: 0.4 }, // Ambient light intensity
-    directionalLight: { value: 1.0 }, // Directional light intensity
+    ambientLight: { value: 0.6 }, // Ambient light intensity
+    directionalLight: { value: 0.6 }, // Directional light intensity
     specularStrength: { value: 0.0 }, // Specular highlight strength
-    shininess: { value: 1.0 }, // Shininess factor for specular highlights
+    shininess: { value: 128.0 }, // Shininess factor for specular highlights
     //Displacement parameters (kept but set to 0 by default)
     displacementStrength: { value: 0.0 },
     displacementScale: { value: 0.0001 },
     displacementDepth: { value: 0.0 },
+    xOffset: { value: 0.0 },
   };
 
   // Enhanced vertex shader with larger displacement
@@ -99,6 +108,7 @@ export function initShaderBackground() {
     uniform float noiseSpeed;
     uniform vec2 resolution;
     uniform float yOffset;
+    uniform float xOffset;
     varying vec2 vUv;
     varying vec3 vViewPosition;
     varying vec3 vNormal;
@@ -106,9 +116,10 @@ export function initShaderBackground() {
     void main() {
       vUv = uv;
       
-      // Apply yOffset to the entire mesh by shifting the y position
+      // Apply xOffset and yOffset to the entire mesh by shifting the position
       vec3 positionWithOffset = position;
       positionWithOffset.y += yOffset * resolution.y; // Scale by resolution for pixel-based offset
+      positionWithOffset.x += xOffset * resolution.x; // Scale by resolution for pixel-based offset
       
       // Pass normal and view position for lighting calculations
       vNormal = normalMatrix * normal;
@@ -124,8 +135,11 @@ export function initShaderBackground() {
     uniform float time;
     uniform vec2 resolution;
     uniform float yOffset;
+    uniform float xOffset;
     uniform float topEdgeSoftness;
     uniform float bottomEdgeSoftness;
+    uniform float leftEdgeSoftness;
+    uniform float rightEdgeSoftness;
     uniform float fadeWidth;
     uniform float leftCornerRoundness;
     uniform float rightCornerRoundness;
@@ -158,6 +172,11 @@ export function initShaderBackground() {
     uniform float filmNoiseSpeed;
     uniform float filmGrainSize;
     uniform float filmScratchIntensity;
+    uniform bool bottomWaveEnabled;
+    uniform float bottomWaveDepth;
+    uniform float bottomWaveWidth;
+    uniform float bottomWaveSpeed;
+    uniform float bottomWaveOffset;
     varying vec2 vUv;
     varying vec3 vViewPosition;
     varying vec3 vNormal;
@@ -246,7 +265,25 @@ export function initShaderBackground() {
       vec2 colorModifiedFlow = flowDirection;
       // Make flow direction respond to color hue
       colorModifiedFlow += vec2(cos(colorHue * 6.28), sin(colorHue * 6.28)) * colorWaveInfluence * 0.5;
-      vec2 flowUv = uv + colorModifiedFlow * time * waveSpeed * 0.1;
+      
+      // Apply waveSpeed to the time component of the sine waves to control actual wave speed
+      float timeComponent = time * waveSpeed;
+      
+      // Create a depth-dependent time component for better synergy between depth and color cycling
+      // This makes different depth layers cycle at slightly different rates
+      float depthTimeComponent = timeComponent * (1.0 - depth * 0.3);
+      
+      // Reduce the flow direction influence for less translation and more morphing
+      // This creates a moving coordinate system that flows in the specified direction but with less movement
+      vec2 flowUv = uv + colorModifiedFlow * depthTimeComponent * 0.3;
+      
+      // Add time-based distortion to create organic morphing effect
+      // This creates bulging and receding areas that change over time
+      // Make the morphing respond to depth for better synergy
+      float morphStrength = 0.05 * (1.0 - depth * 0.3);
+      vec2 morphUv = flowUv;
+      morphUv.x += sin(uv.y * 3.0 + depthTimeComponent * 0.7) * morphStrength;
+      morphUv.y += cos(uv.x * 2.5 + depthTimeComponent * 0.6) * morphStrength;
       
       // Modify frequency based on color
       float frequencyMod = waveFrequency * (1.0 + (colorHue - 0.5) * colorFrequencyShift);
@@ -255,23 +292,34 @@ export function initShaderBackground() {
       // Use color intensity to modify wave phase
       float colorPhaseShift = colorIntensity * colorWaveInfluence * 3.0;
       
-      float wave1 = sin(flowUv.x * frequencyMod * 4.0 + time * colorCycleSpeed + colorPhaseShift) * 0.5 + 0.5;
-      float wave2 = sin(flowUv.y * frequencyMod * 3.0 + time * colorCycleSpeed * 0.7 + colorPhaseShift * 0.8) * 0.5 + 0.5;
-      float wave3 = sin((flowUv.x + flowUv.y) * frequencyMod * 2.0 + time * colorCycleSpeed * 1.3 + colorPhaseShift * 0.6) * 0.5 + 0.5;
+      // Add color cycling effect integrated with the morphing
+      // Make color cycling directly respond to depth for better synergy
+      float colorCycleComponent = time * colorCycleSpeed * (1.0 - depth * 0.3);
+      
+      // Create pulsing amplitude effect over time for more organic movement
+      // Make the pulse effect respond to depth for better synergy
+      float pulseEffect = sin(depthTimeComponent * 0.2) * 0.2 + 0.8;
+      
+      // Generate waves with more organic variation
+      // Make the waves directly respond to the depth parameter for better depth-color synergy
+      float depthFactor = 1.0 - depth * 0.5; // Higher value for foreground
+      
+      // Use depth to influence wave frequency and phase for better synergy
+      // Create a more direct relationship between wave height and color transitions
+      float wave1 = sin(morphUv.x * frequencyMod * (4.0 + depth) + colorCycleComponent * depthFactor + colorPhaseShift) * 0.5 + 0.5;
+      float wave2 = sin(morphUv.y * frequencyMod * (3.0 + depth * 0.5) + colorCycleComponent * 0.7 * depthFactor + colorPhaseShift * 0.8) * 0.5 + 0.5;
+      float wave3 = sin((morphUv.x + morphUv.y) * frequencyMod * (2.0 + depth * 0.3) + colorCycleComponent * 1.3 * depthFactor + colorPhaseShift * 0.6) * 0.5 + 0.5;
       
       // Apply depth offset to create parallax effect
       float depthOffset = depth * layerOffset;
-      wave1 = sin(flowUv.x * frequencyMod * 4.0 + time * colorCycleSpeed + depthOffset + colorPhaseShift) * 0.5 + 0.5;
-      wave2 = sin(flowUv.y * frequencyMod * 3.0 + time * colorCycleSpeed * 0.7 + depthOffset + colorPhaseShift * 0.8) * 0.5 + 0.5;
-      wave3 = sin((flowUv.x + flowUv.y) * frequencyMod * 2.0 + time * colorCycleSpeed * 1.3 + depthOffset + colorPhaseShift * 0.6) * 0.5 + 0.5;
       
       // Combine waves with weighted averaging for a more complex pattern
-      // Use color components to weight the waves differently
-      float rWeight = localColor.r * 0.5 + 0.2; // 0.2-0.7 range
-      float gWeight = localColor.g * 0.5 + 0.2; // 0.2-0.7 range
-      float bWeight = localColor.b * 0.5 + 0.2; // 0.2-0.7 range
+      // Use color components as weights for a more direct relationship between color and wave pattern
+      float rWeight = localColor.r * 0.33 + 0.22; // Weight influenced by red component
+      float gWeight = localColor.g * 0.33 + 0.22; // Weight influenced by green component
+      float bWeight = localColor.b * 0.33 + 0.22; // Weight influenced by blue component
       
-      // Normalize weights
+      // Normalize weights to ensure they sum to 1.0
       float totalWeight = rWeight + gWeight + bWeight;
       rWeight /= totalWeight;
       gWeight /= totalWeight;
@@ -279,14 +327,19 @@ export function initShaderBackground() {
       
       float wave = wave1 * rWeight + wave2 * gWeight + wave3 * bWeight;
       
-      // Apply noise influence for organic movement
-      float noiseValue = fbm(uv * noiseScale + time * 0.1 * noiseSpeed);
-      // Use color intensity to control noise mixing
-      float noiseMix = noiseInfluence * (1.0 - depth * 0.5) * (1.0 + colorIntensity * colorWaveInfluence);
+      // Apply noise influence for organic movement with more variation
+      // Use a more dynamic noise pattern that changes over time
+      // Make noise pattern respond to depth for better synergy
+      float noiseTimeComponent = time * 0.1 * noiseSpeed * (1.0 - depth * 0.3);
+      float noiseValue = fbm((uv + vec2(sin(timeComponent * 0.1), cos(timeComponent * 0.15))) * noiseScale + noiseTimeComponent);
+      
+      // Use color intensity to control noise mixing with more influence
+      float noiseMix = noiseInfluence * depthFactor * (1.0 + colorIntensity * colorWaveInfluence);
       wave = mix(wave, noiseValue, clamp(noiseMix, 0.0, 1.0));
       
-      // Apply color-based amplitude modulation
-      float amplitudeMod = 1.0 + (colorIntensity - 0.5) * colorAmplitudeEffect;
+      // Apply color-based amplitude modulation with time-based pulsing
+      // Make amplitude modulation respond to depth for better synergy
+      float amplitudeMod = pulseEffect * (1.0 + (colorIntensity - 0.5) * colorAmplitudeEffect * depthFactor);
       wave = 0.5 + (wave - 0.5) * amplitudeMod;
       
       return clamp(wave, 0.0, 1.0);
@@ -302,12 +355,17 @@ export function initShaderBackground() {
       float top = wavePattern(uv + vec2(0.0, epsilon), 0.5, localColor);
       
       // Calculate gradient
-      // Use color intensity to affect the wave amplitude
+      // Use color intensity to affect the wave amplitude with time-based variation
       float colorIntensity = getColorIntensity(localColor);
-      float amplitudeMod = waveAmplitude * (1.0 + (colorIntensity - 0.5) * colorAmplitudeEffect);
+      float timeComponent = time * waveSpeed;
+      float pulseEffect = sin(timeComponent * 0.2) * 0.2 + 0.8;
       
-      vec3 dx = vec3(epsilon, 0.0, (right - center) * amplitudeMod);
-      vec3 dy = vec3(0.0, epsilon, (top - center) * amplitudeMod);
+      // Apply a more dynamic amplitude modulation for the normal calculation
+      float amplitudeMod = waveAmplitude * pulseEffect * (1.0 + (colorIntensity - 0.5) * colorAmplitudeEffect);
+      
+      // Create more pronounced normals for a stronger 3D effect
+      vec3 dx = vec3(epsilon, 0.0, (right - center) * amplitudeMod * 1.5);
+      vec3 dy = vec3(0.0, epsilon, (top - center) * amplitudeMod * 1.5);
       
       // Cross product to get normal
       return normalize(cross(dx, dy));
@@ -322,14 +380,34 @@ export function initShaderBackground() {
       float verticalDist;
       if (centeredUV.y < 0.0) {
         // Bottom half - use full edgeDepth to ensure visibility
-        verticalDist = abs(centeredUV.y) / (0.5 * edgeDepth);
+        if (bottomWaveEnabled) {
+          // Create a wave pattern for the bottom edge
+          float waveX = uv.x + bottomWaveOffset + time * bottomWaveSpeed * 0.1;
+          float wave = sin(waveX * bottomWaveWidth) * bottomWaveDepth;
+          
+          // Adjust the vertical distance based on the wave pattern
+          // This creates a wave-like bottom edge
+          float waveOffset = wave * 0.5 * edgeDepth; // Scale the wave by edgeDepth
+          verticalDist = (abs(centeredUV.y) - waveOffset) / (0.5 * edgeDepth);
+          verticalDist = max(verticalDist, 0.0); // Ensure we don't go negative
+        } else {
+          // Standard bottom edge without wave
+          verticalDist = abs(centeredUV.y) / (0.5 * edgeDepth);
+        }
       } else {
         // Top half - adjust for corner roundness to prevent cutting off
         verticalDist = abs(centeredUV.y) / (0.5 * edgeDepth);
       }
       
-      // Calculate horizontal distance for corner rounding
-      float horizontalDist = abs(centeredUV.x) / (0.5 * edgeDepth);
+      // Calculate horizontal distance for left/right fade
+      float horizontalDist;
+      if (centeredUV.x < 0.0) {
+        // Left side
+        horizontalDist = abs(centeredUV.x) / (0.5 * edgeDepth);
+      } else {
+        // Right side
+        horizontalDist = abs(centeredUV.x) / (0.5 * edgeDepth);
+      }
       
       // Create a radial distance for corner rounding
       // Adjust the denominator to prevent cutting off at high corner roundness values
@@ -426,52 +504,148 @@ export function initShaderBackground() {
       vec2 uv = vUv;
       
       // Get initial color blend for feedback
-      vec3 initialColor = mix(color1, color2, 0.5);
+      // Create a time-varying color mix for more dynamic effects
+      // Make the color mix factor respond to the wave depth for better synergy
+      float waveDepthFactor = waveDepth * (1.0 + sin(time * 0.3) * 0.1);
       
-      // Create multiple depth layers for parallax effect with color influence
-      float foregroundWave = wavePattern(uv, 0.0, mix(color1, color2, 0.3)); // Foreground layer
-      float middleWave = wavePattern(uv, 0.5, mix(color1, color2, 0.5));     // Middle layer
-      float backgroundWave = wavePattern(uv, 1.0, mix(color1, color2, 0.7)); // Background layer
+      // Create a more dynamic color mix that's influenced by the wave depth
+      float colorCyclePhase = time * colorCycleSpeed;
+      float colorMixFactor = sin(colorCyclePhase * 0.1) * 0.1 + 0.5;
       
-      // Create depth-based color mixing
-      vec3 foregroundColor = mix(color1, color2, foregroundWave);
-      vec3 backgroundColor = mix(color2, color1, backgroundWave);
+      // Create initial color blend
+      vec3 initialColor = mix(color1, color2, colorMixFactor);
       
-      // Blend layers based on wave depth to create parallax effect
-      float depthBlend = smoothInterpolation(0.3, 0.7, middleWave);
+      // Create multiple depth layers for parallax effect with consistent color influence
+      float foregroundWave = wavePattern(uv, 0.0, initialColor); // Foreground layer
+      float middleWave = wavePattern(uv, 0.5, initialColor);     // Middle layer
+      float backgroundWave = wavePattern(uv, 1.0, initialColor); // Background layer
+      
+      // Create more dynamic depth-based color mixing
+      // Use the wave patterns to create more interesting color blends
+      // Make the color mixing directly respond to the wave amplitude
+      
+      // Create a more dynamic color transition based on wave patterns
+      // This creates a more direct relationship between wave height and color
+      float foregroundColorMix = mix(0.3, 0.7, foregroundWave);
+      float backgroundColorMix = mix(0.7, 0.3, backgroundWave);
+      
+      // Apply color cycling that's synchronized with the wave patterns
+      foregroundColorMix = mix(foregroundColorMix, sin(colorCyclePhase + foregroundWave * 3.14) * 0.5 + 0.5, waveDepthFactor * 0.5);
+      backgroundColorMix = mix(backgroundColorMix, sin(colorCyclePhase + backgroundWave * 3.14 + 1.57) * 0.5 + 0.5, waveDepthFactor * 0.5);
+      
+      vec3 foregroundColor = mix(color1, color2, foregroundColorMix);
+      vec3 backgroundColor = mix(color2, color1, backgroundColorMix);
+      
+      // Add subtle color variations that are synchronized with the wave patterns
+      float waveSyncFactor = sin(time * waveSpeed * 0.2) * 0.5 + 0.5;
+      foregroundColor += vec3(sin(time * 0.5) * 0.03, cos(time * 0.6) * 0.03, sin(time * 0.7) * 0.03) * foregroundWave;
+      backgroundColor += vec3(cos(time * 0.4) * 0.03, sin(time * 0.5) * 0.03, cos(time * 0.6) * 0.03) * backgroundWave;
+      
+      // Create a more dynamic depth blend that's influenced by the wave depth parameter
+      // This creates a stronger connection between the depth parameter and the visual effect
+      float depthBlendRange = 0.3 + waveDepthFactor * 0.4; // Dynamic blend range based on wave depth
+      float depthBlendMin = 0.5 - depthBlendRange * 0.5;
+      float depthBlendMax = 0.5 + depthBlendRange * 0.5;
+      float depthBlend = smoothInterpolation(depthBlendMin, depthBlendMax, middleWave);
+      
+      // Make the depth blend more responsive to the wave pattern
+      depthBlend = mix(depthBlend, middleWave, waveDepthFactor * 0.5);
+      
+      // Create a more dynamic color blend based on wave patterns
       vec3 baseColor = mix(backgroundColor, foregroundColor, depthBlend);
       
-      // Apply darkness to the colors
-      baseColor = mix(baseColor, vec3(0.0, 0.0, 0.0), colorDarkness);
+      // Apply a subtle color shift based on the wave pattern
+      // This creates a more direct relationship between wave height and color
+      float colorShiftAmount = waveDepthFactor * 0.2;
+      vec3 shiftedColor = mix(baseColor, 
+                             vec3(baseColor.r * (1.0 + middleWave * 0.1),
+                                  baseColor.g * (1.0 + foregroundWave * 0.1),
+                                  baseColor.b * (1.0 + backgroundWave * 0.1)),
+                             colorShiftAmount);
+      baseColor = shiftedColor;
       
-      // Calculate lighting based on wave normal with color influence
-      vec3 waveNormal = calculateNormal(uv, baseColor);
+      // Apply darkness to the colors with slight time variation for "breathing" effect
+      // Synchronize the darkness variation with the wave pattern
+      float darknessVariation = colorDarkness * (1.0 + sin(time * 0.2) * 0.05 + middleWave * 0.1);
+      baseColor = mix(baseColor, vec3(0.0, 0.0, 0.0), darknessVariation);
+      
+      // Calculate lighting based on wave normal with consistent color influence
+      vec3 waveNormal = calculateNormal(uv, initialColor);
       
       // Blend between the wave normal and the surface normal for subtle effect
-      vec3 normal = normalize(mix(vNormal, waveNormal, waveDepth));
+      // Make the normal blend more dynamic with time and directly tied to the wave depth
+      // Use the wave pattern to directly influence the normal calculation
+      float normalBlendFactor = waveDepthFactor * (0.5 + middleWave * 0.5);
+      // Add variation to the normal based on the wave pattern
+      vec3 modifiedWaveNormal = waveNormal;
+      modifiedWaveNormal.xy += vec2(sin(foregroundWave * 6.28) * 0.1, cos(backgroundWave * 6.28) * 0.1) * waveDepthFactor;
+      modifiedWaveNormal = normalize(modifiedWaveNormal);
+      
+      vec3 normal = normalize(mix(vNormal, modifiedWaveNormal, normalBlendFactor));
       
       // Lighting calculations
       vec3 viewDir = normalize(vViewPosition);
       vec3 lightDir = normalize(lightDirection);
       
-      // Ambient lighting
-      vec3 ambient = ambientLight * baseColor;
+      // Add subtle movement to the light direction for more dynamic lighting
+      // Synchronize light movement with wave patterns for better synergy
+      // Make the light direction respond directly to the wave pattern
+      lightDir.x += sin(time * 0.2) * 0.05 * middleWave;
+      lightDir.y += cos(time * 0.25) * 0.05 * middleWave;
+      // Add a subtle rotation to the light direction based on the wave pattern
+      float lightRotation = (foregroundWave - 0.5) * waveDepthFactor * 0.2;
+      vec3 rotatedLightDir = vec3(
+          lightDir.x * cos(lightRotation) - lightDir.y * sin(lightRotation),
+          lightDir.x * sin(lightRotation) + lightDir.y * cos(lightRotation),
+          lightDir.z
+      );
+      lightDir = normalize(rotatedLightDir);
       
-      // Diffuse lighting
+      // Ambient lighting with subtle color variation
+      // Make the ambient color variation respond to the wave pattern
+      // Create a more dynamic ambient color that's influenced by the wave pattern
+      vec3 ambientVariation = vec3(sin(time * 0.3) * 0.03, cos(time * 0.4) * 0.03, sin(time * 0.5) * 0.03) * middleWave;
+      // Add color cycling to the ambient lighting
+      ambientVariation += (foregroundColor - backgroundColor) * foregroundWave * 0.05 * waveDepthFactor;
+      vec3 ambientColor = baseColor * (1.0 + ambientVariation);
+      vec3 ambient = ambientLight * ambientColor;
+      
+      // Diffuse lighting with enhanced contrast
+      // Make the diffuse lighting more responsive to the wave pattern
       float diff = max(dot(normal, lightDir), 0.0);
-      vec3 diffuse = directionalLight * diff * baseColor;
+      // Add variation to the diffuse lighting based on the wave pattern
+      diff = pow(diff, 1.2 + foregroundWave * 0.3); // Add contrast to the diffuse lighting
+      // Enhance diffuse lighting based on wave height for better synergy
+      diff *= 1.0 + middleWave * waveDepthFactor * 0.5;
+      // Add a subtle color shift to the diffuse lighting based on the wave pattern
+      vec3 diffuseColor = baseColor;
+      diffuseColor = mix(diffuseColor, foregroundColor, foregroundWave * waveDepthFactor * 0.2);
+      vec3 diffuse = directionalLight * diff * diffuseColor;
       
-      // Specular lighting (Blinn-Phong)
+      // Specular lighting (Blinn-Phong) with time-based variation
       vec3 halfwayDir = normalize(lightDir + viewDir);
-      float spec = pow(max(dot(normal, halfwayDir), 0.0), shininess);
-      vec3 specular = specularStrength * spec * vec3(1.0);
+      // Make the specular power respond to the wave pattern
+      float specPower = shininess * (1.0 + foregroundWave * waveDepthFactor * 2.0);
+      float spec = pow(max(dot(normal, halfwayDir), 0.0), specPower);
+      // Add time-based variation to the specular highlights
+      // Synchronize specular highlights with wave patterns
+      float specularVariation = 1.0 + sin(time * 0.5) * 0.2 * foregroundWave;
+      // Add color to the specular highlights based on the wave pattern
+      vec3 specularColor = mix(vec3(1.0), foregroundColor * 1.5, foregroundWave * waveDepthFactor * 0.3);
+      vec3 specular = specularStrength * specularVariation * spec * specularColor;
       
       // Combine lighting components
       vec3 color = ambient + diffuse + specular;
       
-      // Add highlights based on wave height for extra depth
-      float highlightIntensity = smoothInterpolation(0.4, 0.6, foregroundWave) * waveDepth;
-      color += vec3(0.1, 0.1, 0.15) * highlightIntensity;
+      // Add highlights based on wave height for extra depth with more variation
+      // Make highlights directly respond to the wave pattern for better synergy
+      float highlightIntensity = smoothInterpolation(0.4, 0.6, foregroundWave) * waveDepthFactor * (1.0 + sin(time * 0.4) * 0.2);
+      // Add color tint to highlights based on the wave pattern
+      // Create a more dynamic highlight color that's influenced by the wave pattern
+      vec3 highlightColor = mix(vec3(0.1, 0.1, 0.15), mix(color1, color2, foregroundWave) * 0.5, waveDepthFactor * 0.5);
+      // Add variation to the highlight color based on the wave pattern
+      highlightColor = mix(highlightColor, foregroundColor * 0.7, middleWave * 0.5);
+      color += highlightColor * highlightIntensity;
       
       // Apply film noise effects
       color = applyFilmNoise(color, uv);
@@ -479,16 +653,29 @@ export function initShaderBackground() {
       // Calculate non-linear edge fade with corner rounding
       float distanceField = calculateEdgeFade(uv);
       
-      // Apply different softness to top and bottom edges
-      float alpha;
+      // Apply different softness to all edges
+      float alpha = 1.0;
+      
+      // Vertical edges (top/bottom)
       if (uv.y >= 0.5) {
         // Top half
         float normalizedDist = (distanceField - 0.5) / 0.5; // Normalize to 0-1 range for top half
-        alpha = 1.0 - smoothInterpolation(1.0 - topEdgeSoftness, 1.0, normalizedDist);
+        alpha *= 1.0 - smoothInterpolation(1.0 - topEdgeSoftness, 1.0, normalizedDist);
       } else {
         // Bottom half
         float normalizedDist = (distanceField - 0.5) / 0.5; // Normalize to 0-1 range for bottom half
-        alpha = 1.0 - smoothInterpolation(1.0 - bottomEdgeSoftness, 1.0, normalizedDist);
+        alpha *= 1.0 - smoothInterpolation(1.0 - bottomEdgeSoftness, 1.0, normalizedDist);
+      }
+      
+      // Horizontal edges (left/right)
+      if (uv.x >= 0.5) {
+        // Right half
+        float normalizedDist = (abs(uv.x - 0.5) / 0.5) / edgeDepth;
+        alpha *= 1.0 - smoothInterpolation(1.0 - rightEdgeSoftness, 1.0, normalizedDist);
+      } else {
+        // Left half
+        float normalizedDist = (abs(uv.x - 0.5) / 0.5) / edgeDepth;
+        alpha *= 1.0 - smoothInterpolation(1.0 - leftEdgeSoftness, 1.0, normalizedDist);
       }
       
       // Add subtle noise to alpha for a more organic edge
@@ -554,21 +741,21 @@ export function initShaderBackground() {
     });
 
   speedFolder
-    .add(uniforms.waveSpeed, "value", 0, 5)
+    .add(uniforms.waveSpeed, "value", 0, 25)
     .name("Wave Speed")
     .onChange((value) => {
       uniforms.waveSpeed.value = value;
     });
 
   speedFolder
-    .add(uniforms.noiseSpeed, "value", 0, 5)
+    .add(uniforms.noiseSpeed, "value", 0, 25)
     .name("Noise Speed")
     .onChange((value) => {
       uniforms.noiseSpeed.value = value;
     });
 
   speedFolder
-    .add(uniforms.colorCycleSpeed, "value", 0, 5)
+    .add(uniforms.colorCycleSpeed, "value", 0, 25)
     .name("Color Cycle Speed")
     .onChange((value) => {
       uniforms.colorCycleSpeed.value = value;
@@ -618,6 +805,7 @@ export function initShaderBackground() {
   colorFolder
     .add(uniforms.colorDarkness, "value", 0.0, 1.0)
     .name("Color Darkness")
+    .step(0.001)
     .onChange((value) => {
       uniforms.colorDarkness.value = value;
     });
@@ -625,21 +813,21 @@ export function initShaderBackground() {
   // Add color-wave interaction controls
   colorFolder
     .add(uniforms.colorWaveInfluence, "value", 0.0, 1.0)
-    .name("Color-Wave Influence")
+    .name("Color → Wave Influence")
     .onChange((value) => {
       uniforms.colorWaveInfluence.value = value;
     });
 
   colorFolder
     .add(uniforms.colorFrequencyShift, "value", 0.0, 1.0)
-    .name("Color Frequency Effect")
+    .name("Color → Frequency Effect")
     .onChange((value) => {
       uniforms.colorFrequencyShift.value = value;
     });
 
   colorFolder
     .add(uniforms.colorAmplitudeEffect, "value", 0.0, 1.0)
-    .name("Color Amplitude Effect")
+    .name("Color → Amplitude Effect")
     .onChange((value) => {
       uniforms.colorAmplitudeEffect.value = value;
     });
@@ -652,7 +840,7 @@ export function initShaderBackground() {
 
   // Add controls for wave parameters
   waveFolder
-    .add(uniforms.waveAmplitude, "value", 0, 2)
+    .add(uniforms.waveAmplitude, "value", 0, 12)
     .step(0.0001)
     .name("Wave Amplitude")
     .onChange((value) => {
@@ -674,7 +862,7 @@ export function initShaderBackground() {
     });
 
   waveFolder
-    .add(uniforms.noiseScale, "value", 0.1, 5)
+    .add(uniforms.noiseScale, "value", 0, 5)
     .name("Noise Scale")
     .onChange((value) => {
       uniforms.noiseScale.value = value;
@@ -699,17 +887,20 @@ export function initShaderBackground() {
 
   flowFolder
     .add(uniforms.flowDirection.value, "x", -2, 2)
-    .name("X Direction")
+    .name("Horizontal Flow")
     .onChange((value) => {
       uniforms.flowDirection.value.x = value;
     });
 
   flowFolder
     .add(uniforms.flowDirection.value, "y", -2, 2)
-    .name("Y Direction")
+    .name("Vertical Flow")
     .onChange((value) => {
       uniforms.flowDirection.value.y = value;
     });
+
+  // Open the flow folder by default to make it more visible
+  flowFolder.open();
 
   // Open the wave folder by default
   waveFolder.open();
@@ -752,6 +943,15 @@ export function initShaderBackground() {
   // Film noise folder starts closed
   // filmNoiseFolder.open();
 
+  // Add controls for x-offset with a much larger range
+  appearanceFolder
+    .add(uniforms.xOffset, "value", -1.0, 1.0)
+    .step(0.001)
+    .name("X Position")
+    .onChange((value) => {
+      uniforms.xOffset.value = value;
+    });
+    
   // Add controls for y-offset with a much larger range
   appearanceFolder
     .add(uniforms.yOffset, "value", -1.0, 1.0)
@@ -760,6 +960,7 @@ export function initShaderBackground() {
     .onChange((value) => {
       uniforms.yOffset.value = value;
     });
+  
 
   // Add controls for fade edges and width
   appearanceFolder
@@ -781,6 +982,21 @@ export function initShaderBackground() {
     .name("Bottom Edge Softness")
     .onChange((value) => {
       uniforms.bottomEdgeSoftness.value = value;
+    });
+
+  // Add controls for left and right edge softness
+  appearanceFolder
+    .add(uniforms.leftEdgeSoftness, "value", 0.0, 1.0)
+    .name("Left Edge Softness")
+    .onChange((value) => {
+      uniforms.leftEdgeSoftness.value = value;
+    });
+
+  appearanceFolder
+    .add(uniforms.rightEdgeSoftness, "value", 0.0, 1.0)
+    .name("Right Edge Softness")
+    .onChange((value) => {
+      uniforms.rightEdgeSoftness.value = value;
     });
 
   // Add controls for edge appearance
@@ -826,6 +1042,51 @@ export function initShaderBackground() {
       uniforms.edgeNoiseScale.value = value;
     });
 
+  // Add a folder for bottom wave edge controls
+  const bottomWaveFolder = gui.addFolder("Bottom Wave Edge Controls");
+
+  bottomWaveFolder
+    .add(uniforms.bottomWaveEnabled, "value")
+    .name("Enable Bottom Wave")
+    .onChange((value) => {
+      uniforms.bottomWaveEnabled.value = value;
+    });
+
+  bottomWaveFolder
+    .add(uniforms.bottomWaveDepth, "value", 0.0, 0.5)
+    .name("Wave Depth")
+    .step(0.001)
+    .onChange((value) => {
+      uniforms.bottomWaveDepth.value = value;
+    });
+
+  bottomWaveFolder
+    .add(uniforms.bottomWaveWidth, "value", 1.0, 20.0)
+    .name("Wave Width")
+    .step(0.001)
+    .onChange((value) => {
+      uniforms.bottomWaveWidth.value = value;
+    });
+
+  bottomWaveFolder
+    .add(uniforms.bottomWaveSpeed, "value", 0.0, 5.0)
+    .name("Wave Speed")
+    .step(0.001)
+    .onChange((value) => {
+      uniforms.bottomWaveSpeed.value = value;
+    });
+
+  bottomWaveFolder
+    .add(uniforms.bottomWaveOffset, "value", -5.0, 5.0)
+    .name("Wave Offset")
+    .step(0.001)
+    .onChange((value) => {
+      uniforms.bottomWaveOffset.value = value;
+    });
+
+  // Open the bottom wave folder by default
+  bottomWaveFolder.open();
+
   // Create a folder for lighting controls
   const lightingFolder = gui.addFolder("Lighting Controls");
 
@@ -839,12 +1100,14 @@ export function initShaderBackground() {
   lightingFolder
     .add(uniforms.directionalLight, "value", 0, 1)
     .name("Directional Light")
+      .step(0.001)
     .onChange((value) => {
       uniforms.directionalLight.value = value;
     });
 
   lightingFolder
     .add(uniforms.specularStrength, "value", 0, 1)
+    .step(0.001)
     .name("Specular Strength")
     .onChange((value) => {
       uniforms.specularStrength.value = value;
@@ -875,7 +1138,7 @@ export function initShaderBackground() {
     });
 
   lightDirFolder
-    .add(uniforms.lightDirection.value, "z", 0, 2)
+    .add(uniforms.lightDirection.value, "z", 0, 1)
     .name("Z")
     .onChange(() => {
       uniforms.lightDirection.value.normalize();

@@ -8,21 +8,43 @@ import { initDebug } from "./js/debug.js";
 import gsap from "gsap";
 
 // At the top of the file, add the debugMode flag
-const debugMode = true;
+const debugMode = false;
 
 // Set your target date/time here
 const targetDate = new Date("2026-04-06T00:00:00").getTime();
 
-// Ensure scroll position is at the top before load
+// Prevent browser from restoring scroll position on refresh
+if (history.scrollRestoration) {
+  history.scrollRestoration = 'manual';
+}
+
+// Force scroll to top immediately
 window.scrollTo(0, 0);
 
-// Also, when window loads, force scroll back to top
-window.addEventListener("load", () => {
+// Also force scroll to top when the page is about to be unloaded (before refresh)
+window.addEventListener('beforeunload', () => {
   window.scrollTo(0, 0);
+  sessionStorage.setItem('scrollToTop', 'true');
+});
+
+// When window loads, force scroll back to top
+window.addEventListener("load", () => {
+  window.scrollTo({
+    top: 0,
+    left: 0,
+    behavior: 'instant' // Use 'instant' instead of smooth for immediate effect
+  });
+  
+  // Small delay to ensure scroll is applied after browser might try to restore position
+  setTimeout(() => {
+    window.scrollTo(0, 0);
+  }, 10);
 });
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Force scroll to top again when DOM is ready
   window.scrollTo(0, 0);
+  
   const lenis = new Lenis({
     autoRaf: true,
   });
@@ -41,4 +63,10 @@ document.addEventListener("DOMContentLoaded", () => {
   initShaderBackground();
   // Initialize animations
   initAnimations();
+  
+  // Final attempt to ensure we're at the top
+  setTimeout(() => {
+    window.scrollTo(0, 0);
+    lenis.scrollTo(0, { immediate: true });
+  }, 100);
 });

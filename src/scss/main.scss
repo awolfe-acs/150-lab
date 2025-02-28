@@ -9,6 +9,9 @@
 @use './typography';
 
 html {
+  ::selection {
+    background:#0029cf7f;
+  }
 
   *,
   *:before,
@@ -57,7 +60,9 @@ html {
 #hero-area {
   position: relative;
   z-index: 1;
-
+  h1, span {
+    cursor:default;
+  }
   h1 {
     font-size: 4vw;
     text-align: center;
@@ -65,6 +70,27 @@ html {
     width: 60vw;
     position: absolute;
     z-index: 5;
+    perspective: 1000px; // Add perspective to parent for 3D effect
+    
+    // Styles for SplitType
+    .word {
+      display: inline-block;
+      margin-right: 0.25em; // Space between words
+      white-space: nowrap; // Prevent words from breaking
+    }
+    
+    .char {
+      display: inline-block;
+      position: relative;
+      // Ensure characters maintain proper spacing
+      margin: 0;
+      padding: 0;
+      // Add a subtle transform for more dynamic appearance
+      transform-origin: center center;
+      transform-style: preserve-3d; // Enhance 3D effect
+      will-change: opacity, transform; // Optimize for animation
+      font-weight:150;
+    }
   }
 
   #hero-number {
@@ -72,7 +98,33 @@ html {
     font-weight: 900;
     z-index: 2;
     letter-spacing: -0.5vw;
-    color: #FBE039;
+    opacity: 0; // Remove !important to allow JS to control this
+    position: relative;
+    display: flex;
+    justify-content: center;
+    
+    // Style for each digit
+    .digit {
+      position: relative;
+      color: rgba(251, 225, 57, 0.35);
+      transform-style: preserve-3d;
+      // Add border around text glyphs - thicker and more visible
+      -webkit-text-stroke: 0.5px rgba(251, 225, 57, 0.9);
+      text-stroke: 0.5px rgba(251, 225, 57, 0.9);
+    }
+    
+    // Style for digit overlay during transitions
+    .digit-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      color: rgba(251, 225, 57, 0.9);
+      // Add matching border to overlay
+      -webkit-text-stroke: 2px rgba(251, 225, 57, 0.8);
+      text-stroke: 2px rgba(251, 225, 57, 0.8);
+    }
   }
 }
 
