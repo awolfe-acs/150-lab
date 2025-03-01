@@ -7,15 +7,55 @@
     left: 4vw;
     top: 12vw;
     z-index: 2;
+    .page-nav {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        opacity: 1;
+        position: fixed;
+        top: 50%;
+        transform: translateY(-50%);
+        left: calc(4vw + 25px);
+        z-index: 3;
+        padding: 10px 15px;
+        pointer-events: auto;
+        
+        a {
+            font-weight: 120;
+            text-transform: uppercase;
+            white-space: nowrap;
+            font-size: 12px;
+            letter-spacing: 4px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-left: 0;
+            margin-right: auto;
+            pointer-events: auto;
+            transition: color 0.3s ease;
+            text-decoration: none;
+            padding: 3px 0;
 
+            &.active {
+                color: rgba(243, 255, 69, 0.8);
+                cursor: default;
+            }
+            &:not(.active):hover {
+                color: rgba(255, 255, 255, 1);
+            }
+        }
+    }
     .indicator-wrapper {
         position: fixed;
         top: 50%;
         transform: translateY(-50%);
         left: calc(4vw - 9.5px);
         z-index: 3;
-        background: #0091ff;
+        background: transparent;
         border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        background:#56b2ff;
     }
 
     .indicator {
@@ -23,6 +63,8 @@
         height: 20px;
         border-radius: 50%;
         z-index: 3;
+        position: relative;
+        left: 0;
 
         // Core glow with solid center
         background:

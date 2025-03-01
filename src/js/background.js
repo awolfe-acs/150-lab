@@ -24,7 +24,7 @@ export function initShaderBackground() {
 
   // Camera parameters with zoom control
   const cameraParams = {
-    zoom: 1.25,
+    zoom: 2.471,
     zPosition: 1,
   };
 
@@ -65,11 +65,11 @@ export function initShaderBackground() {
     noiseInfluence: { value: 0.0 }, // How much noise affects the pattern
     layerOffset: { value: 0.4 }, // Offset between color layers for depth
     //Appearance parameters
-    yOffset: { value: 0.145 },
+    yOffset: { value: 0.306 },
     topEdgeSoftness: { value: 1.0 }, // Controls the softness of the top edge fade
     bottomEdgeSoftness: { value: 1.0 }, // Controls the softness of the bottom edge fade
     leftEdgeSoftness: { value: 0.2 }, // Controls the softness of the left edge fade
-    rightEdgeSoftness: { value: 0.12 }, // Controls the softness of the right edge fade
+    rightEdgeSoftness: { value: 1.0 }, // Controls the softness of the right edge fade
     fadeWidth: { value: 1.0 }, // Controls the width of the fade area
     leftCornerRoundness: { value: 0.8 }, // Controls how much the fade rounds into left corners
     rightCornerRoundness: { value: 1.0 }, // Controls how much the fade rounds into right corners
@@ -79,10 +79,10 @@ export function initShaderBackground() {
     edgeContrast: { value: 2.0 }, // Controls the contrast/sharpness of the edge transition
     // Bottom wave edge parameters
     bottomWaveEnabled: { value: true }, // Enable/disable the bottom wave edge
-    bottomWaveDepth: { value: 0.108 }, // Controls the depth/amplitude of the bottom wave
-    bottomWaveWidth: { value: 6.664 }, // Controls the width/frequency of the bottom wave
-    bottomWaveSpeed: { value: 1.78 }, // Controls the speed of the bottom wave animation
-    bottomWaveOffset: { value: 1.35 }, // Controls the horizontal offset of the bottom wave
+    bottomWaveDepth: { value: 0.117 }, // Controls the depth/amplitude of the bottom wave
+    bottomWaveWidth: { value: 6.475 }, // Controls the width/frequency of the bottom wave
+    bottomWaveSpeed: { value: 0.0 }, // Controls the speed of the bottom wave animation
+    bottomWaveOffset: { value: -2.207 }, // Controls the horizontal offset of the bottom wave
     // Film noise parameters
     filmNoiseIntensity: { value: 0.1 }, // Controls the intensity of the film noise
     filmNoiseSpeed: { value: 0.00001 }, // Controls the speed of the film noise animation
@@ -98,7 +98,7 @@ export function initShaderBackground() {
     displacementStrength: { value: 0.0 },
     displacementScale: { value: 0.0001 },
     displacementDepth: { value: 0.0 },
-    xOffset: { value: 0.0 },
+    xOffset: { value: -0.104 },
   };
 
   // Enhanced vertex shader with larger displacement

@@ -95,7 +95,6 @@ html {
 
   #hero-number {
     font-size: 20vw;
-    font-weight: 900;
     z-index: 2;
     letter-spacing: -0.5vw;
     opacity: 0; // Remove !important to allow JS to control this
@@ -106,11 +105,14 @@ html {
     // Style for each digit
     .digit {
       position: relative;
-      color: rgba(251, 225, 57, 0.35);
+      color: rgba(251, 225, 57, 0.66); // Starting color (yellow)
       transform-style: preserve-3d;
-      // Add border around text glyphs - thicker and more visible
-      -webkit-text-stroke: 0.5px rgba(251, 225, 57, 0.9);
-      text-stroke: 0.5px rgba(251, 225, 57, 0.9);
+      // Add border around text glyphs
+      //-webkit-text-stroke: 1px rgba(255, 255, 255, 0.3); // White stroke for better visibility with any color
+      //text-stroke: 1px rgba(255, 255, 255, 0.3);
+      font-weight: 900;
+      transition: color 0.1s ease; // Smooth color transitions for non-GSAP changes
+      line-height:1.52;
     }
     
     // Style for digit overlay during transitions
@@ -122,8 +124,9 @@ html {
       height: 100%;
       color: rgba(251, 225, 57, 0.9);
       // Add matching border to overlay
-      -webkit-text-stroke: 2px rgba(251, 225, 57, 0.8);
-      text-stroke: 2px rgba(251, 225, 57, 0.8);
+      -webkit-text-stroke: 1px rgba(255, 255, 255, 0.3);
+      text-stroke: 1px rgba(255, 255, 255, 0.3);
+      transition: color 0.1s ease;
     }
   }
 }

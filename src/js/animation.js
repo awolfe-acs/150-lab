@@ -253,13 +253,27 @@ export function initAnimations() {
     // Simplified for better performance - only essential properties
     gsap.to(heroNumber, {
       scale: 0.7, // Reduce size to 70% of original
-      y: -50, // Move up by 50px
+      y: () => window.innerWidth * -0.10, // Move up by 8% of viewport width (equivalent to 8vw at 50% scale)
       ease: "none",
       scrollTrigger: {
         trigger: "#hero-travel-area",
         start: "top top",
         end: "bottom bottom",
         scrub: 0.5, // Add a small amount of smoothing
+        markers: false
+      }
+    });
+    
+    // Add color transition animation for the digits - from yellow to teal
+    const digits = heroNumber.querySelectorAll('.digit');
+    gsap.to(digits, {
+      color: "rgba(205, 252, 255, 0.9)", // Teal color with full opacity
+      ease: "none",
+      scrollTrigger: {
+        trigger: "#hero-travel-area",
+        start: "top top",
+        end: "bottom bottom",
+        scrub: true,
         markers: false
       }
     });
@@ -442,5 +456,111 @@ export function initAnimations() {
     ease: "linear",
     duration: 2,
     repeat: -1,
+  });
+
+  // Add page navigation hover and click functionality
+  const pageNav = document.querySelector('.section-timeline .page-nav');
+  const navLinks = pageNav.querySelectorAll('a');
+  const activeTitle = document.querySelector('.section-timeline .indicator .active-title');
+  const indicatorWrapper = document.querySelector('.section-timeline .indicator-wrapper');
+  
+  // Track navigation state
+  let isNavActive = false;
+  let hideActiveTitleTimeout;
+  
+  // Initially hide the page nav - change from y to x translation
+  gsap.set(navLinks, { opacity: 0, x: -20 });
+  
+  // Function to show the navigation
+  const showNavigation = () => {
+    // Clear any pending timeouts
+    if (hideActiveTitleTimeout) {
+      clearTimeout(hideActiveTitleTimeout);
+      hideActiveTitleTimeout = null;
+    }
+    
+    isNavActive = true;
+    
+    // Hide active title
+    gsap.to(activeTitle, {
+      opacity: 0,
+      duration: 0.3,
+      ease: "power2.out"
+    });
+    
+    // Show nav links with stagger - change from y to x translation
+    gsap.to(navLinks, {
+      opacity: 1,
+      x: 0,
+      duration: 0.4,
+      stagger: 0.05,
+      ease: "power2.out"
+    });
+  };
+  
+  // Function to hide the navigation
+  const hideNavigation = () => {
+    isNavActive = false;
+    
+    // Hide nav links with stagger - change from y to x translation
+    gsap.to(navLinks, {
+      opacity: 0,
+      x: -20,
+      duration: 0.3,
+      stagger: 0.03,
+      ease: "power2.in"
+    });
+    
+    // Show active title with a delay
+    hideActiveTitleTimeout = setTimeout(() => {
+      // Only show the active title if the nav is still not active
+      if (!isNavActive) {
+        gsap.to(activeTitle, {
+          opacity: 1,
+          duration: 0.4,
+          ease: "power2.out"
+        });
+      }
+    }, 300); // 300ms delay before showing the active title
+  };
+  
+  // Create hover effect for the timeline navigation
+  indicatorWrapper.addEventListener('mouseenter', showNavigation);
+  
+  // Also allow hovering on the nav itself to keep it visible
+  pageNav.addEventListener('mouseenter', showNavigation);
+  
+  // Hide nav when mouse leaves both elements
+  indicatorWrapper.addEventListener('mouseleave', (e) => {
+    // Check if we're not entering the page nav
+    if (!e.relatedTarget || !pageNav.contains(e.relatedTarget)) {
+      hideNavigation();
+    }
+  });
+  
+  pageNav.addEventListener('mouseleave', (e) => {
+    // Check if we're not entering the indicator wrapper
+    if (!e.relatedTarget || !indicatorWrapper.contains(e.relatedTarget)) {
+      hideNavigation();
+    }
+  });
+  
+  // Add click handler for nav links
+  navLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      
+      // Remove active class from all links
+      navLinks.forEach(l => l.classList.remove('active'));
+      
+      // Add active class to clicked link
+      link.classList.add('active');
+      
+      // Update active title text
+      activeTitle.textContent = link.textContent;
+      
+      // Hide the navigation after clicking
+      hideNavigation();
+    });
   });
 }
