@@ -9,8 +9,10 @@
         width: 100%;
         min-height: 100vh;
         position: relative;
-        z-index: 1;
 
+        &.height-100vh {
+            height: 100vh;
+        }
         &.height-200vh {
             height: 200vh;
         }

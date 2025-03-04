@@ -42,6 +42,7 @@ export function initHeroAnimation() {
   // Split the hero heading text into characters
   const heroHeading = document.querySelector('#hero-area h1');
   const heroNumber = document.querySelector('#hero-number');
+  const videoElement = document.querySelector("#video video");
   
   if (!heroHeading || !heroNumber) return;
   
@@ -138,12 +139,90 @@ export function initHeroAnimation() {
     "-=0.6" // Slight overlap
   );
   
-  // Removed gradient and glow animations for better performance
+  // Initialize the hero animation
+  
+  // Create the hero number animation
+  if (heroNumber) {
+    // Add fade-in animation for the hero number
+    gsap.fromTo(heroNumber, 
+      { opacity: 0, scale: 0.8 },
+      { 
+        opacity: 1, 
+        scale: 1,
+        duration: 1.2,
+        ease: "power2.out",
+        delay: 0.5
+      }
+    );
+    
+    // Add transform animation for the hero number (size and position)
+    // Simplified for better performance - only essential properties
+    gsap.to(heroNumber, {
+      scale: 0.7, // Reduce size to 70% of original
+      y: () => window.innerWidth * -0.10, // Move up by 8% of viewport width (equivalent to 8vw at 50% scale)
+      ease: "none",
+      scrollTrigger: {
+        trigger: "#hero-travel-area",
+        start: "top top",
+        end: "bottom bottom",
+        scrub: 0.5, // Add a small amount of smoothing
+        markers: false
+      }
+    });
+    
+    // Add color transition animation for the digits - from yellow to teal
+    gsap.to(digits, {
+      color: "rgba(205, 252, 255, 0.9)", // Teal color with full opacity
+      ease: "none",
+      scrollTrigger: {
+        trigger: "#hero-travel-area",
+        start: "top top",
+        end: "bottom bottom",
+        scrub: true,
+        markers: false
+      }
+    });
+  }
+  
+  // Animate video scale from small to full size while scrolling
+  if (videoElement) {
+    // Set initial scale
+    gsap.set(videoElement, {
+      scale: 0.4,
+      opacity: 0,
+      transformOrigin: "center center"
+    });
+    
+    // Animate scale and opacity as user scrolls
+    gsap.to(videoElement, {
+      scale: 1.0,
+      opacity: 1,
+      ease: "power1.out",
+      scrollTrigger: {
+        trigger: "#hero-travel-area",
+        start: "top top", // Start at the top of hero-travel-area
+        end: "bottom bottom", // End when bottom of hero-travel-area reaches bottom of viewport
+        scrub: true,
+        markers: false,
+        onUpdate: (self) => {
+          // Add/remove class based on progress
+          if (self.progress > 0.8) {
+            videoElement.classList.add('scale-active');
+          } else {
+            videoElement.classList.remove('scale-active');
+          }
+        }
+      }
+    });
+  }
 }
 
 export function initAnimations() {
   // Initialize the hero animation
   initHeroAnimation();
+  
+  // Initialize video scale animation
+  animateVideoScale();
   
   var fast = 0.18;
   var mediumFast = 0.24;
@@ -563,4 +642,57 @@ export function initAnimations() {
       hideNavigation();
     });
   });
+}
+
+// Animate hero number color
+function animateHeroNumberColor() {
+  const digits = document.querySelector("#hero-number");
+  
+  gsap.to(digits, {
+    color: "rgba(205, 252, 255, 0.9)", // Teal color with full opacity
+    ease: "none",
+    scrollTrigger: {
+      trigger: "#hero-travel-area",
+      start: "top top",
+      end: "bottom bottom",
+      scrub: true,
+      markers: false
+    }
+  });
+}
+
+// Animate video scale from small to full size while scrolling
+function animateVideoScale() {
+  const videoElement = document.querySelector("#video video");
+  
+  if (videoElement) {
+    // Set initial scale
+    gsap.set(videoElement, {
+      scale: 0.4,
+      opacity: 0,
+      transformOrigin: "center center"
+    });
+    
+    // Animate scale and opacity as user scrolls
+    gsap.to(videoElement, {
+      scale: 1.0,
+      opacity: 1,
+      ease: "power1.out",
+      scrollTrigger: {
+        trigger: "#hero-travel-area",
+        start: "top top", // Start at the top of hero-travel-area
+        end: "bottom bottom", // End when bottom of hero-travel-area reaches bottom of viewport
+        scrub: true,
+        markers: false,
+        onUpdate: (self) => {
+          // Add/remove class based on progress
+          if (self.progress > 0.8) {
+            videoElement.classList.add('scale-active');
+          } else {
+            videoElement.classList.remove('scale-active');
+          }
+        }
+      }
+    });
+  }
 }

@@ -5,6 +5,7 @@
 @use './components/background';
 @use './components/header';
 @use './components/countdown';
+@use './components/video';
 @use './components/section-timeline';
 @use './typography';
 
@@ -32,25 +33,6 @@ html {
     align-items: center;
     isolation: isolate;
     overflow-x: hidden;
-
-    #app {
-
-      header {
-        z-index: 5;
-      }
-
-      div.section-timeline {
-        z-index: 3;
-      }
-
-      section {
-        z-index: 2;
-      }
-
-      canvas {
-        z-index: 1;
-      }
-    }
   }
 
 }
@@ -58,8 +40,7 @@ html {
 
 //Hero Area
 #hero-area {
-  position: relative;
-  z-index: 1;
+
   h1, span {
     cursor:default;
   }
@@ -215,10 +196,73 @@ html {
     .cr.boolean {
       position: relative;
       height: 27px;
+      display:flex;
+      align-items:center;
+      > div {
+        width:100%;
+      }
+      // Improve boolean checkbox visibility
+      .property-name {
+        display:flex;
+        align-items:center;
+        white-space:nowrap;
+      }
+      
+      .c {
+        width:16px;
+        height:16px;
+        position:relative;
+      }
+      // Style for the checkbox
+      input[type="checkbox"] {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border: 1px solid #aaa;
+        border-radius: 3px;
+        background-color: #303030;
+        position: absolute;
+        cursor: pointer;
+        margin:0;
+        vertical-align: middle;
+        
+        &:checked {
+          background-color: #25e5ff;
+          border-color: #25e5ff;
+          
+          &:after {
+            content: '✓';
+            position: absolute;
+            color: #000;
+            font-size: 12px;
+            font-weight: bold;
+            top: 0px;
+            left: 3px;
+            height:16px;
+            line-height:1.4;
+          }
+        }
+        
+        &:focus {
+          outline: none;
+          box-shadow: 0 0 0 2px rgba(37, 229, 255, 0.5);
+        }
+      }
     }
 
     .cr.function {
       height: 27px;
+    }
+    
+    // Improve hover states for all controls
+    .cr:hover {
+      //background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    // Active control highlighting
+    .cr.active {
+      //background-color: rgba(37, 229, 255, 0.2);
     }
   }
 }

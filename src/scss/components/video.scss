@@ -1,0 +1,19 @@
+video {
+    border-radius:16px;
+    background:#222;
+    aspect-ratio: 16/9;
+    max-height:calc(100vh - 80px);
+    width:calc(86vw - 32px);
+    max-width:1600px;
+    height:auto;
+    object-fit: cover;
+    object-position: center;
+    //box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    transform-origin: center center;
+    will-change: transform, opacity;
+    transition: box-shadow 0.3s ease;
+    opacity:0;
+    &.scale-active {
+        box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
+    }
+}

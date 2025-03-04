@@ -22,6 +22,9 @@ export function initShaderBackground() {
   // Create scene and an orthographic camera
   const scene = new THREE.Scene();
 
+  // Create a separate scene for particles to ensure they render on top
+  const particleScene = new THREE.Scene();
+
   // Camera parameters with zoom control
   const cameraParams = {
     zoom: 2.471,
@@ -45,10 +48,10 @@ export function initShaderBackground() {
     time: { value: 0.0 },
     resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
     // Animation speed parameters
-    mainSpeed: { value: 0.03 }, // Overall animation speed multiplier
-    waveSpeed: { value: 8.0 }, // Controls how fast the waves animate
-    noiseSpeed: { value: 1.8 }, // Speed of the noise animation
-    colorCycleSpeed: { value: 8.0 }, // Speed of color cycling/transitions
+    mainSpeed: { value: 0.012 }, // Overall animation speed multiplier
+    waveSpeed: { value: 2.0 }, // Controls how fast the waves animate
+    noiseSpeed: { value: 0.45 }, // Speed of the noise animation
+    colorCycleSpeed: { value: 2.0 }, // Speed of color cycling/transitions
     //Color parameters
     color1: { value: new THREE.Color(0x32c2d6) },
     color2: { value: new THREE.Color(0x004199) },
@@ -741,21 +744,21 @@ export function initShaderBackground() {
     });
 
   speedFolder
-    .add(uniforms.waveSpeed, "value", 0, 25)
+    .add(uniforms.waveSpeed, "value", 0, 5)
     .name("Wave Speed")
     .onChange((value) => {
       uniforms.waveSpeed.value = value;
     });
 
   speedFolder
-    .add(uniforms.noiseSpeed, "value", 0, 25)
+    .add(uniforms.noiseSpeed, "value", 0, 5)
     .name("Noise Speed")
     .onChange((value) => {
       uniforms.noiseSpeed.value = value;
     });
 
   speedFolder
-    .add(uniforms.colorCycleSpeed, "value", 0, 25)
+    .add(uniforms.colorCycleSpeed, "value", 0, 5)
     .name("Color Cycle Speed")
     .onChange((value) => {
       uniforms.colorCycleSpeed.value = value;
@@ -898,12 +901,6 @@ export function initShaderBackground() {
     .onChange((value) => {
       uniforms.flowDirection.value.y = value;
     });
-
-  // Open the flow folder by default to make it more visible
-  flowFolder.open();
-
-  // Open the wave folder by default
-  waveFolder.open();
 
   // Create a folder for appearance controls
   const appearanceFolder = gui.addFolder("Appearance Controls");
@@ -1084,9 +1081,6 @@ export function initShaderBackground() {
       uniforms.bottomWaveOffset.value = value;
     });
 
-  // Open the bottom wave folder by default
-  bottomWaveFolder.open();
-
   // Create a folder for lighting controls
   const lightingFolder = gui.addFolder("Lighting Controls");
 
@@ -1147,13 +1141,563 @@ export function initShaderBackground() {
   // Lighting folder starts closed
   // lightingFolder.open();
 
-  // Animation loop
+  // Create particle system
+  let particleCount = 1000; // Make this mutable
+  let particles = new Float32Array(particleCount * 3);
+  let particleVelocities = new Float32Array(particleCount * 3);
+  let particleColors = new Float32Array(particleCount * 3);
+  
+  // Track scroll position
+  let scrollY = 0;
+  let lastScrollY = 0;
+  
+  // Set a larger vertical distribution area (3x the viewport height)
+  let verticalDistribution = window.innerHeight * 3;
+  
+  // Define scroll control object before it's used in animateParticles
+  const scrollObj = { 
+    scrollSpeed: 0.005,
+    verticalSpread: 3.0,
+    damping: 0.95,
+    depthRange: 1000,  // Default depth range
+    sizeMin: 1,        // Minimum particle size
+    sizeMax: 5,       // Maximum particle size
+    floatSpeed: 1.0,   // Floating speed multiplier
+    verticalOffset: 0  // Vertical offset for the entire particle system
+  };
+
+  // Function to redistribute particles with size variation
+  function redistributeParticles() {
+    // Create a size attribute for individual particle sizes
+    const sizes = new Float32Array(particleCount);
+    
+    for (let i = 0; i < particleCount; i++) {
+      const i3 = i * 3;
+      
+      // Randomly assign a size between min and max
+      const sizeRatio = Math.random();
+      // Calculate the actual size value between min and max
+      const particleSize = scrollObj.sizeMin + (sizeRatio * (scrollObj.sizeMax - scrollObj.sizeMin));
+      
+      // Store the size value directly - we'll divide by baseSize in the shader
+      sizes[i] = particleSize / customParticleMaterial.uniforms.baseSize.value;
+      
+      // Adjust particle color slightly based on size to enhance depth perception
+      const depthColor = new THREE.Color(particleColorObj.color);
+      // Larger particles are brighter (appear closer) - increased brightness factor
+      const brightnessAdjust = 0.8 + (sizeRatio * 0.6); // Increased from 0.6 + 0.4 to 0.8 + 0.6
+      particleColors[i3] = depthColor.r * brightnessAdjust;
+      particleColors[i3 + 1] = depthColor.g * brightnessAdjust;
+      particleColors[i3 + 2] = depthColor.b * brightnessAdjust;
+    }
+    
+    // Add the size attribute to the geometry
+    particleGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+    
+    particleGeometry.attributes.position.needsUpdate = true;
+    particleGeometry.attributes.color.needsUpdate = true;
+    particleGeometry.attributes.size.needsUpdate = true;
+  }
+
+  // Initialize particles with random positions and velocities
+  for (let i = 0; i < particleCount; i++) {
+    const i3 = i * 3;
+    // Random positions within viewport width but extended vertical range
+    particles[i3] = (Math.random() - 0.5) * window.innerWidth;
+    particles[i3 + 1] = (Math.random() - 0.5) * verticalDistribution + scrollObj.verticalOffset;
+    particles[i3 + 2] = (Math.random() * 500) - 250; // Random z position for rendering order
+    
+    // Random velocities
+    particleVelocities[i3] = (Math.random() - 0.5) * 0.5;
+    particleVelocities[i3 + 1] = (Math.random() - 0.5) * 0.5;
+    particleVelocities[i3 + 2] = (Math.random() - 0.5) * 0.2;
+    
+    // Set default color to #25e5ff (bright cyan)
+    const color = new THREE.Color("#25e5ff");
+    particleColors[i3] = color.r;
+    particleColors[i3 + 1] = color.g;
+    particleColors[i3 + 2] = color.b;
+  }
+  
+  // Create particle geometry and material
+  const particleGeometry = new THREE.BufferGeometry();
+  particleGeometry.setAttribute('position', new THREE.BufferAttribute(particles, 3));
+  particleGeometry.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
+  
+  // Create a sparkle texture for particles
+  const sparkleTexture = createSparkleTexture();
+  
+  // Function to create a sparkle texture
+  function createSparkleTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256; // Increased from 128 to 256 for more detail
+    canvas.height = 256;
+    const context = canvas.getContext('2d');
+    
+    // Create a radial gradient for the base glow
+    const gradient = context.createRadialGradient(
+      canvas.width / 2, canvas.height / 2, 0,
+      canvas.width / 2, canvas.height / 2, canvas.width / 2
+    );
+    
+    // Create a multi-layered glow effect with a bright core and soft outer halo
+    gradient.addColorStop(0, 'rgba(255, 255, 255, 1.0)'); // Bright center
+    gradient.addColorStop(0.05, 'rgba(255, 255, 255, 1.0)'); // Maintain brightness for core
+    gradient.addColorStop(0.2, 'rgba(255, 255, 255, 0.9)'); // Start of first halo
+    gradient.addColorStop(0.4, 'rgba(255, 255, 255, 0.5)'); // Middle of first halo
+    gradient.addColorStop(0.6, 'rgba(255, 255, 255, 0.3)'); // Outer edge of first halo
+    gradient.addColorStop(0.8, 'rgba(255, 255, 255, 0.1)'); // Start of outer halo
+    gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');     // Fade to transparent
+    
+    // Fill with gradient
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Add star-like cross shape for the core
+    context.beginPath();
+    context.moveTo(canvas.width / 2, canvas.width * 0.3); // Shorter lines (70% of previous length)
+    context.lineTo(canvas.width / 2, canvas.width * 0.7);
+    context.moveTo(canvas.width * 0.3, canvas.height / 2);
+    context.lineTo(canvas.width * 0.7, canvas.height / 2);
+    
+    // Add diagonal lines for more star-like appearance
+    context.moveTo(canvas.width * 0.35, canvas.height * 0.35); // Shorter diagonals
+    context.lineTo(canvas.width * 0.65, canvas.height * 0.65);
+    context.moveTo(canvas.width * 0.65, canvas.height * 0.35);
+    context.lineTo(canvas.width * 0.35, canvas.height * 0.65);
+    
+    // Set line style - make lines brighter and thicker
+    context.strokeStyle = 'rgba(255, 255, 255, 1.0)';
+    context.lineWidth = 4;
+    context.stroke();
+    
+    // Add a second, larger glow layer
+    const outerGlow = context.createRadialGradient(
+      canvas.width / 2, canvas.height / 2, canvas.width * 0.2, // Start outside the core
+      canvas.width / 2, canvas.height / 2, canvas.width * 0.7  // Extend further than the main gradient
+    );
+    
+    outerGlow.addColorStop(0, 'rgba(255, 255, 255, 0.3)'); // Subtle start
+    outerGlow.addColorStop(0.5, 'rgba(255, 255, 255, 0.1)'); // Very faint middle
+    outerGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');     // Fade to transparent
+    
+    // Apply the outer glow with additive blending
+    context.globalCompositeOperation = 'lighter';
+    context.fillStyle = outerGlow;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Create texture from canvas
+    const texture = new THREE.Texture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+  }
+  
+  // Convert to ShaderMaterial to support custom size attribute
+  const customParticleMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      baseSize: { value: 6.0 },
+      opacity: { value: 0.8 },
+      map: { value: sparkleTexture },
+      brightness: { value: 1.4 },
+      haloStrength: { value: 1.4 }, // Control halo intensity
+      haloSize: { value: 1.3 }      // Control halo size relative to particle
+    },
+    vertexShader: `
+      attribute vec3 color;
+      attribute float size;
+      uniform float baseSize;
+      uniform float haloSize;
+      
+      varying vec3 vColor;
+      varying float vSize;
+      
+      void main() {
+        vColor = color;
+        vSize = size;
+        
+        // Calculate position in clip space
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        gl_Position = projectionMatrix * mvPosition;
+        
+        // Apply individual size attribute without attenuation
+        // Multiply by haloSize to make room for the glow effect
+        gl_PointSize = size * baseSize * haloSize;
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D map;
+      uniform float opacity;
+      uniform float brightness;
+      uniform float haloStrength;
+      
+      varying vec3 vColor;
+      varying float vSize;
+      
+      void main() {
+        // Calculate distance from center of point (in 0-1 range)
+        vec2 centeredUV = gl_PointCoord - 0.5;
+        float dist = length(centeredUV) * 2.0; // 0 at center, 1 at edge
+        
+        // Sample the texture
+        vec4 texColor = texture2D(map, gl_PointCoord);
+        
+        // Apply color, opacity and brightness
+        vec3 brightColor = vColor * brightness;
+        
+        // Create a halo effect by boosting brightness near the center
+        // and adding a subtle color shift toward white for the halo
+        float haloFactor = max(0.0, 1.0 - dist);
+        haloFactor = pow(haloFactor, 1.5); // Adjust power for halo shape
+        
+        // Boost the core brightness
+        float coreBrightness = 1.0 + haloFactor * haloStrength;
+        
+        // Blend toward white for the halo (subtle color shift)
+        vec3 haloColor = mix(brightColor, vec3(1.0, 1.0, 1.0), haloFactor * 0.3);
+        
+        // Apply the halo effect
+        vec3 finalColor = haloColor * coreBrightness;
+        
+        // Apply color and opacity with enhanced brightness and halo
+        gl_FragColor = vec4(finalColor, texColor.a * opacity);
+        
+        // Discard transparent pixels
+        if (gl_FragColor.a < 0.05) discard;
+      }
+    `,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    depthTest: false
+  });
+  
+  const particleSystem = new THREE.Points(particleGeometry, customParticleMaterial);
+  // Add to particle scene instead of main scene
+  particleScene.add(particleSystem);
+
+  // Add particle controls to GUI
+  const particleFolder = gui.addFolder('Particle System');
+  
+  // Particle count control
+  const particleCountObj = { count: particleCount };
+  particleFolder.add(particleCountObj, 'count', 100, 1000, 10)
+    .name('Particle Count')
+    .onChange((value) => {
+      // Update the particle count
+      particleCount = Math.floor(value);
+      
+      // Create new arrays with the new size
+      const newParticles = new Float32Array(particleCount * 3);
+      const newVelocities = new Float32Array(particleCount * 3);
+      const newColors = new Float32Array(particleCount * 3);
+      
+      // Initialize all particles
+      for (let i = 0; i < particleCount; i++) {
+        const i3 = i * 3;
+        
+        // Copy existing data if available
+        if (i < particles.length / 3) {
+          newParticles[i3] = particles[i3];
+          newParticles[i3 + 1] = particles[i3 + 1];
+          newParticles[i3 + 2] = particles[i3 + 2];
+          
+          newVelocities[i3] = particleVelocities[i3];
+          newVelocities[i3 + 1] = particleVelocities[i3 + 1];
+          newVelocities[i3 + 2] = particleVelocities[i3 + 2];
+          
+          newColors[i3] = particleColors[i3];
+          newColors[i3 + 1] = particleColors[i3 + 1];
+          newColors[i3 + 2] = particleColors[i3 + 2];
+        } else {
+          // Create new particles with extended vertical range
+          newParticles[i3] = (Math.random() - 0.5) * window.innerWidth;
+          newParticles[i3 + 1] = (Math.random() - 0.5) * verticalDistribution + scrollObj.verticalOffset;
+          newParticles[i3 + 2] = (Math.random() * 500) - 250; // Random z position
+          
+          newVelocities[i3] = (Math.random() - 0.5) * 0.5;
+          newVelocities[i3 + 1] = (Math.random() - 0.5) * 0.5;
+          newVelocities[i3 + 2] = (Math.random() - 0.5) * 0.2;
+          
+          // Use the current color from the color picker
+          const color = new THREE.Color(particleColorObj.color);
+          newColors[i3] = color.r;
+          newColors[i3 + 1] = color.g;
+          newColors[i3 + 2] = color.b;
+        }
+      }
+      
+      // Replace the old arrays with the new ones
+      particles = newParticles;
+      particleVelocities = newVelocities;
+      particleColors = newColors;
+      
+      // Update the geometry attributes
+      particleGeometry.setAttribute('position', new THREE.BufferAttribute(particles, 3));
+      particleGeometry.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
+      
+      // Force update the geometry
+      particleGeometry.attributes.position.needsUpdate = true;
+      particleGeometry.attributes.color.needsUpdate = true;
+      
+      // Redistribute particle sizes
+      redistributeParticles();
+    });
+
+  // Particle color control
+  const particleColorObj = {
+    color: '#25e5ff'  // Default to bright cyan
+  };
+  particleFolder.addColor(particleColorObj, 'color')
+    .name('Particle Color')
+    .onChange((value) => {
+      const color = new THREE.Color(value);
+      for (let i = 0; i < particleCount; i++) {
+        const i3 = i * 3;
+        particleColors[i3] = color.r;
+        particleColors[i3 + 1] = color.g;
+        particleColors[i3 + 2] = color.b;
+      }
+      particleGeometry.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
+      particleGeometry.attributes.color.needsUpdate = true;
+    });
+
+  // Add particle size and glow controls
+  particleFolder.add(customParticleMaterial.uniforms.baseSize, 'value', 2, 15, 0.5)
+    .name('Base Particle Size')
+    .onChange((value) => {
+      // Update all individual particle sizes when base size changes
+      redistributeParticles();
+    });
+  particleFolder.add(customParticleMaterial.uniforms.opacity, 'value', 0, 1, 0.1).name('Opacity');
+  
+  // Add brightness control
+  particleFolder.add(customParticleMaterial.uniforms.brightness, 'value', 1.0, 3.0, 0.1)
+    .name('Brightness')
+    .onChange((value) => {
+      // No need to redistribute particles, just update the uniform
+      customParticleMaterial.uniforms.brightness.value = value;
+    });
+  
+  // Add sparkle intensity control
+  const sparkleObj = { intensity: 1.5 };
+  particleFolder.add(sparkleObj, 'intensity', 0.1, 3.0, 0.1)
+    .name('Sparkle Intensity')
+    .onChange((value) => {
+      customParticleMaterial.uniforms.opacity.value = value; // Direct mapping to opacity
+    });
+  
+  // Size Attenuation control with proper explanation
+  const sizeAttenuationObj = { 
+    enabled: false // Start with size attenuation disabled
+  };
+  
+  // Add a more descriptive tooltip to explain what Size Attenuation does
+  const sizeAttenuationController = particleFolder.add(sizeAttenuationObj, 'enabled')
+    .name('Size Attenuation')
+    .onChange((value) => {
+      // Update the shader to include size attenuation if enabled
+      if (value) {
+        customParticleMaterial.vertexShader = `
+          attribute vec3 color;
+          attribute float size;
+          uniform float baseSize;
+          
+          varying vec3 vColor;
+          
+          void main() {
+            vColor = color;
+            
+            // Calculate position in clip space
+            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+            gl_Position = projectionMatrix * mvPosition;
+            
+            // Apply size attenuation based on distance
+            float distance = length(mvPosition.xyz);
+            gl_PointSize = size * baseSize * (300.0 / distance);
+          }
+        `;
+      } else {
+        customParticleMaterial.vertexShader = `
+          attribute vec3 color;
+          attribute float size;
+          uniform float baseSize;
+          
+          varying vec3 vColor;
+          
+          void main() {
+            vColor = color;
+            
+            // Calculate position in clip space
+            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+            gl_Position = projectionMatrix * mvPosition;
+            
+            // Apply individual size attribute without attenuation
+            gl_PointSize = size * baseSize;
+          }
+        `;
+      }
+      
+      // Need to set this flag to tell THREE.js to recompile the shader
+      customParticleMaterial.needsUpdate = true;
+      
+      // Redistribute particles with appropriate depth when toggling size attenuation
+      redistributeParticles();
+    });
+  
+  // Add a tooltip element to the controller
+  const tooltip = document.createElement('div');
+  tooltip.className = 'gui-tooltip';
+  tooltip.textContent = 'When enabled, particles appear smaller as they move further away';
+  tooltip.style.position = 'absolute';
+  tooltip.style.backgroundColor = 'rgba(0,0,0,0.8)';
+  tooltip.style.color = '#fff';
+  tooltip.style.padding = '5px';
+  tooltip.style.borderRadius = '3px';
+  tooltip.style.fontSize = '11px';
+  tooltip.style.zIndex = '10000';
+  tooltip.style.display = 'none';
+  document.body.appendChild(tooltip);
+  
+  // Show tooltip on hover
+  const controllerElement = sizeAttenuationController.domElement;
+  controllerElement.addEventListener('mouseenter', (e) => {
+    const rect = controllerElement.getBoundingClientRect();
+    tooltip.style.left = rect.right + 'px';
+    tooltip.style.top = rect.top + 'px';
+    tooltip.style.display = 'block';
+  });
+  
+  controllerElement.addEventListener('mouseleave', () => {
+    tooltip.style.display = 'none';
+  });
+  
+  // Add twinkle effect to particles
+  let twinkleTime = 0;
+  
+  // Add scroll event listener
+  window.addEventListener('scroll', () => {
+    scrollY = window.scrollY;
+  });
+
+  // Function to update particle positions with the new vertical offset
+  function applyVerticalOffset() {
+    const positions = particleGeometry.attributes.position.array;
+    const oldOffset = scrollObj.previousOffset || 0;
+    const offsetDelta = scrollObj.verticalOffset - oldOffset;
+    
+    // Store the current offset for future reference
+    scrollObj.previousOffset = scrollObj.verticalOffset;
+    
+    for (let i = 0; i < particleCount; i++) {
+      const i3 = i * 3;
+      
+      // Simply apply the delta offset to all particles
+      positions[i3 + 1] += offsetDelta;
+      
+      // Check if particles are now outside the distribution range and wrap if needed
+      const relativePos = positions[i3 + 1] - scrollObj.verticalOffset;
+      const halfDist = verticalDistribution / 2;
+      
+      if (relativePos > halfDist) {
+        positions[i3 + 1] = -halfDist + scrollObj.verticalOffset;
+      } else if (relativePos < -halfDist) {
+        positions[i3 + 1] = halfDist + scrollObj.verticalOffset;
+      }
+    }
+    
+    particleGeometry.attributes.position.needsUpdate = true;
+  }
+
+  // Separate animation loop for particles
+  function animateParticles() {
+    const positions = particleGeometry.attributes.position.array;
+    const colors = particleGeometry.attributes.color.array;
+    const sizes = particleGeometry.attributes.size ? particleGeometry.attributes.size.array : null;
+    
+    // Update twinkle time
+    twinkleTime += 0.01;
+    
+    // Calculate scroll delta for smooth movement with easing
+    const scrollDelta = (scrollY - lastScrollY) * scrollObj.scrollSpeed;
+    
+    // Apply easing to the scroll movement with stronger damping
+    // This makes particles slow down and stop more quickly
+    lastScrollY = scrollY * (1 - scrollObj.damping) + lastScrollY * scrollObj.damping;
+    
+    for (let i = 0; i < particleCount; i++) {
+      const i3 = i * 3;
+      
+      // Get the size ratio for this particle (if sizes exist)
+      const sizeRatio = sizes ? (sizes[i] - scrollObj.sizeMin) / (scrollObj.sizeMax - scrollObj.sizeMin) : 0.5;
+      
+      // Adjust float speed based on size - smaller particles move more slowly
+      const particleFloatSpeed = scrollObj.floatSpeed * (0.5 + sizeRatio * 0.5);
+      
+      // Update positions with float speed applied
+      positions[i3] += particleVelocities[i3] * particleFloatSpeed;
+      positions[i3 + 1] += particleVelocities[i3 + 1] * particleFloatSpeed;
+      positions[i3 + 2] += particleVelocities[i3 + 2] * particleFloatSpeed;
+      
+      // Move particles up based on scroll with size-based parallax effect
+      // Larger particles (appearing closer) move faster
+      positions[i3 + 1] += scrollDelta * (0.5 + sizeRatio * 0.5);
+      
+      // Bounce off horizontal boundaries
+      if (Math.abs(positions[i3]) > window.innerWidth / 2) {
+        particleVelocities[i3] *= -1;
+      }
+      
+      // Wrap around vertical boundaries instead of bouncing
+      // This creates an infinite scrolling effect
+      // Account for vertical offset in the boundary check
+      const relativePos = positions[i3 + 1] - scrollObj.verticalOffset;
+      const halfDist = verticalDistribution / 2;
+      
+      if (relativePos > halfDist) {
+        positions[i3 + 1] = -halfDist + scrollObj.verticalOffset;
+      } else if (relativePos < -halfDist) {
+        positions[i3 + 1] = halfDist + scrollObj.verticalOffset;
+      }
+      
+      // Bounce off z boundaries
+      if (Math.abs(positions[i3 + 2]) > 250) {
+        particleVelocities[i3 + 2] *= -1;
+      }
+      
+      // Add twinkle effect - subtle brightness variation over time
+      const baseColor = new THREE.Color(particleColorObj.color);
+      const twinkleFactor = 0.2 * Math.sin(twinkleTime + i * 0.1) + 0.9; // Increased from 0.15/0.85 to 0.2/0.9
+      
+      // Apply size-based brightness - larger particles are brighter
+      const sizeBrightness = 0.8 + (sizeRatio * 0.6); // Increased from 0.6/0.4 to 0.8/0.6
+      
+      colors[i3] = baseColor.r * twinkleFactor * sizeBrightness;
+      colors[i3 + 1] = baseColor.g * twinkleFactor * sizeBrightness;
+      colors[i3 + 2] = baseColor.b * twinkleFactor * sizeBrightness;
+    }
+    
+    particleGeometry.attributes.position.needsUpdate = true;
+    particleGeometry.attributes.color.needsUpdate = true;
+    requestAnimationFrame(animateParticles);
+  }
+
+  // Start particle animation
+  animateParticles();
+
+  // Main shader animation loop
   function animate() {
     requestAnimationFrame(animate);
-    // Apply main speed multiplier to the time increment
-    uniforms.time.value += 0.01 * uniforms.mainSpeed.value;
+    
+    // Update shader uniforms with slower speed
+    uniforms.time.value += 0.001; // Reduced from 0.01 to 0.001
+    
+    // Render both scenes - background first, then particles on top
     renderer.render(scene, camera);
+    renderer.autoClear = false; // Don't clear the renderer after first render
+    renderer.render(particleScene, camera);
+    renderer.autoClear = true; // Reset to default
   }
+
   animate();
 
   // Handle window resize
@@ -1179,6 +1723,18 @@ export function initShaderBackground() {
       window.innerWidth / 10,
       window.innerHeight / 10
     );
+    
+    // Update vertical distribution based on new window height
+    verticalDistribution = window.innerHeight * scrollObj.verticalSpread;
+    
+    // Update the vertical offset range in the GUI
+    for (let i = 0; i < particleFolder.__controllers.length; i++) {
+      if (particleFolder.__controllers[i].property === 'verticalOffset') {
+        particleFolder.__controllers[i].min(-window.innerHeight * 3);
+        particleFolder.__controllers[i].max(window.innerHeight * 2);
+        break;
+      }
+    }
   });
 
   // Add keyboard controls for zoom
@@ -1210,4 +1766,131 @@ export function initShaderBackground() {
       }
     }
   });
+
+  // Add a scroll speed control to GUI
+  particleFolder.add(scrollObj, 'scrollSpeed', 0.001, 0.05, 0.018)
+    .name('Scroll Sensitivity')
+    .step(0.001)
+    .onChange((value) => {
+      // This value will be used in the animation loop
+      scrollObj.scrollSpeed = value;
+    });
+    
+  // Add damping control to GUI
+  particleFolder.add(scrollObj, 'damping', 0.8, 0.99, 0.01)
+    .name('Scroll Damping')
+    .onChange((value) => {
+      scrollObj.damping = value;
+    });
+    
+  particleFolder.add(scrollObj, 'verticalSpread', 1.0, 5.0, 0.5)
+    .name('Vertical Spread')
+    .onChange((value) => {
+      // Store the old distribution value
+      const oldDistribution = verticalDistribution;
+      
+      // Update vertical distribution
+      verticalDistribution = window.innerHeight * value;
+      
+      // Calculate the scale factor for adjusting positions
+      const scaleFactor = verticalDistribution / oldDistribution;
+      
+      // Redistribute particles vertically while maintaining relative positions
+      const positions = particleGeometry.attributes.position.array;
+      
+      for (let i = 0; i < particleCount; i++) {
+        const i3 = i * 3;
+        
+        // Get the relative position from the center of distribution
+        const relativePos = positions[i3 + 1] - scrollObj.verticalOffset;
+        
+        // Scale the relative position by the new distribution size
+        const newRelativePos = relativePos * scaleFactor;
+        
+        // Apply the new position with offset
+        positions[i3 + 1] = newRelativePos + scrollObj.verticalOffset;
+        
+        // Check if the particle is outside the new bounds and reset if needed
+        if (Math.abs(newRelativePos) > verticalDistribution / 2) {
+          positions[i3 + 1] = ((Math.random() - 0.5) * verticalDistribution) + scrollObj.verticalOffset;
+        }
+      }
+      
+      particleGeometry.attributes.position.needsUpdate = true;
+    });
+    
+  // Add vertical offset control with extended range
+  particleFolder.add(scrollObj, 'verticalOffset', -window.innerHeight * 3, window.innerHeight * 2, 10)
+    .name('Vertical Position')
+    .onChange((value) => {
+      // Store the previous value before updating
+      if (scrollObj.previousOffset === undefined) {
+        scrollObj.previousOffset = 0;
+      }
+      
+      scrollObj.verticalOffset = value;
+      applyVerticalOffset();
+    });
+    
+  // Add size range controls
+  particleFolder.add(scrollObj, 'sizeMin', 1, 5, 0.01)
+    .name('Min Particle Size')
+    .onChange((value) => {
+      scrollObj.sizeMin = value;
+      // Make sure min is always less than max
+      if (scrollObj.sizeMin >= scrollObj.sizeMax) {
+        scrollObj.sizeMax = scrollObj.sizeMin + 1;
+        // Update the max controller display
+        for (let i = 0; i < particleFolder.__controllers.length; i++) {
+          if (particleFolder.__controllers[i].property === 'sizeMax') {
+            particleFolder.__controllers[i].updateDisplay();
+            break;
+          }
+        }
+      }
+      // Redistribute particles with new size range
+      redistributeParticles();
+    });
+    
+  particleFolder.add(scrollObj, 'sizeMax', 5, 10, 0.01)
+    .name('Max Particle Size')
+    .onChange((value) => {
+      scrollObj.sizeMax = value;
+      // Make sure max is always greater than min
+      if (scrollObj.sizeMax <= scrollObj.sizeMin) {
+        scrollObj.sizeMin = scrollObj.sizeMax - 1;
+        // Update the min controller display
+        for (let i = 0; i < particleFolder.__controllers.length; i++) {
+          if (particleFolder.__controllers[i].property === 'sizeMin') {
+            particleFolder.__controllers[i].updateDisplay();
+            break;
+          }
+        }
+      }
+      // Redistribute particles with new size range
+      redistributeParticles();
+    });
+    
+  // Add float speed control
+  particleFolder.add(scrollObj, 'floatSpeed', 0.1, 3.0, 0.1)
+    .name('Float Speed')
+    .onChange((value) => {
+      scrollObj.floatSpeed = value;
+    });
+    
+  // Initialize particle sizes
+  redistributeParticles();
+
+  // Add halo controls
+  particleFolder.add(customParticleMaterial.uniforms.haloStrength, 'value', 0.0, 2.0, 0.1)
+    .name('Halo Intensity')
+    .onChange((value) => {
+      customParticleMaterial.uniforms.haloStrength.value = value;
+    });
+    
+  particleFolder.add(customParticleMaterial.uniforms.haloSize, 'value', 1.0, 2.0, 0.1)
+    .name('Halo Size')
+    .onChange((value) => {
+      customParticleMaterial.uniforms.haloSize.value = value;
+    });
 }
