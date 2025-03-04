@@ -97,6 +97,12 @@ export function initHeroAnimation() {
   // Create a timeline for the animation
   const tl = gsap.timeline({ delay: 0.5 });
   
+  // Dispatch event to start particle fade-in at the very beginning of the animation
+  const veryEarlyFadeEvent = new CustomEvent('veryEarlyParticleFade');
+  setTimeout(() => {
+    document.dispatchEvent(veryEarlyFadeEvent);
+  }, 840);
+  
   // Randomize the characters for reveal
   const shuffledChars = [...splitText.chars];
   for (let i = shuffledChars.length - 1; i > 0; i--) {
@@ -586,32 +592,43 @@ export function initAnimations() {
   const navLinks = pageNav.querySelectorAll('a');
   const activeTitle = document.querySelector('.section-timeline .indicator .active-title');
   const indicatorWrapper = document.querySelector('.section-timeline .indicator-wrapper');
+  const timelineNavWrapper = document.querySelector('.timeline-nav-wrapper');
   
   // Track navigation state
   let isNavActive = false;
   let hideActiveTitleTimeout;
+  let showActiveTitleTimeout;
   
-  // Initially hide the page nav - change from y to x translation
+  // Initially hide the page nav and ensure active title is visible
   gsap.set(navLinks, { opacity: 0, x: -20 });
+  gsap.set(activeTitle, { opacity: 1 });
   
-  // Function to show the navigation
-  const showNavigation = () => {
+  // Cancel all pending animations and timeouts
+  const cancelAllPendingAnimations = () => {
     // Clear any pending timeouts
     if (hideActiveTitleTimeout) {
       clearTimeout(hideActiveTitleTimeout);
       hideActiveTitleTimeout = null;
     }
+    if (showActiveTitleTimeout) {
+      clearTimeout(showActiveTitleTimeout);
+      showActiveTitleTimeout = null;
+    }
     
+    // Kill any ongoing GSAP animations for these elements
+    gsap.killTweensOf(activeTitle);
+    gsap.killTweensOf(navLinks);
+  };
+  
+  // Function to show the navigation
+  const showNavigation = () => {
+    cancelAllPendingAnimations();
     isNavActive = true;
     
-    // Hide active title
-    gsap.to(activeTitle, {
-      opacity: 0,
-      duration: 0.3,
-      ease: "power2.out"
-    });
+    // Immediately hide active title
+    gsap.set(activeTitle, { opacity: 0 });
     
-    // Show nav links with stagger - change from y to x translation
+    // Then animate the nav links
     gsap.to(navLinks, {
       opacity: 1,
       x: 0,
@@ -623,55 +640,98 @@ export function initAnimations() {
   
   // Function to hide the navigation
   const hideNavigation = () => {
+    cancelAllPendingAnimations();
     isNavActive = false;
     
-    // Hide nav links with stagger - change from y to x translation
+    // Hide nav links with stagger
     gsap.to(navLinks, {
       opacity: 0,
       x: -20,
       duration: 0.3,
       stagger: 0.03,
-      ease: "power2.in"
-    });
-    
-    // Show active title with a delay
-    hideActiveTitleTimeout = setTimeout(() => {
-      // Only show the active title if the nav is still not active
-      if (!isNavActive) {
-        gsap.to(activeTitle, {
-          opacity: 1,
-          duration: 0.4,
-          ease: "power2.out"
-        });
+      ease: "power2.in",
+      onComplete: () => {
+        // Only show the active title if the nav is still not active
+        if (!isNavActive) {
+          gsap.to(activeTitle, {
+            opacity: 1,
+            duration: 0.4,
+            ease: "power2.out"
+          });
+        }
       }
-    }, 300); // 300ms delay before showing the active title
+    });
   };
   
-  // Create hover effect for the timeline navigation
-  indicatorWrapper.addEventListener('mouseenter', showNavigation);
-  
-  // Also allow hovering on the nav itself to keep it visible
-  pageNav.addEventListener('mouseenter', showNavigation);
-  
-  // Hide nav when mouse leaves both elements
-  indicatorWrapper.addEventListener('mouseleave', (e) => {
-    // Check if we're not entering the page nav
-    if (!e.relatedTarget || !pageNav.contains(e.relatedTarget)) {
-      hideNavigation();
+  // Remove old event listeners if they exist
+  if (indicatorWrapper) {
+    indicatorWrapper.removeEventListener('mouseenter', showNavigation);
+    const oldLeaveHandlers = indicatorWrapper.onmouseleave;
+    if (oldLeaveHandlers) {
+      indicatorWrapper.removeEventListener('mouseleave', oldLeaveHandlers);
     }
-  });
+  }
   
-  pageNav.addEventListener('mouseleave', (e) => {
-    // Check if we're not entering the indicator wrapper
-    if (!e.relatedTarget || !indicatorWrapper.contains(e.relatedTarget)) {
-      hideNavigation();
+  if (pageNav) {
+    pageNav.removeEventListener('mouseenter', showNavigation);
+    const oldLeaveHandlers = pageNav.onmouseleave;
+    if (oldLeaveHandlers) {
+      pageNav.removeEventListener('mouseleave', oldLeaveHandlers);
     }
-  });
+  }
+  
+  if (timelineNavWrapper) {
+    timelineNavWrapper.removeEventListener('mouseenter', showNavigation);
+    const oldLeaveHandlers = timelineNavWrapper.onmouseleave;
+    if (oldLeaveHandlers) {
+      timelineNavWrapper.removeEventListener('mouseleave', oldLeaveHandlers);
+    }
+  }
+  
+  // Create hover effect for the timeline navigation using the new wrapper
+  if (timelineNavWrapper) {
+    // Use mouseenter/mouseleave for more reliable hover detection
+    timelineNavWrapper.addEventListener('mouseenter', () => {
+      showNavigation();
+    });
+    
+    timelineNavWrapper.addEventListener('mouseleave', () => {
+      hideNavigation();
+    });
+  } else {
+    // Fallback to old behavior if new wrapper doesn't exist
+    indicatorWrapper.addEventListener('mouseenter', showNavigation);
+    pageNav.addEventListener('mouseenter', showNavigation);
+    
+    // Hide nav when mouse leaves both elements
+    indicatorWrapper.addEventListener('mouseleave', (e) => {
+      // Check if we're not entering the page nav
+      if (!e.relatedTarget || !pageNav.contains(e.relatedTarget)) {
+        hideNavigation();
+      }
+    });
+    
+    pageNav.addEventListener('mouseleave', (e) => {
+      // Check if we're not entering the indicator wrapper
+      if (!e.relatedTarget || !indicatorWrapper.contains(e.relatedTarget)) {
+        hideNavigation();
+      }
+    });
+  }
   
   // Add click handler for nav links
   navLinks.forEach(link => {
+    // Remove any existing click listeners to prevent duplicates
+    const oldClickListeners = link.onclick;
+    if (oldClickListeners) {
+      link.removeEventListener('click', oldClickListeners);
+    }
+    
     link.addEventListener('click', (e) => {
       e.preventDefault();
+      
+      // Cancel any pending animations
+      cancelAllPendingAnimations();
       
       // Remove active class from all links
       navLinks.forEach(l => l.classList.remove('active'));
@@ -682,8 +742,25 @@ export function initAnimations() {
       // Update active title text
       activeTitle.textContent = link.textContent;
       
-      // Hide the navigation after clicking
-      hideNavigation();
+      // Immediately hide nav links
+      gsap.to(navLinks, {
+        opacity: 0,
+        x: -20,
+        duration: 0.3,
+        stagger: 0.03,
+        ease: "power2.in",
+        onComplete: () => {
+          // Ensure nav is marked as inactive
+          isNavActive = false;
+          
+          // Show active title
+          gsap.to(activeTitle, {
+            opacity: 1,
+            duration: 0.4,
+            ease: "power2.out"
+          });
+        }
+      });
     });
   });
 }

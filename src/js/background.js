@@ -1695,9 +1695,9 @@ export function initShaderBackground() {
     // Update shader uniforms with slower speed
     uniforms.time.value += 0.001; // Reduced from 0.01 to 0.001
     
-    // Gradually fade in particles if needed - slower fade-in (0.005 instead of 0.01)
+    // Gradually fade in particles if needed - even slower fade-in (0.002 instead of 0.005)
     if (customParticleMaterial.uniforms.opacity.value < targetParticleOpacity) {
-      customParticleMaterial.uniforms.opacity.value += 0.005; // Slower fade in
+      customParticleMaterial.uniforms.opacity.value += 0.002; // Much slower fade in
       if (customParticleMaterial.uniforms.opacity.value > targetParticleOpacity) {
         customParticleMaterial.uniforms.opacity.value = targetParticleOpacity;
       }
@@ -1712,10 +1712,16 @@ export function initShaderBackground() {
 
   animate();
   
-  // Listen for early particle fade start event
+  // Listen for very early particle fade start event (before hero animation)
+  document.addEventListener('veryEarlyParticleFade', () => {
+    // Start with a very low opacity target to begin the fade-in
+    targetParticleOpacity = 0.2;
+  });
+  
+  // Listen for early particle fade start event (after text animation)
   document.addEventListener('particleFadeStart', () => {
-    // Set target opacity to trigger fade-in
-    targetParticleOpacity = 0.8; // Match the original opacity value
+    // Increase target opacity to continue fade-in
+    targetParticleOpacity = 0.5;
   });
   
   // Also keep the original event listener for completion
