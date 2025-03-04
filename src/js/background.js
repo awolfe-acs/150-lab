@@ -24,6 +24,10 @@ export function initShaderBackground() {
 
   // Create a separate scene for particles to ensure they render on top
   const particleScene = new THREE.Scene();
+  
+  // Variable to track particle opacity for fade-in
+  let particleOpacity = 0;
+  let targetParticleOpacity = 0; // Will be set to 1 when hero animation completes
 
   // Camera parameters with zoom control
   const cameraParams = {
@@ -87,7 +91,7 @@ export function initShaderBackground() {
     bottomWaveSpeed: { value: 0.0 }, // Controls the speed of the bottom wave animation
     bottomWaveOffset: { value: -2.207 }, // Controls the horizontal offset of the bottom wave
     // Film noise parameters
-    filmNoiseIntensity: { value: 0.1 }, // Controls the intensity of the film noise
+    filmNoiseIntensity: { value: 0.088 }, // Controls the intensity of the film noise
     filmNoiseSpeed: { value: 0.00001 }, // Controls the speed of the film noise animation
     filmGrainSize: { value: 10.0 }, // Controls the size of the film grain
     filmScratchIntensity: { value: 0.0 }, // Controls the intensity of film scratches
@@ -1296,7 +1300,7 @@ export function initShaderBackground() {
   const customParticleMaterial = new THREE.ShaderMaterial({
     uniforms: {
       baseSize: { value: 6.0 },
-      opacity: { value: 0.8 },
+      opacity: { value: 0 }, // Start with 0 opacity
       map: { value: sparkleTexture },
       brightness: { value: 1.4 },
       haloStrength: { value: 1.4 }, // Control halo intensity
@@ -1691,6 +1695,14 @@ export function initShaderBackground() {
     // Update shader uniforms with slower speed
     uniforms.time.value += 0.001; // Reduced from 0.01 to 0.001
     
+    // Gradually fade in particles if needed - slower fade-in (0.005 instead of 0.01)
+    if (customParticleMaterial.uniforms.opacity.value < targetParticleOpacity) {
+      customParticleMaterial.uniforms.opacity.value += 0.005; // Slower fade in
+      if (customParticleMaterial.uniforms.opacity.value > targetParticleOpacity) {
+        customParticleMaterial.uniforms.opacity.value = targetParticleOpacity;
+      }
+    }
+    
     // Render both scenes - background first, then particles on top
     renderer.render(scene, camera);
     renderer.autoClear = false; // Don't clear the renderer after first render
@@ -1699,6 +1711,18 @@ export function initShaderBackground() {
   }
 
   animate();
+  
+  // Listen for early particle fade start event
+  document.addEventListener('particleFadeStart', () => {
+    // Set target opacity to trigger fade-in
+    targetParticleOpacity = 0.8; // Match the original opacity value
+  });
+  
+  // Also keep the original event listener for completion
+  document.addEventListener('heroAnimationComplete', () => {
+    // Ensure particles are fully visible when hero animation completes
+    targetParticleOpacity = 0.8;
+  });
 
   // Handle window resize
   window.addEventListener("resize", () => {

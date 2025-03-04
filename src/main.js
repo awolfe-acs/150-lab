@@ -45,10 +45,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // Force scroll to top again when DOM is ready
   window.scrollTo(0, 0);
   
-  const lenis = new Lenis({
+  // Create a global lenis instance that can be accessed from other modules
+  window.lenis = new Lenis({
     autoRaf: true,
   });
-  lenis.on("scroll", (e) => {
+  window.lenis.on("scroll", (e) => {
     //console.log(e);
   });
 
@@ -67,6 +68,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // Final attempt to ensure we're at the top
   setTimeout(() => {
     window.scrollTo(0, 0);
-    lenis.scrollTo(0, { immediate: true });
+    window.lenis.scrollTo(0, { immediate: true });
   }, 100);
 });

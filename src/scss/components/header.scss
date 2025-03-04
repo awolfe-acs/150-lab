@@ -1,9 +1,17 @@
+@use '../animation';
+
 header.anniversary {
     position: absolute;
     z-index: 500;
     width: 100%;
     padding: 2vw 4vw;
 
+    &.nav-active {
+        div.logo, button.sound-toggle button.menu {
+            opacity:0;
+            pointer-events:none;
+        }
+    }
     div.logo {
         cursor:pointer;
         svg {
@@ -66,7 +74,6 @@ header.anniversary {
         &:after {
             top: calc(50% + 5px);
         }
-
 
     }
 }

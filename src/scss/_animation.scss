@@ -2,3 +2,18 @@
 .reveal-top-center {
     opacity: 0;
 }
+
+@mixin ease {
+    transition:0.66s;
+    transition-timing-function: cubic-bezier(0.075, 0.82, 0.165, 1);
+}
+
+.ease {
+    transition:0.66s;
+    transition-timing-function: cubic-bezier(0.075, 0.82, 0.165, 1);
+}
+
+.ease-opacity {
+    transition:opacity 0.66s;
+    transition-timing-function: cubic-bezier(0.075, 0.82, 0.165, 1);
+}

@@ -1,12 +1,75 @@
+@use '../animation';
+
 nav {
     position:fixed;
-    top:0;
-    left:0;
-    width:100%;
-    height:100px;
-    z-index:100;
-    background:#fff;
-    border-bottom-left-radius:16px;
-    border-bottom-right-radius:16px;
     top:-100px;
+    left:50%;
+    transform:translateX(-50%);
+    width:100%;
+    height:84px;
+    z-index:100;
+    background:rgba(255,255,255,0.9);
+    backdrop-filter:blur(8px);
+    border-radius:16px;
+    width:1440px;
+    max-width:calc(100% - 32px);
+    margin:0 auto;
+    padding:16px 24px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    &.active {
+        top:16px;
+        z-index:1000;
+    }
+
+    div.nav-logo {
+        height:44px;
+        cursor:pointer;
+        svg {
+            height:100%;
+            width:auto;
+        }
+    }
+    
+    
+    button.close-menu {
+        font-size: 12px;
+        font-weight: 200;
+        text-transform: uppercase;
+        background: none;
+        border: none;
+        cursor: pointer;
+        position: relative;
+        letter-spacing: 6px;
+        padding-right: 24px;
+        align-self: center;
+        span {
+            color:#000;
+        }
+        &:before,
+        &:after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 1.5px;
+            background-color: #000;
+            transition: all 0.3s ease;
+            transform: translateY(-50%);
+            right: 0;
+            transform-origin: center center;
+        }
+
+        &:before {
+            top: calc(50%);
+            transform: rotate(45deg);
+        }
+
+        &:after {
+            top: calc(50%);
+            transform: rotate(-45deg);
+        }
+
+    }
+
 }

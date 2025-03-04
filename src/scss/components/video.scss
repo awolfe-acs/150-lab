@@ -13,6 +13,7 @@ video {
     will-change: transform, opacity;
     transition: box-shadow 0.3s ease;
     opacity:0;
+    backdrop-filter: blur(10px);
     &.scale-active {
         box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
     }

@@ -46,6 +46,11 @@ export function initHeroAnimation() {
   
   if (!heroHeading || !heroNumber) return;
   
+  // Stop Lenis scrolling until animations complete
+  if (window.lenis) {
+    window.lenis.stop();
+  }
+  
   // Reset any existing animations and scroll triggers
   ScrollTrigger.getAll().forEach(trigger => {
     if (trigger.vars.trigger === "#hero-area" || 
@@ -107,7 +112,12 @@ export function initHeroAnimation() {
     filter: 'blur(0px)', // Clear the blur effect
     duration: 1.25, // Slightly longer duration for more visible effect
     stagger: 0.03,
-    ease: "power2.out" // Smoother easing
+    ease: "power2.out", // Smoother easing
+    onComplete: () => {
+      // Trigger particle fade-in earlier - after text animation completes
+      const earlyFadeEvent = new CustomEvent('particleFadeStart');
+      document.dispatchEvent(earlyFadeEvent);
+    }
   });
   
   // After all characters are revealed, show the number
@@ -134,7 +144,17 @@ export function initHeroAnimation() {
       z: 0,
       duration: 2.5, // Much longer duration for slower fade-in
       stagger: 0.1, // Slightly longer stagger
-      ease: "power3.out"
+      ease: "power3.out",
+      onComplete: () => {
+        // Re-enable Lenis scrolling after animation completes
+        if (window.lenis) {
+          window.lenis.start();
+        }
+        
+        // Dispatch custom event to signal hero animation completion
+        const heroAnimationCompleteEvent = new CustomEvent('heroAnimationComplete');
+        document.dispatchEvent(heroAnimationCompleteEvent);
+      }
     }, 
     "-=0.6" // Slight overlap
   );
@@ -223,6 +243,30 @@ export function initAnimations() {
   
   // Initialize video scale animation
   animateVideoScale();
+  
+  // Add menu button click handler
+  const menuButton = document.querySelector('button.menu');
+  if (menuButton) {
+    menuButton.addEventListener('click', () => {
+      const nav = document.querySelector('nav');
+      const header = document.querySelector('header');
+      
+      if (nav) nav.classList.toggle('active');
+      if (header) header.classList.toggle('nav-active');
+    });
+  }
+  
+  // Add close menu button click handler
+  const closeMenuButton = document.querySelector('button.close-menu');
+  if (closeMenuButton) {
+    closeMenuButton.addEventListener('click', () => {
+      const nav = document.querySelector('nav');
+      const header = document.querySelector('header');
+      
+      if (nav) nav.classList.remove('active');
+      if (header) header.classList.remove('nav-active');
+    });
+  }
   
   var fast = 0.18;
   var mediumFast = 0.24;
@@ -331,8 +375,8 @@ export function initAnimations() {
     // Add transform animation for the hero number (size and position)
     // Simplified for better performance - only essential properties
     gsap.to(heroNumber, {
-      scale: 0.7, // Reduce size to 70% of original
-      y: () => window.innerWidth * -0.10, // Move up by 8% of viewport width (equivalent to 8vw at 50% scale)
+      scale: 0.5, // Reduce size to 70% of original
+      y: () => window.innerWidth * -0.20, // Move up by 8% of viewport width (equivalent to 8vw at 50% scale)
       ease: "none",
       scrollTrigger: {
         trigger: "#hero-travel-area",
