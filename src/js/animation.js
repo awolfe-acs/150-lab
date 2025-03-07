@@ -42,9 +42,25 @@ export function initHeroAnimation() {
   // Split the hero heading text into characters
   const heroHeading = document.querySelector('#hero-area h1');
   const heroNumber = document.querySelector('#hero-number');
-  const videoElement = document.querySelector("#video video");
+  const header = document.querySelector('header');
+  const sectionTimeline = document.querySelector('.section-timeline');
   
   if (!heroHeading || !heroNumber) return;
+  
+  // Hide header and section-timeline initially
+  if (header) {
+    gsap.set(header, { 
+      opacity: 0,
+      autoAlpha: 0
+    });
+  }
+  
+  if (sectionTimeline) {
+    gsap.set(sectionTimeline, { 
+      opacity: 0,
+      autoAlpha: 0
+    });
+  }
   
   // Stop Lenis scrolling until animations complete
   if (window.lenis) {
@@ -145,13 +161,33 @@ export function initHeroAnimation() {
       transformOrigin: "center center"
     },
     {
-      opacity: 1,
+      opacity: 0.44, // Fade in to 0.44 opacity as requested
       y: 0,
       z: 0,
       duration: 2.5, // Much longer duration for slower fade-in
       stagger: 0.1, // Slightly longer stagger
       ease: "power3.out",
       onComplete: () => {
+        // Fade in header and section-timeline after hero number animation completes
+        if (header) {
+          gsap.to(header, {
+            opacity: 1,
+            autoAlpha: 1,
+            duration: 0.8,
+            ease: "power2.inOut"
+          });
+        }
+        
+        if (sectionTimeline) {
+          gsap.to(sectionTimeline, {
+            opacity: 1,
+            autoAlpha: 1,
+            duration: 0.8,
+            ease: "power2.inOut",
+            delay: 0.2 // Slight delay after header starts fading in
+          });
+        }
+        
         // Re-enable Lenis scrolling after animation completes
         if (window.lenis) {
           window.lenis.start();
@@ -184,8 +220,7 @@ export function initHeroAnimation() {
     // Add transform animation for the hero number (size and position)
     // Simplified for better performance - only essential properties
     gsap.to(heroNumber, {
-      scale: 0.7, // Reduce size to 70% of original
-      y: () => window.innerWidth * -0.10, // Move up by 8% of viewport width (equivalent to 8vw at 50% scale)
+      scale: 0.5, // Reduce size to 50% of original
       ease: "none",
       scrollTrigger: {
         trigger: "#hero-travel-area",
@@ -196,48 +231,45 @@ export function initHeroAnimation() {
       }
     });
     
-    // Add color transition animation for the digits - from yellow to teal
-    gsap.to(digits, {
-      color: "rgba(205, 252, 255, 0.9)", // Teal color with full opacity
-      ease: "none",
-      scrollTrigger: {
-        trigger: "#hero-travel-area",
-        start: "top top",
-        end: "bottom bottom",
-        scrub: true,
-        markers: false
+    // Create a ScrollTrigger for the opacity animation
+    // This will be applied to all digits, including ones that change during scrolling
+    const digitOpacityScrollTrigger = ScrollTrigger.create({
+      trigger: "#hero-travel-area",
+      start: "top top",
+      end: "20% top", // End at 20% through the hero-travel-area
+      scrub: true,
+      markers: false,
+      onUpdate: function(self) {
+        // Get the current progress (0 to 1)
+        const progress = self.progress;
+        
+        // Calculate the opacity value (from 0.44 to 1)
+        const opacity = 0.44 + (progress * 0.56);
+        
+        // Apply to all current digits
+        const digits = heroNumber.querySelectorAll('.digit');
+        digits.forEach(digit => {
+          digit.style.opacity = opacity;
+        });
       }
     });
-  }
-  
-  // Animate video scale from small to full size while scrolling
-  if (videoElement) {
-    // Set initial scale
-    gsap.set(videoElement, {
-      scale: 0.4,
-      opacity: 0,
-      transformOrigin: "center center"
-    });
     
-    // Animate scale and opacity as user scrolls
-    gsap.to(videoElement, {
-      scale: 1.0,
-      opacity: 1,
-      ease: "power1.out",
-      scrollTrigger: {
-        trigger: "#hero-travel-area",
-        start: "top top", // Start at the top of hero-travel-area
-        end: "bottom bottom", // End when bottom of hero-travel-area reaches bottom of viewport
-        scrub: true,
-        markers: false,
-        onUpdate: (self) => {
-          // Add/remove class based on progress
-          if (self.progress > 0.8) {
-            videoElement.classList.add('scale-active');
-          } else {
-            videoElement.classList.remove('scale-active');
-          }
-        }
+    // Add fade-out animation for the hero number as we approach the video travel area
+    ScrollTrigger.create({
+      trigger: "#video-travel-area",
+      start: "top bottom", // Start when the top of video-travel-area is 100% away from the bottom of viewport
+      end: "top 90%", // End when the top of video-travel-area is 10% away from the bottom of viewport
+      scrub: true,
+      markers: false,
+      onUpdate: function(self) {
+        // Get the current progress (0 to 1)
+        const progress = self.progress;
+        
+        // Calculate the opacity value (from 1 to 0)
+        const opacity = 1 - progress;
+        
+        // Apply to the hero number
+        heroNumber.style.opacity = opacity;
       }
     });
   }
@@ -337,7 +369,7 @@ export function initAnimations() {
       scrollTrigger: {
         trigger: "#hero-travel-area",
         start: "top top", // Start when the top of hero-travel-area reaches the top of viewport (after heading fade-out completes)
-        end: "bottom bottom", // End when the bottom of hero-travel-area reaches the bottom of viewport
+        end: "70% 70%",
         scrub: true,
         markers: false // Set to true for debugging
       },
@@ -366,12 +398,8 @@ export function initAnimations() {
               digitSpan.textContent = newDigits[index];
               digitSpan.setAttribute('data-digit', newDigits[index]);
               
-              // Optional: Add a very minimal opacity change for visual feedback
-              // No scale, no z-axis, just a simple opacity change
-              gsap.fromTo(digitSpan, 
-                { opacity: 0.7 },
-                { opacity: 1, duration: 0.2, ease: "power1.out" }
-              );
+              // Keep only a simple update without animation for performance
+              // No opacity animation here
             }
           });
         }
@@ -381,28 +409,13 @@ export function initAnimations() {
     // Add transform animation for the hero number (size and position)
     // Simplified for better performance - only essential properties
     gsap.to(heroNumber, {
-      scale: 0.5, // Reduce size to 70% of original
-      y: () => window.innerWidth * -0.20, // Move up by 8% of viewport width (equivalent to 8vw at 50% scale)
+      scale: 0.5, // Reduce size to 50% of original
       ease: "none",
       scrollTrigger: {
         trigger: "#hero-travel-area",
         start: "top top",
         end: "bottom bottom",
         scrub: 0.5, // Add a small amount of smoothing
-        markers: false
-      }
-    });
-    
-    // Add color transition animation for the digits - from yellow to teal
-    const digits = heroNumber.querySelectorAll('.digit');
-    gsap.to(digits, {
-      color: "rgba(205, 252, 255, 0.9)", // Teal color with full opacity
-      ease: "none",
-      scrollTrigger: {
-        trigger: "#hero-travel-area",
-        start: "top top",
-        end: "bottom bottom",
-        scrub: true,
         markers: false
       }
     });
@@ -500,58 +513,58 @@ export function initAnimations() {
   });
 
   // Years counter scroll animation
-  const yearsElem = document.querySelector(".years");
-  const fontWeightObj = { weight: 100 };
-
-  if (yearsElem) {
-    // Create an object to hold the year value
-    const yearsObj = { year: 2026 };
-    // Set initial text
-    yearsElem.innerText = yearsObj.year.toString();
-    // Animation for the year counter
-    gsap.to(yearsObj, {
-      year: 1876,
-      ease: "none",
-      scrollTrigger: {
-        trigger: "#years-travel-area",
-        start: "top -80%",
-        end: "bottom 180%",
-        scrub: true,
-      },
-      onUpdate: function () {
-        yearsElem.innerText = Math.round(yearsObj.year).toString();
-      },
-    });
-    // Animation for the font weight
-    gsap.to(fontWeightObj, {
-      weight: 900,
-      ease: "power2.inOut",
-      scrollTrigger: {
-        trigger: "#years-travel-area",
-        start: "top -80%",
-        end: "bottom 180%",
-        scrub: true,
-      },
-      onUpdate: function () {
-        yearsElem.style.fontWeight = Math.round(fontWeightObj.weight).toString();
-      },
-    });
-    // Add a scale tween: start smaller (scale 0.5) and grow larger (scale 1.5) as you scroll
-    gsap.fromTo(
-      yearsElem,
-      { scale: 0.5 },
-      {
-        scale: 1.5,
-        ease: "power2.inOut",
-        scrollTrigger: {
-          trigger: "#years-travel-area",
-          start: "top top",
-          end: "bottom bottom",
-          scrub: true,
-        },
-      }
-    );
-  }
+  //const yearsElem = document.querySelector(".years");
+  //const fontWeightObj = { weight: 100 };
+//
+  //if (yearsElem) {
+  //  // Create an object to hold the year value
+  //  const yearsObj = { year: 2026 };
+  //  // Set initial text
+  //  yearsElem.innerText = yearsObj.year.toString();
+  //  // Animation for the year counter
+  //  gsap.to(yearsObj, {
+  //    year: 1876,
+  //    ease: "none",
+  //    scrollTrigger: {
+  //      trigger: "#years-travel-area",
+  //      start: "top -80%",
+  //      end: "bottom 180%",
+  //      scrub: true,
+  //    },
+  //    onUpdate: function () {
+  //      yearsElem.innerText = Math.round(yearsObj.year).toString();
+  //    },
+  //  });
+  //  // Animation for the font weight
+  //  gsap.to(fontWeightObj, {
+  //    weight: 900,
+  //    ease: "power2.inOut",
+  //    scrollTrigger: {
+  //      trigger: "#years-travel-area",
+  //      start: "top -80%",
+  //      end: "bottom 180%",
+  //      scrub: true,
+  //    },
+  //    onUpdate: function () {
+  //      yearsElem.style.fontWeight = Math.round(fontWeightObj.weight).toString();
+  //    },
+  //  });
+  //  // Add a scale tween: start smaller (scale 0.5) and grow larger (scale 1.5) as you scroll
+  //  gsap.fromTo(
+  //    yearsElem,
+  //    { scale: 0.5 },
+  //    {
+  //      scale: 1.5,
+  //      ease: "power2.inOut",
+  //      scrollTrigger: {
+  //        trigger: "#years-travel-area",
+  //        start: "top top",
+  //        end: "bottom bottom",
+  //        scrub: true,
+  //      },
+  //    }
+  //  );
+  //}
 
   // Add seamless infinite marquee inside #anniversary-area
   const anniversaryArea = document.getElementById("anniversary-area");
@@ -580,12 +593,187 @@ export function initAnimations() {
   const waveGroup = document.getElementById("waveGroup");
   if (!waveGroup) return;
   // Animate the waveGroup shifting 100 units to the left continuously for seamless looping
-  gsap.to(waveGroup, {
+  const waveAnimation = gsap.to(waveGroup, {
     x: "-=100",
     ease: "linear",
     duration: 2,
     repeat: -1,
   });
+
+  // Create and configure background audio with Web Audio API for better volume control
+  const backgroundAudio = new Audio('/audio/chemistry.mp3');
+  backgroundAudio.loop = true;
+  backgroundAudio.volume = 0; // Start at 0 volume for fade in
+  
+  // Add error event listener to check if the audio file can be loaded
+  backgroundAudio.addEventListener('error', (e) => {
+    console.error('Audio loading error:', e);
+    console.error('Audio src:', backgroundAudio.src);
+  });
+  
+  // Store reference for other functions to access
+  window.backgroundAudio = backgroundAudio;
+  window.audioInitialized = false;
+  window.audioMuted = false;
+  
+  // Create and configure UI click sound
+  const uiClickSound = new Audio('/audio/ui-click.mp3');
+  uiClickSound.volume = 0.44; // Set to 44% volume
+  
+  // Function to play UI click sound
+  const playUIClickSound = () => {
+    if (window.audioMuted) return;
+    
+    try {
+      // Clone the audio to allow multiple overlapping sounds
+      const clickSound = uiClickSound.cloneNode();
+      clickSound.volume = 0.44;
+      clickSound.play().catch(error => {
+        console.warn('UI click sound play was prevented:', error);
+      });
+    } catch (error) {
+      console.error('Error playing UI click sound:', error);
+    }
+  };
+  
+  // Add click sound to interactive elements
+  const setupUIClickSounds = () => {
+    // Select all interactive elements
+    const interactiveElements = document.querySelectorAll('a, button, input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"]');
+    
+    // Add click event listeners to each element
+    interactiveElements.forEach(element => {
+      element.addEventListener('click', (event) => {
+        // Don't play sound if audio is muted
+        if (!window.audioMuted) {
+          playUIClickSound();
+        }
+      });
+    });
+    
+    // Set up a mutation observer to handle dynamically added elements
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach(mutation => {
+        if (mutation.addedNodes.length) {
+          mutation.addedNodes.forEach(node => {
+            // Check if the added node is an element and matches our selectors
+            if (node.nodeType === 1 && (
+                node.matches('a, button, input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"]')
+            )) {
+              node.addEventListener('click', (event) => {
+                if (!window.audioMuted) {
+                  playUIClickSound();
+                }
+              });
+            }
+            
+            // Check for matching elements inside the added node
+            if (node.nodeType === 1) {
+              const childInteractiveElements = node.querySelectorAll('a, button, input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"]');
+              childInteractiveElements.forEach(element => {
+                element.addEventListener('click', (event) => {
+                  if (!window.audioMuted) {
+                    playUIClickSound();
+                  }
+                });
+              });
+            }
+          });
+        }
+      });
+    });
+    
+    // Start observing the document with the configured parameters
+    observer.observe(document.body, { childList: true, subtree: true });
+  };
+  
+  // Simplified audio playback function - plays at 20% volume
+  const playBackgroundAudio = () => {
+    if (window.audioMuted) return;
+    
+    try {
+      // Play the audio at 8% volume
+      backgroundAudio.volume = 0.08;
+      backgroundAudio.play().then(() => {
+        console.log('Audio playback started at 8% volume');
+        window.audioInitialized = true;
+        
+        // Update sound toggle if it exists
+        const soundToggle = document.querySelector('.sound-toggle');
+        if (soundToggle) {
+          soundToggle.classList.add('active');
+        }
+      }).catch(error => {
+        console.error('Audio play was prevented:', error);
+      });
+    } catch (error) {
+      console.error('Error playing audio:', error);
+    }
+  };
+  
+  // Handle audio playback on user interaction
+  const enableAudioOnInteraction = (event) => {
+    // Only proceed if we haven't already started the audio
+    if (!window.audioInitialized && !window.audioMuted) {
+      playBackgroundAudio();
+      
+      // Remove event listeners after initialization attempt
+      document.removeEventListener('click', enableAudioOnInteraction);
+      document.removeEventListener('touchstart', enableAudioOnInteraction);
+      document.removeEventListener('keydown', enableAudioOnInteraction);
+    }
+  };
+  
+  // Add event listeners for user interaction
+  document.addEventListener('click', enableAudioOnInteraction);
+  document.addEventListener('touchstart', enableAudioOnInteraction);
+  document.addEventListener('keydown', enableAudioOnInteraction);
+
+  // Add sound toggle functionality
+  const soundToggle = document.querySelector('.sound-toggle');
+  if (soundToggle) {
+    soundToggle.addEventListener('click', () => {
+      // Toggle the muted class
+      soundToggle.classList.toggle('muted');
+      
+      // Update global mute state
+      window.audioMuted = soundToggle.classList.contains('muted');
+      
+      // Play UI click sound for the toggle itself (before muting takes effect)
+      if (!window.audioMuted) {
+        playUIClickSound();
+      }
+      
+      // Pause or resume the wave animation based on muted state
+      if (window.audioMuted) {
+        waveAnimation.pause();
+        
+        // Mute the audio
+        if (window.backgroundAudio) {
+          window.backgroundAudio.volume = 0;
+          // Optional: pause the audio
+          // window.backgroundAudio.pause();
+        }
+      } else {
+        waveAnimation.resume();
+        
+        // If audio hasn't been initialized yet, initialize it now
+        if (!window.audioInitialized && window.backgroundAudio) {
+          playBackgroundAudio();
+        } else if (window.backgroundAudio) {
+          // Unmute the audio
+          window.backgroundAudio.volume = 0.08;
+          
+          // If audio was paused, restart it
+          if (window.backgroundAudio.paused) {
+            window.backgroundAudio.play().catch(error => {
+              console.warn('Audio play was prevented:', error);
+            });
+          }
+        }
+      }
+    });
+  }
 
   // Add page navigation hover and click functionality
   const pageNav = document.querySelector('.section-timeline .page-nav');
@@ -763,30 +951,71 @@ export function initAnimations() {
       });
     });
   });
+
+  // Export a utility function to handle dynamically added audio elements
+  window.handleNewAudioElement = (element) => {
+    // Check if the sound is currently muted
+    if (window.audioMuted) {
+      // If muted, set volume to 0 and mute
+      element.volume = 0;
+      element.muted = true;
+    }
+    
+    // Add event listener to check mute state when audio starts playing
+    element.addEventListener('play', () => {
+      const soundToggle = document.querySelector('.sound-toggle');
+      if (soundToggle && soundToggle.classList.contains('muted')) {
+        element.volume = 0;
+        element.muted = true;
+      }
+    });
+  };
+
+  // Add a mutation observer to detect dynamically added audio/video elements
+  const audioObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === 'childList') {
+        mutation.addedNodes.forEach((node) => {
+          // Check if the added node is an audio or video element
+          if (node.nodeName === 'AUDIO' || node.nodeName === 'VIDEO') {
+            window.handleNewAudioElement(node);
+          } else if (node.querySelectorAll) {
+            // Check for audio/video elements inside the added node
+            const audioNodes = node.querySelectorAll('audio, video');
+            audioNodes.forEach(audioNode => {
+              window.handleNewAudioElement(audioNode);
+            });
+          }
+        });
+      }
+    });
+  });
+
+  // Start observing the document body for added nodes
+  audioObserver.observe(document.body, { childList: true, subtree: true });
+
+  // Initialize UI click sounds after the DOM is fully loaded
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupUIClickSounds);
+  } else {
+    setupUIClickSounds();
+  }
+
+  // Add this line where other animations are initialized
+  animateGetInvolvedText();
+
+  // Initialize page navigation updates
+  updatePageNavigation();
 }
 
-// Animate hero number color
-function animateHeroNumberColor() {
-  const digits = document.querySelector("#hero-number");
-  
-  gsap.to(digits, {
-    color: "rgba(205, 252, 255, 0.9)", // Teal color with full opacity
-    ease: "none",
-    scrollTrigger: {
-      trigger: "#hero-travel-area",
-      start: "top top",
-      end: "bottom bottom",
-      scrub: true,
-      markers: false
-    }
-  });
-}
 
 // Animate video scale from small to full size while scrolling
 function animateVideoScale() {
   const videoElement = document.querySelector("#video video");
+  const videoSection = document.querySelector("#video");
+  const videoTravelArea = document.querySelector("#video-travel-area");
   
-  if (videoElement) {
+  if (videoElement && videoSection && videoTravelArea) {
     // Set initial scale
     gsap.set(videoElement, {
       scale: 0.4,
@@ -794,15 +1023,12 @@ function animateVideoScale() {
       transformOrigin: "center center"
     });
     
-    // Animate scale and opacity as user scrolls
-    gsap.to(videoElement, {
-      scale: 1.0,
-      opacity: 1,
-      ease: "power1.out",
+    // Create a timeline for the video animations - start when entering video-travel-area
+    const videoTl = gsap.timeline({
       scrollTrigger: {
-        trigger: "#hero-travel-area",
-        start: "top top", // Start at the top of hero-travel-area
-        end: "bottom bottom", // End when bottom of hero-travel-area reaches bottom of viewport
+        trigger: "#video-travel-area", // Changed from hero-travel-area to video-travel-area
+        start: "top bottom", // Start when the top of video-travel-area enters the viewport
+        end: "top 20%", // End when the top of video-travel-area is 20% from the top of viewport
         scrub: true,
         markers: false,
         onUpdate: (self) => {
@@ -815,5 +1041,160 @@ function animateVideoScale() {
         }
       }
     });
+    
+    // Add the scale animation to the timeline
+    videoTl.to(videoElement, {
+      scale: 1.0,
+      opacity: 1,
+      ease: "power2.out" // Slightly more pronounced easing
+    });
+    
+    // Create a pin animation that pins the video when it reaches the top of the viewport
+    ScrollTrigger.create({
+      trigger: "#video",
+      start: "top top", // Start pinning when the top of #video reaches the top of the viewport
+      endTrigger: "#video-travel-area", // Use video-travel-area as the end trigger
+      end: "bottom bottom", // End pinning when the bottom of video-travel-area reaches the bottom of viewport
+      pin: true, // Pin the video section
+      pinSpacing: false, // Don't add extra space for the pinned element
+      anticipatePin: 1, // Helps prevent jittering
+      markers: false, // Set to true for debugging
+      id: "video-pin" // Add an ID for easier debugging
+    });
   }
+}
+
+// Add this function after the animateVideoScale function
+function animateGetInvolvedText() {
+  const getInvolvedText = document.querySelector('#get-involved-text p');
+  
+  if (getInvolvedText) {
+    
+    // Make sure the paragraph is visible so SplitType can detect natural line breaks
+    gsap.set(getInvolvedText, { 
+      opacity: 1,
+      visibility: 'visible'
+    });
+    
+    // Force a reflow to ensure proper line detection
+    getInvolvedText.offsetHeight;
+    
+    // Split the text into lines based on natural word-wrap
+    const splitText = new SplitType(getInvolvedText, { 
+      types: 'lines',
+      lineClass: 'line'
+    });
+    
+    // Log the number of lines detected for debugging
+    console.log('Number of lines detected:', splitText.lines ? splitText.lines.length : 0);
+    
+    // Hide all lines initially and set their initial position
+    gsap.set(splitText.lines, { 
+      opacity: 0,
+      y: 40,
+      transformOrigin: "center center"
+    });
+    
+    // Create a timeline for the animation
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: "#get-involved",
+        start: "top 65%",
+        end: "top 20%",
+        scrub: false,
+        markers: false,
+        toggleActions: "play none none reverse"
+      }
+    })
+    .to(splitText.lines, {
+      opacity: 1,
+      y: 0,
+      duration: 1.2,
+      stagger: 0.25,
+      ease: "power1.out"
+    });
+  }
+}
+
+function updatePageNavigation() {
+  const heroTravelArea = document.querySelector('#hero-travel-area');
+  const getInvolvedSection = document.querySelector('#get-involved');
+  const pageNav = document.querySelector('.page-nav');
+  const activeTitle = document.querySelector('.section-timeline .indicator .active-title');
+  
+  if (!heroTravelArea || !getInvolvedSection || !pageNav || !activeTitle) return;
+  
+  const heroYearsLink = pageNav.querySelector('.anniversary');
+  const getInvolvedLink = pageNav.querySelector('.get-involved');
+  
+  // Create a function to update the active title with a fade transition
+  const updateActiveTitleWithFade = (newText) => {
+    // Don't animate if the text is already the same
+    if (activeTitle.textContent === newText) return;
+    
+    // Create a timeline for the fade transition
+    const tl = gsap.timeline();
+    
+    // Fade out current text
+    tl.to(activeTitle, {
+      opacity: 0,
+      duration: 0.3,
+      onComplete: () => {
+        // Update text when fully faded out
+        activeTitle.textContent = newText;
+      }
+    });
+    
+    // Fade in new text
+    tl.to(activeTitle, {
+      opacity: 1,
+      duration: 0.3
+    });
+  };
+  
+  // Create ScrollTrigger for hero section
+  ScrollTrigger.create({
+    trigger: "#hero-travel-area",
+    start: "top 50%",
+    end: "bottom 50%",
+    onEnter: () => {
+      // Remove active class from all links
+      pageNav.querySelectorAll('a').forEach(link => link.classList.remove('active'));
+      // Add active class to 150 years link
+      heroYearsLink.classList.add('active');
+      // Update active title with fade transition
+      updateActiveTitleWithFade("150 Years of ACS");
+    },
+    onEnterBack: () => {
+      // Remove active class from all links
+      pageNav.querySelectorAll('a').forEach(link => link.classList.remove('active'));
+      // Add active class to 150 years link
+      heroYearsLink.classList.add('active');
+      // Update active title with fade transition
+      updateActiveTitleWithFade("150 Years of ACS");
+    }
+  });
+  
+  // Create ScrollTrigger for get involved section
+  ScrollTrigger.create({
+    trigger: "#get-involved",
+    start: "top 50%",
+    end: "bottom 50%",
+    onEnter: () => {
+      // Remove active class from all links
+      pageNav.querySelectorAll('a').forEach(link => link.classList.remove('active'));
+      // Add active class to get involved link
+      getInvolvedLink.classList.add('active');
+      // Update active title with fade transition
+      updateActiveTitleWithFade("Get Involved");
+    },
+    onEnterBack: () => {
+      // Remove active class from all links
+      pageNav.querySelectorAll('a').forEach(link => link.classList.remove('active'));
+      // Add active class to get involved link
+      getInvolvedLink.classList.add('active');
+      // Update active title with fade transition
+      updateActiveTitleWithFade("Get Involved");
+    }
+  });
 }

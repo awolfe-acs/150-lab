@@ -7,9 +7,15 @@ header.anniversary {
     padding: 2vw 4vw;
 
     &.nav-active {
-        div.logo, button.sound-toggle button.menu {
-            opacity:0;
-            pointer-events:none;
+        div.logo, button {
+            opacity:0!important;
+            pointer-events:none!important;
+            transition:opacity 0.24s ease;
+            * {
+                transition:opacity 0.24s ease;
+                opacity:0!important;
+                pointer-events:none!important;
+            }
         }
     }
     div.logo {
@@ -24,6 +30,20 @@ header.anniversary {
         align-items: center;
         gap: 16px;
         cursor:pointer;
+        transition: opacity 1.8s ease, transform 0.32s ease;
+        position: relative;
+        opacity:0;
+        &:not(.active) {
+            opacity:0;
+            pointer-events:none;
+        }
+        &.active {
+            transition: opacity 1.8s ease 2s, transform 0.32s ease;
+            opacity:1;
+        }
+        &:active {
+            transform:scale(0.95);
+        }
         span {
             font-weight: 300;
         }
@@ -39,6 +59,35 @@ header.anniversary {
             fill: none;
             stroke: #fff;
             stroke-width: 5;
+        }
+        #waveGroup {
+            transition: opacity 0.4s ease;
+        }
+        &:before, &:after {
+            height:15px;
+            width:1.25px;
+            background-color: #fff; 
+            transition: all 0.32s ease;
+            transition-delay:0.18s;
+            position: absolute;
+            content:'';
+            top:calc(50% + 0.5px);
+            transform: translateY(-50%);
+            opacity:0;
+        }
+        &:before {
+            right:14px;
+        }
+        &:after {
+            right:6px;
+        }
+        &.muted {
+            #waveGroup {
+                opacity:0;
+            }
+            &:before, &:after {
+                opacity:1;
+            }
         }
     }
 

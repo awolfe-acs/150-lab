@@ -53,7 +53,7 @@ html {
     position: absolute;
     z-index: 5;
     perspective: 1000px; // Add perspective to parent for 3D effect
-    
+    padding-top:1vw;
     // Styles for SplitType
     .word {
       display: inline-block;
@@ -76,7 +76,7 @@ html {
   }
 
   #hero-number {
-    font-size: 20vw;
+    font-size: 28vw;
     z-index: 2;
     letter-spacing: -0.5vw;
     opacity: 0; // Remove !important to allow JS to control this
@@ -87,7 +87,7 @@ html {
     // Style for each digit
     .digit {
       position: relative;
-      color: rgba(251, 225, 57, 0.66); // Starting color (yellow)
+      color: rgba(251, 225, 57, 1); // Starting color (yellow)
       transform-style: preserve-3d;
       // Add border around text glyphs
       //-webkit-text-stroke: 1px rgba(255, 255, 255, 0.3); // White stroke for better visibility with any color
@@ -95,6 +95,9 @@ html {
       font-weight: 900;
       transition: color 0.1s ease; // Smooth color transitions for non-GSAP changes
       line-height:1.52;
+      user-select:none;
+      opacity:0.44;
+      filter: drop-shadow(0px 0px 4px rgba(251, 225, 57, 0.9)) drop-shadow(0px 0px 8px rgba(251, 225, 57, 0.4));
     }
     
     // Style for digit overlay during transitions
@@ -113,7 +116,43 @@ html {
   }
 }
 
+#get-involved {
+  p, span {
+    max-width:82vw;
+    margin:0 auto;
+  }
+  p {
+    font-size: 2.75vw;
+    text-align: center;
+    font-weight: 200;
+    color:#fff;
+  }
+  .line {
+    font-size: 2.75vw;
+    text-align: center;
+    font-weight: 200;
+    color:#fff;
+  }
+}
+#get-involved-text {
 
+}
+#get-involved-earth {
+  gap:3vh;
+  h2, p, span {
+    text-align:center;
+  }
+  h2 {
+    font-weight:900;
+  }
+  span {
+    display:block;
+    font-size:1vw;
+    font-weight:120;
+    line-height:1.4;
+    max-width:65vw;
+  }
+}
 .years {
   position: relative;
   color: #fff;

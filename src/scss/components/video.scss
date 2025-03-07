@@ -1,10 +1,17 @@
+#video {
+    margin-bottom:0;
+    margin-top:auto;
+    align-self:flex-end;
+    position: relative;
+}
+
 video {
     border-radius:16px;
-    background:#222;
+    background:rgba(22,22,22,0.66);
     aspect-ratio: 16/9;
     max-height:calc(100vh - 80px);
     width:calc(86vw - 32px);
-    max-width:1600px;
+    max-width:1280px;
     height:auto;
     object-fit: cover;
     object-position: center;
@@ -14,7 +21,12 @@ video {
     transition: box-shadow 0.3s ease;
     opacity:0;
     backdrop-filter: blur(10px);
+    margin:0 auto;
+    position:relative;
+    z-index:1;
     &.scale-active {
         box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
     }
 }
+
+/* Remove SVG outline styles */

@@ -713,14 +713,14 @@ export function initShaderBackground() {
   scene.add(mesh);
 
   // Create GUI controls
-  const gui = new dat.GUI({ width: 300 });
+  const gui = new dat.GUI({ width: 300, closed: true });
   gui.domElement.style.position = "absolute";
   gui.domElement.style.top = "10px";
   gui.domElement.style.right = "10px";
 
   // Create a folder for camera controls
   const cameraFolder = gui.addFolder("Camera Controls");
-
+  
   // Add zoom control
   cameraFolder
     .add(cameraParams, "zoom", 0.1, 5)
@@ -731,9 +731,9 @@ export function initShaderBackground() {
       camera.zoom = value;
       camera.updateProjectionMatrix();
     });
-
-  // Open the camera folder by default
-  cameraFolder.open();
+  
+  // Close the camera folder by default
+  cameraFolder.close();
 
   // Create a folder for animation speed controls
   const speedFolder = gui.addFolder("Animation Speed Controls");
@@ -1166,7 +1166,7 @@ export function initShaderBackground() {
     depthRange: 1000,  // Default depth range
     sizeMin: 1,        // Minimum particle size
     sizeMax: 5,       // Maximum particle size
-    floatSpeed: 1.0,   // Floating speed multiplier
+    floatSpeed: 0.8,   // Floating speed multiplier
     verticalOffset: 0  // Vertical offset for the entire particle system
   };
 
@@ -1715,19 +1715,19 @@ export function initShaderBackground() {
   // Listen for very early particle fade start event (before hero animation)
   document.addEventListener('veryEarlyParticleFade', () => {
     // Start with a very low opacity target to begin the fade-in
-    targetParticleOpacity = 0.2;
+    targetParticleOpacity = 0.1;
   });
   
   // Listen for early particle fade start event (after text animation)
   document.addEventListener('particleFadeStart', () => {
     // Increase target opacity to continue fade-in
-    targetParticleOpacity = 0.5;
+    targetParticleOpacity = 0.3;
   });
   
   // Also keep the original event listener for completion
   document.addEventListener('heroAnimationComplete', () => {
     // Ensure particles are fully visible when hero animation completes
-    targetParticleOpacity = 0.8;
+    targetParticleOpacity = 0.5;
   });
 
   // Handle window resize
