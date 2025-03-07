@@ -601,7 +601,13 @@ export function initAnimations() {
   });
 
   // Create and configure background audio with Web Audio API for better volume control
-  const backgroundAudio = new Audio('/audio/chemistry.mp3');
+  const getAudioPath = (filename) => {
+    // Check if we're in production mode (base path will be /150-lab/)
+    const isProd = window.location.pathname.includes('/150-lab/');
+    return isProd ? `/150-lab/assets/audio/${filename}` : `/audio/${filename}`;
+  };
+  
+  const backgroundAudio = new Audio(getAudioPath('chemistry.mp3'));
   backgroundAudio.loop = true;
   backgroundAudio.volume = 0; // Start at 0 volume for fade in
   
@@ -617,7 +623,7 @@ export function initAnimations() {
   window.audioMuted = false;
   
   // Create and configure UI click sound
-  const uiClickSound = new Audio('/audio/ui-click.mp3');
+  const uiClickSound = new Audio(getAudioPath('ui-click.mp3'));
   uiClickSound.volume = 0.44; // Set to 44% volume
   
   // Function to play UI click sound
