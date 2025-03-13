@@ -3,7 +3,7 @@ import "./scss/main.scss";
 import "lenis/dist/lenis.css";
 import { initShaderBackground } from "./js/background.js";
 import { initAnimations } from "./js/animation.js";
-import { initCountdown } from "./js/countdown.js";
+//import { initCountdown } from "./js/countdown.js";
 import { initDebug } from "./js/debug.js";
 import gsap from "gsap";
 
@@ -49,12 +49,16 @@ document.addEventListener("DOMContentLoaded", () => {
   window.lenis = new Lenis({
     autoRaf: true,
   });
+  
+  // Stop scrolling initially - will be enabled when enter-experience button is clicked
+  window.lenis.stop();
+  
   window.lenis.on("scroll", (e) => {
     //console.log(e);
   });
 
   // Initialize countdown timer
-  initCountdown(targetDate);
+  // initCountdown(targetDate);
 
   // Initialize debug mode if enabled
   if (debugMode) {

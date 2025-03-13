@@ -7,36 +7,36 @@ import SplitType from "split-type";
 gsap.registerPlugin(ScrollTrigger);
 gsap.registerPlugin(MorphSVGPlugin);
 
-export function animateCountdownChange(id, value) {
-  const el = document.querySelector(`#${id} .number`);
-  const formatted = id === "days" ? (value >= 100 ? String(value) : ("0" + value).slice(-2)) : ("0" + value).slice(-2);
+// export function animateCountdownChange(id, value) {
+//   const el = document.querySelector(`#${id} .number`);
+//   const formatted = id === "days" ? (value >= 100 ? String(value) : ("0" + value).slice(-2)) : ("0" + value).slice(-2);
 
-  if (el.dataset.value === formatted) return;
-  el.dataset.value = formatted;
+//   if (el.dataset.value === formatted) return;
+//   el.dataset.value = formatted;
 
-  const currentChars = el.querySelectorAll(".char");
-  gsap.to(currentChars, {
-    y: -12,
-    opacity: 0,
-    duration: 0.4,
-    stagger: 0.05,
-    onComplete: () => {
-      el.innerHTML = formatted
-        .split("")
-        .map((char) => `<span class="char">${char}</span>`)
-        .join("");
-      const newChars = el.querySelectorAll(".char");
-      gsap.from(newChars, {
-        y: 20,
-        z: -500,
-        opacity: 0,
-        duration: 0.42,
-        stagger: 0.05,
-        ease: "power1.out",
-      });
-    },
-  });
-}
+//   const currentChars = el.querySelectorAll(".char");
+//   gsap.to(currentChars, {
+//     y: -12,
+//     opacity: 0,
+//     duration: 0.4,
+//     stagger: 0.05,
+//     onComplete: () => {
+//       el.innerHTML = formatted
+//         .split("")
+//         .map((char) => `<span class="char">${char}</span>`)
+//         .join("");
+//       const newChars = el.querySelectorAll(".char");
+//       gsap.from(newChars, {
+//         y: 20,
+//         z: -500,
+//         opacity: 0,
+//         duration: 0.42,
+//         stagger: 0.05,
+//         ease: "power1.out",
+//       });
+//     },
+//   });
+// }
 
 export function initHeroAnimation() {
   // Split the hero heading text into characters
@@ -44,6 +44,7 @@ export function initHeroAnimation() {
   const heroNumber = document.querySelector('#hero-number');
   const header = document.querySelector('header');
   const sectionTimeline = document.querySelector('.section-timeline');
+  const enterExperienceBtn = document.querySelector('button.enter-experience');
   
   if (!heroHeading || !heroNumber) return;
   
@@ -62,7 +63,16 @@ export function initHeroAnimation() {
     });
   }
   
-  // Stop Lenis scrolling until animations complete
+  // Hide enter-experience button initially
+  if (enterExperienceBtn) {
+    gsap.set(enterExperienceBtn, {
+      opacity: 0,
+      autoAlpha: 0,
+      y: 20
+    });
+  }
+  
+  // Stop Lenis scrolling until animations complete or button is clicked
   if (window.lenis) {
     window.lenis.stop();
   }
@@ -168,55 +178,78 @@ export function initHeroAnimation() {
       stagger: 0.1, // Slightly longer stagger
       ease: "power3.out",
       onComplete: () => {
-        // Fade in header and section-timeline after hero number animation completes
-        if (header) {
-          gsap.to(header, {
+        // Fade in the enter-experience button after hero number animation completes
+        if (enterExperienceBtn) {
+          gsap.to(enterExperienceBtn, {
             opacity: 1,
             autoAlpha: 1,
+            y: 0,
             duration: 0.8,
-            ease: "power2.inOut"
+            ease: "power2.out"
           });
         }
         
-        if (sectionTimeline) {
-          gsap.to(sectionTimeline, {
-            opacity: 1,
-            autoAlpha: 1,
-            duration: 0.8,
-            ease: "power2.inOut",
-            delay: 0.2 // Slight delay after header starts fading in
-          });
-        }
-        
-        // Re-enable Lenis scrolling after animation completes
-        if (window.lenis) {
-          window.lenis.start();
-        }
-        
-        // Dispatch custom event to signal hero animation completion
-        const heroAnimationCompleteEvent = new CustomEvent('heroAnimationComplete');
-        document.dispatchEvent(heroAnimationCompleteEvent);
+        // Mark hero animation as complete
+        window.heroAnimationComplete = true;
       }
     }, 
     "-=0.6" // Slight overlap
   );
   
+  // Add click event listener to the enter-experience button
+  if (enterExperienceBtn) {
+    enterExperienceBtn.addEventListener('click', () => {
+      // Fade in header
+      if (header) {
+        gsap.to(header, {
+          opacity: 1,
+          autoAlpha: 1,
+          duration: 0.8,
+          ease: "power2.inOut"
+        });
+      }
+      
+      // Fade in section-timeline
+      if (sectionTimeline) {
+        gsap.to(sectionTimeline, {
+          opacity: 1,
+          autoAlpha: 1,
+          duration: 0.8,
+          ease: "power2.inOut",
+          delay: 0.2 // Slight delay after header starts fading in
+        });
+      }
+      
+      // Mark user as having interacted with the page
+      window.userInteracted = true;
+      
+      // Try to play audio
+      window.playBackgroundAudio();
+      
+      // Re-enable Lenis scrolling
+      if (window.lenis) {
+        window.lenis.start();
+      }
+      
+      // Dispatch custom event to signal hero animation completion
+      const heroAnimationCompleteEvent = new CustomEvent('heroAnimationComplete');
+      document.dispatchEvent(heroAnimationCompleteEvent);
+      
+      // Fade out the enter-experience button
+      gsap.to(enterExperienceBtn, {
+        opacity: 0,
+        autoAlpha: 0,
+        y: -20,
+        duration: 0.5,
+        ease: "power2.in"
+      });
+    });
+  }
+  
   // Initialize the hero animation
   
   // Create the hero number animation
   if (heroNumber) {
-    // Add fade-in animation for the hero number
-    gsap.fromTo(heroNumber, 
-      { opacity: 0, scale: 0.8 },
-      { 
-        opacity: 1, 
-        scale: 1,
-        duration: 1.2,
-        ease: "power2.out",
-        delay: 0.5
-      }
-    );
-    
     // Add transform animation for the hero number (size and position)
     // Simplified for better performance - only essential properties
     gsap.to(heroNumber, {
@@ -567,28 +600,28 @@ export function initAnimations() {
   //}
 
   // Add seamless infinite marquee inside #anniversary-area
-  const anniversaryArea = document.getElementById("anniversary-area");
-  if (anniversaryArea) {
-    let marquee = anniversaryArea.querySelector("#marquee");
-    if (!marquee) {
-      marquee = document.createElement("div");
-      marquee.id = "marquee";
-      marquee.style.position = "absolute";
-      marquee.style.bottom = "0";
-      marquee.style.left = "0";
-      // Create two copies for seamless looping with no space
-      const textContent = "150 YEARS OF AMERICAN CHEMICAL SOCIETY ";
-      marquee.innerHTML = `<span>${textContent}</span><span>${textContent}</span>`;
-      anniversaryArea.appendChild(marquee);
-      // Animate the marquee: translateX using xPercent for smoother movement
-      gsap.to(marquee, {
-        xPercent: -50,
-        ease: "linear",
-        duration: 20,
-        repeat: -1,
-      });
-    }
-  }
+  // const anniversaryArea = document.getElementById("anniversary-area");
+  // if (anniversaryArea) {
+  //   let marquee = anniversaryArea.querySelector("#marquee");
+  //   if (!marquee) {
+  //     marquee = document.createElement("div");
+  //     marquee.id = "marquee";
+  //     marquee.style.position = "absolute";
+  //     marquee.style.bottom = "0";
+  //     marquee.style.left = "0";
+  //     // Create two copies for seamless looping with no space
+  //     const textContent = "150 YEARS OF AMERICAN CHEMICAL SOCIETY ";
+  //     marquee.innerHTML = `<span>${textContent}</span><span>${textContent}</span>`;
+  //     anniversaryArea.appendChild(marquee);
+  //     // Animate the marquee: translateX using xPercent for smoother movement
+  //     gsap.to(marquee, {
+  //       xPercent: -50,
+  //       ease: "linear",
+  //       duration: 20,
+  //       repeat: -1,
+  //     });
+  //   }
+  // }
 
   const waveGroup = document.getElementById("waveGroup");
   if (!waveGroup) return;
@@ -621,7 +654,42 @@ export function initAnimations() {
   window.backgroundAudio = backgroundAudio;
   window.audioInitialized = false;
   window.audioMuted = false;
+  window.userInteracted = false;
+  window.heroAnimationComplete = false;
   
+  // Simplified audio playback function - plays at 8% volume
+  const playBackgroundAudio = () => {
+    if (window.audioMuted) return;
+    
+    // Only play if both conditions are met: user interaction and hero animation complete
+    if (!window.userInteracted || !window.heroAnimationComplete) return;
+    
+    // Don't play if already initialized
+    if (window.audioInitialized) return;
+    
+    try {
+      // Play the audio at 8% volume
+      backgroundAudio.volume = 0.08;
+      backgroundAudio.play().then(() => {
+        console.log('Audio playback started at 8% volume');
+        window.audioInitialized = true;
+        
+        // Update sound toggle if it exists
+        const soundToggle = document.querySelector('.sound-toggle');
+        if (soundToggle) {
+          soundToggle.classList.add('active');
+        }
+      }).catch(error => {
+        console.error('Audio play was prevented:', error);
+      });
+    } catch (error) {
+      console.error('Error playing audio:', error);
+    }
+  };
+  
+  // Expose playBackgroundAudio globally so it can be accessed in other callbacks
+  window.playBackgroundAudio = playBackgroundAudio;
+
   // Create and configure UI click sound
   const uiClickSound = new Audio(getAudioPath('ui-click.mp3'));
   uiClickSound.volume = 0.44; // Set to 44% volume
@@ -647,34 +715,31 @@ export function initAnimations() {
     // Select all interactive elements
     const interactiveElements = document.querySelectorAll('a, button, input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"]');
     
-    // Add click event listeners to each element
+    // Add click event listeners to play sound
     interactiveElements.forEach(element => {
       element.addEventListener('click', (event) => {
-        // Don't play sound if audio is muted
         if (!window.audioMuted) {
           playUIClickSound();
         }
       });
     });
     
-    // Set up a mutation observer to handle dynamically added elements
-    const observer = new MutationObserver((mutations) => {
+    // Set up a MutationObserver to add click sounds to new elements
+    const observer = new MutationObserver(mutations => {
       mutations.forEach(mutation => {
-        if (mutation.addedNodes.length) {
+        if (mutation.type === 'childList') {
           mutation.addedNodes.forEach(node => {
-            // Check if the added node is an element and matches our selectors
-            if (node.nodeType === 1 && (
-                node.matches('a, button, input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"]')
-            )) {
-              node.addEventListener('click', (event) => {
-                if (!window.audioMuted) {
-                  playUIClickSound();
-                }
-              });
-            }
-            
-            // Check for matching elements inside the added node
-            if (node.nodeType === 1) {
+            if (node.nodeType === 1) { // Element node
+              // Check if the node itself is an interactive element
+              if (node.matches('a, button, input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"]')) {
+                node.addEventListener('click', (event) => {
+                  if (!window.audioMuted) {
+                    playUIClickSound();
+                  }
+                });
+              }
+              
+              // Check for interactive elements within the added node
               const childInteractiveElements = node.querySelectorAll('a, button, input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"]');
               childInteractiveElements.forEach(element => {
                 element.addEventListener('click', (event) => {
@@ -693,41 +758,13 @@ export function initAnimations() {
     observer.observe(document.body, { childList: true, subtree: true });
   };
   
-  // Simplified audio playback function - plays at 20% volume
-  const playBackgroundAudio = () => {
-    if (window.audioMuted) return;
-    
-    try {
-      // Play the audio at 8% volume
-      backgroundAudio.volume = 0.08;
-      backgroundAudio.play().then(() => {
-        console.log('Audio playback started at 8% volume');
-        window.audioInitialized = true;
-        
-        // Update sound toggle if it exists
-        const soundToggle = document.querySelector('.sound-toggle');
-        if (soundToggle) {
-          soundToggle.classList.add('active');
-        }
-      }).catch(error => {
-        console.error('Audio play was prevented:', error);
-      });
-    } catch (error) {
-      console.error('Error playing audio:', error);
-    }
-  };
-  
   // Handle audio playback on user interaction
   const enableAudioOnInteraction = (event) => {
-    // Only proceed if we haven't already started the audio
-    if (!window.audioInitialized && !window.audioMuted) {
-      playBackgroundAudio();
-      
-      // Remove event listeners after initialization attempt
-      document.removeEventListener('click', enableAudioOnInteraction);
-      document.removeEventListener('touchstart', enableAudioOnInteraction);
-      document.removeEventListener('keydown', enableAudioOnInteraction);
-    }
+    // Mark that user has interacted with the page
+    window.userInteracted = true;
+    
+    // Try to play audio if hero animation is also complete
+    window.playBackgroundAudio();
   };
   
   // Add event listeners for user interaction
@@ -765,7 +802,7 @@ export function initAnimations() {
         
         // If audio hasn't been initialized yet, initialize it now
         if (!window.audioInitialized && window.backgroundAudio) {
-          playBackgroundAudio();
+          window.playBackgroundAudio();
         } else if (window.backgroundAudio) {
           // Unmute the audio
           window.backgroundAudio.volume = 0.08;
