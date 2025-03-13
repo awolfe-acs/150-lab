@@ -63,12 +63,12 @@ export function initHeroAnimation() {
     });
   }
   
-  // Hide enter-experience button initially
+  // Hide enter-experience button initially but don't apply transform
+  // This avoids conflicts with fancy-btn effects
   if (enterExperienceBtn) {
     gsap.set(enterExperienceBtn, {
       opacity: 0,
-      autoAlpha: 0,
-      y: 20
+      autoAlpha: 0
     });
   }
   
@@ -179,11 +179,11 @@ export function initHeroAnimation() {
       ease: "power3.out",
       onComplete: () => {
         // Fade in the enter-experience button after hero number animation completes
+        // Only change opacity, not position or scale
         if (enterExperienceBtn) {
           gsap.to(enterExperienceBtn, {
             opacity: 1,
             autoAlpha: 1,
-            y: 0,
             duration: 0.8,
             ease: "power2.out"
           });
@@ -191,6 +191,10 @@ export function initHeroAnimation() {
         
         // Mark hero animation as complete
         window.heroAnimationComplete = true;
+        
+        // Dispatch event to initialize fancy buttons
+        const heroAnimationCompleteEvent = new CustomEvent('heroAnimationComplete');
+        document.dispatchEvent(heroAnimationCompleteEvent);
       }
     }, 
     "-=0.6" // Slight overlap
@@ -231,15 +235,10 @@ export function initHeroAnimation() {
         window.lenis.start();
       }
       
-      // Dispatch custom event to signal hero animation completion
-      const heroAnimationCompleteEvent = new CustomEvent('heroAnimationComplete');
-      document.dispatchEvent(heroAnimationCompleteEvent);
-      
-      // Fade out the enter-experience button
+      // Fade out the enter-experience button - only opacity, not position
       gsap.to(enterExperienceBtn, {
         opacity: 0,
         autoAlpha: 0,
-        y: -20,
         duration: 0.5,
         ease: "power2.in"
       });
@@ -314,6 +313,9 @@ export function initAnimations() {
   
   // Initialize video scale animation
   animateVideoScale();
+  
+  // Initialize fancy button interactions
+  initFancyButtonEffects();
   
   // Add menu button click handler
   const menuButton = document.querySelector('button.menu');
@@ -1051,6 +1053,77 @@ export function initAnimations() {
   updatePageNavigation();
 }
 
+// Function to initialize fancy button effects
+function initFancyButtonEffects() {
+  const fancyButtons = document.querySelectorAll('.fancy-btn');
+  
+  // Flag to track if we've already set up the event listener
+  let heroEventListenerAdded = false;
+  
+  // Create a function to initialize all fancy buttons
+  const initAllFancyButtons = () => {
+    fancyButtons.forEach(button => {
+      // Skip buttons that are already initialized
+      if (button.dataset.fancyInitialized === 'true') {
+        return;
+      }
+      
+      initSingleFancyButton(button);
+      // Mark as initialized
+      button.dataset.fancyInitialized = 'true';
+    });
+  };
+  
+  // Add event listener for heroAnimationComplete only once
+  if (!heroEventListenerAdded) {
+    document.addEventListener('heroAnimationComplete', initAllFancyButtons);
+    heroEventListenerAdded = true;
+  }
+  
+  // Initialize non-enter-experience buttons immediately
+  fancyButtons.forEach(button => {
+    if (!button.classList.contains('enter-experience')) {
+      initSingleFancyButton(button);
+      button.dataset.fancyInitialized = 'true';
+    }
+  });
+  
+  // If hero animation is already complete, initialize all buttons now
+  if (window.heroAnimationComplete) {
+    initAllFancyButtons();
+  }
+  
+  // Helper function to initialize a single fancy button
+  function initSingleFancyButton(button) {
+    let isHovering = false;
+    
+    // Add hover effect
+    button.addEventListener('mouseenter', () => {
+      isHovering = true;
+      button.classList.add('fancy-btn-active');
+      button.style.transform = 'translateY(-2px) scale(1.02)';
+    });
+    
+    // Remove hover effect
+    button.addEventListener('mouseleave', () => {
+      isHovering = false;
+      button.classList.remove('fancy-btn-active');
+      button.style.transform = '';
+    });
+    
+    // Add click effect
+    button.addEventListener('mousedown', () => {
+      button.style.transform = 'translateY(1px) scale(0.98)';
+    });
+    
+    // Reset after click
+    button.addEventListener('mouseup', () => {
+      if (isHovering) {
+        button.style.transform = 'translateY(-2px) scale(1.02)';
+      }
+    });
+  }
+}
 
 // Animate video scale from small to full size while scrolling
 function animateVideoScale() {

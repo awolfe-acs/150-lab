@@ -6,6 +6,17 @@ export function initShaderBackground() {
   const canvas = document.getElementById("shaderBackground");
   if (!canvas) return;
 
+  // Get the true viewport height (accounting for mobile browser address bar)
+  function getTrueViewportHeight() {
+    // On mobile, use the maximum of window.innerHeight and document.documentElement.clientHeight
+    // This helps account for the address bar appearing/disappearing
+    return Math.max(window.innerHeight, document.documentElement.clientHeight);
+  }
+
+  // Set initial size based on true viewport dimensions
+  const initialWidth = window.innerWidth;
+  const initialHeight = getTrueViewportHeight();
+  
   // Set canvas to fill the viewport and position it fixed in the background
   canvas.style.position = "fixed";
   canvas.style.top = "0";
@@ -13,10 +24,15 @@ export function initShaderBackground() {
   canvas.style.width = "100vw";
   canvas.style.height = "100vh";
   canvas.style.zIndex = "-1"; // Place behind other content
+  
+  // Force hardware acceleration to prevent address bar issues
+  canvas.style.transform = "translateZ(0)";
+  canvas.style.transformStyle = "preserve-3d";
+  canvas.style.willChange = "transform";
 
   // Create the WebGL renderer
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true });
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setSize(initialWidth, initialHeight);
   renderer.setPixelRatio(window.devicePixelRatio);
 
   // Create scene and an orthographic camera
@@ -1730,42 +1746,85 @@ export function initShaderBackground() {
     targetParticleOpacity = 0.5;
   });
 
-  // Handle window resize
-  window.addEventListener("resize", () => {
+  // Handle window resize with debouncing for better performance
+  let resizeTimeout;
+  function handleResize() {
+    const width = window.innerWidth;
+    const height = getTrueViewportHeight();
+    
     // Update canvas and renderer size
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(width, height);
 
     // Update camera
-    camera.left = -window.innerWidth / 2;
-    camera.right = window.innerWidth / 2;
-    camera.top = window.innerHeight / 2;
-    camera.bottom = -window.innerHeight / 2;
+    camera.left = -width / 2;
+    camera.right = width / 2;
+    camera.top = height / 2;
+    camera.bottom = -height / 2;
     camera.updateProjectionMatrix();
 
     // Update resolution uniform
-    uniforms.resolution.value.set(window.innerWidth, window.innerHeight);
+    uniforms.resolution.value.set(width, height);
 
     // Update the plane geometry to match the new window size
     mesh.geometry.dispose(); // Clean up old geometry
     mesh.geometry = new THREE.PlaneGeometry(
-      window.innerWidth,
-      window.innerHeight,
-      window.innerWidth / 10,
-      window.innerHeight / 10
+      width,
+      height,
+      width / 10,
+      height / 10
     );
     
     // Update vertical distribution based on new window height
-    verticalDistribution = window.innerHeight * scrollObj.verticalSpread;
+    verticalDistribution = height * scrollObj.verticalSpread;
     
     // Update the vertical offset range in the GUI
     for (let i = 0; i < particleFolder.__controllers.length; i++) {
       if (particleFolder.__controllers[i].property === 'verticalOffset') {
-        particleFolder.__controllers[i].min(-window.innerHeight * 3);
-        particleFolder.__controllers[i].max(window.innerHeight * 2);
+        particleFolder.__controllers[i].min(-height * 3);
+        particleFolder.__controllers[i].max(height * 2);
         break;
       }
     }
+  }
+  
+  // Debounced resize handler
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(handleResize, 150); // Debounce resize events
   });
+  
+  // Also listen for orientation change events specifically for mobile
+  window.addEventListener("orientationchange", () => {
+    // Wait a bit longer after orientation change as it takes time for the browser to settle
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(handleResize, 300);
+  });
+  
+  // Listen for the visibilitychange event to handle when the page becomes visible again
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      // When the page becomes visible again, force a resize to ensure correct dimensions
+      setTimeout(handleResize, 100);
+    }
+  });
+  
+  // Special handler for mobile browsers where the address bar can appear/disappear
+  let lastHeight = getTrueViewportHeight();
+  function checkForAddressBarChange() {
+    const currentHeight = getTrueViewportHeight();
+    
+    // If height changed significantly (address bar appeared/disappeared)
+    if (Math.abs(currentHeight - lastHeight) > 50) {
+      handleResize();
+      lastHeight = currentHeight;
+    }
+    
+    // Continue checking periodically
+    requestAnimationFrame(checkForAddressBarChange);
+  }
+  
+  // Start checking for address bar changes
+  checkForAddressBarChange();
 
   // Add keyboard controls for zoom
   window.addEventListener("keydown", (event) => {

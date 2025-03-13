@@ -1,4 +1,4 @@
-
+@use '../utilities' as *;
 .timeline-nav-wrapper {
     position: fixed;
     top: 50%;
@@ -20,6 +20,10 @@
     left: 4vw;
     top: 12vw;
     z-index: 400;
+    @media (max-width:$desktop-viewport) {
+        pointer-events:none;
+        display:none;
+    }
     .page-nav {
         display: flex;
         flex-direction: column;

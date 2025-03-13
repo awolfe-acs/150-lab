@@ -1,0 +1,143 @@
+.fancy-btn {
+    --gradient-angle: 45deg;
+    --gradient-position: 50% 50%;
+    height: 64px;
+    border-radius: 32px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.05);
+    width: 180px;
+    cursor: pointer;
+    position: absolute;
+    bottom: 25%;
+    z-index: 1000;
+    overflow: hidden;
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+    backface-visibility: hidden;
+    perspective: 1000px;
+    transition: all 0.7s cubic-bezier(0.2, 0.1, 0.2, 1), 
+                box-shadow 0.7s cubic-bezier(0.2, 0.1, 0.2, 1), 
+                border-color 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
+    
+    /* Add multi-chromatic glow effect with initial subtle glow */
+    box-shadow: 0 0 15px rgba(251, 225, 57, 0.05), 
+                0 0 25px rgba(128, 0, 255, 0.03);
+    
+    /* Create gradient border effect */
+    &::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        right: -50%;
+        bottom: -50%;
+        background: radial-gradient(
+            circle at var(--gradient-position, 50% 50%), 
+            rgba(251, 225, 57, 0.6), 
+            rgba(190, 117, 158, 0.6) 40%, 
+            rgba(251, 225, 57, 0.4) 80%
+        );
+        background-size: 400% 400%;
+        border-radius: 34px;
+        z-index: -1;
+        opacity: 0;
+        filter: blur(8px);
+        transition: opacity 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
+        animation: subtleGradientShift 10s ease-in-out infinite alternate;
+    }
+    
+    /* Create hover effect for button fill */
+    &::after {
+        content: '';
+        position: absolute;
+        inset: -20%;
+        border-radius: 32px;
+        background: radial-gradient(
+            circle at var(--gradient-position, 50% 50%), 
+            rgba(251, 225, 57, 0.15), 
+            rgba(128, 0, 255, 0.15) 40%, 
+            rgba(251, 225, 57, 0.1) 80%
+        );
+        background-size: 400% 400%;
+        opacity: 0;
+        filter: blur(5px);
+        transition: opacity 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
+        animation: subtleGradientShift 20s ease-in-out infinite alternate;
+        z-index: -1;
+    }
+    
+    span {
+        display: block;
+        font-size: 14px!important;
+        text-transform: uppercase;
+        letter-spacing: 6px;
+        color: white;
+        text-align: center;
+        font-weight: 400!important;
+        pointer-events: none;
+        transform: translateX(3px) translateY(0.5px);
+        position: relative;
+        z-index: 2;
+        transition: color 0.7s cubic-bezier(0.2, 0.1, 0.2, 1), 
+                    text-shadow 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
+    }
+    
+    &:hover {
+        transform: translate3d(0, -2px, 0) scale3d(1.02, 1.02, 1);
+        border-color: transparent;
+        box-shadow: 0 0 20px rgba(251, 225, 57, 0.2), 
+                    0 0 30px rgba(128, 0, 255, 0.1);
+        
+        &::before {
+            opacity: 0.6;
+        }
+        
+        &::after {
+            opacity: 0.8;
+        }
+        
+        span {
+            color: #ffffff;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+        }
+    }
+    
+    &:active {
+        transform: translate3d(0, 1px, 0) scale3d(0.98, 0.98, 1);
+        transition: transform 0.3s cubic-bezier(0.2, 0.1, 0.2, 1);
+    }
+}
+
+/* Keyframe animations for more subtle gradient effects */
+@keyframes subtleGradientShift {
+    0% {
+        background-position: 0% 0%;
+    }
+    25% {
+        background-position: 100% 0%;
+    }
+    50% {
+        background-position: 100% 100%;
+    }
+    75% {
+        background-position: 0% 100%;
+    }
+    100% {
+        background-position: 0% 0%;
+    }
+}
+
+/* Add a class for cursor interaction effects */
+.fancy-btn-active {
+    border-color: rgba(255, 255, 255, 0.2);
+    
+    &::before {
+        opacity: 0.4;
+        filter: blur(10px);
+    }
+    
+    &::after {
+        opacity: 0.6;
+        filter: blur(6px);
+    }
+}

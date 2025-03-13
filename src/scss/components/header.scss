@@ -94,7 +94,7 @@ header.anniversary {
     button.menu {
         font-size: 12px;
         text-transform: uppercase;
-        background: none;
+        background: rgba(255,255,255,0.01);
         border: none;
         cursor: pointer;
         color: #fff;
@@ -102,6 +102,7 @@ header.anniversary {
         letter-spacing: 6px;
         padding-right: 24px;
         align-self: center;
+        height:24px;
         span {
             font-weight:400;
             transform:translateY(1px);

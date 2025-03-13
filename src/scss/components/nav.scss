@@ -18,6 +18,7 @@ nav {
     display:flex;
     align-items:center;
     justify-content:space-between;
+    gap:24px;
     &.active {
         top:16px;
         z-index:1000;
@@ -32,7 +33,22 @@ nav {
         }
     }
     
-    
+    .nav-items {
+        gap:20px;
+        a {
+            font-family: 'Open Sans', sans-serif;
+            font-size:13.5px;
+            font-weight:400;
+            letter-spacing:0.54px;
+            color:#767676;
+            text-transform:uppercase;
+            &:hover {
+                color:#0029cf;
+            }
+        }
+        
+    }
+
     button.close-menu {
         font-size: 12px;
         font-weight: 200;
@@ -44,8 +60,11 @@ nav {
         letter-spacing: 6px;
         padding-right: 24px;
         align-self: center;
+        width:24px;
+        height:24px;
         span {
             color:#000;
+            display:none;
         }
         &:before,
         &:after {
@@ -56,18 +75,18 @@ nav {
             background-color: #000;
             transition: all 0.3s ease;
             transform: translateY(-50%);
-            right: 0;
+            left: 50%;
             transform-origin: center center;
         }
 
         &:before {
             top: calc(50%);
-            transform: rotate(45deg);
+            transform: translateX(-50%) translateY(-50%) rotate(45deg);
         }
 
         &:after {
             top: calc(50%);
-            transform: rotate(-45deg);
+            transform: translateX(-50%) translateY(-50%) rotate(-45deg);
         }
 
     }
