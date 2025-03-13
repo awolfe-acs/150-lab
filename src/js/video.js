@@ -21,18 +21,20 @@ export function initVideo() {
 
     const getVideoPath = () => {
         if (isProduction) {
-            // In production, video is in /150-lab/video/
-            return `${getBasePath()}/video/acs-150-compressed.mp4`;
+            // In production, video is in /150-lab/assets/video/
+            return `${getBasePath()}/assets/video/acs-150-compressed.mp4`;
         }
         return '/video/acs-150-compressed.mp4';
     };
 
     const getPosterPath = () => {
         if (isProduction) {
-            // In production, images are in /150-lab/images/
+            // In production, images are in /150-lab/assets/images/
             // Extract the relative path from the original poster attribute
             const relativePath = originalPosterPath.replace(/^\//g, '');
-            return `${getBasePath()}/${relativePath}`;
+            // Replace 'images/' with 'assets/images/' for production
+            const assetPath = relativePath.replace(/^images\//, 'assets/images/');
+            return `${getBasePath()}/${assetPath}`;
         }
         return originalPosterPath;
     };

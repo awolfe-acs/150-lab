@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import { resolve } from 'path';
 import fs from 'fs';
+import path from 'path';
 
 export default defineConfig(({ mode }) => ({
   base: mode === "production" ? "/150-lab/" : "/",
@@ -57,5 +58,67 @@ export default defineConfig(({ mode }) => ({
         );
       },
     },
+    {
+      name: "copy-public-to-assets",
+      apply: 'build',
+      closeBundle() {
+        // Define the public directory and the destination assets directory
+        const publicDir = resolve(__dirname, 'public');
+        const assetsDir = resolve(__dirname, 'dist/assets');
+        
+        // Create the assets directory if it doesn't exist
+        if (!fs.existsSync(assetsDir)) {
+          fs.mkdirSync(assetsDir, { recursive: true });
+        }
+        
+        // Function to recursively copy files from source to destination
+        const copyRecursive = (src, dest) => {
+          // Get stats of the current file/directory
+          const stats = fs.statSync(src);
+          
+          // If it's a directory, create it in the destination and copy its contents
+          if (stats.isDirectory()) {
+            // Create the destination directory if it doesn't exist
+            if (!fs.existsSync(dest)) {
+              fs.mkdirSync(dest, { recursive: true });
+            }
+            
+            // Read the directory contents
+            const entries = fs.readdirSync(src);
+            
+            // Copy each entry recursively
+            for (const entry of entries) {
+              // Skip .DS_Store files
+              if (entry === '.DS_Store') continue;
+              
+              const srcPath = path.join(src, entry);
+              const destPath = path.join(dest, entry);
+              copyRecursive(srcPath, destPath);
+            }
+          } 
+          // If it's a file, copy it to the destination
+          else if (stats.isFile()) {
+            fs.copyFileSync(src, dest);
+            console.log(`Copied: ${src} -> ${dest}`);
+          }
+        };
+        
+        // Copy each subdirectory from public to assets
+        const entries = fs.readdirSync(publicDir);
+        for (const entry of entries) {
+          // Skip .DS_Store files
+          if (entry === '.DS_Store') continue;
+          
+          const srcPath = path.join(publicDir, entry);
+          const stats = fs.statSync(srcPath);
+          
+          // Only copy directories, not individual files at the root level
+          if (stats.isDirectory()) {
+            const destPath = path.join(assetsDir, entry);
+            copyRecursive(srcPath, destPath);
+          }
+        }
+      }
+    }
   ],
 }));
