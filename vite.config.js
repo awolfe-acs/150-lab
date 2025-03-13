@@ -84,11 +84,11 @@ export default defineConfig(({ mode }) => ({
       name: "copy-video-files",
       apply: 'build',
       closeBundle() {
-        // Copy video files from public/video to video in the dist folder
+        // Copy video files from public/video to assets/video in the dist folder
         const publicVideoDir = resolve(__dirname, 'public/video');
-        const distVideoDir = resolve(__dirname, 'dist/video');
+        const distVideoDir = resolve(__dirname, 'dist/assets/video');
         
-        // Create the video directory if it doesn't exist
+        // Create the video directory in assets if it doesn't exist
         if (!fs.existsSync(distVideoDir)) {
           fs.mkdirSync(distVideoDir, { recursive: true });
         }
