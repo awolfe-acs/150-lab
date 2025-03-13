@@ -4,8 +4,8 @@ export function initVideo() {
     
     if (!videoElement || !videoSection) return;
     
-    // Get the original poster path
-    const originalPosterPath = videoElement.poster;
+    // Get the poster filename from data attribute
+    const posterFilename = videoElement.dataset.poster;
     
     // Check if we're in production by looking at the URL
     const isProduction = window.location.pathname.includes('/150-lab/') || 
@@ -30,13 +30,9 @@ export function initVideo() {
     const getPosterPath = () => {
         if (isProduction) {
             // In production, images are in /150-lab/assets/images/
-            // Extract the relative path from the original poster attribute
-            const relativePath = originalPosterPath.replace(/^\//g, '');
-            // Replace 'images/' with 'assets/images/' for production
-            const assetPath = relativePath.replace(/^images\//, 'assets/images/');
-            return `${getBasePath()}/${assetPath}`;
+            return `${getBasePath()}/assets/images/${posterFilename}`;
         }
-        return originalPosterPath;
+        return `/images/${posterFilename}`;
     };
 
     // Update video source with correct path
@@ -47,7 +43,7 @@ export function initVideo() {
     // Set poster path
     const finalPosterPath = getPosterPath();
     console.log('Setting poster path:', finalPosterPath);
-    console.log('Original poster attribute:', originalPosterPath);
+    console.log('Poster filename:', posterFilename);
     videoElement.poster = finalPosterPath;
 
     // Add error event listener to check if the video file can be loaded
