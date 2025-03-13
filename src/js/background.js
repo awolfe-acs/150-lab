@@ -733,6 +733,19 @@ export function initShaderBackground() {
   gui.domElement.style.position = "absolute";
   gui.domElement.style.top = "10px";
   gui.domElement.style.right = "10px";
+  
+  // Change the close button text from "Close Controls" to "Open Controls"
+  const closeButton = gui.domElement.querySelector('.close-button');
+  if (closeButton) {
+    closeButton.innerHTML = 'Open Controls';
+    
+    // Add event listener to toggle the text when clicked
+    closeButton.addEventListener('click', function() {
+      setTimeout(() => {
+        this.innerHTML = gui.closed ? 'Open Controls' : 'Close Controls';
+      }, 50);
+    });
+  }
 
   // Create a folder for camera controls
   const cameraFolder = gui.addFolder("Camera Controls");

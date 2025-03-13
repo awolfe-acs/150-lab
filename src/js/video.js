@@ -4,35 +4,48 @@ export function initVideo() {
     
     if (!videoElement || !videoSection) return;
     
-    const posterPath = videoElement.dataset.poster;
-    const isProduction = window.location.hostname !== 'localhost';
+    // Get the original poster path
+    const originalPosterPath = videoElement.poster;
+    
+    // Check if we're in production by looking at the URL
+    const isProduction = window.location.pathname.includes('/150-lab/') || 
+                         window.location.hostname !== 'localhost';
+    
+    // Get the base path for production
+    const getBasePath = () => {
+        if (isProduction) {
+            return '/150-lab';
+        }
+        return '';
+    };
 
     const getVideoPath = () => {
         if (isProduction) {
-            return '/assets/video/acs-150-compressed.mp4';
+            // In production, video is in /150-lab/video/
+            return `${getBasePath()}/video/acs-150-compressed.mp4`;
         }
         return '/video/acs-150-compressed.mp4';
     };
 
     const getPosterPath = () => {
-        // Make sure we're using the correct poster filename
-        const filename = posterPath || 'images/anniversary-video-poster.jpg';
-        
         if (isProduction) {
-            // In production, the image should be in /assets/images/
-            return `/assets/${filename}`;
+            // In production, images are in /150-lab/images/
+            // Extract the relative path from the original poster attribute
+            const relativePath = originalPosterPath.replace(/^\//g, '');
+            return `${getBasePath()}/${relativePath}`;
         }
-        // In development, the image should be in /images/
-        return `/${filename}`;
+        return originalPosterPath;
     };
 
     // Update video source with correct path
-    videoElement.src = getVideoPath();
+    const videoSrc = getVideoPath();
+    console.log('Setting video source:', videoSrc);
+    videoElement.src = videoSrc;
     
     // Set poster path
     const finalPosterPath = getPosterPath();
     console.log('Setting poster path:', finalPosterPath);
-    console.log('Original data-poster attribute:', posterPath);
+    console.log('Original poster attribute:', originalPosterPath);
     videoElement.poster = finalPosterPath;
 
     // Add error event listener to check if the video file can be loaded
