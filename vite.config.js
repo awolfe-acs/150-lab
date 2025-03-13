@@ -13,9 +13,12 @@ export default defineConfig(({ mode }) => ({
           if (assetInfo.name.endsWith('.mp3') || 
               assetInfo.name.endsWith('.mp4') || 
               assetInfo.name.endsWith('.jpg') || 
-              assetInfo.name.endsWith('.png')) {
+              assetInfo.name.endsWith('.png') ||
+              assetInfo.name.endsWith('.webp') ||
+              assetInfo.name.endsWith('.svg')) {
             const type = assetInfo.name.split('.').pop();
-            const subDir = type === 'mp3' ? 'audio' : 'video';
+            const subDir = type === 'mp3' ? 'audio' : 
+                          type === 'mp4' ? 'video' : 'images';
             return `assets/${subDir}/[name][extname]`;
           }
           return 'assets/[name]-[hash][extname]';
@@ -102,6 +105,33 @@ export default defineConfig(({ mode }) => ({
               fs.copyFileSync(
                 resolve(publicVideoDir, file),
                 resolve(distVideoDir, file)
+              );
+            }
+          });
+        }
+      }
+    },
+    {
+      name: "copy-images-files",
+      apply: 'build',
+      closeBundle() {
+        // Copy image files from public/images to assets/images in the dist folder
+        const publicImagesDir = resolve(__dirname, 'public/images');
+        const distImagesDir = resolve(__dirname, 'dist/assets/images');
+        
+        // Create the images directory in assets if it doesn't exist
+        if (!fs.existsSync(distImagesDir)) {
+          fs.mkdirSync(distImagesDir, { recursive: true });
+        }
+        
+        // Copy all image files
+        if (fs.existsSync(publicImagesDir)) {
+          const imageFiles = fs.readdirSync(publicImagesDir);
+          imageFiles.forEach(file => {
+            if (file.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) {
+              fs.copyFileSync(
+                resolve(publicImagesDir, file),
+                resolve(distImagesDir, file)
               );
             }
           });
