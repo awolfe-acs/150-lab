@@ -9,13 +9,14 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         assetFileNames: (assetInfo) => {
-          // Put audio files in the assets directory
-          if (assetInfo.name.endsWith('.mp3')) {
-            return 'assets/audio/[name][extname]';
-          }
-          // Put video files in the video directory
-          if (assetInfo.name.endsWith('.mp4')) {
-            return 'assets/video/[name][extname]';
+          // Handle all media files consistently in the assets directory
+          if (assetInfo.name.endsWith('.mp3') || 
+              assetInfo.name.endsWith('.mp4') || 
+              assetInfo.name.endsWith('.jpg') || 
+              assetInfo.name.endsWith('.png')) {
+            const type = assetInfo.name.split('.').pop();
+            const subDir = type === 'mp3' ? 'audio' : 'video';
+            return `assets/${subDir}/[name][extname]`;
           }
           return 'assets/[name]-[hash][extname]';
         }
