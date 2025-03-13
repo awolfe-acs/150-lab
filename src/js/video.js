@@ -19,6 +19,11 @@ export function initVideo() {
     const videoPath = getVideoPath('acs-150-compressed.mp4');
     console.log('Setting video source:', videoPath);
     videoElement.src = videoPath;
+
+    // Update poster path with correct path
+    const posterPath = getVideoPath('acs-150-compressed-poster.jpg');
+    console.log('Setting poster path:', posterPath);
+    videoElement.poster = posterPath;
     
     // Add error event listener to check if the video file can be loaded
     videoElement.addEventListener('error', (e) => {
