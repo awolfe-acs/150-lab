@@ -637,12 +637,16 @@ export function initAnimations() {
 
   // Create and configure background audio with Web Audio API for better volume control
   const getAudioPath = (filename) => {
-    // Check if we're in production mode (base path will be /150-lab/)
-    const isProd = window.location.pathname.includes('/150-lab/');
+    // Check if we're in any production environment
+    const pathname = window.location.pathname;
+    const hostname = window.location.hostname;
+    const isProd = pathname.includes('/150-lab/') || 
+                  pathname.includes('/content/') || 
+                  hostname.includes('acs.org');
     return isProd ? `/150-lab/assets/audio/${filename}` : `/audio/${filename}`;
   };
   
-  const backgroundAudio = new Audio(getAudioPath('chemistry.mp3'));
+  const backgroundAudio = new Audio(getAudioPath('chemistry2.mp3'));
   backgroundAudio.loop = true;
   backgroundAudio.volume = 0; // Start at 0 volume for fade in
   
@@ -694,7 +698,7 @@ export function initAnimations() {
 
   // Create and configure UI click sound
   const uiClickSound = new Audio(getAudioPath('ui-click.mp3'));
-  uiClickSound.volume = 0.44; // Set to 44% volume
+  uiClickSound.volume = 0.38; // Set to 38% volume
   
   // Function to play UI click sound
   const playUIClickSound = () => {
@@ -703,7 +707,7 @@ export function initAnimations() {
     try {
       // Clone the audio to allow multiple overlapping sounds
       const clickSound = uiClickSound.cloneNode();
-      clickSound.volume = 0.44;
+      clickSound.volume = 0.38;
       clickSound.play().catch(error => {
         console.warn('UI click sound play was prevented:', error);
       });
@@ -720,6 +724,17 @@ export function initAnimations() {
     // Add click event listeners to play sound
     interactiveElements.forEach(element => {
       element.addEventListener('click', (event) => {
+        // For enter-experience button, only play sound if it's the first click
+        if (element.classList.contains('enter-experience')) {
+          if (!element.dataset.clickSoundPlayed) {
+            if (!window.audioMuted) {
+              playUIClickSound();
+            }
+            element.dataset.clickSoundPlayed = 'true';
+          }
+          return;
+        }
+        
         if (!window.audioMuted) {
           playUIClickSound();
         }
@@ -735,6 +750,17 @@ export function initAnimations() {
               // Check if the node itself is an interactive element
               if (node.matches('a, button, input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"]')) {
                 node.addEventListener('click', (event) => {
+                  // For enter-experience button, only play sound if it's the first click
+                  if (node.classList.contains('enter-experience')) {
+                    if (!node.dataset.clickSoundPlayed) {
+                      if (!window.audioMuted) {
+                        playUIClickSound();
+                      }
+                      node.dataset.clickSoundPlayed = 'true';
+                    }
+                    return;
+                  }
+                  
                   if (!window.audioMuted) {
                     playUIClickSound();
                   }
@@ -745,6 +771,17 @@ export function initAnimations() {
               const childInteractiveElements = node.querySelectorAll('a, button, input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"]');
               childInteractiveElements.forEach(element => {
                 element.addEventListener('click', (event) => {
+                  // For enter-experience button, only play sound if it's the first click
+                  if (element.classList.contains('enter-experience')) {
+                    if (!element.dataset.clickSoundPlayed) {
+                      if (!window.audioMuted) {
+                        playUIClickSound();
+                      }
+                      element.dataset.clickSoundPlayed = 'true';
+                    }
+                    return;
+                  }
+                  
                   if (!window.audioMuted) {
                     playUIClickSound();
                   }
@@ -778,16 +815,14 @@ export function initAnimations() {
   const soundToggle = document.querySelector('.sound-toggle');
   if (soundToggle) {
     soundToggle.addEventListener('click', () => {
+      // Always play UI click sound first, regardless of mute state
+      playUIClickSound();
+      
       // Toggle the muted class
       soundToggle.classList.toggle('muted');
       
       // Update global mute state
       window.audioMuted = soundToggle.classList.contains('muted');
-      
-      // Play UI click sound for the toggle itself (before muting takes effect)
-      if (!window.audioMuted) {
-        playUIClickSound();
-      }
       
       // Pause or resume the wave animation based on muted state
       if (window.audioMuted) {
@@ -1127,57 +1162,57 @@ function initFancyButtonEffects() {
 
 // Animate video scale from small to full size while scrolling
 function animateVideoScale() {
-  const videoElement = document.querySelector("#video video");
-  const videoSection = document.querySelector("#video");
-  const videoTravelArea = document.querySelector("#video-travel-area");
-  
-  if (videoElement && videoSection && videoTravelArea) {
-    // Set initial scale
-    gsap.set(videoElement, {
-      scale: 0.4,
-      opacity: 0,
-      transformOrigin: "center center"
-    });
+    const videoWrapper = document.querySelector("#video .video-wrapper");
+    const videoSection = document.querySelector("#video");
+    const videoTravelArea = document.querySelector("#video-travel-area");
     
-    // Create a timeline for the video animations - start when entering video-travel-area
-    const videoTl = gsap.timeline({
-      scrollTrigger: {
-        trigger: "#video-travel-area", // Changed from hero-travel-area to video-travel-area
-        start: "top bottom", // Start when the top of video-travel-area enters the viewport
-        end: "top 20%", // End when the top of video-travel-area is 20% from the top of viewport
-        scrub: true,
-        markers: false,
-        onUpdate: (self) => {
-          // Add/remove class based on progress
-          if (self.progress > 0.8) {
-            videoElement.classList.add('scale-active');
-          } else {
-            videoElement.classList.remove('scale-active');
-          }
-        }
-      }
-    });
-    
-    // Add the scale animation to the timeline
-    videoTl.to(videoElement, {
-      scale: 1.0,
-      opacity: 1,
-      ease: "power2.out" // Slightly more pronounced easing
-    });
-    
-    // Create a pin animation that pins the video when it reaches the top of the viewport
-    ScrollTrigger.create({
-      trigger: "#video",
-      start: "top top", // Start pinning when the top of #video reaches the top of the viewport
-      endTrigger: "#video-travel-area", // Use video-travel-area as the end trigger
-      end: "bottom bottom", // End pinning when the bottom of video-travel-area reaches the bottom of viewport
-      pin: true, // Pin the video section
-      pinSpacing: false, // Don't add extra space for the pinned element
-      anticipatePin: 1, // Helps prevent jittering
-      markers: false, // Set to true for debugging
-      id: "video-pin" // Add an ID for easier debugging
-    });
-  }
+    if (videoWrapper && videoSection && videoTravelArea) {
+        // Set initial scale
+        gsap.set(videoWrapper, {
+            scale: 0.4,
+            opacity: 0,
+            transformOrigin: "center center"
+        });
+        
+        // Create a timeline for the video animations - start when entering video-travel-area
+        const videoTl = gsap.timeline({
+            scrollTrigger: {
+                trigger: "#video-travel-area", // Changed from hero-travel-area to video-travel-area
+                start: "top bottom", // Start when the top of video-travel-area enters the viewport
+                end: "top 20%", // End when the top of video-travel-area is 20% from the top of viewport
+                scrub: true,
+                markers: false,
+                onUpdate: (self) => {
+                    // Add/remove class based on progress
+                    if (self.progress > 0.8) {
+                        videoWrapper.classList.add('scale-active');
+                    } else {
+                        videoWrapper.classList.remove('scale-active');
+                    }
+                }
+            }
+        });
+        
+        // Add the scale animation to the timeline
+        videoTl.to(videoWrapper, {
+            scale: 1.0,
+            opacity: 1,
+            ease: "power2.out" // Slightly more pronounced easing
+        });
+        
+        // Create a pin animation that pins the video when it reaches the top of the viewport
+        ScrollTrigger.create({
+            trigger: "#video",
+            start: "top top", // Start pinning when the top of #video reaches the top of the viewport
+            endTrigger: "#video-travel-area", // Use video-travel-area as the end trigger
+            end: "bottom bottom", // End pinning when the bottom of video-travel-area reaches the bottom of viewport
+            pin: true, // Pin the video section
+            pinSpacing: false, // Don't add extra space for the pinned element
+            anticipatePin: 1, // Helps prevent jittering
+            markers: false, // Set to true for debugging
+            id: "video-pin" // Add an ID for easier debugging
+        });
+    }
 }
 
 // Add this function after the animateVideoScale function

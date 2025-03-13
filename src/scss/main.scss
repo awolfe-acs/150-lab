@@ -47,7 +47,7 @@ html {
 
 //Hero Area
 #hero-area {
-
+  pointer-events:none;
   h1, span {
     cursor:default;
   }
@@ -122,7 +122,9 @@ html {
   }
 
   button.enter-experience {
-
+    bottom:20vh;
+    position:absolute;
+    pointer-events:auto;
   }
 }
 
@@ -163,7 +165,7 @@ html {
     font-size:1.5vw;
     font-weight:120;
     line-height:1.4;
-    max-width:65vw;
+    max-width:66.5vw;
   }
   .fancy-btn {
     width:240px;

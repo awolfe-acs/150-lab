@@ -3,6 +3,7 @@ import "./scss/main.scss";
 import "lenis/dist/lenis.css";
 import { initShaderBackground } from "./js/background.js";
 import { initAnimations } from "./js/animation.js";
+import { initVideo } from "./js/video.js";
 //import { initCountdown } from "./js/countdown.js";
 import { initDebug } from "./js/debug.js";
 import gsap from "gsap";
@@ -68,6 +69,8 @@ document.addEventListener("DOMContentLoaded", () => {
   initShaderBackground();
   // Initialize animations
   initAnimations();
+  // Initialize video
+  initVideo();
   
   // Final attempt to ensure we're at the top
   setTimeout(() => {

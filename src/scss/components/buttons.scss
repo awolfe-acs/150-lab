@@ -7,8 +7,6 @@
     background: rgba(255, 255, 255, 0.05);
     width: 180px;
     cursor: pointer;
-    position: absolute;
-    bottom: 25%;
     z-index: 1000;
     overflow: hidden;
     transform: translate3d(0, 0, 0);
@@ -44,6 +42,7 @@
         filter: blur(8px);
         transition: opacity 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
         animation: subtleGradientShift 10s ease-in-out infinite alternate;
+        pointer-events:none;
     }
     
     /* Create hover effect for button fill */
@@ -64,6 +63,7 @@
         transition: opacity 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
         animation: subtleGradientShift 20s ease-in-out infinite alternate;
         z-index: -1;
+        pointer-events:none;
     }
     
     span {

@@ -13,6 +13,10 @@ export default defineConfig(({ mode }) => ({
           if (assetInfo.name.endsWith('.mp3')) {
             return 'assets/audio/[name][extname]';
           }
+          // Put video files in the video directory
+          if (assetInfo.name.endsWith('.mp4')) {
+            return 'video/[name][extname]';
+          }
           return 'assets/[name]-[hash][extname]';
         }
       }
@@ -70,6 +74,33 @@ export default defineConfig(({ mode }) => ({
               fs.copyFileSync(
                 resolve(publicAudioDir, file),
                 resolve(distAudioDir, file)
+              );
+            }
+          });
+        }
+      }
+    },
+    {
+      name: "copy-video-files",
+      apply: 'build',
+      closeBundle() {
+        // Copy video files from public/video to video in the dist folder
+        const publicVideoDir = resolve(__dirname, 'public/video');
+        const distVideoDir = resolve(__dirname, 'dist/video');
+        
+        // Create the video directory if it doesn't exist
+        if (!fs.existsSync(distVideoDir)) {
+          fs.mkdirSync(distVideoDir, { recursive: true });
+        }
+        
+        // Copy all video files
+        if (fs.existsSync(publicVideoDir)) {
+          const videoFiles = fs.readdirSync(publicVideoDir);
+          videoFiles.forEach(file => {
+            if (file.endsWith('.mp4')) {
+              fs.copyFileSync(
+                resolve(publicVideoDir, file),
+                resolve(distVideoDir, file)
               );
             }
           });
