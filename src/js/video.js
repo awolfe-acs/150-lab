@@ -12,7 +12,7 @@ export function initVideo() {
         const isProd = pathname.includes('/150-lab/') || 
                       pathname.includes('/content/') || 
                       hostname.includes('acs.org');
-        return isProd ? `/150-lab/assets/video/${filename}` : `/video/${filename}`;
+        return isProd ? `/assets/video/${filename}` : `/video/${filename}`;
     };
 
     // Update video source with correct path

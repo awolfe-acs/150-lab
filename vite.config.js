@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => ({
           }
           // Put video files in the video directory
           if (assetInfo.name.endsWith('.mp4')) {
-            return 'video/[name][extname]';
+            return 'assets/video/[name][extname]';
           }
           return 'assets/[name]-[hash][extname]';
         }
