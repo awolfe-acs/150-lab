@@ -1,10 +1,201 @@
 import * as THREE from "three";
 import * as dat from "dat.gui";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 export function initShaderBackground() {
   // Get the canvas element
   const canvas = document.getElementById("shaderBackground");
   if (!canvas) return;
+
+  // Import GSAP and ScrollTrigger
+  let gsap, ScrollTrigger;
+  
+  // Try to import GSAP and ScrollTrigger asynchronously
+  import('gsap').then(module => {
+    gsap = module.default;
+    
+    import('gsap/ScrollTrigger').then(module => {
+      ScrollTrigger = module.default;
+      gsap.registerPlugin(ScrollTrigger);
+      
+      // Set up the ScrollTrigger for colorDarkness after GSAP is loaded
+      setupColorDarknessAnimation(gsap, ScrollTrigger);
+    });
+  }).catch(error => {
+    console.error("Error loading GSAP:", error);
+  });
+  
+  // Function to set up the color darkness animation with ScrollTrigger
+  function setupColorDarknessAnimation(gsap, ScrollTrigger) {
+    // Find the video-travel-area element
+    const videoTravelArea = document.querySelector("#video-travel-area");
+    
+    if (!videoTravelArea) {
+      console.warn("Could not find #video-travel-area element for shader animation");
+      return;
+    }
+    
+    // Create ScrollTrigger to animate the colorDarkness value
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: "#video-travel-area",
+        start: "top bottom", // Starts when the top of video-travel-area reaches the bottom of viewport
+        end: "top 20%",     // Ends when the top of video-travel-area reaches 20% from the top of viewport
+        scrub: true,        // Smooth scrubbing effect, tied to scroll position
+        markers: false,     // Set to true for debugging
+        onUpdate: (self) => {
+          // Update the colorDarkness value based on progress
+          if (uniforms && uniforms.colorDarkness) {
+            // Map progress (0-1) to colorDarkness (0-1)
+            uniforms.colorDarkness.value = self.progress;
+            
+            // Update the GUI if it exists
+            updateColorDarknessGUI();
+          }
+        }
+      }
+    });
+    
+    // Find the get-involved section
+    const getInvolvedSection = document.querySelector("#get-involved");
+    
+    if (!getInvolvedSection) {
+      console.warn("Could not find #get-involved element for globe opacity animation");
+      return;
+    }
+    
+    // Create ScrollTrigger to animate both the globe and overlay
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: "#get-involved",
+        start: "top bottom",  // Starts when the top of get-involved reaches the bottom of viewport
+        end: "top 40%",       // Ends when the top of get-involved reaches 40% from the top of viewport
+        scrub: true,          // Smooth scrubbing effect, tied to scroll position
+        markers: false,       // Set to true for debugging
+        onUpdate: (self) => {
+          const progress = self.progress;
+          
+          // Handle Globe Model Visibility and Opacity
+          if (globeModel) {
+            // First make the globe visible once we have any progress
+            if (progress > 0.01 && !globeModel.visible) {
+              globeModel.visible = true;
+              globeParams.visible = true;
+              
+              // Update visibility toggle in GUI if it exists
+              updateGlobeVisibilityGUI();
+            } else if (progress <= 0.01 && globeModel.visible) {
+              globeModel.visible = false;
+              globeParams.visible = false;
+              
+              // Update visibility toggle in GUI if it exists
+              updateGlobeVisibilityGUI();
+            }
+            
+            // Update opacity on all materials
+            if (globeModel.visible) {
+              globeModel.traverse((child) => {
+                if (child.isMesh && child.material) {
+                  child.material.transparent = true;
+                  child.material.opacity = progress;
+                }
+              });
+              
+              // Update globeParams for reference
+              globeParams.opacity = progress;
+              
+              // Update any opacity controllers in the GUI
+              updateGlobeOpacityGUI();
+            }
+          }
+          
+          // Handle Overlay Visibility and Opacity
+          if (overlayMesh) {
+            // First make the overlay visible once we have any progress
+            if (progress > 0.01 && !overlayMesh.visible) {
+              overlayMesh.visible = true;
+              overlayParams.enabled = true;
+              
+              // Update visibility toggle in GUI if it exists
+              updateOverlayVisibilityGUI();
+            } else if (progress <= 0.01 && overlayMesh.visible) {
+              overlayMesh.visible = false;
+              overlayParams.enabled = false;
+              
+              // Update visibility toggle in GUI if it exists
+              updateOverlayVisibilityGUI();
+            }
+          }
+        }
+      }
+    });
+    
+    console.log("Set up ScrollTrigger animations for shader, globe, and overlay");
+  }
+  
+  // Helper function to update the GUI control for colorDarkness if it exists
+  function updateColorDarknessGUI() {
+    if (gui) {
+      // Try to find the colorDarkness controller and update its display
+      for (let folder of Object.values(gui.__folders)) {
+        if (folder.__controllers) {
+          for (let controller of folder.__controllers) {
+            if (controller.property === "value" && controller.object === uniforms.colorDarkness) {
+              controller.updateDisplay();
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Helper function to update any globe opacity controllers in the GUI
+  function updateGlobeOpacityGUI() {
+    if (gui && gui.__folders['Globe Model Controls'] && gui.__folders['Globe Model Controls'].__folders['Material']) {
+      const materialFolder = gui.__folders['Globe Model Controls'].__folders['Material'];
+      
+      if (materialFolder.__controllers) {
+        for (let controller of materialFolder.__controllers) {
+          if (controller.property === "opacity") {
+            controller.updateDisplay();
+          }
+        }
+      }
+    }
+  }
+  
+  // Helper function to update globe visibility control in the GUI
+  function updateGlobeVisibilityGUI() {
+    if (gui && gui.__folders['Globe Model Controls']) {
+      const globeFolder = gui.__folders['Globe Model Controls'];
+      
+      if (globeFolder.__controllers) {
+        for (let controller of globeFolder.__controllers) {
+          if (controller.property === "visible") {
+            controller.updateDisplay();
+            break;
+          }
+        }
+      }
+    }
+  }
+  
+  // Helper function to update overlay visibility control in the GUI
+  function updateOverlayVisibilityGUI() {
+    if (gui && gui.__folders['Gradient Overlay Controls']) {
+      const overlayFolder = gui.__folders['Gradient Overlay Controls'];
+      
+      if (overlayFolder.__controllers) {
+        for (let controller of overlayFolder.__controllers) {
+          if (controller.property === "enabled") {
+            controller.updateDisplay();
+            break;
+          }
+        }
+      }
+    }
+  }
 
   // Get the true viewport height (accounting for mobile browser address bar)
   function getTrueViewportHeight() {
@@ -62,6 +253,314 @@ export function initShaderBackground() {
   camera.position.z = cameraParams.zPosition;
   camera.zoom = cameraParams.zoom;
   camera.updateProjectionMatrix();
+
+  // Create a group to hold and control the globe model
+  const globeGroup = new THREE.Group();
+  scene.add(globeGroup);
+
+  // Create gradient overlay
+  let overlayMaterial, overlayMesh;
+  
+  // Gradient overlay parameters
+  const overlayParams = {
+    enabled: false,     // Start with overlay disabled
+    startOpacity: 0.0,  // Top opacity (fully transparent)
+    endOpacity: 1.0,    // Bottom opacity (fully opaque black)
+    offsetY: 0.0,       // Y position offset (for gradient calculation)
+    height: 1.4,        // Height multiplier for gradient
+    color: "#000000",   // Pure black color
+    yOffset: -0.5       // Y position of the entire overlay (in viewport height %)
+  };
+  
+  function createGradientOverlay() {
+    // Create a shader material for the gradient overlay
+    overlayMaterial = new THREE.ShaderMaterial({
+      transparent: true,
+      uniforms: {
+        startOpacity: { value: overlayParams.startOpacity },
+        endOpacity: { value: overlayParams.endOpacity },
+        overlayColor: { value: new THREE.Color(overlayParams.color) },
+        offsetY: { value: overlayParams.offsetY },
+        heightMultiplier: { value: overlayParams.height }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform float startOpacity;
+        uniform float endOpacity;
+        uniform float offsetY;
+        uniform float heightMultiplier;
+        uniform vec3 overlayColor;
+        varying vec2 vUv;
+        
+        void main() {
+          // Calculate y position with offset and height multiplier
+          // Use vUv.y directly (0 at bottom, 1 at top)
+          float y = (vUv.y - offsetY) * heightMultiplier;
+          
+          // Clamp y between 0 and 1
+          y = clamp(y, 0.0, 1.0);
+          
+          // Linear gradient from bottom to top
+          // endOpacity at bottom (y=0), startOpacity at top (y=1)
+          float opacity = mix(endOpacity, startOpacity, y);
+          
+          gl_FragColor = vec4(overlayColor, opacity);
+        }
+      `,
+      // Ensure the overlay renders on top of other content
+      depthTest: false,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+    
+    // Create a plane that matches the viewport width/height
+    const planeWidth = window.innerWidth;
+    const planeHeight = window.innerHeight;
+    
+    // Convert screen pixels to world units based on camera properties
+    const worldUnitsPerPixel = (camera.right - camera.left) / window.innerWidth;
+    
+    // Create the geometry at a size that will appear as the full viewport
+    const overlayGeometry = new THREE.PlaneGeometry(
+      planeWidth * worldUnitsPerPixel,
+      planeHeight * worldUnitsPerPixel
+    );
+    
+    // Create mesh and add to scene (not to camera)
+    overlayMesh = new THREE.Mesh(overlayGeometry, overlayMaterial);
+    
+    // Position the overlay at a fixed distance in front of the camera
+    overlayMesh.position.z = -10; // 10 units in front of the camera's z position
+    overlayMesh.frustumCulled = false; // Never cull this object
+    overlayMesh.renderOrder = 9999; // Ensure it renders last/on top of everything
+    overlayMesh.visible = overlayParams.enabled;
+    
+    // Add to scene, not to camera
+    scene.add(overlayMesh);
+    
+    // Initial update of position relative to camera
+    updateOverlayPosition();
+    
+    console.log("Created gradient overlay:", overlayMesh);
+  }
+  
+  // Function to update overlay position relative to camera
+  function updateOverlayPosition() {
+    if (!overlayMesh) return;
+    
+    // Position the overlay in front of the camera
+    // We want it to stay at a fixed distance in front of the camera
+    overlayMesh.position.x = camera.position.x;
+    
+    // Apply yOffset without changing the scale of the overlay
+    // This moves the overlay up or down but doesn't affect its visual height
+    overlayMesh.position.y = camera.position.y + (overlayParams.yOffset * 50); // Use a fixed offset amount
+    
+    overlayMesh.position.z = camera.position.z - 10; // 10 units in front of camera
+    
+    // Look at the camera to ensure the plane is perpendicular to view
+    overlayMesh.lookAt(camera.position);
+  }
+  
+  // Function to update the overlay on window resize
+  function updateOverlaySize() {
+    if (!overlayMesh) return;
+    
+    // Get viewport dimensions
+    const planeWidth = window.innerWidth;
+    const planeHeight = window.innerHeight;
+    
+    // Convert screen pixels to world units
+    const worldUnitsPerPixel = (camera.right - camera.left) / window.innerWidth;
+    
+    // Dispose of old geometry
+    overlayMesh.geometry.dispose();
+    
+    // Create new geometry that matches the viewport size
+    overlayMesh.geometry = new THREE.PlaneGeometry(
+      planeWidth * worldUnitsPerPixel,
+      planeHeight * worldUnitsPerPixel
+    );
+    
+    // Update position
+    updateOverlayPosition();
+    
+    console.log("Updated overlay size:", planeWidth, planeHeight, "World units:", planeWidth * worldUnitsPerPixel, planeHeight * worldUnitsPerPixel);
+  }
+
+  // Create the initial overlay
+  createGradientOverlay();
+  
+  // Function to update the overlay on window resize
+  function updateOverlaySize() {
+    if (!overlayMesh) return;
+    
+    // Calculate the exact view frustum dimensions
+    const viewWidth = (camera.right - camera.left);
+    const viewHeight = (camera.top - camera.bottom);
+    
+    // Dispose of old geometry
+    overlayMesh.geometry.dispose();
+    
+    // Create new geometry that exactly matches the camera view
+    overlayMesh.geometry = new THREE.PlaneGeometry(
+      viewWidth,
+      viewHeight
+    );
+    
+    // Position exactly in front of camera
+    overlayMesh.position.z = 0.1; // Very small offset to be in front of frustum near plane
+    
+    // Update position based on current y-offset setting
+    overlayMesh.position.y = overlayParams.yOffset * viewHeight;
+  }
+
+  // Globe model parameters with default values
+  const globeParams = {
+    visible: false,     // Start invisible
+    scale: 25.0,
+    positionX: 0,
+    positionY: -280,    // Updated from -166 to -280
+    positionZ: 0,
+    rotationX: 0,
+    rotationY: 0,
+    rotationZ: 0,
+    autoRotate: true,
+    autoRotateSpeed: 0.1,
+    responsive: true,  // New parameter to enable/disable responsive scaling
+    baseScale: 25.0,   // Store the base scale for responsive calculations
+    opacity: 0.0       // Start with opacity 0
+  };
+
+  // Load the GLTF model
+  const gltfLoader = new GLTFLoader();
+  let globeModel;
+  
+  gltfLoader.load('/models/globe.gltf', (gltf) => {
+    globeModel = gltf.scene;
+    
+    // Center the model's geometry to ensure proper rotation around its center
+    let boundingBox = new THREE.Box3().setFromObject(globeModel);
+    let center = boundingBox.getCenter(new THREE.Vector3());
+    
+    // Create a centered wrapper group
+    let centeredGroup = new THREE.Group();
+    // Add the model to the centered group with offset to center it
+    centeredGroup.add(globeModel);
+    // Position the model so its center is at the origin of the group
+    globeModel.position.set(-center.x, -center.y, -center.z);
+    
+    // Use the centered group instead of the raw model
+    globeModel = centeredGroup;
+    
+    // Apply initial parameters
+    globeModel.visible = globeParams.visible;
+    
+    // First add to the scene
+    globeGroup.add(globeModel);
+    
+    // Set initial position and rotation
+    globeModel.position.set(globeParams.positionX, globeParams.positionY, globeParams.positionZ);
+    globeModel.rotation.set(
+      globeParams.rotationX * Math.PI / 180,
+      globeParams.rotationY * Math.PI / 180,
+      globeParams.rotationZ * Math.PI / 180
+    );
+    
+    // Apply initial scale after adding to scene
+    if (globeParams.responsive) {
+      // Use responsive sizing
+      updateGlobeSize();
+    } else {
+      // Use fixed scale
+      globeModel.scale.set(globeParams.scale, globeParams.scale, globeParams.scale);
+      
+      // Position behind the bottom wave
+      positionGlobeBehindBottomWave();
+    }
+    
+    // Set up material controls for the globe
+    const materialFolder = globeFolder.addFolder("Material");
+    
+    // Traverse the model to find materials
+    let materialCount = 0;
+    globeModel.traverse((child) => {
+      if (child.isMesh && child.material) {
+        const globeMaterial = child.material;
+        materialCount++;
+        
+        // Add material properties to GUI if it's a MeshStandardMaterial or MeshPhongMaterial
+        if (globeMaterial.isMeshStandardMaterial || globeMaterial.isMeshPhongMaterial) {
+          // Add metalness control if available
+          if (globeMaterial.metalness !== undefined) {
+            materialFolder
+              .add({ metalness: globeMaterial.metalness }, "metalness", 0, 1)
+              .name(`Metalness${materialCount > 1 ? ' ' + materialCount : ''}`)
+              .onChange((value) => {
+                globeMaterial.metalness = value;
+              });
+          }
+          
+          // Add roughness control if available
+          if (globeMaterial.roughness !== undefined) {
+            materialFolder
+              .add({ roughness: globeMaterial.roughness }, "roughness", 0, 1)
+              .name(`Roughness${materialCount > 1 ? ' ' + materialCount : ''}`)
+              .onChange((value) => {
+                globeMaterial.roughness = value;
+              });
+          }
+          
+          // Add shininess control for MeshPhongMaterial
+          if (globeMaterial.shininess !== undefined) {
+            materialFolder
+              .add({ shininess: globeMaterial.shininess }, "shininess", 0, 100)
+              .name(`Shininess${materialCount > 1 ? ' ' + materialCount : ''}`)
+              .onChange((value) => {
+                globeMaterial.shininess = value;
+              });
+          }
+          
+          // Add opacity control
+          materialFolder
+            .add({ opacity: globeMaterial.opacity }, "opacity", 0, 1)
+            .name(`Opacity${materialCount > 1 ? ' ' + materialCount : ''}`)
+            .onChange((value) => {
+              globeMaterial.opacity = value;
+              globeMaterial.transparent = value < 1;
+            });
+          
+          // Add emissive color control
+          const emissiveColor = globeMaterial.emissive ? '#' + globeMaterial.emissive.getHexString() : "#000000";
+          materialFolder
+            .addColor({ color: emissiveColor }, "color")
+            .name(`Emissive Color${materialCount > 1 ? ' ' + materialCount : ''}`)
+            .onChange((value) => {
+              if (globeMaterial.emissive) {
+                globeMaterial.emissive.set(value);
+              }
+            });
+        }
+      }
+    });
+    
+    console.log("Globe model loaded successfully");
+  }, 
+  // Progress callback
+  (xhr) => {
+    console.log(`Globe model ${(xhr.loaded / xhr.total) * 100}% loaded`);
+  },
+  // Error callback
+  (error) => {
+    console.error('Error loading globe model:', error);
+  });
 
   // Define uniforms with tunable parameters - increased default values for larger displacement
   const uniforms = {
@@ -1080,6 +1579,10 @@ export function initShaderBackground() {
     .name("Enable Bottom Wave")
     .onChange((value) => {
       uniforms.bottomWaveEnabled.value = value;
+      // Reposition globe when wave is enabled/disabled
+      if (globeModel && globeParams.responsive) {
+        positionGlobeBehindBottomWave();
+      }
     });
 
   bottomWaveFolder
@@ -1088,6 +1591,10 @@ export function initShaderBackground() {
     .step(0.001)
     .onChange((value) => {
       uniforms.bottomWaveDepth.value = value;
+      // Reposition globe when wave depth changes
+      if (globeModel && globeParams.responsive) {
+        positionGlobeBehindBottomWave();
+      }
     });
 
   bottomWaveFolder
@@ -1173,6 +1680,415 @@ export function initShaderBackground() {
 
   // Lighting folder starts closed
   // lightingFolder.open();
+
+  // Create a folder for globe model controls
+  const globeFolder = gui.addFolder("Globe Model Controls");
+
+  // Add lighting specifically for the globe model
+  const globeLight = new THREE.DirectionalLight(0xffffff, 1);
+  globeLight.position.set(1, 1, 1);
+  scene.add(globeLight);
+
+  const globeAmbientLight = new THREE.AmbientLight(0xffffff, 0.5);
+  scene.add(globeAmbientLight);
+
+  // Globe lighting controls
+  const globeLightingFolder = globeFolder.addFolder("Lighting");
+  
+  globeLightingFolder
+    .add({ intensity: 5.0 }, "intensity", 0, 5)
+    .name("Direct Light")
+    .onChange((value) => {
+      globeLight.intensity = value;
+    });
+    
+  // Set direct light intensity to 5.0
+  globeLight.intensity = 5.0;
+  
+  globeLightingFolder
+    .add({ intensity: globeAmbientLight.intensity }, "intensity", 0, 5)
+    .name("Ambient Light")
+    .onChange((value) => {
+      globeAmbientLight.intensity = value;
+    });
+
+  // Visibility toggle
+  globeFolder
+    .add(globeParams, "visible")
+    .name("Show Globe")
+    .onChange((value) => {
+      if (globeModel) {
+        globeModel.visible = value;
+      }
+    });
+
+  // Scale control
+  globeFolder
+    .add(globeParams, "scale", 0.1, 50)
+    .name("Size")
+    .step(0.1)
+    .onChange((value) => {
+      if (globeModel) {
+        // Update the base scale value when manually changed
+        globeParams.baseScale = value;
+        // Apply the scale
+        globeModel.scale.set(value, value, value);
+      }
+    });
+    
+  // Responsive scaling toggle
+  globeFolder
+    .add(globeParams, "responsive")
+    .name("Responsive Size")
+    .onChange((value) => {
+      // If responsive is toggled off, reset to the current base scale
+      if (!value && globeModel) {
+        globeModel.scale.set(globeParams.baseScale, globeParams.baseScale, globeParams.baseScale);
+      } else if (value) {
+        // If toggled on, immediately apply responsive scaling
+        updateGlobeSize();
+      }
+    });
+    
+  // Add a manual resize button
+  globeFolder
+    .add({ 
+      resizeGlobe: function() {
+        if (globeModel) {
+          updateGlobeSize();
+        }
+      }
+    }, "resizeGlobe")
+    .name("Force Resize");
+    
+  // Add button to position behind wave
+  globeFolder
+    .add({
+      positionBehindWave: function() {
+        if (globeModel) {
+          positionGlobeBehindBottomWave();
+        }
+      }
+    }, "positionBehindWave")
+    .name("Position Behind Wave");
+    
+  // Function to position the globe behind the bottom wave edge
+  function positionGlobeBehindBottomWave() {
+    if (!globeModel) return;
+    
+    // Get the current viewport height
+    const vh = window.innerHeight;
+    
+    // Get the wave parameters from the shader uniforms
+    const waveEnabled = uniforms.bottomWaveEnabled.value;
+    const waveDepth = uniforms.bottomWaveDepth.value;
+    const edgeDepth = uniforms.edgeDepth.value;
+    
+    // Calculate the position needed to place the globe behind the bottom edge
+    // The bottom wave creates an edge at the bottom of the screen
+    // We need to move the globe down enough that it appears behind this edge
+    
+    // First determine if the wave effect is enabled
+    if (waveEnabled) {
+      // Calculate an approximation of how much the wave extends into the screen
+      // This is based on the shader's wave depth and edge depth calculations
+      const waveExtension = vh * waveDepth * edgeDepth * 0.5;
+      
+      // Set the Y position of the globe to place it partially behind the wave
+      // The position needs to be in THREE.js world units
+      const cameraViewHeight = (camera.top - camera.bottom) / camera.zoom;
+      const pixelsToWorldRatio = cameraViewHeight / vh;
+      
+      // Calculate the world space position - move it down beyond the wave
+      // We add a little extra (-10% of viewport) to ensure it goes behind the wave
+      const worldYPosition = (-waveExtension * pixelsToWorldRatio) - (vh * 0.1 * pixelsToWorldRatio);
+      
+      // Set Z position to ensure the globe is behind the shader layer
+      const worldZPosition = -10; // Negative value to move "behind" the camera
+      
+      // Apply the positions to the globe model
+      globeModel.position.y = worldYPosition;
+      globeModel.position.z = worldZPosition;
+      
+      // Update the position values in the GUI
+      for (let i = 0; i < positionFolder.__controllers.length; i++) {
+        const controller = positionFolder.__controllers[i];
+        if (controller.property === 'positionY') {
+          // Update without triggering onChange
+          controller.setValue(worldYPosition);
+        } else if (controller.property === 'positionZ') {
+          // Update without triggering onChange
+          controller.setValue(worldZPosition);
+        }
+      }
+      
+      console.log(`Positioned globe behind bottom wave at Y: ${worldYPosition.toFixed(2)}, Z: ${worldZPosition}`);
+    }
+  }
+
+  // Function to update globe size based on viewport
+  function updateGlobeSize() {
+    if (!globeModel || !globeParams.responsive) return;
+    
+    // Get the current viewport width
+    const vw = window.innerWidth;
+    
+    // Calculate 90vw in actual pixels
+    const targetWidth = vw * 0.9;
+    
+    // We need the actual size of the model in its natural state
+    // Store the original scale
+    const originalScale = { 
+      x: globeModel.scale.x, 
+      y: globeModel.scale.y, 
+      z: globeModel.scale.z 
+    };
+    
+    try {
+      // Temporarily set scale to 1 to get natural size
+      globeModel.scale.set(1, 1, 1);
+      
+      // Force update of matrix to ensure accurate bounding box calculation
+      globeModel.updateMatrixWorld(true);
+      
+      // Compute the bounding box
+      const bbox = new THREE.Box3().setFromObject(globeModel);
+      const modelWidth = bbox.max.x - bbox.min.x;
+      
+      // Restore original scale immediately after measurement
+      globeModel.scale.set(originalScale.x, originalScale.y, originalScale.z);
+      
+      // Calculate scale needed to make the model 90vw in pixels
+      // We convert from pixels to THREE.js world units
+      // The view frustrum width in world units is (camera.right - camera.left) / camera.zoom
+      const viewFrustrumWidthInWorld = (camera.right - camera.left) / camera.zoom;
+      const pixelsToWorldRatio = viewFrustrumWidthInWorld / vw;
+      
+      // Target width in world units
+      const targetWorldWidth = targetWidth * pixelsToWorldRatio;
+      
+      // Calculate the needed scale
+      const newScale = targetWorldWidth / modelWidth;
+      
+      // Apply the new scale
+      globeModel.scale.set(newScale, newScale, newScale);
+      
+      // Update GUI slider without triggering onChange
+      for (let i = 0; i < globeFolder.__controllers.length; i++) {
+        if (globeFolder.__controllers[i].property === "scale") {
+          globeFolder.__controllers[i].setValue(newScale);
+          break;
+        }
+      }
+      
+      console.log(`Updated globe size: ${targetWidth.toFixed(0)}px (90vw), Scale: ${newScale.toFixed(2)}, Original width: ${modelWidth.toFixed(2)}`);
+      
+      // After sizing the globe, position it behind the bottom wave
+      positionGlobeBehindBottomWave();
+    } catch (error) {
+      console.error("Error updating globe size:", error);
+      // Restore original scale if there was an error
+      globeModel.scale.set(originalScale.x, originalScale.y, originalScale.z);
+    }
+  }
+
+  // Position controls
+  const positionFolder = globeFolder.addFolder("Position");
+  
+  positionFolder
+    .add(globeParams, "positionX", -500, 500)
+    .name("X Position")
+    .step(1)
+    .onChange((value) => {
+      if (globeModel) {
+        globeModel.position.x = value;
+      }
+    });
+  
+  positionFolder
+    .add(globeParams, "positionY", -500, 500)
+    .name("Y Position")
+    .step(1)
+    .onChange((value) => {
+      if (globeModel) {
+        globeModel.position.y = value;
+      }
+    });
+  
+  positionFolder
+    .add(globeParams, "positionZ", -500, 500)
+    .name("Z Position")
+    .step(1)
+    .onChange((value) => {
+      if (globeModel) {
+        globeModel.position.z = value;
+      }
+    });
+
+  // Rotation controls
+  const rotationFolder = globeFolder.addFolder("Rotation");
+  
+  rotationFolder
+    .add(globeParams, "rotationX", 0, 360)
+    .name("X Rotation")
+    .step(1)
+    .onChange((value) => {
+      if (globeModel) {
+        globeModel.rotation.x = value * Math.PI / 180;
+      }
+    });
+  
+  rotationFolder
+    .add(globeParams, "rotationY", 0, 360)
+    .name("Y Rotation")
+    .step(1)
+    .onChange((value) => {
+      if (globeModel) {
+        globeModel.rotation.y = value * Math.PI / 180;
+      }
+    });
+  
+  rotationFolder
+    .add(globeParams, "rotationZ", 0, 360)
+    .name("Z Rotation")
+    .step(1)
+    .onChange((value) => {
+      if (globeModel) {
+        globeModel.rotation.z = value * Math.PI / 180;
+      }
+    });
+
+  // Auto-rotation controls
+  globeFolder
+    .add(globeParams, "autoRotate")
+    .name("Auto Rotate")
+    .onChange((value) => {
+      globeParams.autoRotate = value;
+    });
+  
+  globeFolder
+    .add(globeParams, "autoRotateSpeed", 0.1, 2)
+    .name("Rotation Speed")
+    .step(0.1);
+
+  // Open the globe folder by default
+  globeFolder.open();
+  
+  // Create a folder for gradient overlay controls
+  const overlayFolder = gui.addFolder("Gradient Overlay Controls");
+  
+  // Visibility toggle
+  overlayFolder
+    .add(overlayParams, "enabled")
+    .name("Show Overlay")
+    .onChange((value) => {
+      if (overlayMesh) {
+        overlayMesh.visible = value;
+      }
+    });
+  
+  // Top opacity control with clarified name
+  const topOpacityController = overlayFolder
+    .add(overlayParams, "startOpacity", 0, 1)
+    .name("Top Opacity")
+    .step(0.01)
+    .onChange((value) => {
+      if (overlayMaterial) {
+        overlayMaterial.uniforms.startOpacity.value = value;
+      }
+    });
+  // Modify the display name
+  topOpacityController.__li.querySelector('.property-name').innerHTML = 'Top Opacity (Top Edge)';
+  
+  // Bottom opacity control with clarified name
+  const bottomOpacityController = overlayFolder
+    .add(overlayParams, "endOpacity", 0, 1)
+    .name("Bottom Opacity")
+    .step(0.01)
+    .onChange((value) => {
+      if (overlayMaterial) {
+        overlayMaterial.uniforms.endOpacity.value = value;
+      }
+    });
+  // Modify the display name
+  bottomOpacityController.__li.querySelector('.property-name').innerHTML = 'Bottom Opacity (Bottom Edge)';
+  
+  // Plane Y position control (moves the entire overlay)
+  overlayFolder
+    .add(overlayParams, "yOffset", -2, 2)
+    .name("Vertical Position")
+    .step(0.01)
+    .onChange((value) => {
+      if (overlayMesh) {
+        // Update overlay position with new Y offset
+        updateOverlayPosition();
+      }
+    });
+  
+  // Gradient Y offset control (affects only the gradient within the plane)
+  overlayFolder
+    .add(overlayParams, "offsetY", -1, 1)
+    .name("Gradient Shift")
+    .step(0.01)
+    .onChange((value) => {
+      if (overlayMaterial) {
+        overlayMaterial.uniforms.offsetY.value = value;
+      }
+    });
+  
+  // Height control
+  overlayFolder
+    .add(overlayParams, "height", 0.1, 5)
+    .name("Gradient Stretch")
+    .step(0.1)
+    .onChange((value) => {
+      if (overlayMaterial) {
+        overlayMaterial.uniforms.heightMultiplier.value = value;
+      }
+    });
+  
+  // Color control
+  overlayFolder
+    .addColor(overlayParams, "color")
+    .name("Color")
+    .onChange((value) => {
+      if (overlayMaterial) {
+        overlayMaterial.uniforms.overlayColor.value.set(value);
+      }
+    });
+    
+  // Debug button to make overlay fully opaque temporarily
+  overlayFolder
+    .add({
+      debugOverlay: function() {
+        if (overlayMaterial) {
+          // Save current values
+          const savedStart = overlayMaterial.uniforms.startOpacity.value;
+          const savedEnd = overlayMaterial.uniforms.endOpacity.value;
+          
+          // Make overlay fully opaque with a bright color to check visibility
+          overlayMaterial.uniforms.startOpacity.value = 1.0;
+          overlayMaterial.uniforms.endOpacity.value = 1.0;
+          overlayMaterial.uniforms.overlayColor.value.set('#FF00FF'); // Bright magenta
+          
+          console.log("Debug mode activated - overlay set to fully opaque magenta");
+          console.log("Overlay position:", overlayMesh.position);
+          console.log("Camera position:", camera.position);
+          
+          // Reset after 2 seconds
+          setTimeout(() => {
+            overlayMaterial.uniforms.startOpacity.value = savedStart;
+            overlayMaterial.uniforms.endOpacity.value = savedEnd;
+            overlayMaterial.uniforms.overlayColor.value.set(overlayParams.color);
+            console.log("Debug mode deactivated - overlay restored to previous settings");
+          }, 2000);
+        }
+      }
+    }, "debugOverlay")
+    .name("Debug Visibility");
+  
+  // Open the overlay folder by default
+  overlayFolder.open();
 
   // Create particle system
   let particleCount = 1000; // Make this mutable
@@ -1732,11 +2648,28 @@ export function initShaderBackground() {
       }
     }
     
-    // Render both scenes - background first, then particles on top
-    renderer.render(scene, camera);
-    renderer.autoClear = false; // Don't clear the renderer after first render
-    renderer.render(particleScene, camera);
-    renderer.autoClear = true; // Reset to default
+    // Update globe model rotation if auto-rotate is enabled
+    if (globeModel && globeParams.autoRotate) {
+      // Apply rotation to the model directly, keeping its position fixed
+      globeModel.rotation.y += globeParams.autoRotateSpeed * 0.01;
+    }
+    
+    // Update overlay position to keep it in front of the camera
+    if (overlayMesh) {
+      updateOverlayPosition();
+    }
+    
+    // Correct rendering order:
+    // 1. First render main background shader
+    renderer.autoClear = true; // Clear before first render
+    renderer.render(scene, camera); // Render scene with background shader
+    
+    // 2. Then render particles on top of background
+    renderer.autoClear = false; // Don't clear after first render
+    renderer.render(particleScene, camera); // Render particles
+    
+    // Note: The globe is part of the main scene, so it's already rendered appropriately
+    // This ensures: Background -> Particles -> Globe+Overlay (correct z-order)
   }
 
   animate();
@@ -1759,25 +2692,83 @@ export function initShaderBackground() {
     targetParticleOpacity = 0.5;
   });
 
+  // Function to recalculate scene based on window size
+  function handleResize() {
+    // Get new dimensions
+    width = window.innerWidth;
+    height = window.innerHeight;
+    
+    // Update camera
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+    
+    // Update renderer
+    renderer.setSize(width, height);
+    
+    // Update globe model size and position based on new dimensions
+    if (globeModel) {
+      // Recalculate globe size based on viewport width
+      const viewportWidth = width;
+      const newSize = Math.min(viewportWidth * 0.9, 800); // 90vw with max size of 800px
+      
+      // Update globe size
+      const scaleFactor = newSize / (globeParams.size * 2);
+      globeModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
+      
+      // Update position controllers
+      globePositionFolder.controllers.forEach(controller => {
+        controller.updateDisplay();
+      });
+    }
+    
+    // Update overlay size
+    updateOverlaySize();
+  }
+  
+  // Function to update overlay size based on current viewport
+  function updateOverlaySize() {
+    if (overlayMesh) {
+      // Make overlay cover the full viewport width and desired height
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      
+      // Create a plane that covers the entire viewport
+      // The size needs to be large enough to cover the view at any camera distance
+      const planeWidth = Math.max(viewportWidth * 5, 5000);  // Increased size for full coverage
+      const planeHeight = Math.max(viewportHeight * 5, 5000); // Increased size for full coverage
+      
+      // Update geometry with new dimensions
+      overlayMesh.geometry.dispose(); // Clean up old geometry
+      overlayMesh.geometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
+      
+      // Position the overlay in front of the camera
+      overlayMesh.position.z = camera.position.z + 500;
+      
+      // Update position based on current y-offset setting
+      overlayMesh.position.y = overlayParams.yOffset * viewportHeight;
+    }
+  }
+
   // Handle window resize with debouncing for better performance
   let resizeTimeout;
+  let globeResizeTimeout; // Timeout specifically for globe resizing
   function handleResize() {
     const width = window.innerWidth;
     const height = getTrueViewportHeight();
     
     // Update canvas and renderer size
     renderer.setSize(width, height);
-
+    
     // Update camera
     camera.left = -width / 2;
     camera.right = width / 2;
     camera.top = height / 2;
     camera.bottom = -height / 2;
     camera.updateProjectionMatrix();
-
+    
     // Update resolution uniform
     uniforms.resolution.value.set(width, height);
-
+    
     // Update the plane geometry to match the new window size
     mesh.geometry.dispose(); // Clean up old geometry
     mesh.geometry = new THREE.PlaneGeometry(
@@ -1798,25 +2789,78 @@ export function initShaderBackground() {
         break;
       }
     }
+    
+    // Reposition and resize the globe model to maintain 90vw
+    if (globeModel && globeParams.responsive) {
+      // Add a delay before resizing the globe to ensure resize is fully complete
+      clearTimeout(globeResizeTimeout); // Clear any pending globe resize
+      globeResizeTimeout = setTimeout(() => {
+        // Explicitly call updateGlobeSize to ensure the globe maintains 90vw
+        updateGlobeSize();
+      }, 150); // 150ms delay
+      
+      // Update position controllers with new ranges based on new dimensions
+      for (let i = 0; i < positionFolder.__controllers.length; i++) {
+        const controller = positionFolder.__controllers[i];
+        if (controller.property === 'positionX') {
+          controller.min(-width / 2);
+          controller.max(width / 2);
+        } else if (controller.property === 'positionY') {
+          controller.min(-height / 2);
+          controller.max(height / 2);
+        }
+      }
+    }
+    
+    // Update the gradient overlay size
+    updateOverlaySize();
   }
-  
+
   // Debounced resize handler
   window.addEventListener("resize", () => {
     clearTimeout(resizeTimeout);
+    clearTimeout(globeResizeTimeout); // Clear any pending globe resize
+    
+    // Add a delay before resizing the globe to ensure resize is fully complete
+    if (globeModel && globeParams.responsive) {
+      globeResizeTimeout = setTimeout(() => {
+        updateGlobeSize();
+      }, 150); // 150ms delay
+    }
+    
+    // Debounce other resize operations that might be more expensive
     resizeTimeout = setTimeout(handleResize, 150); // Debounce resize events
   });
   
   // Also listen for orientation change events specifically for mobile
   window.addEventListener("orientationchange", () => {
-    // Wait a bit longer after orientation change as it takes time for the browser to settle
     clearTimeout(resizeTimeout);
+    clearTimeout(globeResizeTimeout); // Clear any pending globe resize
+    
+    // Add a delay before resizing the globe on orientation change
+    if (globeModel && globeParams.responsive) {
+      globeResizeTimeout = setTimeout(() => {
+        updateGlobeSize();
+      }, 300); // Longer delay for orientation changes
+    }
+    
+    // Wait a bit longer after orientation change as it takes time for the browser to settle
     resizeTimeout = setTimeout(handleResize, 300);
   });
   
   // Listen for the visibilitychange event to handle when the page becomes visible again
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
-      // When the page becomes visible again, force a resize to ensure correct dimensions
+      clearTimeout(globeResizeTimeout); // Clear any pending globe resize
+      
+      // When the page becomes visible again, update the globe size after a delay
+      if (globeModel && globeParams.responsive) {
+        globeResizeTimeout = setTimeout(() => {
+          updateGlobeSize();
+        }, 150); // 150ms delay
+      }
+      
+      // Force a resize to ensure correct dimensions
       setTimeout(handleResize, 100);
     }
   });
