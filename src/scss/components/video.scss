@@ -57,6 +57,10 @@ video {
     
     &:hover {
         background: rgba(0, 0, 0, 0.5);
+        .play-button {
+            transform: scale(1.1);
+            background: rgba(255, 255, 255, 1);
+        }
     }
     
     &.hidden {
@@ -76,11 +80,6 @@ video {
     justify-content: center;
     cursor: pointer;
     transition: transform 0.3s ease, background-color 0.3s ease;
-    
-    &:hover {
-        transform: scale(1.1);
-        background: rgba(255, 255, 255, 1);
-    }
     
     &::before {
         content: '';

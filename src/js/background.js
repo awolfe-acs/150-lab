@@ -69,7 +69,7 @@ export function initShaderBackground() {
       scrollTrigger: {
         trigger: "#get-involved",
         start: "top bottom",  // Starts when the top of get-involved reaches the bottom of viewport
-        end: "top 40%",       // Ends when the top of get-involved reaches 40% from the top of viewport
+        end: "#get-involved-earth center center",  // Ends when the middle of get-involved-earth reaches the middle of viewport
         scrub: true,          // Smooth scrubbing effect, tied to scroll position
         markers: false,       // Set to true for debugging
         onUpdate: (self) => {
@@ -130,7 +130,132 @@ export function initShaderBackground() {
       }
     });
     
-    console.log("Set up ScrollTrigger animations for shader, globe, and overlay");
+    // Create ScrollTrigger to fade out particles when entering #get-involved
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: "#get-involved",
+        start: "top 90%",    // Start when the top of get-involved is 90% from the top of viewport
+        end: "bottom top",   // Continue until the bottom of get-involved exits the top of viewport
+        scrub: 0.5,          // Reduced from true to 0.5 for less delay but still smooth scrubbing
+        markers: false,      // Set to true for debugging
+        onUpdate: (self) => {
+          // Get the current progress from start to end
+          const progress = self.progress;
+          
+          // We only want to fade out in the first portion of this range,
+          // but keep particles hidden after that threshold
+          
+          // Define the portion of the total range where fade-out occurs (0 to 1)
+          // Reduced from 0.2 to 0.15 to fade out faster
+          const fadeOutThreshold = 0.15;
+          
+          // Store a flag indicating if particles should be fully hidden
+          // This helps prevent any fade-in after Lenis easing settles
+          if (!window.particlesFullyHidden && progress >= fadeOutThreshold) {
+            window.particlesFullyHidden = true;
+          } else if (window.particlesFullyHidden && progress < fadeOutThreshold * 0.8) {
+            // Only reset when we're well below the threshold (added 20% buffer)
+            window.particlesFullyHidden = false;
+          }
+          
+          // If particles should be fully hidden, force opacity to 0
+          if (window.particlesFullyHidden) {
+            if (customParticleMaterial && customParticleMaterial.uniforms && customParticleMaterial.uniforms.opacity) {
+              customParticleMaterial.uniforms.opacity.value = 0;
+              
+              // Update GUI if necessary
+              updateParticleOpacityGUI(0);
+            }
+            return; // Skip the rest of the calculation
+          }
+          
+          // If we're here, we're in the fade transition zone
+          // Calculate a modified progress that maxes out at fadeOutThreshold
+          const fadeOutProgress = Math.min(progress / fadeOutThreshold, 1);
+            
+          // Calculate the inverse (1 at start, 0 when fully faded)
+          const inverseProgress = 1 - fadeOutProgress;
+          
+          // Apply a steeper power curve for an even quicker initial fade (power of 3 instead of 2)
+          const curvedProgress = Math.pow(inverseProgress, 3);
+          
+          // Use the existing max opacity value
+          const maxParticleOpacity = 0.5;
+          
+          // Calculate the new opacity (will be 0 after the fadeOutThreshold is reached)
+          const newOpacity = maxParticleOpacity * curvedProgress;
+          
+          // Apply to particle material if it exists
+          if (customParticleMaterial && customParticleMaterial.uniforms && customParticleMaterial.uniforms.opacity) {
+            customParticleMaterial.uniforms.opacity.value = newOpacity;
+            
+            // Update GUI
+            updateParticleOpacityGUI(newOpacity);
+          }
+        }
+      }
+    });
+    
+    // Create ScrollTrigger to animate the globe rising as we scroll through #get-involved-earth
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: "#get-involved-earth",
+        start: "top bottom",    // Start when the top of get-involved-earth reaches the bottom of viewport
+        end: "bottom top",      // End when the bottom of get-involved-earth exits the top of viewport
+        scrub: 0.3,             // Smooth scrubbing effect with minimal delay
+        markers: false,         // Set to true for debugging
+        onUpdate: (self) => {
+          const progress = self.progress;
+          
+          if (globeGroup) {
+            // Initial position (where the globe starts)
+            const startY = -322;
+            
+            // How much the globe should rise (in world units)
+            const riseAmount = 120; // Adjust this value to control how much the globe rises
+            
+            // Calculate the new y position based on progress
+            // Apply an ease-out curve for more natural movement
+            const easedProgress = 1 - Math.pow(1 - progress, 3); // Cubic ease out
+            const newY = startY + (riseAmount * easedProgress);
+            
+            // Set the globe group's position
+            globeGroup.position.y = newY;
+            
+            // Update the GUI if it exists
+            if (gui && gui.__folders['Globe Model Controls']) {
+              const positionFolder = gui.__folders['Globe Model Controls'].__folders['Position'];
+              if (positionFolder && positionFolder.__controllers) {
+                for (let controller of positionFolder.__controllers) {
+                  if (controller.property === 'positionY') {
+                    // Only update the display, not the actual value to avoid conflicts
+                    controller.updateDisplay();
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    // Helper function to update particle opacity in the GUI
+    function updateParticleOpacityGUI(opacity) {
+      if (gui && gui.__folders['Particle System']) {
+        const particleFolder = gui.__folders['Particle System'];
+        if (particleFolder.__controllers) {
+          for (let controller of particleFolder.__controllers) {
+            if (controller.property === 'value' && controller.object === customParticleMaterial.uniforms.opacity) {
+              controller.updateDisplay();
+              break;
+            }
+          }
+        }
+      }
+    }
+    
+    console.log("Set up ScrollTrigger animations for shader, globe, overlay, and particles");
   }
   
   // Helper function to update the GUI control for colorDarkness if it exists
@@ -256,6 +381,7 @@ export function initShaderBackground() {
 
   // Create a group to hold and control the globe model
   const globeGroup = new THREE.Group();
+  globeGroup.position.y = -322;
   scene.add(globeGroup);
 
   // Create gradient overlay
@@ -266,10 +392,10 @@ export function initShaderBackground() {
     enabled: false,     // Start with overlay disabled
     startOpacity: 0.0,  // Top opacity (fully transparent)
     endOpacity: 1.0,    // Bottom opacity (fully opaque black)
-    offsetY: 0.0,       // Y position offset (for gradient calculation)
-    height: 1.4,        // Height multiplier for gradient
+    offsetY: 0.22,      // Y position offset (for gradient calculation) - changed to 0.22
+    height: 3.0,        // Height multiplier for gradient - changed to 3.0
     color: "#000000",   // Pure black color
-    yOffset: -0.5       // Y position of the entire overlay (in viewport height %)
+    yOffset: -0.03      // Y position of the entire overlay (in viewport height %) - changed to -0.03
   };
   
   function createGradientOverlay() {
@@ -320,79 +446,96 @@ export function initShaderBackground() {
       side: THREE.DoubleSide
     });
     
-    // Create a plane that matches the viewport width/height
-    const planeWidth = window.innerWidth;
-    const planeHeight = window.innerHeight;
+    // Calculate the world space height for exactly 66% of viewport height
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
     
-    // Convert screen pixels to world units based on camera properties
-    const worldUnitsPerPixel = (camera.right - camera.left) / window.innerWidth;
+    // Get the dimensions in world units
+    const worldWidth = (camera.right - camera.left);
+    const worldHeight = (camera.top - camera.bottom);
     
-    // Create the geometry at a size that will appear as the full viewport
+    // Calculate world units for 66% viewport height
+    const fixedHeightWorld = (viewportHeight * 0.66) * (worldHeight / viewportHeight);
+    
+    // Create the plane geometry with exact width and fixed height
     const overlayGeometry = new THREE.PlaneGeometry(
-      planeWidth * worldUnitsPerPixel,
-      planeHeight * worldUnitsPerPixel
+      worldWidth,
+      fixedHeightWorld
     );
     
-    // Create mesh and add to scene (not to camera)
+    // Create mesh with the configured material
     overlayMesh = new THREE.Mesh(overlayGeometry, overlayMaterial);
     
-    // Position the overlay at a fixed distance in front of the camera
-    overlayMesh.position.z = -10; // 10 units in front of the camera's z position
+    // Keep the overlay flat and in front of everything
+    overlayMesh.rotation.set(0, 0, 0);
+    overlayMesh.position.x = 0; // Center horizontally
+    overlayMesh.position.y = overlayParams.yOffset * worldHeight;
+    overlayMesh.position.z = -100; // Fixed distance in front
+    
     overlayMesh.frustumCulled = false; // Never cull this object
-    overlayMesh.renderOrder = 9999; // Ensure it renders last/on top of everything
+    overlayMesh.renderOrder = 9999; // Ensure it renders last/on top
     overlayMesh.visible = overlayParams.enabled;
     
     // Add to scene, not to camera
     scene.add(overlayMesh);
     
-    // Initial update of position relative to camera
-    updateOverlayPosition();
-    
-    console.log("Created gradient overlay:", overlayMesh);
+    console.log("Created gradient overlay with fixed 66% viewport height");
   }
   
   // Function to update overlay position relative to camera
   function updateOverlayPosition() {
     if (!overlayMesh) return;
     
-    // Position the overlay in front of the camera
-    // We want it to stay at a fixed distance in front of the camera
-    overlayMesh.position.x = camera.position.x;
+    // For an orthographic camera, the overlay must stay perfectly flat 
+    // and aligned with the view plane (parallel to the viewport)
     
-    // Apply yOffset without changing the scale of the overlay
-    // This moves the overlay up or down but doesn't affect its visual height
-    overlayMesh.position.y = camera.position.y + (overlayParams.yOffset * 50); // Use a fixed offset amount
+    // Make sure rotation is reset to perfectly flat (parallel to view)
+    overlayMesh.rotation.set(0, 0, 0);
     
-    overlayMesh.position.z = camera.position.z - 10; // 10 units in front of camera
+    // Center horizontally 
+    overlayMesh.position.x = 0;
     
-    // Look at the camera to ensure the plane is perpendicular to view
-    overlayMesh.lookAt(camera.position);
+    // Calculate the world space coordinates for positioning
+    const viewportHeight = window.innerHeight;
+    const worldHeight = (camera.top - camera.bottom);
+    const worldToPixelRatio = worldHeight / viewportHeight;
+    
+    // Apply vertical offset in world units
+    overlayMesh.position.y = overlayParams.yOffset * worldHeight;
+    
+    // Keep at fixed distance in front of everything
+    overlayMesh.position.z = -100;
   }
   
   // Function to update the overlay on window resize
   function updateOverlaySize() {
-    if (!overlayMesh) return;
-    
-    // Get viewport dimensions
-    const planeWidth = window.innerWidth;
-    const planeHeight = window.innerHeight;
-    
-    // Convert screen pixels to world units
-    const worldUnitsPerPixel = (camera.right - camera.left) / window.innerWidth;
-    
-    // Dispose of old geometry
-    overlayMesh.geometry.dispose();
-    
-    // Create new geometry that matches the viewport size
-    overlayMesh.geometry = new THREE.PlaneGeometry(
-      planeWidth * worldUnitsPerPixel,
-      planeHeight * worldUnitsPerPixel
-    );
-    
-    // Update position
-    updateOverlayPosition();
-    
-    console.log("Updated overlay size:", planeWidth, planeHeight, "World units:", planeWidth * worldUnitsPerPixel, planeHeight * worldUnitsPerPixel);
+    if (overlayMesh) {
+      // Get viewport dimensions
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      
+      // Get world dimensions from camera
+      const worldWidth = (camera.right - camera.left);
+      const worldHeight = (camera.top - camera.bottom);
+      
+      // Calculate the fixed height in world units - exactly 66% of viewport
+      const fixedHeightWorld = (viewportHeight * 0.66) * (worldHeight / viewportHeight);
+      
+      // Dispose of old geometry and create new one with fixed height
+      overlayMesh.geometry.dispose();
+      overlayMesh.geometry = new THREE.PlaneGeometry(
+        worldWidth,
+        fixedHeightWorld
+      );
+      
+      // Ensure overlay stays perfectly flat and parallel to view
+      overlayMesh.rotation.set(0, 0, 0);
+      
+      // Update the position after resizing
+      updateOverlayPosition();
+      
+      console.log("Updated overlay to 66% viewport height");
+    }
   }
 
   // Create the initial overlay
@@ -400,26 +543,33 @@ export function initShaderBackground() {
   
   // Function to update the overlay on window resize
   function updateOverlaySize() {
-    if (!overlayMesh) return;
-    
-    // Calculate the exact view frustum dimensions
-    const viewWidth = (camera.right - camera.left);
-    const viewHeight = (camera.top - camera.bottom);
-    
-    // Dispose of old geometry
-    overlayMesh.geometry.dispose();
-    
-    // Create new geometry that exactly matches the camera view
-    overlayMesh.geometry = new THREE.PlaneGeometry(
-      viewWidth,
-      viewHeight
-    );
-    
-    // Position exactly in front of camera
-    overlayMesh.position.z = 0.1; // Very small offset to be in front of frustum near plane
-    
-    // Update position based on current y-offset setting
-    overlayMesh.position.y = overlayParams.yOffset * viewHeight;
+    if (overlayMesh) {
+      // Get viewport dimensions
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      
+      // Get world dimensions from camera
+      const worldWidth = (camera.right - camera.left);
+      const worldHeight = (camera.top - camera.bottom);
+      
+      // Calculate the fixed height in world units - exactly 66% of viewport
+      const fixedHeightWorld = (viewportHeight * 0.66) * (worldHeight / viewportHeight);
+      
+      // Dispose of old geometry and create new one with fixed height
+      overlayMesh.geometry.dispose();
+      overlayMesh.geometry = new THREE.PlaneGeometry(
+        worldWidth,
+        fixedHeightWorld
+      );
+      
+      // Ensure overlay stays perfectly flat and parallel to view
+      overlayMesh.rotation.set(0, 0, 0);
+      
+      // Update the position after resizing
+      updateOverlayPosition();
+      
+      console.log("Updated overlay to 66% viewport height");
+    }
   }
 
   // Globe model parameters with default values
@@ -433,7 +583,9 @@ export function initShaderBackground() {
     rotationY: 0,
     rotationZ: 0,
     autoRotate: true,
-    autoRotateSpeed: 0.1,
+    autoRotateSpeed: 0.05,  // Reduced by 50% from 0.1 to 0.05
+    baseRotateSpeed: 0.05,  // Store the base rotation speed for reference
+    scrollRotateSpeed: 0.075, // 50% faster than base speed (for when scrolling)
     responsive: true,  // New parameter to enable/disable responsive scaling
     baseScale: 25.0,   // Store the base scale for responsive calculations
     opacity: 0.0       // Start with opacity 0
@@ -443,7 +595,7 @@ export function initShaderBackground() {
   const gltfLoader = new GLTFLoader();
   let globeModel;
   
-  gltfLoader.load('/models/globe.gltf', (gltf) => {
+  gltfLoader.load('/models/globe-hd.glb', (gltf) => {
     globeModel = gltf.scene;
     
     // Center the model's geometry to ensure proper rotation around its center
@@ -1685,7 +1837,7 @@ export function initShaderBackground() {
   const globeFolder = gui.addFolder("Globe Model Controls");
 
   // Add lighting specifically for the globe model
-  const globeLight = new THREE.DirectionalLight(0xffffff, 1);
+  const globeLight = new THREE.DirectionalLight(0xffffff, 10);
   globeLight.position.set(1, 1, 1);
   scene.add(globeLight);
 
@@ -1696,14 +1848,14 @@ export function initShaderBackground() {
   const globeLightingFolder = globeFolder.addFolder("Lighting");
   
   globeLightingFolder
-    .add({ intensity: 5.0 }, "intensity", 0, 5)
+    .add({ intensity: 3 }, "intensity", 0, 5)
     .name("Direct Light")
     .onChange((value) => {
       globeLight.intensity = value;
     });
     
   // Set direct light intensity to 5.0
-  globeLight.intensity = 5.0;
+  globeLight.intensity = 3.0;
   
   globeLightingFolder
     .add({ intensity: globeAmbientLight.intensity }, "intensity", 0, 5)
@@ -1967,9 +2119,20 @@ export function initShaderBackground() {
     });
   
   globeFolder
-    .add(globeParams, "autoRotateSpeed", 0.1, 2)
-    .name("Rotation Speed")
-    .step(0.1);
+    .add(globeParams, "baseRotateSpeed", 0.05, 1)
+    .name("Base Rotation Speed")
+    .step(0.01)
+    .onChange((value) => {
+      globeParams.baseRotateSpeed = value;
+    });
+    
+  globeFolder
+    .add(globeParams, "scrollRotateSpeed", 0.05, 1)
+    .name("Scroll Rotation Speed")
+    .step(0.01)
+    .onChange((value) => {
+      globeParams.scrollRotateSpeed = value;
+    });
 
   // Open the globe folder by default
   globeFolder.open();
@@ -2016,11 +2179,11 @@ export function initShaderBackground() {
   // Plane Y position control (moves the entire overlay)
   overlayFolder
     .add(overlayParams, "yOffset", -2, 2)
-    .name("Vertical Position")
+    .name("Vertical Position (moves only)")
     .step(0.01)
     .onChange((value) => {
       if (overlayMesh) {
-        // Update overlay position with new Y offset
+        // Only update position, never affect height
         updateOverlayPosition();
       }
     });
@@ -2039,7 +2202,7 @@ export function initShaderBackground() {
   // Height control
   overlayFolder
     .add(overlayParams, "height", 0.1, 5)
-    .name("Gradient Stretch")
+    .name("Gradient Distribution (not size)")
     .step(0.1)
     .onChange((value) => {
       if (overlayMaterial) {
@@ -2640,22 +2803,34 @@ export function initShaderBackground() {
     // Update shader uniforms with slower speed
     uniforms.time.value += 0.001; // Reduced from 0.01 to 0.001
     
-    // Gradually fade in particles if needed - even slower fade-in (0.002 instead of 0.005)
-    if (customParticleMaterial.uniforms.opacity.value < targetParticleOpacity) {
+    // Gradually fade in particles if needed - but only if not fully hidden by scrolling
+    if (!window.particlesFullyHidden && customParticleMaterial.uniforms.opacity.value < targetParticleOpacity) {
       customParticleMaterial.uniforms.opacity.value += 0.002; // Much slower fade in
       if (customParticleMaterial.uniforms.opacity.value > targetParticleOpacity) {
         customParticleMaterial.uniforms.opacity.value = targetParticleOpacity;
       }
     }
     
+    // Ensure particles stay hidden when they should be
+    if (window.particlesFullyHidden && customParticleMaterial.uniforms.opacity.value > 0) {
+      customParticleMaterial.uniforms.opacity.value = 0;
+    }
+    
     // Update globe model rotation if auto-rotate is enabled
     if (globeModel && globeParams.autoRotate) {
+      // Determine which rotation speed to use based on scroll state
+      const rotationSpeed = isScrolling 
+        ? globeParams.scrollRotateSpeed  // Use faster speed when scrolling
+        : globeParams.baseRotateSpeed;   // Use normal speed when not scrolling
+      
       // Apply rotation to the model directly, keeping its position fixed
-      globeModel.rotation.y += globeParams.autoRotateSpeed * 0.01;
+      globeModel.rotation.y += rotationSpeed * 0.01;
     }
     
     // Update overlay position to keep it in front of the camera
     if (overlayMesh) {
+      // Always ensure overlay remains perfectly flat
+      overlayMesh.rotation.set(0, 0, 0);
       updateOverlayPosition();
     }
     
@@ -2728,24 +2903,36 @@ export function initShaderBackground() {
   // Function to update overlay size based on current viewport
   function updateOverlaySize() {
     if (overlayMesh) {
-      // Make overlay cover the full viewport width and desired height
+      // Get viewport dimensions
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
       
-      // Create a plane that covers the entire viewport
-      // The size needs to be large enough to cover the view at any camera distance
-      const planeWidth = Math.max(viewportWidth * 5, 5000);  // Increased size for full coverage
-      const planeHeight = Math.max(viewportHeight * 5, 5000); // Increased size for full coverage
+      // Camera world units
+      const worldWidth = camera.right - camera.left;
+      const worldHeight = camera.top - camera.bottom;
       
-      // Update geometry with new dimensions
+      // Calculate the scale to convert from pixels to world units
+      const pixelToWorldX = worldWidth / viewportWidth;
+      const pixelToWorldY = worldHeight / viewportHeight;
+      
+      // Always use exactly 66% of viewport height for the overlay
+      const fixedOverlayWidthWorld = worldWidth;
+      const fixedOverlayHeightWorld = (viewportHeight * 0.66) * pixelToWorldY;
+      
+      // Update geometry with new dimensions - keep it perfectly flat
       overlayMesh.geometry.dispose(); // Clean up old geometry
-      overlayMesh.geometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
+      overlayMesh.geometry = new THREE.PlaneGeometry(
+        fixedOverlayWidthWorld,
+        fixedOverlayHeightWorld
+      );
       
-      // Position the overlay in front of the camera
-      overlayMesh.position.z = camera.position.z + 500;
+      // Keep the overlay perfectly parallel to the view plane
+      overlayMesh.rotation.set(0, 0, 0);
       
-      // Update position based on current y-offset setting
-      overlayMesh.position.y = overlayParams.yOffset * viewportHeight;
+      // Update position based on current y-offset
+      updateOverlayPosition();
+      
+      console.log("Updated overlay size to 66% viewport height");
     }
   }
 
@@ -2853,15 +3040,50 @@ export function initShaderBackground() {
     if (document.visibilityState === "visible") {
       clearTimeout(globeResizeTimeout); // Clear any pending globe resize
       
-      // When the page becomes visible again, update the globe size after a delay
-      if (globeModel && globeParams.responsive) {
-        globeResizeTimeout = setTimeout(() => {
-          updateGlobeSize();
-        }, 150); // 150ms delay
+      // Store current dimensions to check if there's been a significant change
+      const currentWidth = window.innerWidth;
+      const currentHeight = getTrueViewportHeight();
+      
+      // We store the last known dimensions to compare against
+      if (!window.lastKnownDimensions) {
+        window.lastKnownDimensions = {
+          width: currentWidth,
+          height: currentHeight
+        };
       }
       
-      // Force a resize to ensure correct dimensions
-      setTimeout(handleResize, 100);
+      // Calculate the percentage change in dimensions
+      const widthChange = Math.abs(currentWidth - window.lastKnownDimensions.width) / window.lastKnownDimensions.width;
+      const heightChange = Math.abs(currentHeight - window.lastKnownDimensions.height) / window.lastKnownDimensions.height;
+      
+      // Only resize if there's a significant change in viewport dimensions (more than 5%)
+      const significantChange = widthChange > 0.05 || heightChange > 0.05;
+      
+      if (significantChange) {
+        // Update the stored dimensions
+        window.lastKnownDimensions.width = currentWidth;
+        window.lastKnownDimensions.height = currentHeight;
+        
+        // Only update globe size if there's a significant change
+        if (globeModel && globeParams.responsive) {
+          globeResizeTimeout = setTimeout(() => {
+            updateGlobeSize();
+          }, 150); // 150ms delay
+        }
+        
+        // Only force a resize if there's a significant change
+        setTimeout(handleResize, 100);
+        
+        console.log(`Tab refocused with significant viewport change: Width ${widthChange.toFixed(2)}%, Height ${heightChange.toFixed(2)}%`);
+      } else {
+        console.log("Tab refocused but no significant viewport change, skipping resize");
+      }
+    } else {
+      // When tab becomes hidden, store the current dimensions
+      window.lastKnownDimensions = {
+        width: window.innerWidth,
+        height: getTrueViewportHeight()
+      };
     }
   });
   
@@ -3039,4 +3261,23 @@ export function initShaderBackground() {
     .onChange((value) => {
       customParticleMaterial.uniforms.haloSize.value = value;
     });
+
+  // Variables to track scrolling
+  let isScrolling = false;
+  let scrollTimeout;
+  
+  // Function to set isScrolling to true when scrolling starts
+  window.addEventListener('scroll', () => {
+    isScrolling = true;
+    
+    // Clear the timeout if it exists
+    if (scrollTimeout) {
+      clearTimeout(scrollTimeout);
+    }
+    
+    // Set a timeout to reset isScrolling when scrolling stops
+    scrollTimeout = setTimeout(() => {
+      isScrolling = false;
+    }, 150); // Consider scrolling stopped after 150ms of no scroll events
+  });
 }
