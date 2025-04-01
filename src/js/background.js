@@ -171,10 +171,16 @@ export function initShaderBackground() {
             }
             
             // Update overlay opacity to match globe opacity
-            if (overlayMesh.visible && overlayMaterial && overlayMaterial.uniforms) {
-              // Scale the start and end opacity by the progress value
-              overlayMaterial.uniforms.startOpacity.value = overlayParams.startOpacity * progress;
-              overlayMaterial.uniforms.endOpacity.value = overlayParams.endOpacity * progress;
+            if (overlayMaterial && overlayMaterial.uniforms) {
+              if (progress > 0.01 && overlayMesh.visible) {
+                // Scale the start and end opacity by the progress value
+                overlayMaterial.uniforms.startOpacity.value = overlayParams.startOpacity * progress;
+                overlayMaterial.uniforms.endOpacity.value = overlayParams.endOpacity * progress;
+              } else {
+                // Ensure opacity is exactly 0 when progress is <= 0.01
+                overlayMaterial.uniforms.startOpacity.value = 0;
+                overlayMaterial.uniforms.endOpacity.value = 0;
+              }
             }
           }
         }
@@ -427,15 +433,30 @@ export function initShaderBackground() {
             // Update any opacity controllers in the GUI
             updateGlobeOpacityGUI();
           }
+          
+          // Also fade out the overlay alongside the globe
+          if (overlayMesh && overlayMaterial && overlayMaterial.uniforms) {
+            overlayMesh.visible = curvedProgress > 0.01;
+            
+            // Ensure the overlay opacity matches the globe's fade out
+            overlayMaterial.uniforms.startOpacity.value = overlayParams.startOpacity * curvedProgress;
+            overlayMaterial.uniforms.endOpacity.value = overlayParams.endOpacity * curvedProgress;
+            
+            // Update overlay visibility in parameters
+            overlayParams.enabled = curvedProgress > 0.01;
+            
+            // Update overlay visibility in GUI if necessary
+            updateOverlayVisibilityGUI();
+          }
         }
       }
     });
     
     // Helper function to update particle opacity in the GUI
     function updateParticleOpacityGUI(opacity) {
-      if (gui && gui.__folders['Particle System']) {
+      if (typeof gui !== 'undefined' && gui && gui.__folders && gui.__folders['Particle System']) {
         const particleFolder = gui.__folders['Particle System'];
-        if (particleFolder.__controllers) {
+        if (particleFolder && particleFolder.__controllers) {
           for (let controller of particleFolder.__controllers) {
             if (controller.property === 'value' && controller.object === customParticleMaterial.uniforms.opacity) {
               controller.updateDisplay();
@@ -518,24 +539,24 @@ export function initShaderBackground() {
   
   // Helper function to update the GUI control for colorDarkness if it exists
   function updateColorDarknessGUI() {
-    if (gui && gui.__folders['Color Controls']) {
+    if (typeof gui !== 'undefined' && gui && gui.__folders && gui.__folders['Color Controls']) {
       const colorFolder = gui.__folders['Color Controls'];
-      if (colorFolder.__controllers) {
+      if (colorFolder && colorFolder.__controllers) {
         for (let controller of colorFolder.__controllers) {
-            if (controller.property === "value" && controller.object === uniforms.colorDarkness) {
-              controller.updateDisplay();
-              break;
-            }
+          if (controller.property === "value" && controller.object === uniforms.colorDarkness) {
+            controller.updateDisplay();
+            break;
           }
         }
+      }
     }
   }
   
   // Helper function to update color pickers in the GUI
   function updateColorGUI() {
-    if (gui && gui.__folders['Color Controls']) {
+    if (typeof gui !== 'undefined' && gui && gui.__folders && gui.__folders['Color Controls']) {
       const colorFolder = gui.__folders['Color Controls'];
-      if (colorFolder.__controllers) {
+      if (colorFolder && colorFolder.__controllers) {
         // Update both color controllers
         colorFolder.__controllers.forEach(controller => {
           if (controller.property === "color") {
@@ -559,10 +580,13 @@ export function initShaderBackground() {
 
   // Helper function to update any globe opacity controllers in the GUI
   function updateGlobeOpacityGUI() {
-    if (gui && gui.__folders['Globe Model Controls'] && gui.__folders['Globe Model Controls'].__folders['Material']) {
+    if (typeof gui !== 'undefined' && gui && gui.__folders && 
+        gui.__folders['Globe Model Controls'] && 
+        gui.__folders['Globe Model Controls'].__folders && 
+        gui.__folders['Globe Model Controls'].__folders['Material']) {
       const materialFolder = gui.__folders['Globe Model Controls'].__folders['Material'];
       
-      if (materialFolder.__controllers) {
+      if (materialFolder && materialFolder.__controllers) {
         for (let controller of materialFolder.__controllers) {
           if (controller.property === "opacity") {
             controller.updateDisplay();
@@ -574,10 +598,10 @@ export function initShaderBackground() {
   
   // Helper function to update globe visibility control in the GUI
   function updateGlobeVisibilityGUI() {
-    if (gui && gui.__folders['Globe Model Controls']) {
+    if (typeof gui !== 'undefined' && gui && gui.__folders && gui.__folders['Globe Model Controls']) {
       const globeFolder = gui.__folders['Globe Model Controls'];
       
-      if (globeFolder.__controllers) {
+      if (globeFolder && globeFolder.__controllers) {
         for (let controller of globeFolder.__controllers) {
           if (controller.property === "visible") {
             controller.updateDisplay();
@@ -590,10 +614,10 @@ export function initShaderBackground() {
   
   // Helper function to update overlay visibility control in the GUI
   function updateOverlayVisibilityGUI() {
-    if (gui && gui.__folders['Gradient Overlay Controls']) {
+    if (typeof gui !== 'undefined' && gui && gui.__folders && gui.__folders['Gradient Overlay Controls']) {
       const overlayFolder = gui.__folders['Gradient Overlay Controls'];
       
-      if (overlayFolder.__controllers) {
+      if (overlayFolder && overlayFolder.__controllers) {
         for (let controller of overlayFolder.__controllers) {
           if (controller.property === "enabled") {
             controller.updateDisplay();
@@ -679,7 +703,7 @@ export function initShaderBackground() {
     offsetY: 0.22,      // Y position offset (for gradient calculation) - changed to 0.22
     height: 3.0,        // Height multiplier for gradient - changed to 3.0
     color: "#000000",   // Pure black color
-    yOffset: -0.03      // Y position of the entire overlay (in viewport height %) - changed to -0.03
+    yOffset: -0.03      // Y position of the entire overlay (in viewport height %) - changed to -0.3
   };
   
   function createGradientOverlay() {
@@ -3182,34 +3206,78 @@ export function initShaderBackground() {
 
   // Function to recalculate scene based on window size
   function handleResize() {
-    // Get new dimensions
-    width = window.innerWidth;
-    height = window.innerHeight;
+    const width = window.innerWidth;
+    const height = getTrueViewportHeight();
     
-    // Update camera
-    camera.aspect = width / height;
-    camera.updateProjectionMatrix();
-    
-    // Update renderer
+    // Update canvas and renderer size
     renderer.setSize(width, height);
     
-    // Update globe model size and position based on new dimensions
-    if (globeModel) {
-      // Recalculate globe size based on viewport width
-      const viewportWidth = width;
-      const newSize = Math.min(viewportWidth * 0.9, 800); // 90vw with max size of 800px
-      
-      // Update globe size
-      const scaleFactor = newSize / (globeParams.size * 2);
-      globeModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
-      
-      // Update position controllers
-      globePositionFolder.controllers.forEach(controller => {
-        controller.updateDisplay();
-      });
+    // Update camera
+    camera.left = -width / 2;
+    camera.right = width / 2;
+    camera.top = height / 2;
+    camera.bottom = -height / 2;
+    camera.updateProjectionMatrix();
+    
+    // Update resolution uniform
+    uniforms.resolution.value.set(width, height);
+    
+    // Update the plane geometry to match the new window size
+    mesh.geometry.dispose(); // Clean up old geometry
+    mesh.geometry = new THREE.PlaneGeometry(
+      width,
+      height,
+      width / 10,
+      height / 10
+    );
+    
+    // Update vertical distribution based on new window height
+    verticalDistribution = height * scrollObj.verticalSpread;
+    
+    // Update the vertical offset range in the GUI only if GUI exists
+    if (typeof gui !== 'undefined' && gui && gui.__folders && gui.__folders['Particle System']) {
+      const particleFolder = gui.__folders['Particle System'];
+      if (particleFolder && particleFolder.__controllers) {
+        for (let i = 0; i < particleFolder.__controllers.length; i++) {
+          if (particleFolder.__controllers[i].property === 'verticalOffset') {
+            particleFolder.__controllers[i].min(-height * 3);
+            particleFolder.__controllers[i].max(height * 2);
+            break;
+          }
+        }
+      }
     }
     
-    // Update overlay size
+    // Reposition and resize the globe model to maintain 90vw
+    if (globeModel && globeParams.responsive) {
+      // Add a delay before resizing the globe to ensure resize is fully complete
+      clearTimeout(globeResizeTimeout); // Clear any pending globe resize
+      globeResizeTimeout = setTimeout(() => {
+        // Explicitly call updateGlobeSize to ensure the globe maintains 90vw
+        updateGlobeSize();
+      }, 150); // 150ms delay
+      
+      // Update position controllers with new ranges based on new dimensions
+      if (typeof gui !== 'undefined' && gui && gui.__folders && gui.__folders['Globe Model Controls'] && 
+          gui.__folders['Globe Model Controls'].__folders && 
+          gui.__folders['Globe Model Controls'].__folders['Position']) {
+        const positionFolder = gui.__folders['Globe Model Controls'].__folders['Position'];
+        if (positionFolder && positionFolder.__controllers) {
+          for (let i = 0; i < positionFolder.__controllers.length; i++) {
+            const controller = positionFolder.__controllers[i];
+            if (controller.property === 'positionX') {
+              controller.min(-width / 2);
+              controller.max(width / 2);
+            } else if (controller.property === 'positionY') {
+              controller.min(-height / 2);
+              controller.max(height / 2);
+            }
+          }
+        }
+      }
+    }
+    
+    // Update the gradient overlay size
     updateOverlaySize();
   }
   
@@ -3281,12 +3349,17 @@ export function initShaderBackground() {
     // Update vertical distribution based on new window height
     verticalDistribution = height * scrollObj.verticalSpread;
     
-    // Update the vertical offset range in the GUI
-    for (let i = 0; i < particleFolder.__controllers.length; i++) {
-      if (particleFolder.__controllers[i].property === 'verticalOffset') {
-        particleFolder.__controllers[i].min(-height * 3);
-        particleFolder.__controllers[i].max(height * 2);
-        break;
+    // Update the vertical offset range in the GUI only if GUI exists
+    if (typeof gui !== 'undefined' && gui && gui.__folders['Particle System']) {
+      const particleFolder = gui.__folders['Particle System'];
+      if (particleFolder && particleFolder.__controllers) {
+        for (let i = 0; i < particleFolder.__controllers.length; i++) {
+          if (particleFolder.__controllers[i].property === 'verticalOffset') {
+            particleFolder.__controllers[i].min(-height * 3);
+            particleFolder.__controllers[i].max(height * 2);
+            break;
+          }
+        }
       }
     }
     
@@ -3426,10 +3499,15 @@ export function initShaderBackground() {
       camera.zoom = cameraParams.zoom;
       camera.updateProjectionMatrix();
       // Update the GUI display
-      for (let i = 0; i < cameraFolder.__controllers.length; i++) {
-        if (cameraFolder.__controllers[i].property === "zoom") {
-          cameraFolder.__controllers[i].updateDisplay();
-          break;
+      if (typeof gui !== 'undefined' && gui && gui.__folders['Camera Controls']) {
+        const cameraFolder = gui.__folders['Camera Controls'];
+        if (cameraFolder && cameraFolder.__controllers) {
+          for (let i = 0; i < cameraFolder.__controllers.length; i++) {
+            if (cameraFolder.__controllers[i].property === "zoom") {
+              cameraFolder.__controllers[i].updateDisplay();
+              break;
+            }
+          }
         }
       }
     }
@@ -3439,10 +3517,15 @@ export function initShaderBackground() {
       camera.zoom = cameraParams.zoom;
       camera.updateProjectionMatrix();
       // Update the GUI display
-      for (let i = 0; i < cameraFolder.__controllers.length; i++) {
-        if (cameraFolder.__controllers[i].property === "zoom") {
-          cameraFolder.__controllers[i].updateDisplay();
-          break;
+      if (typeof gui !== 'undefined' && gui && gui.__folders['Camera Controls']) {
+        const cameraFolder = gui.__folders['Camera Controls'];
+        if (cameraFolder && cameraFolder.__controllers) {
+          for (let i = 0; i < cameraFolder.__controllers.length; i++) {
+            if (cameraFolder.__controllers[i].property === "zoom") {
+              cameraFolder.__controllers[i].updateDisplay();
+              break;
+            }
+          }
         }
       }
     }
@@ -3522,10 +3605,15 @@ export function initShaderBackground() {
       if (scrollObj.sizeMin >= scrollObj.sizeMax) {
         scrollObj.sizeMax = scrollObj.sizeMin + 1;
         // Update the max controller display
-        for (let i = 0; i < particleFolder.__controllers.length; i++) {
-          if (particleFolder.__controllers[i].property === 'sizeMax') {
-            particleFolder.__controllers[i].updateDisplay();
-            break;
+        if (typeof gui !== 'undefined' && gui && gui.__folders['Particle System']) {
+          const particleFolder = gui.__folders['Particle System'];
+          if (particleFolder && particleFolder.__controllers) {
+            for (let i = 0; i < particleFolder.__controllers.length; i++) {
+              if (particleFolder.__controllers[i].property === 'sizeMax') {
+                particleFolder.__controllers[i].updateDisplay();
+                break;
+              }
+            }
           }
         }
       }
@@ -3541,10 +3629,15 @@ export function initShaderBackground() {
       if (scrollObj.sizeMax <= scrollObj.sizeMin) {
         scrollObj.sizeMin = scrollObj.sizeMax - 1;
         // Update the min controller display
-        for (let i = 0; i < particleFolder.__controllers.length; i++) {
-          if (particleFolder.__controllers[i].property === 'sizeMin') {
-            particleFolder.__controllers[i].updateDisplay();
-            break;
+        if (typeof gui !== 'undefined' && gui && gui.__folders['Particle System']) {
+          const particleFolder = gui.__folders['Particle System'];
+          if (particleFolder && particleFolder.__controllers) {
+            for (let i = 0; i < particleFolder.__controllers.length; i++) {
+              if (particleFolder.__controllers[i].property === 'sizeMin') {
+                particleFolder.__controllers[i].updateDisplay();
+                break;
+              }
+            }
           }
         }
       }
