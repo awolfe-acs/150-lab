@@ -1473,9 +1473,9 @@ function animateSlidingCards() {
     // Create scroll animation for the sliding cards
     gsap.fromTo(
       slidingCardWrapper, 
-      { x: '52vw' }, // Starting position (matching the CSS)
+      { x: '44vw' }, // Starting position (matching the CSS)
       {
-        x: '-32vw', // End position
+        x: '-28vw', // End position
         ease: 'power1.inOut', // Slightly smoother easing
         scrollTrigger: {
           trigger: '#get-involved-cards',
