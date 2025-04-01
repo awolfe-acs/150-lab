@@ -126,8 +126,8 @@ export function initVideo() {
             if (window.backgroundAudio) {
                 fadeAudio(window.backgroundAudio, 0);
             }
-            // Set video volume based on global audio state
-            videoElement.volume = window.audioMuted ? 0 : 1;
+            // Set video volume based on global audio state - use 0.5 volume when not muted
+            videoElement.volume = window.audioMuted ? 0 : 0.5;
         } else {
             pauseVideoAndShowOverlay();
         }
@@ -172,9 +172,9 @@ export function initVideo() {
     
     // Listen for sound toggle state changes
     const updateVideoAudioState = () => {
-        // Update video volume based on global audio state
+        // Update video volume based on global audio state - use 0.5 volume when not muted
         if (!videoElement.paused) {
-            videoElement.volume = window.audioMuted ? 0 : 1;
+            videoElement.volume = window.audioMuted ? 0 : 0.5;
         }
     };
     

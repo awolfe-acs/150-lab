@@ -3,6 +3,12 @@ import * as dat from "dat.gui";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 export function initShaderBackground() {
+  // Set up default values
+  window.colorPhase = 1; // Start in phase one (default colors)
+  window.specialColorsActive = false;
+  window.particlesFullyHidden = false;
+  window.particlesMovementPaused = false; // Initialize movement pause flag
+
   // Get the canvas element
   const canvas = document.getElementById("shaderBackground");
   if (!canvas) return;
@@ -198,9 +204,13 @@ export function initShaderBackground() {
           // This helps prevent any fade-in after Lenis easing settles
           if (!window.particlesFullyHidden && progress >= fadeOutThreshold) {
             window.particlesFullyHidden = true;
+            // Pause particle movement to improve performance when hidden
+            window.particlesMovementPaused = true;
           } else if (window.particlesFullyHidden && progress < fadeOutThreshold * 0.8) {
             // Only reset when we're well below the threshold (added 20% buffer)
             window.particlesFullyHidden = false;
+            // Resume particle movement when visible again
+            window.particlesMovementPaused = false;
           }
           
           // If particles should be fully hidden, force opacity to 0
@@ -654,6 +664,8 @@ export function initShaderBackground() {
   // Create a group to hold and control the globe model
   const globeGroup = new THREE.Group();
   globeGroup.position.y = -322;
+  // Enable frustum culling for the globe group
+  globeGroup.frustumCulled = true;
   scene.add(globeGroup);
 
   // Create gradient overlay
@@ -887,6 +899,16 @@ export function initShaderBackground() {
     
     // Apply initial parameters
     globeModel.visible = globeParams.visible;
+    
+    // Enable frustum culling for performance optimization
+    globeModel.frustumCulled = true;
+    
+    // Apply frustum culling to all child meshes for more granular culling
+    globeModel.traverse((child) => {
+      if (child.isMesh) {
+        child.frustumCulled = true;
+      }
+    });
     
     // First add to the scene
     globeGroup.add(globeModel);
@@ -2527,7 +2549,7 @@ export function initShaderBackground() {
   overlayFolder.open();
 
   // Create particle system
-  let particleCount = 320; // Make this mutable
+  let particleCount = 276; // Make this mutable
   let particles = new Float32Array(particleCount * 3);
   let particleVelocities = new Float32Array(particleCount * 3);
   let particleColors = new Float32Array(particleCount * 3);
@@ -2757,6 +2779,8 @@ export function initShaderBackground() {
   });
   
   const particleSystem = new THREE.Points(particleGeometry, customParticleMaterial);
+  // Enable frustum culling for particle system
+  particleSystem.frustumCulled = true;
   // Add to particle scene instead of main scene
   particleScene.add(particleSystem);
 
@@ -3009,45 +3033,60 @@ export function initShaderBackground() {
     // This makes particles slow down and stop more quickly
     lastScrollY = scrollY * (1 - scrollObj.damping) + lastScrollY * scrollObj.damping;
     
+    // Only update particle positions if movement is not paused
+    if (!window.particlesMovementPaused) {
+      for (let i = 0; i < particleCount; i++) {
+        const i3 = i * 3;
+        
+        // Get the size ratio for this particle (if sizes exist)
+        const sizeRatio = sizes ? (sizes[i] - scrollObj.sizeMin) / (scrollObj.sizeMax - scrollObj.sizeMin) : 0.5;
+        
+        // Adjust float speed based on size - smaller particles move more slowly
+        const particleFloatSpeed = scrollObj.floatSpeed * (0.5 + sizeRatio * 0.5);
+        
+        // Update positions with float speed applied
+        positions[i3] += particleVelocities[i3] * particleFloatSpeed;
+        positions[i3 + 1] += particleVelocities[i3 + 1] * particleFloatSpeed;
+        positions[i3 + 2] += particleVelocities[i3 + 2] * particleFloatSpeed;
+        
+        // Move particles up based on scroll with size-based parallax effect
+        // Larger particles (appearing closer) move faster
+        positions[i3 + 1] += scrollDelta * (0.5 + sizeRatio * 0.5);
+        
+        // Bounce off horizontal boundaries
+        if (Math.abs(positions[i3]) > window.innerWidth / 2) {
+          particleVelocities[i3] *= -1;
+        }
+        
+        // Wrap around vertical boundaries instead of bouncing
+        // This creates an infinite scrolling effect
+        // Account for vertical offset in the boundary check
+        const relativePos = positions[i3 + 1] - scrollObj.verticalOffset;
+        const halfDist = verticalDistribution / 2;
+        
+        if (relativePos > halfDist) {
+          positions[i3 + 1] = -halfDist + scrollObj.verticalOffset;
+        } else if (relativePos < -halfDist) {
+          positions[i3 + 1] = halfDist + scrollObj.verticalOffset;
+        }
+        
+        // Bounce off z boundaries
+        if (Math.abs(positions[i3 + 2]) > 250) {
+          particleVelocities[i3 + 2] *= -1;
+        }
+      }
+      
+      // Only need to update position attribute if we actually changed positions
+      particleGeometry.attributes.position.needsUpdate = true;
+    }
+    
+    // Always update colors for twinkle effect, even when movement is paused
+    // This ensures a smooth transition when particles become visible again
     for (let i = 0; i < particleCount; i++) {
       const i3 = i * 3;
       
       // Get the size ratio for this particle (if sizes exist)
       const sizeRatio = sizes ? (sizes[i] - scrollObj.sizeMin) / (scrollObj.sizeMax - scrollObj.sizeMin) : 0.5;
-      
-      // Adjust float speed based on size - smaller particles move more slowly
-      const particleFloatSpeed = scrollObj.floatSpeed * (0.5 + sizeRatio * 0.5);
-      
-      // Update positions with float speed applied
-      positions[i3] += particleVelocities[i3] * particleFloatSpeed;
-      positions[i3 + 1] += particleVelocities[i3 + 1] * particleFloatSpeed;
-      positions[i3 + 2] += particleVelocities[i3 + 2] * particleFloatSpeed;
-      
-      // Move particles up based on scroll with size-based parallax effect
-      // Larger particles (appearing closer) move faster
-      positions[i3 + 1] += scrollDelta * (0.5 + sizeRatio * 0.5);
-      
-      // Bounce off horizontal boundaries
-      if (Math.abs(positions[i3]) > window.innerWidth / 2) {
-        particleVelocities[i3] *= -1;
-      }
-      
-      // Wrap around vertical boundaries instead of bouncing
-      // This creates an infinite scrolling effect
-      // Account for vertical offset in the boundary check
-      const relativePos = positions[i3 + 1] - scrollObj.verticalOffset;
-      const halfDist = verticalDistribution / 2;
-      
-      if (relativePos > halfDist) {
-        positions[i3 + 1] = -halfDist + scrollObj.verticalOffset;
-      } else if (relativePos < -halfDist) {
-        positions[i3 + 1] = halfDist + scrollObj.verticalOffset;
-      }
-      
-      // Bounce off z boundaries
-      if (Math.abs(positions[i3 + 2]) > 250) {
-        particleVelocities[i3 + 2] *= -1;
-      }
       
       // Add twinkle effect - subtle brightness variation over time
       const baseColor = new THREE.Color(particleColorObj.color);
@@ -3061,7 +3100,6 @@ export function initShaderBackground() {
       colors[i3 + 2] = baseColor.b * twinkleFactor * sizeBrightness;
     }
     
-    particleGeometry.attributes.position.needsUpdate = true;
     particleGeometry.attributes.color.needsUpdate = true;
     requestAnimationFrame(animateParticles);
   }
@@ -3112,9 +3150,11 @@ export function initShaderBackground() {
     renderer.autoClear = true; // Clear before first render
     renderer.render(scene, camera); // Render scene with background shader
     
-    // 2. Then render particles on top of background
-    renderer.autoClear = false; // Don't clear after first render
-    renderer.render(particleScene, camera); // Render particles
+    // 2. Then render particles on top of background (only if visible)
+    if (!window.particlesFullyHidden) {
+      renderer.autoClear = false; // Don't clear after first render
+      renderer.render(particleScene, camera); // Render particles
+    }
     
     // Note: The globe is part of the main scene, so it's already rendered appropriately
     // This ensures: Background -> Particles -> Globe+Overlay (correct z-order)

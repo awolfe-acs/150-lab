@@ -1481,7 +1481,7 @@ function animateSlidingCards() {
           trigger: '#get-involved-cards',
           start: 'top 80%', // Start when the top of cards section is 80% down the viewport
           end: 'bottom 20%', // End when the bottom of cards section is 20% from the top of viewport
-          scrub: 1.2, // Smoother scrubbing with slightly more lag
+          scrub: 1.5, // Smoother scrubbing with slightly more lag
           invalidateOnRefresh: true, // Recalculate on resize
           markers: false, // Set to true for debugging
           id: "sliding-cards-animation" // For debugging
