@@ -308,12 +308,32 @@ export function initHeroAnimation() {
 }
 
 export function initAnimations() {
-  // Initialize the hero animation
+  console.log('Initializing animations');
+
+  ScrollTrigger.refresh();
+  ScrollTrigger.clearMatchMedia();
+
+  // Kill any existing ScrollTriggers to prevent duplicates
+  ScrollTrigger.getAll().forEach(st => st.kill());
+
+  gsap.registerPlugin(ScrollTrigger);
+  gsap.registerPlugin(SplitType);
+
+  // Initialize hero animation (animations that happen on page load)
   initHeroAnimation();
-  
+
   // Initialize video scale animation
   animateVideoScale();
   
+  // Initialize get involved text animation 
+  animateGetInvolvedText();
+  
+  // Initialize sliding cards animation
+  animateSlidingCards();
+  
+  // Initialize page navigation
+  updatePageNavigation();
+
   // Initialize fancy button interactions
   initFancyButtonEffects();
   
@@ -1220,50 +1240,63 @@ function animateGetInvolvedText() {
   const getInvolvedText = document.querySelector('#get-involved-text p');
   
   if (getInvolvedText) {
-    
-    // Make sure the paragraph is visible so SplitType can detect natural line breaks
+    // Make sure the paragraph is visible and has proper dimensions
     gsap.set(getInvolvedText, { 
       opacity: 1,
-      visibility: 'visible'
+      visibility: 'visible',
+      autoAlpha: 1
     });
     
-    // Force a reflow to ensure proper line detection
-    getInvolvedText.offsetHeight;
-    
-    // Split the text into lines based on natural word-wrap
-    const splitText = new SplitType(getInvolvedText, { 
-      types: 'lines',
-      lineClass: 'line'
-    });
-    
-    // Log the number of lines detected for debugging
-    console.log('Number of lines detected:', splitText.lines ? splitText.lines.length : 0);
-    
-    // Hide all lines initially and set their initial position
-    gsap.set(splitText.lines, { 
-      opacity: 0,
-      y: 40,
-      transformOrigin: "center center"
-    });
-    
-    // Create a timeline for the animation
-    gsap.timeline({
-      scrollTrigger: {
-        trigger: "#get-involved",
-        start: "top 65%",
-        end: "top 20%",
-        scrub: false,
-        markers: false,
-        toggleActions: "play none none reverse"
+    // Use a short delay to ensure the browser has properly rendered text and calculated dimensions
+    setTimeout(() => {
+      // Force a reflow to ensure proper layout calculations
+      document.body.offsetHeight;
+      getInvolvedText.offsetHeight;
+      
+      // Manually force proper word wrapping before splitting
+      getInvolvedText.style.width = getInvolvedText.offsetWidth + 'px';
+      
+      // Split the text into lines based on natural word-wrap
+      const splitText = new SplitType(getInvolvedText, { 
+        types: 'lines',
+        lineClass: 'line',
+        // Ensure proper positioning
+        absolute: false
+      });
+      
+      // If we have splitText.lines, proceed with the animation
+      if (splitText.lines && splitText.lines.length > 0) {
+        console.log('Number of lines detected:', splitText.lines.length);
+        
+        // Hide all lines initially and set their initial position
+        gsap.set(splitText.lines, { 
+          opacity: 0,
+          y: 40,
+          transformOrigin: "center center"
+        });
+        
+        // Create a timeline for the animation
+        gsap.timeline({
+          scrollTrigger: {
+            trigger: "#get-involved",
+            start: "top 65%",
+            end: "top 20%",
+            scrub: false,
+            markers: false,
+            toggleActions: "play none none reverse"
+          }
+        })
+        .to(splitText.lines, {
+          opacity: 1,
+          y: 0,
+          duration: 1.2,
+          stagger: 0.25,
+          ease: "power1.out"
+        });
+      } else {
+        console.warn('SplitType failed to detect lines properly');
       }
-    })
-    .to(splitText.lines, {
-      opacity: 1,
-      y: 0,
-      duration: 1.2,
-      stagger: 0.25,
-      ease: "power1.out"
-    });
+    }, 100); // Small delay to ensure proper layout
   }
 }
 
@@ -1348,4 +1381,34 @@ function updatePageNavigation() {
       updateActiveTitleWithFade("Get Involved");
     }
   });
+}
+
+function animateSlidingCards() {
+  const slidingCardWrapper = document.querySelector('.sliding-card-row-wrapper');
+  const getInvolvedCards = document.querySelector('#get-involved-cards');
+  
+  if (slidingCardWrapper && getInvolvedCards) {
+    // Create scroll animation for the sliding cards
+    gsap.fromTo(
+      slidingCardWrapper, 
+      { x: '32vw' }, // Starting position (matching the CSS)
+      {
+        x: '-32vw', // End position
+        ease: 'power1.inOut', // Slightly smoother easing
+        scrollTrigger: {
+          trigger: '#get-involved-cards',
+          start: 'top 80%', // Start when the top of cards section is 80% down the viewport
+          end: 'bottom 20%', // End when the bottom of cards section is 20% from the top of viewport
+          scrub: 1.5, // Smoother scrubbing with slightly more lag
+          invalidateOnRefresh: true, // Recalculate on resize
+          markers: false, // Set to true for debugging
+          id: "sliding-cards-animation" // For debugging
+        }
+      }
+    );
+    
+    console.log('Sliding cards animation initialized');
+  } else {
+    console.warn('Could not find sliding card wrapper or get-involved-cards section');
+  }
 }

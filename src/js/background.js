@@ -7,6 +7,11 @@ export function initShaderBackground() {
   const canvas = document.getElementById("shaderBackground");
   if (!canvas) return;
 
+  // Global state to track special colors activation
+  window.specialColorsActive = false;
+  // Track which color phase we're in (1 = original, 2 = past get-involved-earth)
+  window.colorPhase = 1;
+
   // Import GSAP and ScrollTrigger
   let gsap, ScrollTrigger;
   
@@ -27,12 +32,21 @@ export function initShaderBackground() {
   
   // Function to set up the color darkness animation with ScrollTrigger
   function setupColorDarknessAnimation(gsap, ScrollTrigger) {
+    // Store original colors for reverting later
+    let originalColor1, originalColor2;
+    
     // Find the video-travel-area element
     const videoTravelArea = document.querySelector("#video-travel-area");
     
     if (!videoTravelArea) {
       console.warn("Could not find #video-travel-area element for shader animation");
       return;
+    }
+
+    // Save original colors when the function runs
+    if (uniforms && uniforms.color1 && uniforms.color2) {
+      originalColor1 = uniforms.color1.value.clone();
+      originalColor2 = uniforms.color2.value.clone();
     }
     
     // Create ScrollTrigger to animate the colorDarkness value
@@ -46,8 +60,27 @@ export function initShaderBackground() {
         onUpdate: (self) => {
           // Update the colorDarkness value based on progress
           if (uniforms && uniforms.colorDarkness) {
-            // Map progress (0-1) to colorDarkness (0-1)
-            uniforms.colorDarkness.value = self.progress;
+            // Map progress (0-1) to colorDarkness (0-2)
+            uniforms.colorDarkness.value = self.progress * 2.0;
+            
+            // When colorDarkness reaches 2.0 (or very close to it), change the colors
+            if (uniforms.colorDarkness.value >= 1.95) {
+              // Only change colors if we're still in phase one
+              // Phase two colors are controlled separately when scrolling past get-involved-earth
+              if (window.colorPhase === 1) {
+                // Phase one special colors
+                if (uniforms.color1) uniforms.color1.value.set("#dadaff");
+                if (uniforms.color2) uniforms.color2.value.set("#ba64ff");
+                window.specialColorsActive = true;
+              }
+            } else if (originalColor1 && originalColor2) {
+              // Revert to original colors when not fully dark and we're in phase one
+              if (window.colorPhase === 1) {
+                if (uniforms.color1) uniforms.color1.value.copy(originalColor1);
+                if (uniforms.color2) uniforms.color2.value.copy(originalColor2);
+                window.specialColorsActive = false;
+              }
+            }
             
             // Update the GUI if it exists
             updateColorDarknessGUI();
@@ -55,6 +88,11 @@ export function initShaderBackground() {
         }
       }
     });
+    
+    // Setup anniversary-assets animation with a slight delay to ensure DOM is fully processed
+    setTimeout(() => {
+      setupAnniversaryAssetsAnimation(gsap, ScrollTrigger, originalColor1, originalColor2);
+    }, 100);
     
     // Find the get-involved section
     const getInvolvedSection = document.querySelector("#get-involved");
@@ -240,6 +278,132 @@ export function initShaderBackground() {
       }
     });
     
+    // Create a separate ScrollTrigger to transition to phase two colors after passing get-involved-earth
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: "#get-involved-earth",
+        start: "center center",  // Start at center of get-involved-earth in center of viewport
+        end: "bottom top",       // End when bottom of get-involved-earth reaches top of viewport
+        scrub: true,             // Smooth scrubbing effect, tied to scroll position
+        markers: false,          // Set to true for debugging
+        onUpdate: (self) => {
+          // Only proceed if we have uniforms
+          if (!uniforms || !uniforms.color1 || !uniforms.color2) return;
+          
+          // Get the current progress from start to end
+          const progress = self.progress;
+          
+          // When progress is close to complete, transition to phase two
+          if (progress > 0.8) {
+            // Set phase two colors
+            uniforms.color1.value.set("#fcdcff");
+            uniforms.color2.value.set("#905dff");
+            
+            // Set the yOffset to -0.05 for phase two
+            if (uniforms.yOffset) {
+              uniforms.yOffset.value = -0.05;
+            }
+            
+            // Mark that we're now in phase two
+            window.colorPhase = 2;
+            // We're still in special colors mode, just a different set
+            window.specialColorsActive = true;
+            
+            // Update the GUI to reflect the new colors
+            updateColorGUI();
+          } else if (progress < 0.2 && window.colorPhase === 2) {
+            // When scrolling back up, restore phase one special colors
+            uniforms.color1.value.set("#dadaff");
+            uniforms.color2.value.set("#ba64ff");
+            
+            // Reset the yOffset to its original value for phase one
+            if (uniforms.yOffset) {
+              uniforms.yOffset.value = 0.306;
+            }
+            
+            // Reset to phase one
+            window.colorPhase = 1;
+            window.specialColorsActive = true;
+            
+            // Update the GUI to reflect the phase one colors
+            updateColorGUI();
+          }
+          
+          // Update the GUI if it exists
+          updateColorDarknessGUI();
+        }
+      }
+    });
+    
+    // Create ScrollTrigger to fade out the globe when entering #get-involved-cards
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: "#get-involved-cards",
+        start: "top 80%",    // Start when the top of get-involved-cards is 80% from the top of viewport
+        end: "top 20%",      // End when the top of get-involved-cards is 20% from the top of viewport
+        scrub: 0.7,          // Increased scrub for smoother transition
+        markers: false,      // Set to true for debugging
+        onUpdate: (self) => {
+          // Get the current progress from start to end
+          const progress = self.progress;
+          
+          // Calculate the inverse (1 at start, 0 at end)
+          const inverseProgress = 1 - progress;
+          
+          // Apply a smoother curve for natural fade
+          // Use cubic easing for a more gradual fade near the end
+          const curvedProgress = Math.pow(inverseProgress, 3);
+          
+          // Apply to globe model if it exists
+          if (globeModel) {
+            // Keep the globe visible throughout the animation
+            globeModel.visible = true;
+            
+            // Set the opacity on all materials with proper transparency settings
+            globeModel.traverse((child) => {
+              if (child.isMesh && child.material) {
+                if (Array.isArray(child.material)) {
+                  child.material.forEach(mat => {
+                    // Ensure proper material settings for transparency
+                    mat.transparent = true;
+                    mat.opacity = curvedProgress;
+                    mat.depthWrite = curvedProgress > 0.1; // Only write to depth buffer when mostly opaque
+                    // Set blending mode for smoother transparency
+                    mat.blending = THREE.NormalBlending;
+                    mat.needsUpdate = true;
+                  });
+                } else {
+                  // Ensure proper material settings for transparency
+                  child.material.transparent = true;
+                  child.material.opacity = curvedProgress;
+                  child.material.depthWrite = curvedProgress > 0.1; // Only write to depth buffer when mostly opaque
+                  // Set blending mode for smoother transparency
+                  child.material.blending = THREE.NormalBlending;
+                  child.material.needsUpdate = true;
+                }
+              }
+            });
+            
+            // Handle the extreme case where opacity is near zero
+            if (curvedProgress < 0.01) {
+              // For complete invisibility at the end of fade, hide the globe
+              // but only when it's practically invisible already
+              globeModel.visible = false;
+            }
+            
+            // Update globeParams for reference
+            globeParams.opacity = curvedProgress;
+            
+            // Pause rotation when opacity is very low
+            globeParams.rotationPaused = curvedProgress < 0.01;
+            
+            // Update any opacity controllers in the GUI
+            updateGlobeOpacityGUI();
+          }
+        }
+      }
+    });
+    
     // Helper function to update particle opacity in the GUI
     function updateParticleOpacityGUI(opacity) {
       if (gui && gui.__folders['Particle System']) {
@@ -258,19 +422,102 @@ export function initShaderBackground() {
     console.log("Set up ScrollTrigger animations for shader, globe, overlay, and particles");
   }
   
-  // Helper function to update the GUI control for colorDarkness if it exists
-  function updateColorDarknessGUI() {
-    if (gui) {
-      // Try to find the colorDarkness controller and update its display
-      for (let folder of Object.values(gui.__folders)) {
-        if (folder.__controllers) {
-          for (let controller of folder.__controllers) {
-            if (controller.property === "value" && controller.object === uniforms.colorDarkness) {
-              controller.updateDisplay();
-              break;
+  // Separate function to set up anniversary assets animation
+  function setupAnniversaryAssetsAnimation(gsap, ScrollTrigger, originalColor1, originalColor2) {
+    // Find the anniversary-assets section
+    const anniversaryAssetsSection = document.querySelector("#anniversary-assets");
+    
+    if (!anniversaryAssetsSection) {
+      console.warn("Could not find #anniversary-assets element for shader animation");
+      console.log("Waiting for DOM to be ready before trying again...");
+      
+      // Try again when DOM is fully loaded
+      document.addEventListener('DOMContentLoaded', () => {
+        setupAnniversaryAssetsAnimation(gsap, ScrollTrigger, originalColor1, originalColor2);
+      });
+      return;
+    }
+    
+    console.log("Anniversary assets section found, setting up animation");
+    
+    // Create a second ScrollTrigger to animate colorDarkness back to 0 when scrolling through #anniversary-assets
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: "#anniversary-assets",
+        start: "top bottom", // Starts when the top of anniversary-assets reaches the bottom of viewport
+        end: "center center", // Ends when the center of anniversary-assets reaches the center of viewport
+        scrub: true,        // Smooth scrubbing effect, tied to scroll position
+        markers: false,     // Set to true for debugging
+        onUpdate: (self) => {
+          // Update the colorDarkness value based on progress
+          if (uniforms && uniforms.colorDarkness) {
+            // Map progress (0-1) to colorDarkness (2-0), starting at 2 and going to 0
+            uniforms.colorDarkness.value = 2.0 - (self.progress * 2.0);
+            
+            // Maintain colors based on the current phase, never revert to original colors
+            if (window.colorPhase === 2) {
+              // We're in phase two, always maintain the phase two colors
+              if (uniforms.color1) uniforms.color1.value.set("#fcdcff");
+              if (uniforms.color2) uniforms.color2.value.set("#905dff");
+              window.specialColorsActive = true;
+              
+              // Update the GUI to reflect the phase two colors
+              updateColorGUI();
+            } else {
+              // We're in phase one, maintain phase one special colors
+              if (uniforms.color1) uniforms.color1.value.set("#dadaff");
+              if (uniforms.color2) uniforms.color2.value.set("#ba64ff");
+              window.specialColorsActive = true;
+              
+              // Update the GUI to reflect the phase one colors
+              updateColorGUI();
             }
+            
+            // Update the GUI if it exists
+            updateColorDarknessGUI();
           }
         }
+      }
+    });
+  }
+  
+  // Helper function to update the GUI control for colorDarkness if it exists
+  function updateColorDarknessGUI() {
+    if (gui && gui.__folders['Color Controls']) {
+      const colorFolder = gui.__folders['Color Controls'];
+      if (colorFolder.__controllers) {
+        for (let controller of colorFolder.__controllers) {
+          if (controller.property === "value" && controller.object === uniforms.colorDarkness) {
+            controller.updateDisplay();
+            break;
+          }
+        }
+      }
+    }
+  }
+  
+  // Helper function to update color pickers in the GUI
+  function updateColorGUI() {
+    if (gui && gui.__folders['Color Controls']) {
+      const colorFolder = gui.__folders['Color Controls'];
+      if (colorFolder.__controllers) {
+        // Update both color controllers
+        colorFolder.__controllers.forEach(controller => {
+          if (controller.property === "color") {
+            const colorObject = controller.__color;
+            if (colorObject) {
+              if (controller.property === "color" && controller.__li && controller.__li.querySelector(".property-name").textContent === "Color 1") {
+                // Update Color 1
+                const hexColor = "#" + uniforms.color1.value.getHexString();
+                controller.setValue(hexColor);
+              } else if (controller.property === "color" && controller.__li && controller.__li.querySelector(".property-name").textContent === "Color 2") {
+                // Update Color 2
+                const hexColor = "#" + uniforms.color2.value.getHexString();
+                controller.setValue(hexColor);
+              }
+            }
+          }
+        });
       }
     }
   }
@@ -510,30 +757,30 @@ export function initShaderBackground() {
   // Function to update the overlay on window resize
   function updateOverlaySize() {
     if (overlayMesh) {
-      // Get viewport dimensions
+    // Get viewport dimensions
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
-      
+    
       // Get world dimensions from camera
       const worldWidth = (camera.right - camera.left);
       const worldHeight = (camera.top - camera.bottom);
-      
+    
       // Calculate the fixed height in world units - exactly 66% of viewport
       const fixedHeightWorld = (viewportHeight * 0.66) * (worldHeight / viewportHeight);
-      
+    
       // Dispose of old geometry and create new one with fixed height
       overlayMesh.geometry.dispose();
-      overlayMesh.geometry = new THREE.PlaneGeometry(
+    overlayMesh.geometry = new THREE.PlaneGeometry(
         worldWidth,
         fixedHeightWorld
-      );
-      
+    );
+    
       // Ensure overlay stays perfectly flat and parallel to view
       overlayMesh.rotation.set(0, 0, 0);
       
       // Update the position after resizing
-      updateOverlayPosition();
-      
+    updateOverlayPosition();
+    
       console.log("Updated overlay to 66% viewport height");
     }
   }
@@ -557,7 +804,7 @@ export function initShaderBackground() {
       
       // Dispose of old geometry and create new one with fixed height
       overlayMesh.geometry.dispose();
-      overlayMesh.geometry = new THREE.PlaneGeometry(
+    overlayMesh.geometry = new THREE.PlaneGeometry(
         worldWidth,
         fixedHeightWorld
       );
@@ -588,7 +835,8 @@ export function initShaderBackground() {
     scrollRotateSpeed: 0.075, // 50% faster than base speed (for when scrolling)
     responsive: true,  // New parameter to enable/disable responsive scaling
     baseScale: 25.0,   // Store the base scale for responsive calculations
-    opacity: 0.0       // Start with opacity 0
+    opacity: 0.0,       // Start with opacity 0
+    rotationPaused: false // New parameter to track if rotation should be paused
   };
 
   // Load the GLTF model
@@ -1490,7 +1738,7 @@ export function initShaderBackground() {
 
   // Add color darkness control
   colorFolder
-    .add(uniforms.colorDarkness, "value", 0.0, 1.0)
+    .add(uniforms.colorDarkness, "value", 0.0, 2.0)
     .name("Color Darkness")
     .step(0.001)
     .onChange((value) => {
@@ -2817,7 +3065,7 @@ export function initShaderBackground() {
     }
     
     // Update globe model rotation if auto-rotate is enabled
-    if (globeModel && globeParams.autoRotate) {
+    if (globeModel && globeParams.autoRotate && !globeParams.rotationPaused) {
       // Determine which rotation speed to use based on scroll state
       const rotationSpeed = isScrolling 
         ? globeParams.scrollRotateSpeed  // Use faster speed when scrolling
@@ -3065,14 +3313,14 @@ export function initShaderBackground() {
         window.lastKnownDimensions.height = currentHeight;
         
         // Only update globe size if there's a significant change
-        if (globeModel && globeParams.responsive) {
-          globeResizeTimeout = setTimeout(() => {
-            updateGlobeSize();
-          }, 150); // 150ms delay
-        }
-        
+      if (globeModel && globeParams.responsive) {
+        globeResizeTimeout = setTimeout(() => {
+          updateGlobeSize();
+        }, 150); // 150ms delay
+      }
+      
         // Only force a resize if there's a significant change
-        setTimeout(handleResize, 100);
+      setTimeout(handleResize, 100);
         
         console.log(`Tab refocused with significant viewport change: Width ${widthChange.toFixed(2)}%, Height ${heightChange.toFixed(2)}%`);
       } else {
@@ -3279,5 +3527,5 @@ export function initShaderBackground() {
     scrollTimeout = setTimeout(() => {
       isScrolling = false;
     }, 150); // Consider scrolling stopped after 150ms of no scroll events
-  });
+    });
 }

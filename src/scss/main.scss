@@ -9,6 +9,7 @@
 @use './components/video' as *;
 @use './components/section-timeline' as *;
 @use './components/nav' as *;
+@use './components/cards' as *;
 @use './typography' as *;
 
 html {
@@ -22,7 +23,6 @@ html {
     //font-family: "Plus Jakarta Sans", sans-serif;
     font-family: "Poppins", sans-serif;
     font-optical-sizing: auto;
-    font-weight: 600;
     font-style: normal;
     color: #fff;
   }
@@ -129,29 +129,27 @@ html {
 }
 
 #get-involved {
-  p, span {
+  p.large-paragraph, span {
     max-width:82vw;
     margin:0 auto;
   }
-  p {
+  p.large-paragraph {
     font-size: 2.5vw;
     text-align: center;
-    font-weight: 200;
-    color:#fff;
-  }
-  .line {
-    font-size: 2.5vw;
-    text-align: center;
-    font-weight: 200;
+    font-weight: 100;
     color:#fff;
     @media (max-width:$mobile-viewport) {
       font-size:3.75vw;
     }
   }
+  .line {
+    font-size: inherit!important;
+    text-align: center;
+    font-weight: 100;
+    color:#fff;
+  }
 }
-#get-involved-text {
 
-}
 #get-involved-earth {
   gap:3vh;
   h2, p, span {
@@ -166,9 +164,6 @@ html {
     font-weight:120;
     line-height:1.4;
     max-width:66.5vw;
-  }
-  .fancy-btn {
-    width:240px;
   }
 }
 .years {
