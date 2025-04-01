@@ -163,6 +163,13 @@ export function initShaderBackground() {
               // Update visibility toggle in GUI if it exists
               updateOverlayVisibilityGUI();
             }
+            
+            // Update overlay opacity to match globe opacity
+            if (overlayMesh.visible && overlayMaterial && overlayMaterial.uniforms) {
+              // Scale the start and end opacity by the progress value
+              overlayMaterial.uniforms.startOpacity.value = overlayParams.startOpacity * progress;
+              overlayMaterial.uniforms.endOpacity.value = overlayParams.endOpacity * progress;
+            }
           }
         }
       }
@@ -296,8 +303,8 @@ export function initShaderBackground() {
           // When progress is close to complete, transition to phase two
           if (progress > 0.8) {
             // Set phase two colors
-            uniforms.color1.value.set("#fcdcff");
-            uniforms.color2.value.set("#905dff");
+            uniforms.color1.value.set("#ffbeff");
+            uniforms.color2.value.set("#67e3ff");
             
             // Set the yOffset to -0.05 for phase two
             if (uniforms.yOffset) {
@@ -2520,7 +2527,7 @@ export function initShaderBackground() {
   overlayFolder.open();
 
   // Create particle system
-  let particleCount = 1000; // Make this mutable
+  let particleCount = 320; // Make this mutable
   let particles = new Float32Array(particleCount * 3);
   let particleVelocities = new Float32Array(particleCount * 3);
   let particleColors = new Float32Array(particleCount * 3);
@@ -2529,13 +2536,10 @@ export function initShaderBackground() {
   let scrollY = 0;
   let lastScrollY = 0;
   
-  // Set a larger vertical distribution area (3x the viewport height)
-  let verticalDistribution = window.innerHeight * 3;
-  
-  // Define scroll control object before it's used in animateParticles
+  // Define scroll control object before it's used in any calculations
   const scrollObj = { 
     scrollSpeed: 0.005,
-    verticalSpread: 3.0,
+    verticalSpread: 1.0,
     damping: 0.95,
     depthRange: 1000,  // Default depth range
     sizeMin: 1,        // Minimum particle size
@@ -2543,7 +2547,10 @@ export function initShaderBackground() {
     floatSpeed: 0.8,   // Floating speed multiplier
     verticalOffset: 0  // Vertical offset for the entire particle system
   };
-
+  
+  // Set vertical distribution area based on the verticalSpread value
+  let verticalDistribution = window.innerHeight * scrollObj.verticalSpread;
+  
   // Function to redistribute particles with size variation
   function redistributeParticles() {
     // Create a size attribute for individual particle sizes
@@ -2580,7 +2587,7 @@ export function initShaderBackground() {
   // Initialize particles with random positions and velocities
   for (let i = 0; i < particleCount; i++) {
     const i3 = i * 3;
-    // Random positions within viewport width but extended vertical range
+    // Random positions within viewport width but with correct vertical range
     particles[i3] = (Math.random() - 0.5) * window.innerWidth;
     particles[i3 + 1] = (Math.random() - 0.5) * verticalDistribution + scrollObj.verticalOffset;
     particles[i3 + 2] = (Math.random() * 500) - 250; // Random z position for rendering order
@@ -3514,6 +3521,15 @@ export function initShaderBackground() {
     
   // Initialize particle sizes
   redistributeParticles();
+
+  // Force redistribute all particles to respect the 1.0 vertical spread
+  const positions = particleGeometry.attributes.position.array;
+  for (let i = 0; i < particleCount; i++) {
+    const i3 = i * 3;
+    // Reset vertical positions to match the new verticalDistribution
+    positions[i3 + 1] = (Math.random() - 0.5) * verticalDistribution + scrollObj.verticalOffset;
+  }
+  particleGeometry.attributes.position.needsUpdate = true;
 
   // Add halo controls
   particleFolder.add(customParticleMaterial.uniforms.haloStrength, 'value', 0.0, 2.0, 0.1)

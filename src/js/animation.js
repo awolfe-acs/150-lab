@@ -1125,6 +1125,15 @@ export function initAnimations() {
 
   // Initialize page navigation updates
   updatePageNavigation();
+
+  // Initialize split lines animations
+  initSplitLinesAnimation();
+  
+  // Initialize split chars animations
+  initSplitCharsAnimation();
+  
+  // Initialize scroll reveal animations
+  initScrollRevealAnimation();
 }
 
 // Function to initialize fancy button effects
@@ -1464,7 +1473,7 @@ function animateSlidingCards() {
     // Create scroll animation for the sliding cards
     gsap.fromTo(
       slidingCardWrapper, 
-      { x: '32vw' }, // Starting position (matching the CSS)
+      { x: '46vw' }, // Starting position (matching the CSS)
       {
         x: '-32vw', // End position
         ease: 'power1.inOut', // Slightly smoother easing
@@ -1484,4 +1493,337 @@ function animateSlidingCards() {
   } else {
     console.warn('Could not find sliding card wrapper or get-involved-cards section');
   }
+}
+
+export function initSplitLinesAnimation() {
+  // Get all elements with the split-lines class
+  const splitLinesElements = document.querySelectorAll('.split-lines');
+  
+  if (!splitLinesElements.length) {
+    console.warn('No .split-lines elements found');
+    return;
+  }
+  
+  // Store references to split instances for potential cleanup
+  const splitInstances = [];
+  
+  // Function to process a single element with proper timing
+  const processSplitElement = (element, index) => {
+    // First, store the original content
+    const originalContent = element.innerHTML;
+    
+    // Create a wrapper div that will contain the split text only
+    const wrapperDiv = document.createElement('div');
+    wrapperDiv.className = 'split-lines-wrapper';
+    wrapperDiv.innerHTML = originalContent;
+    element.innerHTML = '';
+    element.appendChild(wrapperDiv);
+    
+    // Add a small timeout to ensure the text is fully rendered before splitting
+    setTimeout(() => {
+      // Apply SplitType only to the wrapper div
+      const splitText = new SplitType(wrapperDiv, {
+        types: 'lines',
+        lineClass: 'split-line',
+        absolute: false, // Avoid absolute positioning which affects layout more
+        tagName: 'div'   // Use div instead of default spans
+      });
+      
+      // Store the instance for potential cleanup
+      splitInstances.push({ 
+        element, 
+        wrapper: wrapperDiv, 
+        splitText, 
+        originalContent 
+      });
+      
+      // Check if lines were created properly
+      if (splitText.lines && splitText.lines.length > 0) {
+        // Set initial state for lines - hidden and shifted down
+        gsap.set(splitText.lines, {
+          opacity: 0,
+          y: 50
+        });
+        
+        // Create ScrollTrigger animation for each element
+        ScrollTrigger.create({
+          trigger: element,
+          start: "top 85%", // Trigger when the top of the element is 85% from the top of viewport
+          once: false, // Allow the animation to run multiple times if scrolled past
+          markers: false, // Set to true for debugging
+          id: `split-lines-${index}`,
+          onEnter: () => {
+            // Animate the lines when they enter the viewport
+            gsap.to(splitText.lines, {
+              opacity: 1,
+              y: 0,
+              duration: 1.2,
+              stagger: 0.1, // Staggered animation for each line
+              ease: "power2.out",
+              overwrite: true
+            });
+          },
+          onLeaveBack: () => {
+            // Reset the animation when scrolling back up
+            gsap.to(splitText.lines, {
+              opacity: 0,
+              y: 50,
+              duration: 0.8,
+              stagger: 0.05,
+              ease: "power2.in",
+              overwrite: true
+            });
+          }
+        });
+      } else {
+        console.warn('SplitType failed to create lines for element:', element);
+        // Restore original content if split failed
+        element.innerHTML = originalContent;
+      }
+    }, 100); // 100ms delay to ensure rendering is complete
+  };
+  
+  // Process each split-lines element with the delayed function
+  splitLinesElements.forEach((element, index) => {
+    processSplitElement(element, index);
+  });
+  
+  // Add a cleanup method to the window for potential use
+  window.cleanupSplitLines = () => {
+    splitInstances.forEach(instance => {
+      // Revert to original content
+      instance.element.innerHTML = instance.originalContent;
+      // Remove from instance array
+      const index = splitInstances.indexOf(instance);
+      if (index > -1) {
+        splitInstances.splice(index, 1);
+      }
+    });
+    console.log('Split lines cleanup completed');
+  };
+  
+  // Also add a refresh method to recalculate splits if needed (like after window resize)
+  window.refreshSplitLines = () => {
+    // First clean up existing splits
+    window.cleanupSplitLines();
+    
+    // Then re-initialize with a slight delay to ensure DOM is updated
+    setTimeout(() => {
+      // Get elements again in case DOM has changed
+      const elements = document.querySelectorAll('.split-lines');
+      elements.forEach((element, index) => {
+        processSplitElement(element, index);
+      });
+      console.log('Split lines refreshed');
+    }, 100);
+  };
+  
+  // Add a window resize handler to refresh splits when viewport size changes
+  const debouncedRefresh = debounce(() => {
+    window.refreshSplitLines();
+  }, 250); // 250ms debounce
+  
+  window.addEventListener('resize', debouncedRefresh);
+  
+  console.log(`Initialized split lines animations for ${splitLinesElements.length} elements`);
+}
+
+// Initialize character splitting animation for elements with .split-chars class
+export function initSplitCharsAnimation() {
+  // Get all elements with the split-chars class
+  const splitCharsElements = document.querySelectorAll('.split-chars');
+  
+  if (!splitCharsElements.length) {
+    console.warn('No .split-chars elements found');
+    return;
+  }
+  
+  // Store references to split instances for potential cleanup
+  const splitCharsInstances = [];
+  
+  // Function to process a single element with proper timing
+  const processSplitCharsElement = (element, index) => {
+    // First, store the original content
+    const originalContent = element.innerHTML;
+    
+    // Create a wrapper div that will contain the split text only
+    const wrapperDiv = document.createElement('div');
+    wrapperDiv.className = 'split-chars-wrapper';
+    wrapperDiv.innerHTML = originalContent;
+    element.innerHTML = '';
+    element.appendChild(wrapperDiv);
+    
+    // Add a small timeout to ensure the text is fully rendered before splitting
+    setTimeout(() => {
+      // Apply SplitType only to the wrapper div, but split by chars
+      const splitText = new SplitType(wrapperDiv, {
+        types: 'chars',
+        charClass: 'split-char',
+        absolute: false,
+        tagName: 'span' // Use spans for characters as they're inline elements
+      });
+      
+      // Store the instance for potential cleanup
+      splitCharsInstances.push({ 
+        element, 
+        wrapper: wrapperDiv, 
+        splitText, 
+        originalContent 
+      });
+      
+      // Check if chars were created properly
+      if (splitText.chars && splitText.chars.length > 0) {
+        // Set initial state for chars - hidden and shifted down
+        gsap.set(splitText.chars, {
+          opacity: 0,
+          y: 50,
+          // Ensure characters don't break the flow
+          display: 'inline-block'
+        });
+        
+        // Create ScrollTrigger animation for each element
+        ScrollTrigger.create({
+          trigger: element,
+          start: "top 85%", // Trigger when the top of the element is 85% from the top of viewport
+          once: false, // Allow the animation to run multiple times if scrolled past
+          markers: false, // Set to true for debugging
+          id: `split-chars-${index}`,
+          onEnter: () => {
+            // Animate the chars when they enter the viewport
+            gsap.to(splitText.chars, {
+              opacity: 1,
+              y: 0,
+              duration: 1.2,
+              stagger: 0.02, // Faster stagger for chars since there are more of them
+              ease: "power2.out",
+              overwrite: true
+            });
+          },
+          onLeaveBack: () => {
+            // Reset the animation when scrolling back up
+            gsap.to(splitText.chars, {
+              opacity: 0,
+              y: 50,
+              duration: 0.8,
+              stagger: 0.01, // Faster stagger for reset
+              ease: "power2.in",
+              overwrite: true
+            });
+          }
+        });
+      } else {
+        console.warn('SplitType failed to create chars for element:', element);
+        // Restore original content if split failed
+        element.innerHTML = originalContent;
+      }
+    }, 100); // 100ms delay to ensure rendering is complete
+  };
+  
+  // Process each split-chars element with the delayed function
+  splitCharsElements.forEach((element, index) => {
+    processSplitCharsElement(element, index);
+  });
+  
+  // Add a cleanup method to the window for potential use
+  window.cleanupSplitChars = () => {
+    splitCharsInstances.forEach(instance => {
+      // Revert to original content
+      instance.element.innerHTML = instance.originalContent;
+      // Remove from instance array
+      const index = splitCharsInstances.indexOf(instance);
+      if (index > -1) {
+        splitCharsInstances.splice(index, 1);
+      }
+    });
+    console.log('Split chars cleanup completed');
+  };
+  
+  // Also add a refresh method to recalculate splits if needed (like after window resize)
+  window.refreshSplitChars = () => {
+    // First clean up existing splits
+    window.cleanupSplitChars();
+    
+    // Then re-initialize with a slight delay to ensure DOM is updated
+    setTimeout(() => {
+      // Get elements again in case DOM has changed
+      const elements = document.querySelectorAll('.split-chars');
+      elements.forEach((element, index) => {
+        processSplitCharsElement(element, index);
+      });
+      console.log('Split chars refreshed');
+    }, 100);
+  };
+  
+  // Add a window resize handler to refresh splits when viewport size changes
+  const debouncedRefresh = debounce(() => {
+    window.refreshSplitChars();
+  }, 250); // 250ms debounce
+  
+  window.addEventListener('resize', debouncedRefresh);
+  
+  console.log(`Initialized split chars animations for ${splitCharsElements.length} elements`);
+}
+
+// Initialize simple scroll reveal animation without text splitting
+export function initScrollRevealAnimation() {
+  // Get all elements with the scroll-reveal class
+  const scrollRevealElements = document.querySelectorAll('.scroll-reveal');
+  
+  if (!scrollRevealElements.length) {
+    console.warn('No .scroll-reveal elements found');
+    return;
+  }
+  
+  // Process each scroll-reveal element
+  scrollRevealElements.forEach((element, index) => {
+    // Set initial state - hidden and shifted down
+    gsap.set(element, {
+      opacity: 0,
+      y: 50
+    });
+    
+    // Create ScrollTrigger animation for each element
+    ScrollTrigger.create({
+      trigger: element,
+      start: "top 85%", // Trigger when the top of the element is 85% from the top of viewport
+      once: false, // Allow the animation to run multiple times if scrolled past
+      markers: false, // Set to true for debugging
+      id: `scroll-reveal-${index}`,
+      onEnter: () => {
+        // Animate when element enters the viewport
+        gsap.to(element, {
+          opacity: 1,
+          y: 0,
+          duration: 1.2,
+          ease: "power2.out",
+          overwrite: true
+        });
+      },
+      onLeaveBack: () => {
+        // Reset the animation when scrolling back up
+        gsap.to(element, {
+          opacity: 0,
+          y: 50,
+          duration: 0.8,
+          ease: "power2.in",
+          overwrite: true
+        });
+      }
+    });
+  });
+  
+  console.log(`Initialized scroll reveal animations for ${scrollRevealElements.length} elements`);
+}
+
+// Simple debounce function to prevent too many resize calculations
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
 }
