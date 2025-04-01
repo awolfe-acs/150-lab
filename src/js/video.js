@@ -126,7 +126,8 @@ export function initVideo() {
             if (window.backgroundAudio) {
                 fadeAudio(window.backgroundAudio, 0);
             }
-            videoElement.volume = 1;
+            // Set video volume based on global audio state
+            videoElement.volume = window.audioMuted ? 0 : 1;
         } else {
             pauseVideoAndShowOverlay();
         }
@@ -168,4 +169,32 @@ export function initVideo() {
 
     // Start observing the video section
     observer.observe(videoSection);
+    
+    // Listen for sound toggle state changes
+    const updateVideoAudioState = () => {
+        // Update video volume based on global audio state
+        if (!videoElement.paused) {
+            videoElement.volume = window.audioMuted ? 0 : 1;
+        }
+    };
+    
+    // Watch for sound toggle clicks
+    const soundToggle = document.querySelector('.sound-toggle');
+    if (soundToggle) {
+        soundToggle.addEventListener('click', updateVideoAudioState);
+    }
+    
+    // Also check for changes to the window.audioMuted property
+    // This creates a setter/getter for the audioMuted property to detect changes
+    let _audioMuted = window.audioMuted;
+    Object.defineProperty(window, 'audioMuted', {
+        get: function() {
+            return _audioMuted;
+        },
+        set: function(value) {
+            _audioMuted = value;
+            // When audioMuted changes, update video volume
+            updateVideoAudioState();
+        }
+    });
 }

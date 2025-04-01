@@ -69,8 +69,8 @@ export function initShaderBackground() {
               // Phase two colors are controlled separately when scrolling past get-involved-earth
               if (window.colorPhase === 1) {
                 // Phase one special colors
-                if (uniforms.color1) uniforms.color1.value.set("#dadaff");
-                if (uniforms.color2) uniforms.color2.value.set("#ba64ff");
+                if (uniforms.color1) uniforms.color1.value.set(originalColor1);
+                if (uniforms.color2) uniforms.color2.value.set(originalColor2);
                 window.specialColorsActive = true;
               }
             } else if (originalColor1 && originalColor2) {
@@ -304,32 +304,42 @@ export function initShaderBackground() {
               uniforms.yOffset.value = -0.05;
             }
             
+            // Set phase two lighting values
+            uniforms.ambientLight.value = 0.4;
+            uniforms.directionalLight.value = 0.4;
+            
             // Mark that we're now in phase two
             window.colorPhase = 2;
             // We're still in special colors mode, just a different set
             window.specialColorsActive = true;
             
-            // Update the GUI to reflect the new colors
+            // Update the GUI to reflect the new colors and lighting
             updateColorGUI();
+            updateLightingGUI();
           } else if (progress < 0.2 && window.colorPhase === 2) {
             // When scrolling back up, restore phase one special colors
-            uniforms.color1.value.set("#dadaff");
-            uniforms.color2.value.set("#ba64ff");
+            uniforms.color1.value.set(originalColor1);
+            uniforms.color2.value.set(originalColor2);
             
             // Reset the yOffset to its original value for phase one
             if (uniforms.yOffset) {
               uniforms.yOffset.value = 0.306;
             }
             
+            // Reset to phase one lighting values
+            uniforms.ambientLight.value = 0.6;
+            uniforms.directionalLight.value = 0.6;
+            
             // Reset to phase one
             window.colorPhase = 1;
             window.specialColorsActive = true;
             
-            // Update the GUI to reflect the phase one colors
+            // Update the GUI to reflect the phase one colors and lighting
             updateColorGUI();
+            updateLightingGUI();
           }
           
-          // Update the GUI if it exists
+          // Update the color darkness GUI if it exists
           updateColorDarknessGUI();
         }
       }
@@ -459,18 +469,26 @@ export function initShaderBackground() {
               // We're in phase two, always maintain the phase two colors
               if (uniforms.color1) uniforms.color1.value.set("#fcdcff");
               if (uniforms.color2) uniforms.color2.value.set("#905dff");
+              // Set phase two lighting values
+              if (uniforms.ambientLight) uniforms.ambientLight.value = 0.4;
+              if (uniforms.directionalLight) uniforms.directionalLight.value = 0.4;
               window.specialColorsActive = true;
               
               // Update the GUI to reflect the phase two colors
               updateColorGUI();
+              updateLightingGUI();
             } else {
               // We're in phase one, maintain phase one special colors
-              if (uniforms.color1) uniforms.color1.value.set("#dadaff");
-              if (uniforms.color2) uniforms.color2.value.set("#ba64ff");
+              if (uniforms.color1) uniforms.color1.value.set(originalColor1);
+              if (uniforms.color2) uniforms.color2.value.set(originalColor2);
+              // Reset to phase one lighting values
+              if (uniforms.ambientLight) uniforms.ambientLight.value = 0.6;
+              if (uniforms.directionalLight) uniforms.directionalLight.value = 0.6;
               window.specialColorsActive = true;
               
               // Update the GUI to reflect the phase one colors
               updateColorGUI();
+              updateLightingGUI();
             }
             
             // Update the GUI if it exists
@@ -487,12 +505,12 @@ export function initShaderBackground() {
       const colorFolder = gui.__folders['Color Controls'];
       if (colorFolder.__controllers) {
         for (let controller of colorFolder.__controllers) {
-          if (controller.property === "value" && controller.object === uniforms.colorDarkness) {
-            controller.updateDisplay();
-            break;
+            if (controller.property === "value" && controller.object === uniforms.colorDarkness) {
+              controller.updateDisplay();
+              break;
+            }
           }
         }
-      }
     }
   }
   
@@ -3528,4 +3546,28 @@ export function initShaderBackground() {
       isScrolling = false;
     }, 150); // Consider scrolling stopped after 150ms of no scroll events
     });
+}
+
+// Add helper function to update lighting GUI
+function updateLightingGUI() {
+  if (!gui || !gui.__folders['Lighting Controls']) return;
+  
+  const lightingFolder = gui.__folders['Lighting Controls'];
+  
+  // Find the ambient light controller and update it
+  for (let i = 0; i < lightingFolder.__controllers.length; i++) {
+    const controller = lightingFolder.__controllers[i];
+    
+    // Check for ambient light controller
+    if (controller.property === "value" && controller.object === uniforms.ambientLight) {
+      // Update the displayed value without triggering onChange
+      controller.setValue(uniforms.ambientLight.value);
+    }
+    
+    // Check for directional light controller
+    if (controller.property === "value" && controller.object === uniforms.directionalLight) {
+      // Update the displayed value without triggering onChange
+      controller.setValue(uniforms.directionalLight.value);
+    }
+  }
 }

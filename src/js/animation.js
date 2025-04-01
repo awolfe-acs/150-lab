@@ -349,6 +349,25 @@ export function initAnimations() {
     });
   }
   
+  // Add scroll direction detection and class toggling
+  let lastScrollTop = 0;
+  window.addEventListener('scroll', () => {
+    const currentScrollTop = window.scrollY;
+    const anniversaryHeader = document.querySelector('header.anniversary');
+    
+    if (anniversaryHeader) {
+      if (currentScrollTop > lastScrollTop) {
+        // Scrolling down
+        anniversaryHeader.classList.remove('active');
+      } else {
+        // Scrolling up
+        anniversaryHeader.classList.add('active');
+      }
+    }
+    
+    lastScrollTop = currentScrollTop;
+  });
+  
   // Add close menu button click handler
   const closeMenuButton = document.querySelector('button.close-menu');
   if (closeMenuButton) {
@@ -1303,6 +1322,7 @@ function animateGetInvolvedText() {
 function updatePageNavigation() {
   const heroTravelArea = document.querySelector('#hero-travel-area');
   const getInvolvedSection = document.querySelector('#get-involved');
+  const assetsSection = document.querySelector('#anniversary-assets');
   const pageNav = document.querySelector('.page-nav');
   const activeTitle = document.querySelector('.section-timeline .indicator .active-title');
   
@@ -1310,6 +1330,36 @@ function updatePageNavigation() {
   
   const heroYearsLink = pageNav.querySelector('.anniversary');
   const getInvolvedLink = pageNav.querySelector('.get-involved');
+  const assetsLink = pageNav.querySelector('.assets');
+  
+  // Add click event listeners for smooth scrolling
+  heroYearsLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  });
+  
+  getInvolvedLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    const getInvolvedOffset = getInvolvedSection.getBoundingClientRect().top + window.pageYOffset;
+    window.scrollTo({
+      top: getInvolvedOffset,
+      behavior: 'smooth'
+    });
+  });
+  
+  assetsLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (assetsSection) {
+      const assetsOffset = assetsSection.getBoundingClientRect().top + window.pageYOffset;
+      window.scrollTo({
+        top: assetsOffset,
+        behavior: 'smooth'
+      });
+    }
+  });
   
   // Create a function to update the active title with a fade transition
   const updateActiveTitleWithFade = (newText) => {
@@ -1379,6 +1429,29 @@ function updatePageNavigation() {
       getInvolvedLink.classList.add('active');
       // Update active title with fade transition
       updateActiveTitleWithFade("Get Involved");
+    }
+  });
+  
+  // Create ScrollTrigger for anniversary assets section
+  ScrollTrigger.create({
+    trigger: "#anniversary-assets",
+    start: "top 50%",
+    end: "bottom 50%",
+    onEnter: () => {
+      // Remove active class from all links
+      pageNav.querySelectorAll('a').forEach(link => link.classList.remove('active'));
+      // Add active class to assets link
+      assetsLink.classList.add('active');
+      // Update active title with fade transition
+      updateActiveTitleWithFade("150th Assets");
+    },
+    onEnterBack: () => {
+      // Remove active class from all links
+      pageNav.querySelectorAll('a').forEach(link => link.classList.remove('active'));
+      // Add active class to assets link
+      assetsLink.classList.add('active');
+      // Update active title with fade transition
+      updateActiveTitleWithFade("150th Assets");
     }
   });
 }

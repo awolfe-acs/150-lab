@@ -1,11 +1,19 @@
 @use '../animation';
 
 header.anniversary {
-    position: absolute;
+    //position: absolute;
     z-index: 500;
     width: 100%;
     padding: 2vw 4vw;
-
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    transform:translateY(-120px);
+    transition:transform 0.32s ease;
+    &.active {
+        transform:translateY(0);
+    }
     &.nav-active {
         div.logo, button {
             opacity:0!important;
