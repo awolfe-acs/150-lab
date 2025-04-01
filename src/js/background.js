@@ -843,7 +843,7 @@ export function initShaderBackground() {
   const gltfLoader = new GLTFLoader();
   let globeModel;
   
-  gltfLoader.load('/models/globe-hd.glb', (gltf) => {
+  gltfLoader.load('models/globe-hd.glb', (gltf) => {
     globeModel = gltf.scene;
     
     // Center the model's geometry to ensure proper rotation around its center

@@ -13,6 +13,7 @@
     will-change: transform;
     backface-visibility: hidden;
     perspective: 1000px;
+    backdrop-filter: blur(12px);
     transition: all 0.7s cubic-bezier(0.2, 0.1, 0.2, 1), 
                 box-shadow 0.7s cubic-bezier(0.2, 0.1, 0.2, 1), 
                 border-color 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
@@ -143,5 +144,21 @@
     &::after {
         opacity: 0.6;
         filter: blur(6px);
+    }
+}
+
+.btn.btn-primary {
+    height:44px;
+    border-radius:8px;
+    background:#0029CF;
+    color:white;
+    font-size:14px;
+    font-weight:600;
+    text-transform:uppercase;
+    padding:0 16px;
+    cursor:pointer;
+    transition:all 0.3s ease;
+    &:hover {
+        background:#001E9C;
     }
 }
