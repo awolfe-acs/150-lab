@@ -13,6 +13,7 @@
 @use './typography' as *;
 
 html {
+  background:#060E15;
   ::selection {
     background:#0029cf7f;
   }

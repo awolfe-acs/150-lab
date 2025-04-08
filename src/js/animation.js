@@ -43,6 +43,7 @@ export function initHeroAnimation() {
   const heroHeading = document.querySelector('#hero-area h1');
   const heroNumber = document.querySelector('#hero-number');
   const header = document.querySelector('header');
+  const nav = document.querySelector('nav');
   const sectionTimeline = document.querySelector('.section-timeline');
   const enterExperienceBtn = document.querySelector('button.enter-experience');
   
@@ -104,6 +105,12 @@ export function initHeroAnimation() {
     autoAlpha: 0 // Uses visibility and opacity together
   });
   
+  // Also hide the heroHeading (h1) element itself initially
+  gsap.set(heroHeading, {
+    opacity: 0,
+    autoAlpha: 0
+  });
+  
   // Split the text into words first, then characters to prevent mid-word breaks
   const splitText = new SplitType(heroHeading, { 
     types: 'words,chars',
@@ -122,6 +129,14 @@ export function initHeroAnimation() {
   
   // Create a timeline for the animation
   const tl = gsap.timeline({ delay: 0.5 });
+  
+  // First, fade in the h1 container element
+  tl.to(heroHeading, {
+    opacity: 1,
+    autoAlpha: 1,
+    duration: 0.8,
+    ease: "power2.out"
+  });
   
   // Dispatch event to start particle fade-in at the very beginning of the animation
   const veryEarlyFadeEvent = new CustomEvent('veryEarlyParticleFade');
@@ -160,6 +175,11 @@ export function initHeroAnimation() {
     ease: "power1.inOut"
   });
   
+  gsap.set(nav, {
+    opacity: 1,
+    autoAlpha: 1
+  });
+
   // Modified digit reveal animation - slower fade-in with z-axis movement
   const digits = heroNumber.querySelectorAll('.digit');
   tl.fromTo(digits, 
