@@ -178,16 +178,6 @@ export function initHeroAnimation() {
       stagger: 0.1, // Slightly longer stagger
       ease: "power3.out",
       onComplete: () => {
-        // Fade in the enter-experience button after hero number animation completes
-        // Only change opacity, not position or scale
-        if (enterExperienceBtn) {
-          gsap.to(enterExperienceBtn, {
-            opacity: 1,
-            autoAlpha: 1,
-            duration: 0.8,
-            ease: "power2.out"
-          });
-        }
         
         // Mark hero animation as complete
         window.heroAnimationComplete = true;
@@ -199,7 +189,19 @@ export function initHeroAnimation() {
     }, 
     "-=0.6" // Slight overlap
   );
-  
+
+  // Fade in the enter-experience button after hero number animation completes
+  // Only change opacity, not position or scale
+  if (enterExperienceBtn) {
+    gsap.to(enterExperienceBtn, {
+      opacity: 1,
+      autoAlpha: 1,
+      duration: 0.8,
+      delay: 3.5,
+      ease: "power2.out"
+    });
+  }
+
   // Add click event listener to the enter-experience button
   if (enterExperienceBtn) {
     enterExperienceBtn.addEventListener('click', () => {
@@ -1469,27 +1471,60 @@ function animateSlidingCards() {
   const slidingCardWrapper = document.querySelector('.sliding-card-row-wrapper');
   const getInvolvedCards = document.querySelector('#get-involved-cards');
   
+  // Keep track of the ScrollTrigger instance for later cleanup
+  let scrollTriggerInstance;
+  
   if (slidingCardWrapper && getInvolvedCards) {
-    // Create scroll animation for the sliding cards
-    gsap.fromTo(
-      slidingCardWrapper, 
-      { x: '44vw' }, // Starting position (matching the CSS)
-      {
-        x: '-28vw', // End position
-        ease: 'power1.inOut', // Slightly smoother easing
-        scrollTrigger: {
-          trigger: '#get-involved-cards',
-          start: 'top 80%', // Start when the top of cards section is 80% down the viewport
-          end: 'bottom 20%', // End when the bottom of cards section is 20% from the top of viewport
-          scrub: 1.5, // Smoother scrubbing with slightly more lag
-          invalidateOnRefresh: true, // Recalculate on resize
-          markers: false, // Set to true for debugging
-          id: "sliding-cards-animation" // For debugging
-        }
+    // Function to create or destroy the ScrollTrigger based on viewport width
+    const updateScrollTrigger = () => {
+      const isLargeViewport = window.innerWidth > 1024;
+      
+      // If ScrollTrigger exists and viewport is smaller than 1024px, kill the ScrollTrigger
+      if (scrollTriggerInstance && !isLargeViewport) {
+        scrollTriggerInstance.kill();
+        scrollTriggerInstance = null;
+        
+        // Reset the position of the sliding card wrapper
+        gsap.set(slidingCardWrapper, { x: 0 });
+        console.log('Sliding cards animation disabled for small viewport');
+        return;
       }
-    );
+      
+      // If viewport is larger than 1024px and ScrollTrigger doesn't exist, create it
+      if (isLargeViewport && !scrollTriggerInstance) {
+        // Create scroll animation for the sliding cards
+        scrollTriggerInstance = gsap.fromTo(
+          slidingCardWrapper, 
+          { x: '44vw' }, // Starting position (matching the CSS)
+          {
+            x: '-20vw', // End position
+            ease: 'power1.inOut', // Slightly smoother easing
+            scrollTrigger: {
+              trigger: '#get-involved-cards',
+              start: 'top 80%', // Start when the top of cards section is 80% down the viewport
+              end: 'bottom 20%', // End when the bottom of cards section is 20% from the top of viewport
+              scrub: 1.5, // Smoother scrubbing with slightly more lag
+              invalidateOnRefresh: true, // Recalculate on resize
+              markers: false, // Set to true for debugging
+              id: "sliding-cards-animation" // For debugging
+            }
+          }
+        ).scrollTrigger;
+        
+        console.log('Sliding cards animation initialized for large viewport');
+      }
+    };
     
-    console.log('Sliding cards animation initialized');
+    // Initialize on first load
+    updateScrollTrigger();
+    
+    // Update on window resize
+    const debounceResize = debounce(() => {
+      updateScrollTrigger();
+    }, 250); // 250ms debounce timeout
+    
+    window.addEventListener('resize', debounceResize);
+    
   } else {
     console.warn('Could not find sliding card wrapper or get-involved-cards section');
   }

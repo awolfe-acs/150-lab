@@ -1,6 +1,9 @@
 .fancy-btn {
     --gradient-angle: 45deg;
     --gradient-position: 50% 50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
     height: 64px;
     border-radius: 32px;
     border: 1px solid rgba(255, 255, 255, 0.5);

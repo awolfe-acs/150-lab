@@ -3699,7 +3699,7 @@ export function initShaderBackground() {
 
 // Add helper function to update lighting GUI
 function updateLightingGUI() {
-  if (!gui || !gui.__folders['Lighting Controls']) return;
+  if (typeof gui === 'undefined' || !gui || !gui.__folders || !gui.__folders['Lighting Controls']) return;
   
   const lightingFolder = gui.__folders['Lighting Controls'];
   

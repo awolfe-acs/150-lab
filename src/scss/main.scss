@@ -98,7 +98,7 @@ html {
       // Add border around text glyphs
       //-webkit-text-stroke: 1px rgba(255, 255, 255, 0.3); // White stroke for better visibility with any color
       //text-stroke: 1px rgba(255, 255, 255, 0.3);
-      -webkit-text-stroke: 1px rgb(255 242 159);
+      -webkit-text-stroke: 1px rgb(255, 240, 143);
       font-weight: 800;
       transition: color 0.1s ease; // Smooth color transitions for non-GSAP changes
       line-height:1.52;
@@ -151,6 +151,11 @@ html {
   }
 }
 
+#get-involved-text {
+  .line:nth-of-type(5) {
+    margin-top:24px;
+  }
+}
 #get-involved-earth {
   gap:3vh;
   h2, p, span:not(.split-char) {

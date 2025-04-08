@@ -2,22 +2,49 @@
 @use '../animation' as *;
 
 .sliding-card-row-wrapper {
-    width:100vw;
+    width:88vw;
+    max-width:2000px;
+    margin-left:auto;
+    margin-right:auto;
     overflow:visible;
     position:relative;
     transform:translateX(44vw);
     will-change:transform;
+    @media (max-width:$desktop-viewport) {
+        width:480px;
+        transform:translateX(0);
+        max-width:calc(100vw - 32px);
+        margin-left:auto;
+        margin-right:auto;
+    }
 }
 
 .sliding-card-row {
-  display: flex;
-  flex-direction: row;
-  flex-wrap:nowrap;
+    display: flex;
+    flex-direction: row;
+    flex-wrap:nowrap;
+    @media (max-width:$desktop-viewport) {
+        flex-direction:column;
+        gap:8vw;
+    }
+
   .card {
     flex: 1;
     background-color: #111;
     aspect-ratio:3/4;
     position:relative;
+    @media (max-width:$desktop-viewport) and (min-width:$mobile-viewport) {
+        &:nth-of-type(1),
+        &:nth-of-type(3),
+        &:nth-of-type(5) {
+            left:-10vw;
+        }
+        &:nth-of-type(2),
+        &:nth-of-type(4),
+        &:nth-of-type(6) {
+            right:-10vw;
+        }
+    }
     a {
         position:absolute;
         top:0;
