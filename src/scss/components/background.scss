@@ -12,6 +12,7 @@
     will-change: transform;
     /* Prevent any touch events from being captured by the canvas */
     pointer-events: none;
+    background:#060E15;
 }
 
 /* Add a media query for mobile devices */

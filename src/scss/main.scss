@@ -131,6 +131,9 @@ html {
 }
 
 #get-involved {
+  h2, p.large-paragraph, span.description {
+    text-shadow:$text-shadow;
+  }
   p.large-paragraph, span:not(.split-char) {
     max-width:82vw;
     margin:0 auto;
@@ -164,6 +167,7 @@ html {
   }
   h2 {
     font-weight:900;
+    text-shadow:$text-shadow;
   }
   span.description {
     display:block;

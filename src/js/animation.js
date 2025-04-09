@@ -1490,9 +1490,11 @@ function updatePageNavigation() {
 function animateSlidingCards() {
   const slidingCardWrapper = document.querySelector('.sliding-card-row-wrapper');
   const getInvolvedCards = document.querySelector('#get-involved-cards');
+  const heroTravelArea = document.querySelector('#hero-travel-area');
   
-  // Keep track of the ScrollTrigger instance for later cleanup
+  // Keep track of the ScrollTrigger instances for later cleanup
   let scrollTriggerInstance;
+  let heroFadeScrollTriggerInstance;
   
   if (slidingCardWrapper && getInvolvedCards) {
     // Function to create or destroy the ScrollTrigger based on viewport width
@@ -1507,7 +1509,6 @@ function animateSlidingCards() {
         // Reset the position of the sliding card wrapper
         gsap.set(slidingCardWrapper, { x: 0 });
         console.log('Sliding cards animation disabled for small viewport');
-        return;
       }
       
       // If viewport is larger than 1024px and ScrollTrigger doesn't exist, create it
@@ -1535,12 +1536,48 @@ function animateSlidingCards() {
       }
     };
     
+    // Function to create or destroy the hero area fade ScrollTrigger
+    const updateHeroFadeScrollTrigger = () => {
+      // If ScrollTrigger exists, kill it to avoid duplicates
+      if (heroFadeScrollTriggerInstance) {
+        heroFadeScrollTriggerInstance.kill();
+        heroFadeScrollTriggerInstance = null;
+      }
+      
+      // Only create if hero travel area exists
+      if (heroTravelArea) {
+        // Create a ScrollTrigger for fading out the hero travel area
+        heroFadeScrollTriggerInstance = ScrollTrigger.create({
+          trigger: '#get-involved-cards',
+          start: 'top 80%', // Start when the top of get-involved-cards is 80% down the viewport
+          end: 'top 20%',   // End when the top of get-involved-cards is 20% down the viewport
+          scrub: true,      // Smooth scrubbing tied to scroll position
+          markers: false,   // Set to true for debugging
+          id: "hero-fade-animation",
+          onUpdate: (self) => {
+            // Calculate opacity based on scroll progress (1 to 0)
+            const opacity = 1 - self.progress;
+            // Apply to hero travel area
+            gsap.set(heroTravelArea, { opacity: opacity });
+          },
+          onLeaveBack: () => {
+            // Ensure opacity is reset to 1 when scrolling back up
+            gsap.set(heroTravelArea, { opacity: 1 });
+          }
+        });
+        
+        console.log('Hero travel area fade animation initialized');
+      }
+    };
+    
     // Initialize on first load
     updateScrollTrigger();
+    updateHeroFadeScrollTrigger();
     
     // Update on window resize
     const debounceResize = debounce(() => {
       updateScrollTrigger();
+      updateHeroFadeScrollTrigger();
     }, 250); // 250ms debounce timeout
     
     window.addEventListener('resize', debounceResize);

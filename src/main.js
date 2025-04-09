@@ -49,6 +49,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Create a global lenis instance that can be accessed from other modules
   window.lenis = new Lenis({
     autoRaf: true,
+    infinite: false,
   });
   
   // Stop scrolling initially - will be enabled when enter-experience button is clicked
