@@ -58,6 +58,8 @@ p.large-paragraph, span:not(.split-char) {
     text-align: center;
     font-weight: 100;
     color:#fff;
+    text-shadow:$text-shadow;
+    
     @media (max-width:$mobile-viewport) {
       font-size:4.75vw;
     }

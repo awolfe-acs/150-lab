@@ -1677,74 +1677,178 @@ function updatePageNavigation() {
     });
   };
   
-  // Create ScrollTrigger for hero section
-  ScrollTrigger.create({
-    trigger: "#hero-travel-area",
-    start: "top 50%",
-    end: "bottom 50%",
-    onEnter: () => {
-      // Remove active class from all links
-      pageNav.querySelectorAll('a').forEach(link => link.classList.remove('active'));
-      // Add active class to 150 years link
-      heroYearsLink.classList.add('active');
-      // Update active title with fade transition
-      updateActiveTitleWithFade("150 Years of ACS");
-    },
-    onEnterBack: () => {
-      // Remove active class from all links
-      pageNav.querySelectorAll('a').forEach(link => link.classList.remove('active'));
-      // Add active class to 150 years link
-      heroYearsLink.classList.add('active');
-      // Update active title with fade transition
-      updateActiveTitleWithFade("150 Years of ACS");
+  // Kill any existing navigation ScrollTriggers to prevent duplicates
+  ScrollTrigger.getAll().forEach(trigger => {
+    if (trigger.vars.id && (
+        trigger.vars.id === "nav-hero-section" ||
+        trigger.vars.id === "nav-getinvolved-section" ||
+        trigger.vars.id === "nav-video-section" ||
+        trigger.vars.id === "nav-assets-section")) {
+      trigger.kill();
     }
   });
   
-  // Create ScrollTrigger for get involved section
-  ScrollTrigger.create({
-    trigger: "#get-involved",
-    start: "top 50%",
-    end: "bottom 50%",
-    onEnter: () => {
-      // Remove active class from all links
-      pageNav.querySelectorAll('a').forEach(link => link.classList.remove('active'));
-      // Add active class to get involved link
-      getInvolvedLink.classList.add('active');
-      // Update active title with fade transition
-      updateActiveTitleWithFade("Get Involved");
+  // Determine the section boundaries
+  // This helps us create a comprehensive ScrollTrigger system
+  const sections = [
+    {
+      id: "hero",
+      element: heroTravelArea,
+      title: "150 Years of ACS",
+      link: heroYearsLink,
+      top: 0, // We'll measure these dynamically
+      bottom: 0
     },
-    onEnterBack: () => {
-      // Remove active class from all links
-      pageNav.querySelectorAll('a').forEach(link => link.classList.remove('active'));
-      // Add active class to get involved link
-      getInvolvedLink.classList.add('active');
-      // Update active title with fade transition
-      updateActiveTitleWithFade("Get Involved");
+    {
+      id: "getinvolved-video", 
+      element: videoTravelArea,
+      title: "Get Involved",
+      link: getInvolvedLink,
+      top: 0,
+      bottom: 0
+    },
+    {
+      id: "getinvolved",
+      element: getInvolvedSection,
+      title: "Get Involved",
+      link: getInvolvedLink,
+      top: 0,
+      bottom: 0
+    },
+    {
+      id: "assets", 
+      element: assetsSection,
+      title: "Coming Soon",
+      link: assetsLink,
+      top: 0,
+      bottom: 0
+    }
+  ];
+  
+  // Calculate all section boundaries
+  sections.forEach(section => {
+    if (section.element) {
+      const rect = section.element.getBoundingClientRect();
+      section.top = rect.top + window.pageYOffset;
+      section.bottom = rect.bottom + window.pageYOffset;
     }
   });
   
-  // Create ScrollTrigger for anniversary assets section
-  ScrollTrigger.create({
-    trigger: "#anniversary-assets",
-    start: "top 50%",
-    end: "bottom 50%",
-    onEnter: () => {
-      // Remove active class from all links
-      pageNav.querySelectorAll('a').forEach(link => link.classList.remove('active'));
-      // Add active class to assets link
-      assetsLink.classList.add('active');
-      // Update active title with fade transition
-      updateActiveTitleWithFade("150th Assets");
-    },
-    onEnterBack: () => {
-      // Remove active class from all links
-      pageNav.querySelectorAll('a').forEach(link => link.classList.remove('active'));
-      // Add active class to assets link
-      assetsLink.classList.add('active');
-      // Update active title with fade transition
-      updateActiveTitleWithFade("150th Assets");
+  // Special adjustment: hero section ends at the start of video travel area
+  if (sections[0].element && videoTravelArea) {
+    const videoRect = videoTravelArea.getBoundingClientRect();
+    sections[0].bottom = videoRect.top + window.pageYOffset;
+  }
+  
+  // Special adjustment: Make the video travel area and get-involved sections part of the same logical section
+  // This ensures that once we hit video-travel-area, we stay in "Get Involved" until we reach anniversary-assets
+  if (videoTravelArea && assetsSection) {
+    const videoSection = sections.find(s => s.id === "getinvolved-video");
+    const getInvolvedSection = sections.find(s => s.id === "getinvolved");
+    const assetsRect = assetsSection.getBoundingClientRect();
+    
+    if (videoSection && getInvolvedSection) {
+      // The get-involved section extends from the top of video-travel-area to the top of anniversary-assets
+      getInvolvedSection.top = videoSection.top;
+      getInvolvedSection.bottom = assetsRect.top + window.pageYOffset;
+    }
+  }
+  
+  // Log section boundaries for debugging
+  console.log('Section boundaries for navigation:');
+  sections.forEach(section => {
+    if (section.element) {
+      console.log(`${section.id}: ${section.top} - ${section.bottom} (${section.title})`);
     }
   });
+  
+  // Create a global scroll listener to determine active section
+  // This is more reliable than individual ScrollTriggers
+  const handleScroll = () => {
+    const scrollPosition = window.pageYOffset + (window.innerHeight / 2);
+    
+    // Default to the hero section
+    let activeSection = sections[0];
+    
+    // Find the current section based on scroll position
+    for (let i = sections.length - 1; i >= 0; i--) {
+      const section = sections[i];
+      
+      // Skip sections without elements
+      if (!section.element) continue;
+      
+      // Check if we've scrolled to or past the top of this section
+      if (scrollPosition >= section.top && scrollPosition < section.bottom) {
+        activeSection = section;
+        break;
+      }
+    }
+    
+    // Special case: if we're in video-travel-area, use the getInvolved section
+    if (activeSection.id === "getinvolved-video") {
+      // Use the getInvolved section for the title and link
+      const getInvolvedSection = sections.find(s => s.id === "getinvolved");
+      if (getInvolvedSection) {
+        activeSection = getInvolvedSection;
+      }
+    }
+    
+    // Update active link and title
+    if (activeSection) {
+      // Remove active class from all links
+      pageNav.querySelectorAll('a').forEach(link => link.classList.remove('active'));
+      
+      // Add active class to current section link
+      if (activeSection.link) {
+        activeSection.link.classList.add('active');
+      }
+      
+      // Update active title
+      updateActiveTitleWithFade(activeSection.title);
+    }
+  };
+  
+  // Add scroll listener
+  window.removeEventListener('scroll', handleScroll);
+  window.addEventListener('scroll', debounce(handleScroll, 100));
+  
+  // Initialize first view
+  handleScroll();
+  
+  // Create separate ScrollTriggers for debugging/visualization only
+  if (false) { // Set to true for debugging
+    ScrollTrigger.create({
+      trigger: "#hero-travel-area",
+      start: "top top",
+      end: "bottom bottom",
+      markers: true,
+      id: "nav-hero-section"
+    });
+    
+    ScrollTrigger.create({
+      trigger: "#video-travel-area",
+      start: "top top",
+      end: "bottom bottom",
+      markers: true,
+      id: "nav-video-section"
+    });
+    
+    ScrollTrigger.create({
+      trigger: "#get-involved",
+      start: "top top",
+      end: "bottom bottom",
+      markers: true,
+      id: "nav-getinvolved-section"
+    });
+    
+    ScrollTrigger.create({
+      trigger: "#anniversary-assets",
+      start: "top top",
+      end: "bottom bottom",
+      markers: true,
+      id: "nav-assets-section"
+    });
+  }
 }
 
 function animateSlidingCards() {
