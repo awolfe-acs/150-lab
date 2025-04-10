@@ -2247,9 +2247,33 @@ export function initShaderBackground() {
   function positionGlobeBehindBottomWave() {
     if (!globeModel) return;
     
-    // Get the current viewport height
+    // Get the current viewport dimensions
+    const vw = window.innerWidth;
     const vh = window.innerHeight;
     
+    // Check if we're in mobile viewport (640px or less)
+    if (vw <= 640) {
+      // Set the Y position to 192 for mobile viewports as requested
+      globeModel.position.y = 192;
+      globeModel.position.z = -10; // Keep Z position consistent
+      
+      // Update the position values in the GUI
+      for (let i = 0; i < positionFolder.__controllers.length; i++) {
+        const controller = positionFolder.__controllers[i];
+        if (controller.property === 'positionY') {
+          // Update without triggering onChange
+          controller.setValue(192);
+        } else if (controller.property === 'positionZ') {
+          // Update without triggering onChange
+          controller.setValue(-10);
+        }
+      }
+      
+      console.log(`Positioned globe for mobile viewport at Y: 192, Z: -10`);
+      return;
+    }
+    
+    // For non-mobile viewports, use the existing positioning logic
     // Get the wave parameters from the shader uniforms
     const waveEnabled = uniforms.bottomWaveEnabled.value;
     const waveDepth = uniforms.bottomWaveDepth.value;
@@ -2355,6 +2379,7 @@ export function initShaderBackground() {
       console.log(`Updated globe size: ${targetWidth.toFixed(0)}px (90vw), Scale: ${newScale.toFixed(2)}, Original width: ${modelWidth.toFixed(2)}`);
       
       // After sizing the globe, position it behind the bottom wave
+      // This will now account for mobile viewport positioning
       positionGlobeBehindBottomWave();
     } catch (error) {
       console.error("Error updating globe size:", error);

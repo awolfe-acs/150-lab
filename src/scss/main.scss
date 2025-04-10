@@ -12,8 +12,26 @@
 @use './components/cards' as *;
 @use './typography' as *;
 
+
+
+// Fix for Lenis scrolling past the bottom
+html, body {
+  min-height: 100%;
+  height: 100%;
+  overscroll-behavior: none; // Prevent bouncing on some browsers
+  overflow-y: scroll; // Force scrollbar visibility
+}
+
+html.lenis {
+  height: auto; // Override Lenis default
+  // Ensure content doesn't cause overflow beyond intended
+  overflow: auto; // Changed from 'hidden' to 'auto' to keep scrollbar
+  scrollbar-width: thin; // For Firefox
+}
+
 html {
   background:#060E15;
+  overflow-x: hidden!important;
   ::selection {
     background:#0029cf7f;
   }
@@ -29,6 +47,7 @@ html {
   }
 
   body {
+    width:100vw;
     background: #060E15;
     color: #fff;
     font-family: sans-serif;
@@ -60,7 +79,10 @@ html {
     position: absolute;
     z-index: 5;
     perspective: 1000px; // Add perspective to parent for 3D effect
-
+    @media (max-width:$mobile-viewport) {
+      width: 98vw;
+      font-size: 7vw;
+    }
     // Styles for SplitType
     .word {
       display: inline-block;
@@ -86,26 +108,30 @@ html {
     font-size: 26vw;
     z-index: 2;
     letter-spacing: -0.5vw;
-    opacity: 0; // Remove !important to allow JS to control this
+    opacity: 0;
     position: relative;
     display: flex;
     justify-content: center;
-    
+    @media (max-width:$mobile-viewport) {
+      font-size:34vw;
+    }
+
     // Style for each digit
     .digit {
       position: relative;
-      color: rgba(251, 225, 57, 1); // Starting color (yellow)
+      color: rgba(251, 225, 57, 1);
       transform-style: preserve-3d;
-      // Add border around text glyphs
-      //-webkit-text-stroke: 1px rgba(255, 255, 255, 0.3); // White stroke for better visibility with any color
-      //text-stroke: 1px rgba(255, 255, 255, 0.3);
-      -webkit-text-stroke: 1px rgb(255, 240, 143);
+      -webkit-text-stroke: 1px rgba(255, 240, 143,0.66);
       font-weight: 800;
-      transition: color 0.1s ease; // Smooth color transitions for non-GSAP changes
+      transition: color 0.1s ease;
       line-height:1.52;
       user-select:none;
       opacity:0.44;
       filter: drop-shadow(0px 0px 4px rgba(251, 225, 57, 0.9)) drop-shadow(0px 0px 8px rgba(251, 225, 57, 0.4));
+
+      @media (max-width:$desktop-viewport) {
+        -webkit-text-stroke: 0.5px rgba(255, 240, 143,0.66);
+      }
     }
     
     // Style for digit overlay during transitions
@@ -131,22 +157,10 @@ html {
 }
 
 #get-involved {
-  h2, p.large-paragraph, span.description {
+  p.large-paragraph, span.description {
     text-shadow:$text-shadow;
   }
-  p.large-paragraph, span:not(.split-char) {
-    max-width:82vw;
-    margin:0 auto;
-  }
-  p.large-paragraph {
-    font-size: 2.5vw;
-    text-align: center;
-    font-weight: 100;
-    color:#fff;
-    @media (max-width:$mobile-viewport) {
-      font-size:3.75vw;
-    }
-  }
+
   .line {
     font-size: inherit!important;
     text-align: center;
@@ -156,7 +170,7 @@ html {
 }
 
 #get-involved-text {
-  .line:nth-of-type(5) {
+  .line:last-of-type {
     margin-top:24px;
   }
 }
@@ -167,7 +181,7 @@ html {
   }
   h2 {
     font-weight:900;
-    text-shadow:$text-shadow;
+    //text-shadow:$text-shadow;
   }
   span.description {
     display:block;
@@ -175,6 +189,10 @@ html {
     font-weight:120;
     line-height:1.4;
     max-width:66.5vw;
+    @media (max-width:$desktop-viewport) {
+      font-size:4.75vw;
+      max-width:calc(100vw - 32px);
+    }
   }
 }
 .years {

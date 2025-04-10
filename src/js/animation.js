@@ -49,6 +49,11 @@ export function initHeroAnimation() {
   
   if (!heroHeading || !heroNumber) return;
   
+  // Save the original content before any splitting for future reinitializations
+  if (!heroHeading.getAttribute('data-original-content')) {
+    heroHeading.setAttribute('data-original-content', heroHeading.textContent);
+  }
+  
   // Hide header and section-timeline initially
   if (header) {
     gsap.set(header, { 
@@ -86,8 +91,12 @@ export function initHeroAnimation() {
     }
   });
   
-  // Split the hero number into characters for individual digit handling
+  // Also save the original hero number for future reinitializations
   const initialNumber = heroNumber.innerText || '2026';
+  if (!heroNumber.getAttribute('data-original-content')) {
+    heroNumber.setAttribute('data-original-content', initialNumber);
+  }
+  
   heroNumber.innerHTML = ''; // Clear the content
   
   // Create individual spans for each digit - simplified
@@ -358,6 +367,18 @@ export function initAnimations() {
 
   // Initialize fancy button interactions
   initFancyButtonEffects();
+  
+  // Initialize split lines animations
+  initSplitLinesAnimation();
+  
+  // Initialize split chars animations
+  initSplitCharsAnimation();
+  
+  // Initialize scroll reveal animations
+  initScrollRevealAnimation();
+  
+  // Initialize the global resize handler for all split-type elements
+  initGlobalResizeHandler();
   
   // Add menu button click handler
   const menuButton = document.querySelector('button.menu');
@@ -1354,6 +1375,7 @@ function updatePageNavigation() {
   const heroTravelArea = document.querySelector('#hero-travel-area');
   const getInvolvedSection = document.querySelector('#get-involved');
   const assetsSection = document.querySelector('#anniversary-assets');
+  const videoTravelArea = document.querySelector('#video-travel-area');
   const pageNav = document.querySelector('.page-nav');
   const activeTitle = document.querySelector('.section-timeline .indicator .active-title');
   
@@ -1374,11 +1396,21 @@ function updatePageNavigation() {
   
   getInvolvedLink.addEventListener('click', (e) => {
     e.preventDefault();
-    const getInvolvedOffset = getInvolvedSection.getBoundingClientRect().top + window.pageYOffset;
-    window.scrollTo({
-      top: getInvolvedOffset,
-      behavior: 'smooth'
-    });
+    // Scroll to the video-travel-area section instead of get-involved
+    if (videoTravelArea) {
+      const videoTravelAreaOffset = videoTravelArea.getBoundingClientRect().top + window.pageYOffset;
+      window.scrollTo({
+        top: videoTravelAreaOffset,
+        behavior: 'smooth'
+      });
+    } else {
+      // Fallback to the original target if video-travel-area doesn't exist
+      const getInvolvedOffset = getInvolvedSection.getBoundingClientRect().top + window.pageYOffset;
+      window.scrollTo({
+        top: getInvolvedOffset,
+        behavior: 'smooth'
+      });
+    }
   });
   
   assetsLink.addEventListener('click', (e) => {
@@ -1603,6 +1635,7 @@ export function initSplitLinesAnimation() {
   const processSplitElement = (element, index) => {
     // First, store the original content
     const originalContent = element.innerHTML;
+    element.setAttribute('data-original-content', originalContent);
     
     // Create a wrapper div that will contain the split text only
     const wrapperDiv = document.createElement('div');
@@ -1684,7 +1717,9 @@ export function initSplitLinesAnimation() {
   window.cleanupSplitLines = () => {
     splitInstances.forEach(instance => {
       // Revert to original content
-      instance.element.innerHTML = instance.originalContent;
+      if (instance.element && instance.originalContent) {
+        instance.element.innerHTML = instance.originalContent;
+      }
       // Remove from instance array
       const index = splitInstances.indexOf(instance);
       if (index > -1) {
@@ -1710,12 +1745,8 @@ export function initSplitLinesAnimation() {
     }, 100);
   };
   
-  // Add a window resize handler to refresh splits when viewport size changes
-  const debouncedRefresh = debounce(() => {
-    window.refreshSplitLines();
-  }, 250); // 250ms debounce
-  
-  window.addEventListener('resize', debouncedRefresh);
+  // Use the global resize handler instead of individual handlers
+  // This has been moved to initGlobalResizeHandler function
   
   console.log(`Initialized split lines animations for ${splitLinesElements.length} elements`);
 }
@@ -1737,6 +1768,7 @@ export function initSplitCharsAnimation() {
   const processSplitCharsElement = (element, index) => {
     // First, store the original content
     const originalContent = element.innerHTML;
+    element.setAttribute('data-original-content', originalContent);
     
     // Create a wrapper div that will contain the split text only
     const wrapperDiv = document.createElement('div');
@@ -1820,7 +1852,9 @@ export function initSplitCharsAnimation() {
   window.cleanupSplitChars = () => {
     splitCharsInstances.forEach(instance => {
       // Revert to original content
-      instance.element.innerHTML = instance.originalContent;
+      if (instance.element && instance.originalContent) {
+        instance.element.innerHTML = instance.originalContent;
+      }
       // Remove from instance array
       const index = splitCharsInstances.indexOf(instance);
       if (index > -1) {
@@ -1846,12 +1880,8 @@ export function initSplitCharsAnimation() {
     }, 100);
   };
   
-  // Add a window resize handler to refresh splits when viewport size changes
-  const debouncedRefresh = debounce(() => {
-    window.refreshSplitChars();
-  }, 250); // 250ms debounce
-  
-  window.addEventListener('resize', debouncedRefresh);
+  // Use the global resize handler instead of individual handlers
+  // This has been moved to initGlobalResizeHandler function
   
   console.log(`Initialized split chars animations for ${splitCharsElements.length} elements`);
 }
@@ -1918,4 +1948,145 @@ function debounce(func, wait) {
     clearTimeout(timeout);
     timeout = setTimeout(later, wait);
   };
+}
+
+// Function to reinitialize all split-type elements
+export function reinitializeAllSplitElements() {
+  console.log('Reinitializing all split-type elements');
+  
+  // First clean up all existing split instances
+  if (typeof window.cleanupSplitLines === 'function') {
+    window.cleanupSplitLines();
+  }
+  
+  if (typeof window.cleanupSplitChars === 'function') {
+    window.cleanupSplitChars();
+  }
+  
+  // Also reinitialize the hero heading if on the home page
+  const heroHeading = document.querySelector('#hero-area h1');
+  const heroNumber = document.querySelector('#hero-number');
+  
+  if (heroHeading) {
+    // Get original content if available
+    let originalContent = heroHeading.getAttribute('data-original-content');
+    
+    // If original content wasn't saved, save it now
+    if (!originalContent) {
+      // Store only the text content to remove any split-type spans
+      originalContent = heroHeading.textContent;
+      heroHeading.setAttribute('data-original-content', originalContent);
+    }
+    
+    // Clean up any existing split-type elements
+    if (heroHeading.querySelector('.word') || heroHeading.querySelector('.char')) {
+      heroHeading.innerHTML = originalContent;
+      
+      // Re-split the text
+      const splitText = new SplitType(heroHeading, { 
+        types: 'words,chars',
+        absolute: false
+      });
+      
+      // Add the appropriate animation state
+      if (window.heroAnimationComplete) {
+        // If animation has completed, make chars visible
+        gsap.set(splitText.chars, { 
+          opacity: 1,
+          z: 0,
+          scale: 1,
+          filter: 'blur(0px)',
+          transformPerspective: 1000,
+          transformOrigin: "center center"
+        });
+      } else {
+        // If animation hasn't completed, set initial state
+        gsap.set(splitText.chars, { 
+          opacity: 0,
+          z: 150,
+          scale: 1.2,
+          transformPerspective: 1000,
+          transformOrigin: "center center",
+          filter: 'blur(16px)'
+        });
+      }
+    }
+  }
+  
+  // Reinitialize hero number if present
+  if (heroNumber) {
+    let originalNumber = heroNumber.getAttribute('data-original-content');
+    
+    // If no saved original content, use current value or default
+    if (!originalNumber) {
+      // Get the current displayed number or default to 2026
+      const currentDigits = heroNumber.querySelectorAll('.digit');
+      originalNumber = currentDigits.length > 0 
+        ? Array.from(currentDigits).map(d => d.textContent).join('')
+        : '2026';
+      heroNumber.setAttribute('data-original-content', originalNumber);
+    }
+    
+    // Reinitialize the digits
+    heroNumber.innerHTML = ''; // Clear content
+    
+    // Create digits with proper classes and attributes
+    originalNumber.split('').forEach(digit => {
+      const digitSpan = document.createElement('span');
+      digitSpan.className = 'digit';
+      digitSpan.textContent = digit;
+      digitSpan.setAttribute('data-digit', digit);
+      heroNumber.appendChild(digitSpan);
+    });
+    
+    // Set proper visibility state based on animation progress
+    if (window.heroAnimationComplete) {
+      // If animation complete, make digits visible with proper opacity
+      gsap.set(heroNumber.querySelectorAll('.digit'), {
+        opacity: 0.44,
+        y: 0,
+        z: 0,
+        transformPerspective: 1000,
+        transformOrigin: "center center"
+      });
+    }
+  }
+  
+  // Reinitialize both split types with a small delay
+  setTimeout(() => {
+    // Find all elements again
+    const splitLinesElements = document.querySelectorAll('.split-lines');
+    const splitCharsElements = document.querySelectorAll('.split-chars');
+    
+    // Reinitialize them if functions exist
+    if (splitLinesElements.length && typeof window.refreshSplitLines === 'function') {
+      window.refreshSplitLines();
+    }
+    
+    if (splitCharsElements.length && typeof window.refreshSplitChars === 'function') {
+      window.refreshSplitChars();
+    }
+    
+    // Refresh ScrollTrigger to ensure correct animation positions
+    ScrollTrigger.refresh();
+    
+    console.log('All split-type elements reinitialized');
+  }, 200);
+}
+
+// Initialize the global resize handler
+function initGlobalResizeHandler() {
+  // Remove any existing resize handler to prevent duplicates
+  if (window.globalResizeHandler) {
+    window.removeEventListener('resize', window.globalResizeHandler);
+  }
+  
+  // Create a properly debounced global resize handler
+  window.globalResizeHandler = debounce(() => {
+    reinitializeAllSplitElements();
+  }, 250);
+  
+  // Add the event listener
+  window.addEventListener('resize', window.globalResizeHandler);
+  console.log('Global resize handler initialized for split-type elements');
 }

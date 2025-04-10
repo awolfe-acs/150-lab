@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "../../../wso-aem-reactor/aem-6"
+		},
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../wso-acs-bootstrap"
+		}
+	],
+	"settings": {}
+}
