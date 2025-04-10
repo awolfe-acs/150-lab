@@ -80,8 +80,10 @@ header.anniversary {
             position: absolute;
             content:'';
             top:50%;
-            transform: translateY(-50%);
+            transform: translateY(-50%) translateZ(0);
             opacity:0;
+            backface-visibility: hidden;
+            will-change: transform;
         }
         &:before {
             right:13.5px;

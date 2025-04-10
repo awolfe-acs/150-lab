@@ -270,9 +270,16 @@ export function initHeroAnimation() {
             clearInterval(window.audioRetryTimer);
             window.audioRetryTimer = null;
           } else if (window.enterButtonClicked && window.heroAnimationComplete && !window.audioMuted) {
-            // Try again if the audio hasn't started yet
-            console.log("Retry audio playback attempt...");
-            window.playBackgroundAudio(true);
+            // Try again if the audio hasn't started yet, but respect max retries
+            if (window.audioRetryCount < window.maxAudioRetries) {
+              console.log("Retry audio playback attempt...");
+              window.playBackgroundAudio(true);
+            } else {
+              // Stop trying after max retries
+              console.warn(`Exceeded maximum audio retry attempts (${window.maxAudioRetries}). Stopping retries.`);
+              clearInterval(window.audioRetryTimer);
+              window.audioRetryTimer = null;
+            }
           }
         }, 500);
       }
@@ -741,9 +748,14 @@ export function initAnimations() {
     // Check for different environment types
     const pathname = window.location.pathname;
     const hostname = window.location.hostname;
+    const isDevServer = hostname === 'localhost' || hostname.includes('127.0.0.1');
     
+    // Development server - direct path without prefix
+    if (isDevServer) {
+      return `/audio/${filename}`;
+    }
     // GitHub Pages deployment (has /150-lab/ in the path)
-    if (pathname.includes('/150-lab/')) {
+    else if (pathname.includes('/150-lab/')) {
       return `/150-lab/assets/audio/${filename}`;
     }
     // ACS.org production deployment
@@ -922,8 +934,15 @@ export function initAnimations() {
                 window.audioRetryTimer = null;
               } else if (!window.audioMuted && window.enterButtonClicked) {
                 // Try again if the audio hasn't started yet
-                console.log("Retry audio playback attempt from toggle...");
-                window.playBackgroundAudio(true);
+                if (window.audioRetryCount < window.maxAudioRetries) {
+                  console.log("Retry audio playback attempt from toggle...");
+                  window.playBackgroundAudio(true);
+                } else {
+                  // Stop trying after max retries
+                  console.warn(`Exceeded maximum audio retry attempts (${window.maxAudioRetries}). Stopping retries.`);
+                  clearInterval(window.audioRetryTimer);
+                  window.audioRetryTimer = null;
+                }
               }
             }, 500);
           }
@@ -1198,9 +1217,14 @@ function preloadBackgroundAudio() {
     // Check for different environment types
     const pathname = window.location.pathname;
     const hostname = window.location.hostname;
+    const isDevServer = hostname === 'localhost' || hostname.includes('127.0.0.1');
     
+    // Development server - direct path without prefix
+    if (isDevServer) {
+      return `/audio/${filename}`;
+    }
     // GitHub Pages deployment (has /150-lab/ in the path)
-    if (pathname.includes('/150-lab/')) {
+    else if (pathname.includes('/150-lab/')) {
       return `/150-lab/assets/audio/${filename}`;
     }
     // ACS.org production deployment
@@ -1231,6 +1255,12 @@ function preloadBackgroundAudio() {
   backgroundAudio.addEventListener('error', (e) => {
     console.error('Audio loading error:', e);
     console.error('Audio src:', backgroundAudio.src);
+    
+    // In development mode, provide specific guidance
+    const isDevServer = window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1');
+    if (isDevServer) {
+      console.warn('Audio failed to load in dev mode. Ensure audio files are in 150-lab/public/audio/ directory.');
+    }
   });
   
   // Set properties
@@ -1257,6 +1287,7 @@ function preloadBackgroundAudio() {
   window.backgroundAudioLoaded = false;
   window.enterButtonClicked = false;
   window.audioRetryCount = 0;
+  window.maxAudioRetries = 10; // Add a maximum retry limit
   
   // Define an enhanced audio playback function that handles both immediate and delayed playback
   window.playBackgroundAudio = (fromEnterButton = false) => {
@@ -1273,6 +1304,17 @@ function preloadBackgroundAudio() {
     
     // Don't try to play if already initialized
     if (window.audioInitialized) return;
+    
+    // Stop retrying after max attempts (prevents infinite loops)
+    if (window.audioRetryCount >= window.maxAudioRetries) {
+      console.warn(`Exceeded maximum audio retry attempts (${window.maxAudioRetries}). Stopping retries.`);
+      // Clear any audio retry timers
+      if (window.audioRetryTimer) {
+        clearInterval(window.audioRetryTimer);
+        window.audioRetryTimer = null;
+      }
+      return;
+    }
     
     // Check if audio is ready to play
     if (window.backgroundAudioLoaded || backgroundAudio.readyState >= 3) {
@@ -1299,6 +1341,12 @@ function preloadBackgroundAudio() {
     
     window.audioRetryCount++;
     
+    // Stop retrying after max attempts
+    if (window.audioRetryCount >= window.maxAudioRetries) {
+      console.warn(`Exceeded maximum audio retry attempts (${window.maxAudioRetries}). Stopping retries.`);
+      return;
+    }
+    
     try {
       // Play the audio at 8% volume
       backgroundAudio.volume = 0.08;
@@ -1324,6 +1372,9 @@ function preloadBackgroundAudio() {
         if (soundToggle) {
           soundToggle.classList.add('active');
         }
+        
+        // Reset retry count on success
+        window.audioRetryCount = 0;
       }).catch(error => {
         console.error('Audio play was prevented:', error);
         
@@ -1332,7 +1383,7 @@ function preloadBackgroundAudio() {
         window.audioInitialized = false;
         
         // If from enter button, we'll retry automatically
-        if (fromEnterButton || window.enterButtonClicked) {
+        if ((fromEnterButton || window.enterButtonClicked) && window.audioRetryCount < window.maxAudioRetries) {
           setTimeout(() => {
             if (!window.audioInitialized && !window.audioMuted) {
               playBackgroundAudioWhenReady(true);
@@ -1345,7 +1396,7 @@ function preloadBackgroundAudio() {
       window.audioInitialized = false;
       
       // Retry if it was from the enter button
-      if (fromEnterButton || window.enterButtonClicked) {
+      if ((fromEnterButton || window.enterButtonClicked) && window.audioRetryCount < window.maxAudioRetries) {
         setTimeout(() => {
           if (!window.audioInitialized && !window.audioMuted) {
             playBackgroundAudioWhenReady(true);
