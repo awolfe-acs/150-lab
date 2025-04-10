@@ -10,7 +10,7 @@
     position:relative;
     transform:translateX(44vw);
     will-change:transform;
-    @media (max-width:$desktop-viewport) {
+    @media (max-width:1280px) {
         width:480px;
         transform:translateX(0);
         max-width:calc(100vw - 32px);
@@ -23,7 +23,7 @@
     display: flex;
     flex-direction: row;
     flex-wrap:nowrap;
-    @media (max-width:$desktop-viewport) {
+    @media (max-width:1280px) {
         flex-direction:column;
         gap:8vw;
     }
@@ -33,7 +33,7 @@
     background-color: #111;
     aspect-ratio:3/4;
     position:relative;
-    @media (max-width:$desktop-viewport) and (min-width:$mobile-viewport) {
+    @media (max-width:1280px) and (min-width:$mobile-viewport) {
         &:nth-of-type(1),
         &:nth-of-type(3),
         &:nth-of-type(5) {
@@ -73,6 +73,9 @@
             font-weight:600;
             margin-bottom:20px;
             letter-spacing:2px;
+            @media (min-width:1280px) and (max-width:$large-desktop-viewport) {
+                font-size:14px;
+            }
             @media (min-width:$large-desktop-viewport) {
                 font-size:18px;
             }

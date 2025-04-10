@@ -1863,7 +1863,7 @@ function animateSlidingCards() {
   if (slidingCardWrapper && getInvolvedCards) {
     // Function to create or destroy the ScrollTrigger based on viewport width
     const updateScrollTrigger = () => {
-      const isLargeViewport = window.innerWidth > 1024;
+      const isLargeViewport = window.innerWidth > 1280;
       
       // If ScrollTrigger exists and viewport is smaller than 1024px, kill the ScrollTrigger
       if (scrollTriggerInstance && !isLargeViewport) {
