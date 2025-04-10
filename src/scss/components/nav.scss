@@ -77,6 +77,10 @@ nav {
             @media (max-width:$desktop-viewport) {
                 font-size:calc(14px + 2vw);
             }
+            @media (max-width:300px) {
+                letter-spacing:-0.5px;
+                font-size:calc(13px + 2vw);
+            }
         }
         
     }

@@ -38,7 +38,7 @@ header.anniversary {
         align-items: center;
         gap: 16px;
         cursor:pointer;
-        transition: opacity 1.8s ease, transform 0.32s ease;
+        transition: opacity 1.5s ease, transform 0.32s ease;
         position: relative;
         opacity:0;
         &:not(.active) {
@@ -46,7 +46,7 @@ header.anniversary {
             pointer-events:none;
         }
         &.active {
-            transition: opacity 1.8s ease 2s, transform 0.32s ease;
+            transition: opacity 1.5s ease 2s, transform 0.32s ease;
             opacity:1;
         }
         &:active {
@@ -73,18 +73,18 @@ header.anniversary {
         }
         &:before, &:after {
             height:15px;
-            width:1.25px;
+            width:1px;
             background-color: #fff; 
             transition: all 0.32s ease;
             transition-delay:0.18s;
             position: absolute;
             content:'';
-            top:calc(50% + 0.5px);
+            top:50%;
             transform: translateY(-50%);
             opacity:0;
         }
         &:before {
-            right:14px;
+            right:13.5px;
         }
         &:after {
             right:6px;

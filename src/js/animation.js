@@ -255,11 +255,27 @@ export function initHeroAnimation() {
         });
       }
       
-      // Mark user as having interacted with the page
+      // Mark user as having interacted with the page and explicitly set the flag
       window.userInteracted = true;
+      window.enterButtonClicked = true;
       
-      // Try to play audio
-      window.playBackgroundAudio();
+      // Try to play audio - with multiple attempts if needed
+      window.playBackgroundAudio(true); // Pass true to indicate this is from the enter button
+      
+      // Start a timer to keep trying to play audio every 500ms
+      if (!window.audioRetryTimer) {
+        window.audioRetryTimer = setInterval(() => {
+          if (window.audioInitialized) {
+            // Audio started successfully, clear the retry timer
+            clearInterval(window.audioRetryTimer);
+            window.audioRetryTimer = null;
+          } else if (window.enterButtonClicked && window.heroAnimationComplete && !window.audioMuted) {
+            // Try again if the audio hasn't started yet
+            console.log("Retry audio playback attempt...");
+            window.playBackgroundAudio(true);
+          }
+        }, 500);
+      }
       
       // Re-enable Lenis scrolling
       if (window.lenis) {
@@ -340,6 +356,9 @@ export function initHeroAnimation() {
 
 export function initAnimations() {
   console.log('Initializing animations');
+
+  // Preload audio immediately - before anything else
+  preloadBackgroundAudio();
 
   ScrollTrigger.refresh();
   ScrollTrigger.clearMatchMedia();
@@ -717,7 +736,7 @@ export function initAnimations() {
     repeat: -1,
   });
 
-  // Create and configure background audio with Web Audio API for better volume control
+  // Get path for UI click sound - using same function that's now in preloadBackgroundAudio
   const getAudioPath = (filename) => {
     // Check if we're in any production environment
     const pathname = window.location.pathname;
@@ -727,56 +746,6 @@ export function initAnimations() {
                   hostname.includes('acs.org');
     return isProd ? `/150-lab/assets/audio/${filename}` : `/audio/${filename}`;
   };
-  
-  const backgroundAudio = new Audio(getAudioPath('chemistry2.mp3'));
-  backgroundAudio.loop = true;
-  backgroundAudio.volume = 0; // Start at 0 volume for fade in
-  
-  // Add error event listener to check if the audio file can be loaded
-  backgroundAudio.addEventListener('error', (e) => {
-    console.error('Audio loading error:', e);
-    console.error('Audio src:', backgroundAudio.src);
-  });
-  
-  // Store reference for other functions to access
-  window.backgroundAudio = backgroundAudio;
-  window.audioInitialized = false;
-  window.audioMuted = false;
-  window.userInteracted = false;
-  window.heroAnimationComplete = false;
-  
-  // Simplified audio playback function - plays at 8% volume
-  const playBackgroundAudio = () => {
-    if (window.audioMuted) return;
-    
-    // Only play if both conditions are met: user interaction and hero animation complete
-    if (!window.userInteracted || !window.heroAnimationComplete) return;
-    
-    // Don't play if already initialized
-    if (window.audioInitialized) return;
-    
-    try {
-      // Play the audio at 8% volume
-      backgroundAudio.volume = 0.08;
-      backgroundAudio.play().then(() => {
-        console.log('Audio playback started at 8% volume');
-        window.audioInitialized = true;
-        
-        // Update sound toggle if it exists
-        const soundToggle = document.querySelector('.sound-toggle');
-        if (soundToggle) {
-          soundToggle.classList.add('active');
-        }
-      }).catch(error => {
-        console.error('Audio play was prevented:', error);
-      });
-    } catch (error) {
-      console.error('Error playing audio:', error);
-    }
-  };
-  
-  // Expose playBackgroundAudio globally so it can be accessed in other callbacks
-  window.playBackgroundAudio = playBackgroundAudio;
 
   // Create and configure UI click sound
   const uiClickSound = new Audio(getAudioPath('ui-click.mp3'));
@@ -884,8 +853,15 @@ export function initAnimations() {
     // Mark that user has interacted with the page
     window.userInteracted = true;
     
-    // Try to play audio if hero animation is also complete
-    window.playBackgroundAudio();
+    // IMPORTANT: We no longer try to play audio on general user interactions
+    // Only the enter-experience button should start audio playback
+    
+    // However, if the enter button was already clicked but audio failed to start,
+    // we can use this interaction to help retry (since browsers might require interaction)
+    if (window.enterButtonClicked && !window.audioInitialized && window.heroAnimationComplete && !window.audioMuted) {
+      // Only try to play if the enter button was previously clicked
+      window.playBackgroundAudio(true);
+    }
   };
   
   // Add event listeners for user interaction
@@ -913,23 +889,51 @@ export function initAnimations() {
         // Mute the audio
         if (window.backgroundAudio) {
           window.backgroundAudio.volume = 0;
-          // Optional: pause the audio
-          // window.backgroundAudio.pause();
+          
+          // Clear any audio retry timers if they exist
+          if (window.audioRetryTimer) {
+            clearInterval(window.audioRetryTimer);
+            window.audioRetryTimer = null;
+          }
         }
       } else {
         waveAnimation.resume();
         
-        // If audio hasn't been initialized yet, initialize it now
-        if (!window.audioInitialized && window.backgroundAudio) {
-          window.playBackgroundAudio();
-        } else if (window.backgroundAudio) {
-          // Unmute the audio
+        // If audio hasn't been initialized yet but enter button was clicked, initialize it now
+        if (!window.audioInitialized && window.enterButtonClicked && window.backgroundAudio) {
+          // Try to play with aggressive retry
+          window.playBackgroundAudio(true);
+          
+          // Restart retry timer if needed
+          if (!window.audioRetryTimer) {
+            window.audioRetryTimer = setInterval(() => {
+              if (window.audioInitialized) {
+                // Audio started successfully, clear the retry timer
+                clearInterval(window.audioRetryTimer);
+                window.audioRetryTimer = null;
+              } else if (!window.audioMuted && window.enterButtonClicked) {
+                // Try again if the audio hasn't started yet
+                console.log("Retry audio playback attempt from toggle...");
+                window.playBackgroundAudio(true);
+              }
+            }, 500);
+          }
+        } else if (window.audioInitialized && window.backgroundAudio) {
+          // Unmute the audio only if it was previously initialized
           window.backgroundAudio.volume = 0.08;
           
           // If audio was paused, restart it
           if (window.backgroundAudio.paused) {
             window.backgroundAudio.play().catch(error => {
               console.warn('Audio play was prevented:', error);
+              
+              // If play failed, mark as not initialized so it can be retried
+              window.audioInitialized = false;
+              
+              // Only try to replay if enter was clicked previously
+              if (window.enterButtonClicked) {
+                window.playBackgroundAudio(true);
+              }
             });
           }
         }
@@ -1177,6 +1181,161 @@ export function initAnimations() {
   
   // Initialize scroll reveal animations
   initScrollRevealAnimation();
+}
+
+// Function to preload the background audio early
+function preloadBackgroundAudio() {
+  const getAudioPath = (filename) => {
+    // Check if we're in any production environment
+    const pathname = window.location.pathname;
+    const hostname = window.location.hostname;
+    const isProd = pathname.includes('/150-lab/') || 
+                  pathname.includes('/content/') || 
+                  hostname.includes('acs.org');
+    return isProd ? `/150-lab/assets/audio/${filename}` : `/audio/${filename}`;
+  };
+  
+  // Create audio instance early in the initialization process
+  const backgroundAudio = new Audio();
+  
+  // Set audio load event listeners before setting src to ensure they're captured
+  backgroundAudio.addEventListener('canplaythrough', () => {
+    console.log('Background audio loaded and can play through without buffering');
+    window.backgroundAudioLoaded = true;
+    
+    // If user has clicked the enter button but audio wasn't ready, play it now
+    // IMPORTANT: Only attempt playback if enterButtonClicked is true
+    if (window.enterButtonClicked && window.heroAnimationComplete && !window.audioInitialized && !window.audioMuted) {
+      playBackgroundAudioWhenReady(true);
+    }
+  });
+  
+  backgroundAudio.addEventListener('error', (e) => {
+    console.error('Audio loading error:', e);
+    console.error('Audio src:', backgroundAudio.src);
+  });
+  
+  // Set properties
+  backgroundAudio.loop = true;
+  backgroundAudio.volume = 0; // Start at 0 volume for fade in
+  backgroundAudio.preload = 'auto'; // Explicitly set preload attribute
+  
+  // Set src - do this after setting up event listeners
+  backgroundAudio.src = getAudioPath('chemistry2.mp3');
+  
+  // Force load
+  try {
+    backgroundAudio.load();
+  } catch (e) {
+    console.error('Error loading background audio:', e);
+  }
+  
+  // Store references for later use
+  window.backgroundAudio = backgroundAudio;
+  window.audioInitialized = false;
+  window.audioMuted = false;
+  window.userInteracted = false;
+  window.heroAnimationComplete = false;
+  window.backgroundAudioLoaded = false;
+  window.enterButtonClicked = false;
+  window.audioRetryCount = 0;
+  
+  // Define an enhanced audio playback function that handles both immediate and delayed playback
+  window.playBackgroundAudio = (fromEnterButton = false) => {
+    if (window.audioMuted) return;
+    
+    // Track if this was triggered from the enter button for more aggressive retries
+    if (fromEnterButton) {
+      window.enterButtonClicked = true;
+    }
+    
+    // IMPORTANT: Only proceed if enterButtonClicked is true
+    // This ensures only the enter button can start the audio
+    if (!window.enterButtonClicked || !window.heroAnimationComplete) return;
+    
+    // Don't try to play if already initialized
+    if (window.audioInitialized) return;
+    
+    // Check if audio is ready to play
+    if (window.backgroundAudioLoaded || backgroundAudio.readyState >= 3) {
+      playBackgroundAudioWhenReady(fromEnterButton);
+    } else {
+      // Audio not ready yet - it will play when ready via the canplaythrough event
+      console.log('Background audio not yet ready to play, will play when loaded');
+      
+      // If from enter button and the audio isn't loaded yet, force reload
+      if (fromEnterButton) {
+        try {
+          // Try to force load again
+          backgroundAudio.load();
+        } catch (e) {
+          console.warn('Error reloading background audio:', e);
+        }
+      }
+    }
+  };
+  
+  // Function to play audio when it's ready
+  function playBackgroundAudioWhenReady(fromEnterButton = false) {
+    if (window.audioInitialized || window.audioMuted) return;
+    
+    window.audioRetryCount++;
+    
+    try {
+      // Play the audio at 8% volume
+      backgroundAudio.volume = 0.08;
+      
+      // Create a user gesture for Safari if needed
+      if (fromEnterButton) {
+        try {
+          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const source = audioContext.createBufferSource();
+          source.connect(audioContext.destination);
+          source.start(0);
+        } catch (e) {
+          console.warn('Could not create audio context:', e);
+        }
+      }
+      
+      backgroundAudio.play().then(() => {
+        console.log('Audio playback started at 8% volume');
+        window.audioInitialized = true;
+        
+        // Update sound toggle if it exists
+        const soundToggle = document.querySelector('.sound-toggle');
+        if (soundToggle) {
+          soundToggle.classList.add('active');
+        }
+      }).catch(error => {
+        console.error('Audio play was prevented:', error);
+        
+        // Some browsers require user gesture to play audio
+        // We'll retry playing when user clicks next time
+        window.audioInitialized = false;
+        
+        // If from enter button, we'll retry automatically
+        if (fromEnterButton || window.enterButtonClicked) {
+          setTimeout(() => {
+            if (!window.audioInitialized && !window.audioMuted) {
+              playBackgroundAudioWhenReady(true);
+            }
+          }, 500);
+        }
+      });
+    } catch (error) {
+      console.error('Error playing audio:', error);
+      window.audioInitialized = false;
+      
+      // Retry if it was from the enter button
+      if (fromEnterButton || window.enterButtonClicked) {
+        setTimeout(() => {
+          if (!window.audioInitialized && !window.audioMuted) {
+            playBackgroundAudioWhenReady(true);
+          }
+        }, 500);
+      }
+    }
+  }
 }
 
 // Function to initialize fancy button effects
