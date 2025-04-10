@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build --mode standard --outDir dist-aem",
+    "build:gh": "vite build --mode github",
     "preview": "vite preview"
   },
   "devDependencies": {

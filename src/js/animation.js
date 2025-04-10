@@ -738,13 +738,22 @@ export function initAnimations() {
 
   // Get path for UI click sound - using same function that's now in preloadBackgroundAudio
   const getAudioPath = (filename) => {
-    // Check if we're in any production environment
+    // Check for different environment types
     const pathname = window.location.pathname;
     const hostname = window.location.hostname;
-    const isProd = pathname.includes('/150-lab/') || 
-                  pathname.includes('/content/') || 
-                  hostname.includes('acs.org');
-    return isProd ? `/150-lab/assets/audio/${filename}` : `/audio/${filename}`;
+    
+    // GitHub Pages deployment (has /150-lab/ in the path)
+    if (pathname.includes('/150-lab/')) {
+      return `/150-lab/assets/audio/${filename}`;
+    }
+    // ACS.org production deployment
+    else if (pathname.includes('/content/') || hostname.includes('acs.org')) {
+      return `/150-lab/assets/audio/${filename}`;
+    }
+    // Standard deployment (no /150-lab/ in the path)
+    else {
+      return `/assets/audio/${filename}`;
+    }
   };
 
   // Create and configure UI click sound
@@ -1186,13 +1195,22 @@ export function initAnimations() {
 // Function to preload the background audio early
 function preloadBackgroundAudio() {
   const getAudioPath = (filename) => {
-    // Check if we're in any production environment
+    // Check for different environment types
     const pathname = window.location.pathname;
     const hostname = window.location.hostname;
-    const isProd = pathname.includes('/150-lab/') || 
-                  pathname.includes('/content/') || 
-                  hostname.includes('acs.org');
-    return isProd ? `/150-lab/assets/audio/${filename}` : `/audio/${filename}`;
+    
+    // GitHub Pages deployment (has /150-lab/ in the path)
+    if (pathname.includes('/150-lab/')) {
+      return `/150-lab/assets/audio/${filename}`;
+    }
+    // ACS.org production deployment
+    else if (pathname.includes('/content/') || hostname.includes('acs.org')) {
+      return `/150-lab/assets/audio/${filename}`;
+    }
+    // Standard deployment (no /150-lab/ in the path)
+    else {
+      return `/assets/audio/${filename}`;
+    }
   };
   
   // Create audio instance early in the initialization process
