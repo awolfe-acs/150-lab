@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "../../../wso-acs-bootstrap"
+		},
+		{
+			"path": "../../../wso-assets"
 		}
 	],
 	"settings": {}

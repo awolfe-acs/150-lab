@@ -1,0 +1,46 @@
+Refactoring Plan for Hero Number (#hero-number) Countdown Resilience on Resize:
+
+1.  **Persistent State Variable (`heroYearObj`):**
+    *   **Problem:** `heroYearObj` is currently declared *inside* `initAnimations`. If any part of the resize logic inadvertently causes `initAnimations` (or parts of it) to re-run, or if the tween object gets garbage collected and recreated, the `year` will reset to 2026.
+    *   **Solution:** Move the declaration `const heroYearObj = { year: 2026 };` outside the `initAnimations` function to a higher scope (e.g., module scope) so that the object persists across function calls and refreshes. Initialize it there.
+
+2.  **Singleton Tween Creation:**
+    *   **Problem:** The `gsap.to(heroYearObj, ...)` tween might be recreated unnecessarily, potentially interfering with the state.
+    *   **Solution:** Ensure the tween associated with `heroYearObj` is created only *once*. Store a reference to the tween object in the higher scope. Before creating the tween in `initAnimations`, check if the reference already exists. If it does, don't recreate it. 
+        ```javascript
+        // Higher scope
+        let heroYearObj = { year: 2026 }; 
+        let heroNumberTween = null;
+
+        function initAnimations() {
+          // ... other code ...
+          if (heroNumber && !heroNumberTween) { // Check if tween exists
+            heroNumberTween = gsap.to(heroYearObj, { ... }); // Create tween
+          } else if (heroNumberTween) {
+            // Optional: Ensure tween is enabled/active if it was previously killed
+            heroNumberTween.resume(); 
+          }
+          // ... rest of setup ...
+        }
+        ```
+
+3.  **Verify ScrollTrigger Configuration:**
+    *   **Confirm:** Double-check that the ScrollTrigger associated with the `heroNumberTween` has `invalidateOnRefresh: true` set. This is essential for recalculating progress correctly.
+    *   **Confirm:** Ensure `scrub: true` is set, as this links the ScrollTrigger's progress directly to the tween's progress.
+
+4.  **Analyze `onUpdate` Callback:**
+    *   **Confirm:** The `onUpdate` callback in the hero number's ScrollTrigger should *only* be responsible for reading the *current* value of `heroYearObj.year` (which should have been updated by the scrubbed tween based on the refreshed ScrollTrigger progress) and updating the DOM elements (`.digit` spans).
+    *   **Avoid Reset:** Ensure `onUpdate` does not contain any logic that could reset `heroYearObj.year`.
+
+5.  **Review Resize Handler (`reinitializeAllSplitElements` / `initGlobalResizeHandler`):**
+    *   **Confirm No Reset:** Re-verify that `reinitializeAllSplitElements` absolutely does *not* reset `heroYearObj` or kill/recreate the `heroNumberTween`. The previous change removed the DOM reset, which was good, but we need to be sure the underlying *data* (`heroYearObj`) isn't touched.
+    *   **Confirm `ScrollTrigger.refresh()`:** Ensure `ScrollTrigger.refresh()` is called reliably at the *end* of the resize handling process, after all other necessary cleanup and potential re-setup (like the H1 splitting/animation) is done. This triggers the recalculation needed.
+
+6.  **Testing & Debugging:**
+    *   Add temporary `console.log` statements:
+        *   Inside `initAnimations` where `heroYearObj` is initialized (should only log once).
+        *   Inside the `onUpdate` for the hero number ScrollTrigger, logging `self.progress` and `heroYearObj.year` *before* updating the DOM.
+        *   Inside the `onRefresh` callback for the hero number ScrollTrigger (add one if it doesn't exist), logging `self.progress` and `heroYearObj.year`.
+    *   Perform resize tests at various points during the countdown scroll, checking the console logs to see if `heroYearObj.year` maintains its interpolated value correctly through the refresh process.
+
+**Summary:** The key is to treat `heroYearObj` as persistent state and ensure the GSAP tween controlling it is also treated as a persistent object linked to a ScrollTrigger that correctly recalculates its progress on refresh.

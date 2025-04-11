@@ -7,36 +7,131 @@ import SplitType from "split-type";
 gsap.registerPlugin(ScrollTrigger);
 gsap.registerPlugin(MorphSVGPlugin);
 
-// export function animateCountdownChange(id, value) {
-//   const el = document.querySelector(`#${id} .number`);
-//   const formatted = id === "days" ? (value >= 100 ? String(value) : ("0" + value).slice(-2)) : ("0" + value).slice(-2);
+// --- Persistent State for Hero Animations ---
+let heroYearObj = { year: 2026 }; // Moved to module scope
+let heroNumberTween = null; // Reference for the number tween
+let heroHeadingFadeScrollTrigger = null; // Reference for H1 fade ScrollTrigger
 
-//   if (el.dataset.value === formatted) return;
-//   el.dataset.value = formatted;
+// --- Function Definitions (Moved Above initAnimations) ---
 
-//   const currentChars = el.querySelectorAll(".char");
-//   gsap.to(currentChars, {
-//     y: -12,
-//     opacity: 0,
-//     duration: 0.4,
-//     stagger: 0.05,
-//     onComplete: () => {
-//       el.innerHTML = formatted
-//         .split("")
-//         .map((char) => `<span class="char">${char}</span>`)
-//         .join("");
-//       const newChars = el.querySelectorAll(".char");
-//       gsap.from(newChars, {
-//         y: 20,
-//         z: -500,
-//         opacity: 0,
-//         duration: 0.42,
-//         stagger: 0.05,
-//         ease: "power1.out",
-//       });
-//     },
-//   });
-// }
+// Function to set up hero heading character fade animations
+function setupHeroHeadingFadeAnimation() {
+  // Clean up existing ScrollTrigger if it exists
+  if (heroHeadingFadeScrollTrigger) {
+    heroHeadingFadeScrollTrigger.kill();
+    heroHeadingFadeScrollTrigger = null; // Ensure reference is cleared
+    console.log('Killed previous hero heading fade ScrollTrigger.');
+  }
+  
+  const heroHeading = document.querySelector('#hero-area h1');
+  if (heroHeading) {
+    // Make sure we have the SplitType characters to animate
+    let splitTextChars = heroHeading.querySelectorAll('.char');
+    
+    // If characters don't exist yet (e.g., if initial split failed or was reverted)
+    if (!splitTextChars || splitTextChars.length === 0) {
+      console.log('Hero heading characters not found, attempting re-split...');
+      // Get original content if available, otherwise use current text
+      const originalContent = heroHeading.getAttribute('data-original-content') || heroHeading.textContent;
+      
+      // Reset the heading to original content before splitting again
+      heroHeading.innerHTML = originalContent;
+      
+      // Apply SplitType to create character elements
+      try {
+        const splitText = new SplitType(heroHeading, { 
+          types: 'words,chars',
+          absolute: false
+        });
+        splitTextChars = splitText.chars;
+        
+        // Make all chars visible as a starting point after re-split
+        gsap.set(splitTextChars, { 
+          opacity: 1,
+          z: 0,
+          scale: 1,
+          filter: 'blur(0px)',
+          transformPerspective: 1000,
+          transformOrigin: "center center"
+        });
+        console.log('Hero heading re-split successfully.');
+      } catch (error) {
+        console.error('Error re-splitting hero heading:', error);
+        return; // Exit if splitting fails
+      }
+    }
+    
+    // Ensure we have characters to animate now
+    if (!splitTextChars || splitTextChars.length === 0) {
+      console.warn('Still no hero heading characters found after attempting re-split. Aborting animation setup.');
+      return;
+    }
+    
+    // Force a reflow *after* splitting to ensure proper positioning
+    heroHeading.offsetHeight;
+    
+    // Randomize the characters for fade-out (different order than fade-in)
+    const shuffledChars = [...splitTextChars];
+    for (let i = shuffledChars.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledChars[i], shuffledChars[j]] = [shuffledChars[j], shuffledChars[i]];
+    }
+    
+    // Create a timeline for the scroll-triggered fade-out
+    const fadeOutTl = gsap.timeline({
+      // Ensure timeline pauses initially to prevent premature animation
+      paused: true 
+    });
+    
+    // Animate each character to fade out and move back in Z space
+    fadeOutTl.to(shuffledChars, {
+      opacity: 0,
+      z: -50,
+      stagger: 0.02,
+      ease: "power1.in"
+    }, 0);
+    
+    // Create and store the ScrollTrigger instance
+    heroHeadingFadeScrollTrigger = ScrollTrigger.create({
+      animation: fadeOutTl,
+      trigger: "#hero-travel-area",
+      start: "top center", // Start when the top of hero-travel-area reaches the center of viewport
+      end: "top top", // End when the top of hero-travel-area reaches the top of viewport
+      scrub: true, // Makes the animation scrubbable with scroll
+      markers: false, // Set to true for debugging
+      invalidateOnRefresh: true, // **CRITICAL** Recalculate positions on refresh
+      onUpdate: (self) => {
+        // Update character opacities based on scroll position
+        // (Handled by scrub automatically linking timeline progress to scroll progress)
+        
+        // Check if scrolling back up near the top
+        if (self.direction === -1 && self.progress < 0.1) {
+          // Make sure chars are fully visible when scrolling back to top
+          gsap.set(splitTextChars, { 
+            opacity: 1,
+            z: 0
+          });
+        }
+      },
+      onRefresh: (self) => {
+        // When ScrollTrigger refreshes (after resize), immediately update animation
+        // progress to match current scroll position based on *new* boundaries.
+        const progress = self.progress;
+        fadeOutTl.progress(progress); // Update the timeline's progress
+        console.log(`Hero fade ScrollTrigger refreshed. Progress set to: ${progress.toFixed(2)}`);
+      }
+    });
+    
+    // Log that we've set up the animation
+    console.log('Hero heading fade animation set up.');
+  } else {
+    console.warn('#hero-area h1 not found for fade animation setup.');
+  }
+}
+
+// ... (Potentially move other helper function definitions like animateVideoScale, animateGetInvolvedText etc. here too if needed) ...
+
+// --- Initialization Functions ---
 
 export function initHeroAnimation() {
   // Split the hero heading text into characters
@@ -226,7 +321,7 @@ export function initHeroAnimation() {
       opacity: 1,
       autoAlpha: 1,
       duration: 0.8,
-      delay: 3.5,
+      delay: 3.8,
       ease: "power2.out"
     });
   }
@@ -301,38 +396,33 @@ export function initHeroAnimation() {
   
   // Initialize the hero animation
   
-  // Create the hero number animation
+  // Create the hero number animation (size/scale/opacity)
   if (heroNumber) {
-    // Add transform animation for the hero number (size and position)
-    // Simplified for better performance - only essential properties
+    // Scale animation
     gsap.to(heroNumber, {
-      scale: 0.5, // Reduce size to 50% of original
+      scale: 0.5,
       ease: "none",
       scrollTrigger: {
         trigger: "#hero-travel-area",
         start: "top top",
         end: "bottom bottom",
-        scrub: 0.5, // Add a small amount of smoothing
-        markers: false
+        scrub: 0.5,
+        markers: false,
+        invalidateOnRefresh: true // Ensure this recalculates
       }
     });
     
-    // Create a ScrollTrigger for the opacity animation
-    // This will be applied to all digits, including ones that change during scrolling
-    const digitOpacityScrollTrigger = ScrollTrigger.create({
+    // Opacity animation (from 0.44 to 1)
+    ScrollTrigger.create({
       trigger: "#hero-travel-area",
       start: "top top",
-      end: "20% top", // End at 20% through the hero-travel-area
+      end: "20% top",
       scrub: true,
       markers: false,
+      invalidateOnRefresh: true, // Ensure this recalculates
       onUpdate: function(self) {
-        // Get the current progress (0 to 1)
         const progress = self.progress;
-        
-        // Calculate the opacity value (from 0.44 to 1)
         const opacity = 0.44 + (progress * 0.56);
-        
-        // Apply to all current digits
         const digits = heroNumber.querySelectorAll('.digit');
         digits.forEach(digit => {
           digit.style.opacity = opacity;
@@ -340,21 +430,17 @@ export function initHeroAnimation() {
       }
     });
     
-    // Add fade-out animation for the hero number as we approach the video travel area
+    // Fade-out animation (approaching video area)
     ScrollTrigger.create({
       trigger: "#video-travel-area",
-      start: "top bottom", // Start when the top of video-travel-area is 100% away from the bottom of viewport
-      end: "top 90%", // End when the top of video-travel-area is 10% away from the bottom of viewport
+      start: "top bottom",
+      end: "top 90%",
       scrub: true,
       markers: false,
+      invalidateOnRefresh: true, // Ensure this recalculates
       onUpdate: function(self) {
-        // Get the current progress (0 to 1)
         const progress = self.progress;
-        
-        // Calculate the opacity value (from 1 to 0)
         const opacity = 1 - progress;
-        
-        // Apply to the hero number
         heroNumber.style.opacity = opacity;
       }
     });
@@ -367,17 +453,23 @@ export function initAnimations() {
   // Preload audio immediately - before anything else
   preloadBackgroundAudio();
 
+  // Initial refresh and clear match media
   ScrollTrigger.refresh();
   ScrollTrigger.clearMatchMedia();
 
-  // Kill any existing ScrollTriggers to prevent duplicates
+  // Kill any existing ScrollTriggers to prevent duplicates before setup
+  console.log('Killing all existing ScrollTriggers...');
   ScrollTrigger.getAll().forEach(st => st.kill());
+  // Reset tween references as well
+  heroNumberTween = null;
+  heroHeadingFadeScrollTrigger = null;
+  heroYearObj.year = 2026; // Reset year state on full init
 
   gsap.registerPlugin(ScrollTrigger);
   gsap.registerPlugin(SplitType);
 
-  // Initialize hero animation (animations that happen on page load)
-  initHeroAnimation();
+  // Initialize hero animation (visual setup, text reveal)
+  initHeroAnimation(); 
 
   // Initialize video scale animation
   animateVideoScale();
@@ -394,11 +486,11 @@ export function initAnimations() {
   // Initialize fancy button interactions
   initFancyButtonEffects();
   
-  // Initialize split lines animations
-  initSplitLinesAnimation();
+  // Initialize split lines animations (pass null to query all)
+  initSplitLinesAnimation(null);
   
-  // Initialize split chars animations
-  initSplitCharsAnimation();
+  // Initialize split chars animations (pass null to query all)
+  initSplitCharsAnimation(null);
   
   // Initialize scroll reveal animations
   initScrollRevealAnimation();
@@ -455,113 +547,70 @@ export function initAnimations() {
   var mediumSlow = 0.68;
   var slow = 0.84;
 
-  // Add scroll-triggered fade-out for hero heading characters
-  const heroHeading = document.querySelector('#hero-area h1');
-  if (heroHeading) {
-    // Make sure we have the SplitType characters to animate
-    let splitTextChars = heroHeading.querySelectorAll('.char');
-    
-    // If characters don't exist yet (SplitType not initialized), create them
-    if (!splitTextChars.length) {
-      const splitText = new SplitType(heroHeading, { 
-        types: 'words,chars',
-        absolute: false
-      });
-      splitTextChars = splitText.chars;
-    }
-    
-    // Create a timeline for the scroll-triggered fade-out
-    const fadeOutTl = gsap.timeline({
-      scrollTrigger: {
-        trigger: "#hero-travel-area",
-        start: "top center", // Start when the top of hero-travel-area reaches the center of viewport
-        end: "top top", // End when the top of hero-travel-area reaches the top of viewport
-        scrub: true, // Makes the animation scrubbable with scroll
-        markers: false // Set to true for debugging
-      }
-    });
-    
-    // Randomize the characters for fade-out (different order than fade-in)
-    const shuffledChars = [...splitTextChars];
-    for (let i = shuffledChars.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffledChars[i], shuffledChars[j]] = [shuffledChars[j], shuffledChars[i]];
-    }
-    
-    // Animate each character to fade out and move back in Z space
-    fadeOutTl.to(shuffledChars, {
-      opacity: 0,
-      z: -50,
-      stagger: 0.02,
-      ease: "power1.in"
-    }, 0);
-    
-    // We're no longer fading out the hero number - it stays visible
-  }
+  // Set up Hero Heading Character Fade Animation (now uses module-scope trigger reference)
+  setupHeroHeadingFadeAnimation(); // <<<<< THIS CALL IS NOW SAFE
 
-  // Add scroll-triggered countdown for hero number
+  // --- Hero Number Countdown Animation Setup ---
   const heroNumber = document.querySelector('#hero-number');
   if (heroNumber) {
-    // Create an object to hold the year value
-    const heroYearObj = { year: 2026 };
+    console.log('Setting up hero number countdown animation.');
+    console.log(`Initial heroYearObj.year: ${heroYearObj.year}`);
     
-    // Animation for the hero year counter
-    gsap.to(heroYearObj, {
-      year: 1876,
-      ease: "none",
-      scrollTrigger: {
-        trigger: "#hero-travel-area",
-        start: "top top", // Start when the top of hero-travel-area reaches the top of viewport (after heading fade-out completes)
-        end: "70% 70%",
-        scrub: true,
-        markers: false // Set to true for debugging
-      },
-      onUpdate: function () {
-        const yearValue = Math.round(heroYearObj.year).toString();
-        
-        // Update each digit
-        const currentDigits = heroNumber.querySelectorAll('.digit');
-        const newDigits = yearValue.split('');
-        
-        // If the number of digits has changed, recreate all digits
-        if (currentDigits.length !== newDigits.length) {
-          heroNumber.innerHTML = '';
-          newDigits.forEach(digit => {
-            const digitSpan = document.createElement('span');
-            digitSpan.className = 'digit';
-            digitSpan.textContent = digit;
-            digitSpan.setAttribute('data-digit', digit);
-            heroNumber.appendChild(digitSpan);
-          });
-        } else {
-          // Update existing digits - ultra simplified approach for better performance
-          currentDigits.forEach((digitSpan, index) => {
-            if (digitSpan.textContent !== newDigits[index]) {
-              // Direct update without animation for maximum performance
-              digitSpan.textContent = newDigits[index];
-              digitSpan.setAttribute('data-digit', newDigits[index]);
-              
-              // Keep only a simple update without animation for performance
-              // No opacity animation here
+    // Create the tween ONLY if it doesn't exist
+    if (!heroNumberTween) {
+      console.log('Creating hero number tween...');
+      heroNumberTween = gsap.to(heroYearObj, { // Assign to module-scope variable
+        year: 1876,
+        ease: "none",
+        paused: true, // Start paused, ScrollTrigger will control it
+        scrollTrigger: {
+          trigger: "#hero-travel-area",
+          start: "top top",
+          end: "70% 70%",
+          scrub: true, // Links tween progress to scroll progress
+          markers: false,
+          invalidateOnRefresh: true, // **CRITICAL**
+          onUpdate: function (self) {
+            // Log progress and year value before updating DOM
+            // console.log(`Hero Number ST Update -> Progress: ${self.progress.toFixed(3)}, Year: ${heroYearObj.year.toFixed(0)}`); 
+            const yearValue = Math.round(heroYearObj.year).toString();
+            const currentDigits = heroNumber.querySelectorAll('.digit');
+            const newDigits = yearValue.split('');
+            
+            if (currentDigits.length !== newDigits.length) {
+              heroNumber.innerHTML = '';
+              newDigits.forEach(digit => {
+                const digitSpan = document.createElement('span');
+                digitSpan.className = 'digit';
+                digitSpan.textContent = digit;
+                digitSpan.setAttribute('data-digit', digit);
+                heroNumber.appendChild(digitSpan);
+              });
+            } else {
+              currentDigits.forEach((digitSpan, index) => {
+                if (digitSpan.textContent !== newDigits[index]) {
+                  digitSpan.textContent = newDigits[index];
+                  digitSpan.setAttribute('data-digit', newDigits[index]);
+                }
+              });
             }
-          });
+          },
+          onRefresh: (self) => {
+            // Log progress and year value on refresh
+            console.log(`Hero Number ST Refreshed -> Progress: ${self.progress.toFixed(3)}, Year: ${heroYearObj.year.toFixed(0)}`);
+          }
         }
+      });
+    } else {
+      console.log('Hero number tween already exists, ensuring it is active.');
+      // If the tween exists, ensure its ScrollTrigger is enabled (might be needed if killed previously)
+      if (heroNumberTween.scrollTrigger) {
+        heroNumberTween.scrollTrigger.enable();
       }
-    });
-    
-    // Add transform animation for the hero number (size and position)
-    // Simplified for better performance - only essential properties
-    gsap.to(heroNumber, {
-      scale: 0.5, // Reduce size to 50% of original
-      ease: "none",
-      scrollTrigger: {
-        trigger: "#hero-travel-area",
-        start: "top top",
-        end: "bottom bottom",
-        scrub: 0.5, // Add a small amount of smoothing
-        markers: false
-      }
-    });
+      heroNumberTween.resume(); // Ensure tween is not paused
+    }
+  } else {
+    console.warn('#hero-number element not found for countdown animation.');
   }
 
   // Modify the pin-top-top animation for the hero area to unpin at the end of the hero number animation
@@ -1202,10 +1251,10 @@ export function initAnimations() {
   updatePageNavigation();
 
   // Initialize split lines animations
-  initSplitLinesAnimation();
+  initSplitLinesAnimation(null);
   
   // Initialize split chars animations
-  initSplitCharsAnimation();
+  initSplitCharsAnimation(null);
   
   // Initialize scroll reveal animations
   initScrollRevealAnimation();
@@ -1613,9 +1662,40 @@ function updatePageNavigation() {
   const getInvolvedLink = pageNav.querySelector('.get-involved');
   const assetsLink = pageNav.querySelector('.assets');
   
-  // Add click event listeners for smooth scrolling
+  // Create a function to update the active title with a quick fade transition
+  const updateActiveTitle = (newText) => {
+    // Don't update if the text is already the same
+    if (activeTitle.textContent === newText) return;
+    
+    // Use a very fast timeline for a smooth but quick transition
+    const tl = gsap.timeline();
+    
+    // Quick fade out (100ms)
+    tl.to(activeTitle, {
+      opacity: 0,
+      duration: 0.18,
+      onComplete: () => {
+        // Update the text during the brief fade out
+        activeTitle.textContent = newText;
+      }
+    });
+    
+    // Quick fade in (100ms)
+    tl.to(activeTitle, {
+      opacity: 1,
+      duration: 0.24
+    });
+  };
+  
+  // Click handlers with immediate title updates
   heroYearsLink.addEventListener('click', (e) => {
     e.preventDefault();
+    
+    // Immediately update active title and links
+    pageNav.querySelectorAll('a').forEach(link => link.classList.remove('active'));
+    heroYearsLink.classList.add('active');
+    updateActiveTitle("150 Years of ACS");
+    
     window.scrollTo({
       top: 0,
       behavior: 'smooth'
@@ -1624,7 +1704,13 @@ function updatePageNavigation() {
   
   getInvolvedLink.addEventListener('click', (e) => {
     e.preventDefault();
-    // Scroll to the video-travel-area section instead of get-involved
+    
+    // Immediately update active title and links
+    pageNav.querySelectorAll('a').forEach(link => link.classList.remove('active'));
+    getInvolvedLink.classList.add('active');
+    updateActiveTitle("Get Involved");
+    
+    // Scroll to the video-travel-area section 
     if (videoTravelArea) {
       const videoTravelAreaOffset = videoTravelArea.getBoundingClientRect().top + window.pageYOffset;
       window.scrollTo({
@@ -1643,6 +1729,12 @@ function updatePageNavigation() {
   
   assetsLink.addEventListener('click', (e) => {
     e.preventDefault();
+    
+    // Immediately update active title and links
+    pageNav.querySelectorAll('a').forEach(link => link.classList.remove('active'));
+    assetsLink.classList.add('active');
+    updateActiveTitle("Coming Soon");
+    
     if (assetsSection) {
       const assetsOffset = assetsSection.getBoundingClientRect().top + window.pageYOffset;
       window.scrollTo({
@@ -1652,51 +1744,18 @@ function updatePageNavigation() {
     }
   });
   
-  // Create a function to update the active title with a fade transition
-  const updateActiveTitleWithFade = (newText) => {
-    // Don't animate if the text is already the same
-    if (activeTitle.textContent === newText) return;
-    
-    // Create a timeline for the fade transition
-    const tl = gsap.timeline();
-    
-    // Fade out current text
-    tl.to(activeTitle, {
-      opacity: 0,
-      duration: 0.3,
-      onComplete: () => {
-        // Update text when fully faded out
-        activeTitle.textContent = newText;
-      }
-    });
-    
-    // Fade in new text
-    tl.to(activeTitle, {
-      opacity: 1,
-      duration: 0.3
-    });
-  };
+  // -------------------------
+  // Scroll-based detection with improved performance
+  // -------------------------
   
-  // Kill any existing navigation ScrollTriggers to prevent duplicates
-  ScrollTrigger.getAll().forEach(trigger => {
-    if (trigger.vars.id && (
-        trigger.vars.id === "nav-hero-section" ||
-        trigger.vars.id === "nav-getinvolved-section" ||
-        trigger.vars.id === "nav-video-section" ||
-        trigger.vars.id === "nav-assets-section")) {
-      trigger.kill();
-    }
-  });
-  
-  // Determine the section boundaries
-  // This helps us create a comprehensive ScrollTrigger system
+  // Calculate section boundaries once, storing their ranges
   const sections = [
     {
       id: "hero",
       element: heroTravelArea,
       title: "150 Years of ACS",
       link: heroYearsLink,
-      top: 0, // We'll measure these dynamically
+      top: 0,
       bottom: 0
     },
     {
@@ -1725,130 +1784,98 @@ function updatePageNavigation() {
     }
   ];
   
-  // Calculate all section boundaries
-  sections.forEach(section => {
-    if (section.element) {
-      const rect = section.element.getBoundingClientRect();
-      section.top = rect.top + window.pageYOffset;
-      section.bottom = rect.bottom + window.pageYOffset;
-    }
-  });
-  
-  // Special adjustment: hero section ends at the start of video travel area
-  if (sections[0].element && videoTravelArea) {
-    const videoRect = videoTravelArea.getBoundingClientRect();
-    sections[0].bottom = videoRect.top + window.pageYOffset;
-  }
-  
-  // Special adjustment: Make the video travel area and get-involved sections part of the same logical section
-  // This ensures that once we hit video-travel-area, we stay in "Get Involved" until we reach anniversary-assets
-  if (videoTravelArea && assetsSection) {
-    const videoSection = sections.find(s => s.id === "getinvolved-video");
-    const getInvolvedSection = sections.find(s => s.id === "getinvolved");
-    const assetsRect = assetsSection.getBoundingClientRect();
-    
-    if (videoSection && getInvolvedSection) {
-      // The get-involved section extends from the top of video-travel-area to the top of anniversary-assets
-      getInvolvedSection.top = videoSection.top;
-      getInvolvedSection.bottom = assetsRect.top + window.pageYOffset;
-    }
-  }
-  
-  // Log section boundaries for debugging
-  console.log('Section boundaries for navigation:');
-  sections.forEach(section => {
-    if (section.element) {
-      console.log(`${section.id}: ${section.top} - ${section.bottom} (${section.title})`);
-    }
-  });
-  
-  // Create a global scroll listener to determine active section
-  // This is more reliable than individual ScrollTriggers
-  const handleScroll = () => {
-    const scrollPosition = window.pageYOffset + (window.innerHeight / 2);
-    
-    // Default to the hero section
-    let activeSection = sections[0];
-    
-    // Find the current section based on scroll position
-    for (let i = sections.length - 1; i >= 0; i--) {
-      const section = sections[i];
-      
-      // Skip sections without elements
-      if (!section.element) continue;
-      
-      // Check if we've scrolled to or past the top of this section
-      if (scrollPosition >= section.top && scrollPosition < section.bottom) {
-        activeSection = section;
-        break;
+  // Calculate initial boundaries
+  function updateSectionBoundaries() {
+    sections.forEach(section => {
+      if (section.element) {
+        const rect = section.element.getBoundingClientRect();
+        section.top = rect.top + window.pageYOffset;
+        section.bottom = rect.bottom + window.pageYOffset;
       }
+    });
+    
+    // Special adjustment: Hero section ends at the start of video travel area
+    if (sections[0].element && videoTravelArea) {
+      const videoRect = videoTravelArea.getBoundingClientRect();
+      sections[0].bottom = videoRect.top + window.pageYOffset;
     }
     
-    // Special case: if we're in video-travel-area, use the getInvolved section
-    if (activeSection.id === "getinvolved-video") {
-      // Use the getInvolved section for the title and link
+    // Make video-travel-area and get-involved one logical section
+    if (videoTravelArea && assetsSection) {
+      const videoSection = sections.find(s => s.id === "getinvolved-video");
       const getInvolvedSection = sections.find(s => s.id === "getinvolved");
-      if (getInvolvedSection) {
-        activeSection = getInvolvedSection;
+      const assetsRect = assetsSection.getBoundingClientRect();
+      
+      if (videoSection && getInvolvedSection) {
+        // Get-involved section now spans from video-travel-area to assets section
+        getInvolvedSection.top = videoSection.top;
+        getInvolvedSection.bottom = assetsRect.top + window.pageYOffset;
       }
     }
-    
-    // Update active link and title
-    if (activeSection) {
-      // Remove active class from all links
-      pageNav.querySelectorAll('a').forEach(link => link.classList.remove('active'));
+  }
+  
+  // Initial calculation
+  updateSectionBoundaries();
+  
+  // Track current section to avoid unnecessary updates
+  let currentSectionId = null;
+  
+  // Fast scroll handler with minimal processing
+  function handleScroll() {
+    // We'll use requestAnimationFrame to limit how often we calculate
+    // This will naturally throttle during rapid scrolling
+    requestAnimationFrame(() => {
+      // Get current scroll position using viewport midpoint
+      const scrollPosition = window.pageYOffset + (window.innerHeight / 2);
       
-      // Add active class to current section link
-      if (activeSection.link) {
-        activeSection.link.classList.add('active');
+      // Find the active section using a reverse loop for efficiency
+      // (most likely to be in later sections when scrolling down)
+      let activeSection = sections[0]; // Default to hero
+      
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const section = sections[i];
+        if (!section.element) continue;
+        
+        // Check if we're within this section's boundaries
+        if (scrollPosition >= section.top && scrollPosition < section.bottom) {
+          activeSection = section;
+          break;
+        }
       }
       
-      // Update active title
-      updateActiveTitleWithFade(activeSection.title);
-    }
-  };
-  
-  // Add scroll listener
-  window.removeEventListener('scroll', handleScroll);
-  window.addEventListener('scroll', debounce(handleScroll, 100));
-  
-  // Initialize first view
-  handleScroll();
-  
-  // Create separate ScrollTriggers for debugging/visualization only
-  if (false) { // Set to true for debugging
-    ScrollTrigger.create({
-      trigger: "#hero-travel-area",
-      start: "top top",
-      end: "bottom bottom",
-      markers: true,
-      id: "nav-hero-section"
-    });
-    
-    ScrollTrigger.create({
-      trigger: "#video-travel-area",
-      start: "top top",
-      end: "bottom bottom",
-      markers: true,
-      id: "nav-video-section"
-    });
-    
-    ScrollTrigger.create({
-      trigger: "#get-involved",
-      start: "top top",
-      end: "bottom bottom",
-      markers: true,
-      id: "nav-getinvolved-section"
-    });
-    
-    ScrollTrigger.create({
-      trigger: "#anniversary-assets",
-      start: "top top",
-      end: "bottom bottom",
-      markers: true,
-      id: "nav-assets-section"
+      // If we're in video-travel-area, treat as get-involved
+      if (activeSection.id === "getinvolved-video") {
+        activeSection = sections.find(s => s.id === "getinvolved") || activeSection;
+      }
+      
+      // Only update if the section has changed
+      if (currentSectionId !== activeSection.id) {
+        currentSectionId = activeSection.id;
+        
+        // Update nav links
+        pageNav.querySelectorAll('a').forEach(link => link.classList.remove('active'));
+        if (activeSection.link) {
+          activeSection.link.classList.add('active');
+        }
+        
+        // Update title with no delay
+        updateActiveTitle(activeSection.title);
+      }
     });
   }
+  
+  // Use no debounce to ensure immediate response
+  window.removeEventListener('scroll', handleScroll);
+  window.addEventListener('scroll', handleScroll);
+  
+  // Update boundaries on resize
+  window.addEventListener('resize', debounce(() => {
+    updateSectionBoundaries();
+    handleScroll(); // Check current position after resize
+  }, 100));
+  
+  // Initial call to set correct state
+  handleScroll();
 }
 
 function animateSlidingCards() {
@@ -1951,96 +1978,193 @@ function animateSlidingCards() {
   }
 }
 
-export function initSplitLinesAnimation() {
-  // Get all elements with the split-lines class
-  const splitLinesElements = document.querySelectorAll('.split-lines');
+export function initSplitLinesAnimation(elementsToSplit = null) {
+  // Get elements either from argument or by querying the DOM
+  const splitLinesElements = elementsToSplit || document.querySelectorAll('.split-lines');
   
-  if (!splitLinesElements.length) {
-    console.warn('No .split-lines elements found');
+  if (!splitLinesElements || splitLinesElements.length === 0) {
+    console.warn('No .split-lines elements found or provided for initialization');
     return;
   }
   
   // Store references to split instances for potential cleanup
   const splitInstances = [];
   
-  // Function to process a single element with proper timing
+  // Check if fonts are loaded
+  const waitForFonts = () => {
+    return new Promise(resolve => {
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => {
+          resolve();
+        });
+      } else {
+        // Fallback for browsers without font loading API
+        setTimeout(resolve, 100);
+      }
+    });
+  };
+  
+  // Check if images in/near the element are loaded
+  const waitForImages = (element) => {
+    return new Promise(resolve => {
+      // Get the parent container that might affect layout
+      const container = element.closest('section') || element.parentNode;
+      if (!container) {
+        resolve();
+        return;
+      }
+      
+      const images = container.querySelectorAll('img');
+      if (images.length === 0) {
+        resolve();
+        return;
+      }
+      
+      // For safety, set a max timeout
+      const timeout = setTimeout(resolve, 2000);
+      
+      let loadedCount = 0;
+      
+      // First check if all images are already loaded
+      let allLoaded = true;
+      images.forEach(img => {
+        if (!img.complete) allLoaded = false;
+      });
+      
+      if (allLoaded) {
+        clearTimeout(timeout);
+        resolve();
+        return;
+      }
+      
+      // Wait for images to load
+      images.forEach(img => {
+        if (img.complete) {
+          loadedCount++;
+          if (loadedCount === images.length) {
+            clearTimeout(timeout);
+            resolve();
+          }
+        } else {
+          img.addEventListener('load', () => {
+            loadedCount++;
+            if (loadedCount === images.length) {
+              clearTimeout(timeout);
+              resolve();
+            }
+          });
+          
+          img.addEventListener('error', () => {
+            loadedCount++;
+            if (loadedCount === images.length) {
+              clearTimeout(timeout);
+              resolve();
+            }
+          });
+        }
+      });
+    });
+  };
+  
+  // Function to process a single element with proper timing and retries
   const processSplitElement = (element, index) => {
     // First, store the original content
     const originalContent = element.innerHTML;
     element.setAttribute('data-original-content', originalContent);
     
-    // Create a wrapper div that will contain the split text only
-    const wrapperDiv = document.createElement('div');
-    wrapperDiv.className = 'split-lines-wrapper';
-    wrapperDiv.innerHTML = originalContent;
-    element.innerHTML = '';
-    element.appendChild(wrapperDiv);
-    
-    // Add a small timeout to ensure the text is fully rendered before splitting
-    setTimeout(() => {
-      // Apply SplitType only to the wrapper div
-      const splitText = new SplitType(wrapperDiv, {
-        types: 'lines',
-        lineClass: 'split-line',
-        absolute: false, // Avoid absolute positioning which affects layout more
-        tagName: 'div'   // Use div instead of default spans
-      });
+    // Wait for critical resources that affect text layout
+    Promise.all([
+      waitForFonts(),
+      waitForImages(element)
+    ]).then(() => {
+      // Force a reflow to ensure proper layout calculation
+      element.offsetHeight;
       
-      // Store the instance for potential cleanup
-      splitInstances.push({ 
-        element, 
-        wrapper: wrapperDiv, 
-        splitText, 
-        originalContent 
-      });
-      
-      // Check if lines were created properly
-      if (splitText.lines && splitText.lines.length > 0) {
-        // Set initial state for lines - hidden and shifted down
-        gsap.set(splitText.lines, {
-          opacity: 0,
-          y: 50
+      // We'll try splitting multiple times if needed
+      const attemptSplit = (attempt = 0) => {
+        // Apply SplitType directly to the element
+        const splitText = new SplitType(element, {
+          types: 'lines',
+          lineClass: 'split-line',
+          absolute: false, // Avoid absolute positioning which affects layout more
+          tagName: 'div'   // Use div instead of default spans
         });
         
-        // Create ScrollTrigger animation for each element
-        ScrollTrigger.create({
-          trigger: element,
-          start: "top 85%", // Trigger when the top of the element is 85% from the top of viewport
-          once: false, // Allow the animation to run multiple times if scrolled past
-          markers: false, // Set to true for debugging
-          id: `split-lines-${index}`,
-          onEnter: () => {
-            // Animate the lines when they enter the viewport
-            gsap.to(splitText.lines, {
-              opacity: 1,
-              y: 0,
-              duration: 1.2,
-              stagger: 0.1, // Staggered animation for each line
-              ease: "power2.out",
-              overwrite: true
-            });
-          },
-          onLeaveBack: () => {
-            // Reset the animation when scrolling back up
-            gsap.to(splitText.lines, {
-              opacity: 0,
-              y: 50,
-              duration: 0.8,
-              stagger: 0.05,
-              ease: "power2.in",
-              overwrite: true
-            });
+        // Validate the splitting result
+        const isGoodSplit = splitText.lines && 
+                           splitText.lines.length > 0 && 
+                           splitText.lines.length > 1; // Ensure more than 1 line was created
+        
+        if (isGoodSplit) {
+          // Store the instance for potential cleanup
+          splitInstances.push({ 
+            element, 
+            splitText, 
+            originalContent 
+          });
+          
+          // Set initial state for lines - hidden and shifted down
+          gsap.set(splitText.lines, {
+            opacity: 0,
+            y: 50
+          });
+          
+          // Create ScrollTrigger animation for each element
+          ScrollTrigger.create({
+            trigger: element,
+            start: "top 85%", // Trigger when the top of the element is 85% from the top of viewport
+            once: false, // Allow the animation to run multiple times if scrolled past
+            markers: false, // Set to true for debugging
+            id: `split-lines-${index}`,
+            onEnter: () => {
+              // Animate the lines when they enter the viewport
+              gsap.to(splitText.lines, {
+                opacity: 1,
+                y: 0,
+                duration: 1.2,
+                stagger: 0.1, // Staggered animation for each line
+                ease: "power2.out",
+                overwrite: true
+              });
+            },
+            onLeaveBack: () => {
+              // Reset the animation when scrolling back up
+              gsap.to(splitText.lines, {
+                opacity: 0,
+                y: 50,
+                duration: 0.8,
+                stagger: 0.05,
+                ease: "power2.in",
+                overwrite: true
+              });
+            }
+          });
+        } else {
+          // If split failed or looks incorrect, retry a few times
+          if (attempt < 3) {
+            // Clean up the failed attempt
+            if (splitText && typeof splitText.revert === 'function') {
+              splitText.revert();
+            }
+            
+            // Wait longer before each retry
+            setTimeout(() => {
+              attemptSplit(attempt + 1);
+            }, 300 * (attempt + 1)); // 300ms, 600ms, 900ms
+          } else {
+            console.warn('SplitType failed to create lines properly after multiple attempts:', element);
+            // Restore original content if split failed after all retries
+            element.innerHTML = originalContent;
           }
-        });
-      } else {
-        console.warn('SplitType failed to create lines for element:', element);
-        // Restore original content if split failed
-        element.innerHTML = originalContent;
-      }
-    }, 100); // 100ms delay to ensure rendering is complete
+        }
+      };
+      
+      // Start with first attempt
+      attemptSplit();
+    });
   };
   
-  // Process each split-lines element with the delayed function
+  // Process each split-lines element
   splitLinesElements.forEach((element, index) => {
     processSplitElement(element, index);
   });
@@ -2077,102 +2201,191 @@ export function initSplitLinesAnimation() {
     }, 100);
   };
   
-  // Use the global resize handler instead of individual handlers
-  // This has been moved to initGlobalResizeHandler function
-  
   console.log(`Initialized split lines animations for ${splitLinesElements.length} elements`);
 }
 
-// Initialize character splitting animation for elements with .split-chars class
-export function initSplitCharsAnimation() {
-  // Get all elements with the split-chars class
-  const splitCharsElements = document.querySelectorAll('.split-chars');
-  
-  if (!splitCharsElements.length) {
-    console.warn('No .split-chars elements found');
+export function initSplitCharsAnimation(elementsToSplit = null) {
+  // Get elements either from argument or by querying the DOM
+  const splitCharsElements = elementsToSplit || document.querySelectorAll('.split-chars');
+
+  if (!splitCharsElements || splitCharsElements.length === 0) {
+    console.warn('No .split-chars elements found or provided for initialization');
     return;
   }
   
   // Store references to split instances for potential cleanup
   const splitCharsInstances = [];
   
-  // Function to process a single element with proper timing
+  // Check if fonts are loaded
+  const waitForFonts = () => {
+    return new Promise(resolve => {
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => {
+          resolve();
+        });
+      } else {
+        // Fallback for browsers without font loading API
+        setTimeout(resolve, 100);
+      }
+    });
+  };
+  
+  // Check if images in/near the element are loaded
+  const waitForImages = (element) => {
+    return new Promise(resolve => {
+      // Get the parent container that might affect layout
+      const container = element.closest('section') || element.parentNode;
+      if (!container) {
+        resolve();
+        return;
+      }
+      
+      const images = container.querySelectorAll('img');
+      if (images.length === 0) {
+        resolve();
+        return;
+      }
+      
+      // For safety, set a max timeout
+      const timeout = setTimeout(resolve, 2000);
+      
+      let loadedCount = 0;
+      
+      // First check if all images are already loaded
+      let allLoaded = true;
+      images.forEach(img => {
+        if (!img.complete) allLoaded = false;
+      });
+      
+      if (allLoaded) {
+        clearTimeout(timeout);
+        resolve();
+        return;
+      }
+      
+      // Wait for images to load
+      images.forEach(img => {
+        if (img.complete) {
+          loadedCount++;
+          if (loadedCount === images.length) {
+            clearTimeout(timeout);
+            resolve();
+          }
+        } else {
+          img.addEventListener('load', () => {
+            loadedCount++;
+            if (loadedCount === images.length) {
+              clearTimeout(timeout);
+              resolve();
+            }
+          });
+          
+          img.addEventListener('error', () => {
+            loadedCount++;
+            if (loadedCount === images.length) {
+              clearTimeout(timeout);
+              resolve();
+            }
+          });
+        }
+      });
+    });
+  };
+  
+  // Function to process a single element with proper timing and retries
   const processSplitCharsElement = (element, index) => {
     // First, store the original content
     const originalContent = element.innerHTML;
     element.setAttribute('data-original-content', originalContent);
     
-    // Create a wrapper div that will contain the split text only
-    const wrapperDiv = document.createElement('div');
-    wrapperDiv.className = 'split-chars-wrapper';
-    wrapperDiv.innerHTML = originalContent;
-    element.innerHTML = '';
-    element.appendChild(wrapperDiv);
-    
-    // Add a small timeout to ensure the text is fully rendered before splitting
-    setTimeout(() => {
-      // Apply SplitType only to the wrapper div, but split by chars
-      const splitText = new SplitType(wrapperDiv, {
-        types: 'chars',
-        charClass: 'split-char',
-        absolute: false,
-        tagName: 'span' // Use spans for characters as they're inline elements
-      });
+    // Wait for critical resources that affect text layout
+    Promise.all([
+      waitForFonts(),
+      waitForImages(element)
+    ]).then(() => {
+      // Force a reflow to ensure proper layout calculation
+      element.offsetHeight;
       
-      // Store the instance for potential cleanup
-      splitCharsInstances.push({ 
-        element, 
-        wrapper: wrapperDiv, 
-        splitText, 
-        originalContent 
-      });
-      
-      // Check if chars were created properly
-      if (splitText.chars && splitText.chars.length > 0) {
-        // Set initial state for chars - hidden and shifted down
-        gsap.set(splitText.chars, {
-          opacity: 0,
-          y: 50,
-          // Ensure characters don't break the flow
-          display: 'inline-block'
+      // We'll try splitting multiple times if needed
+      const attemptSplit = (attempt = 0) => {
+        // Apply SplitType directly to the element (not to a wrapper)
+        const splitText = new SplitType(element, {
+          types: 'chars',
+          charClass: 'split-char',
+          absolute: false,
+          tagName: 'span' // Use spans for characters as they're inline elements
         });
         
-        // Create ScrollTrigger animation for each element
-        ScrollTrigger.create({
-          trigger: element,
-          start: "top 85%", // Trigger when the top of the element is 85% from the top of viewport
-          once: false, // Allow the animation to run multiple times if scrolled past
-          markers: false, // Set to true for debugging
-          id: `split-chars-${index}`,
-          onEnter: () => {
-            // Animate the chars when they enter the viewport
-            gsap.to(splitText.chars, {
-              opacity: 1,
-              y: 0,
-              duration: 1.2,
-              stagger: 0.02, // Faster stagger for chars since there are more of them
-              ease: "power2.out",
-              overwrite: true
-            });
-          },
-          onLeaveBack: () => {
-            // Reset the animation when scrolling back up
-            gsap.to(splitText.chars, {
-              opacity: 0,
-              y: 50,
-              duration: 0.8,
-              stagger: 0.01, // Faster stagger for reset
-              ease: "power2.in",
-              overwrite: true
-            });
+        // Check if chars were created properly
+        if (splitText.chars && splitText.chars.length > 0) {
+          // Store the instance for potential cleanup
+          splitCharsInstances.push({ 
+            element, 
+            splitText, 
+            originalContent 
+          });
+          
+          // Set initial state for chars - hidden and shifted down
+          gsap.set(splitText.chars, {
+            opacity: 0,
+            y: 50,
+            // Ensure characters don't break the flow
+            display: 'inline-block'
+          });
+          
+          // Create ScrollTrigger animation for each element
+          ScrollTrigger.create({
+            trigger: element,
+            start: "top 85%", // Trigger when the top of the element is 85% from the top of viewport
+            once: false, // Allow the animation to run multiple times if scrolled past
+            markers: false, // Set to true for debugging
+            id: `split-chars-${index}`,
+            onEnter: () => {
+              // Animate the chars when they enter the viewport
+              gsap.to(splitText.chars, {
+                opacity: 1,
+                y: 0,
+                duration: 1.2,
+                stagger: 0.02, // Faster stagger for chars since there are more of them
+                ease: "power2.out",
+                overwrite: true
+              });
+            },
+            onLeaveBack: () => {
+              // Reset the animation when scrolling back up
+              gsap.to(splitText.chars, {
+                opacity: 0,
+                y: 50,
+                duration: 0.8,
+                stagger: 0.01, // Faster stagger for reset
+                ease: "power2.in",
+                overwrite: true
+              });
+            }
+          });
+        } else {
+          // If split failed, retry a few times
+          if (attempt < 3) {
+            // Clean up the failed attempt
+            if (splitText && typeof splitText.revert === 'function') {
+              splitText.revert();
+            }
+            
+            // Wait longer before each retry
+            setTimeout(() => {
+              attemptSplit(attempt + 1);
+            }, 300 * (attempt + 1)); // 300ms, 600ms, 900ms
+          } else {
+            console.warn('SplitType failed to create chars after multiple attempts:', element);
+            // Restore original content if split failed after all retries
+            element.innerHTML = originalContent;
           }
-        });
-      } else {
-        console.warn('SplitType failed to create chars for element:', element);
-        // Restore original content if split failed
-        element.innerHTML = originalContent;
-      }
-    }, 100); // 100ms delay to ensure rendering is complete
+        }
+      };
+      
+      // Start with first attempt
+      attemptSplit();
+    });
   };
   
   // Process each split-chars element with the delayed function
@@ -2212,9 +2425,6 @@ export function initSplitCharsAnimation() {
     }, 100);
   };
   
-  // Use the global resize handler instead of individual handlers
-  // This has been moved to initGlobalResizeHandler function
-  
   console.log(`Initialized split chars animations for ${splitCharsElements.length} elements`);
 }
 
@@ -2230,40 +2440,82 @@ export function initScrollRevealAnimation() {
   
   // Process each scroll-reveal element
   scrollRevealElements.forEach((element, index) => {
-    // Set initial state - hidden and shifted down
-    gsap.set(element, {
-      opacity: 0,
-      y: 50
-    });
+    // Check if this element has the button class
+    const isButton = element.classList.contains('fancy-btn');
     
-    // Create ScrollTrigger animation for each element
-    ScrollTrigger.create({
-      trigger: element,
-      start: "top 85%", // Trigger when the top of the element is 85% from the top of viewport
-      once: false, // Allow the animation to run multiple times if scrolled past
-      markers: false, // Set to true for debugging
-      id: `scroll-reveal-${index}`,
-      onEnter: () => {
-        // Animate when element enters the viewport
-        gsap.to(element, {
-          opacity: 1,
-          y: 0,
-          duration: 1.2,
-          ease: "power2.out",
-          overwrite: true
-        });
-      },
-      onLeaveBack: () => {
-        // Reset the animation when scrolling back up
-        gsap.to(element, {
-          opacity: 0,
-          y: 50,
-          duration: 0.8,
-          ease: "power2.in",
-          overwrite: true
-        });
-      }
-    });
+    if (isButton) {
+      // For button elements, use filter:opacity() instead of opacity
+      // Set initial state - hidden using filter opacity and shifted down
+      gsap.set(element, {
+        y: 50,
+        filter: 'opacity(0)', // Use filter instead of opacity
+      });
+      
+      // Create ScrollTrigger animation for button elements
+      ScrollTrigger.create({
+        trigger: element,
+        start: "top 85%", // Trigger when the top of the element is 85% from the top of viewport
+        once: false, // Allow the animation to run multiple times if scrolled past
+        markers: false, // Set to true for debugging
+        id: `scroll-reveal-button-${index}`,
+        onEnter: () => {
+          // Animate when element enters the viewport
+          gsap.to(element, {
+            y: 0,
+            filter: 'opacity(1)', // Animate filter to fully visible
+            duration: 1.2,
+            ease: "power2.out",
+            overwrite: true
+          });
+        },
+        onLeaveBack: () => {
+          // Reset the animation when scrolling back up
+          gsap.to(element, {
+            y: 50,
+            filter: 'opacity(0)', // Reset filter to invisible
+            duration: 0.8,
+            ease: "power2.in",
+            overwrite: true
+          });
+        }
+      });
+    } else {
+      // For normal scroll-reveal elements, use regular opacity
+      // Set initial state - hidden and shifted down
+      gsap.set(element, {
+        opacity: 0,
+        y: 50
+      });
+      
+      // Create ScrollTrigger animation for each element
+      ScrollTrigger.create({
+        trigger: element,
+        start: "top 85%", // Trigger when the top of the element is 85% from the top of viewport
+        once: false, // Allow the animation to run multiple times if scrolled past
+        markers: false, // Set to true for debugging
+        id: `scroll-reveal-${index}`,
+        onEnter: () => {
+          // Animate when element enters the viewport
+          gsap.to(element, {
+            opacity: 1,
+            y: 0,
+            duration: 1.2,
+            ease: "power2.out",
+            overwrite: true
+          });
+        },
+        onLeaveBack: () => {
+          // Reset the animation when scrolling back up
+          gsap.to(element, {
+            opacity: 0,
+            y: 50,
+            duration: 0.8,
+            ease: "power2.in",
+            overwrite: true
+          });
+        }
+      });
+    }
   });
   
   console.log(`Initialized scroll reveal animations for ${scrollRevealElements.length} elements`);
@@ -2284,126 +2536,111 @@ function debounce(func, wait) {
 
 // Function to reinitialize all split-type elements
 export function reinitializeAllSplitElements() {
-  console.log('Reinitializing all split-type elements');
+  console.log('Reinitializing all split-type elements...');
   
-  // First clean up all existing split instances
+  // First clean up all existing generic split instances (not the hero heading yet)
   if (typeof window.cleanupSplitLines === 'function') {
-    window.cleanupSplitLines();
+    window.cleanupSplitLines(); // Assumes this cleans up non-hero elements
   }
-  
   if (typeof window.cleanupSplitChars === 'function') {
-    window.cleanupSplitChars();
+    window.cleanupSplitChars(); // Assumes this cleans up non-hero elements
   }
   
-  // Also reinitialize the hero heading if on the home page
+  // Handle Hero Heading Special Case
   const heroHeading = document.querySelector('#hero-area h1');
-  const heroNumber = document.querySelector('#hero-number');
-  
   if (heroHeading) {
-    // Get original content if available
-    let originalContent = heroHeading.getAttribute('data-original-content');
+    let currentProgress = 0; // Default progress if trigger doesn't exist
     
-    // If original content wasn't saved, save it now
-    if (!originalContent) {
-      // Store only the text content to remove any split-type spans
-      originalContent = heroHeading.textContent;
-      heroHeading.setAttribute('data-original-content', originalContent);
-    }
-    
-    // Clean up any existing split-type elements
-    if (heroHeading.querySelector('.word') || heroHeading.querySelector('.char')) {
-      heroHeading.innerHTML = originalContent;
+    // Capture current progress and apply state BEFORE killing
+    if (heroHeadingFadeScrollTrigger && heroHeadingFadeScrollTrigger.animation) {
+      currentProgress = heroHeadingFadeScrollTrigger.progress;
+      console.log(`Capturing hero fade progress before kill: ${currentProgress.toFixed(3)}`);
       
-      // Re-split the text
-      const splitText = new SplitType(heroHeading, { 
-        types: 'words,chars',
-        absolute: false
-      });
-      
-      // Add the appropriate animation state
-      if (window.heroAnimationComplete) {
-        // If animation has completed, make chars visible
-        gsap.set(splitText.chars, { 
-          opacity: 1,
-          z: 0,
-          scale: 1,
-          filter: 'blur(0px)',
-          transformPerspective: 1000,
-          transformOrigin: "center center"
-        });
-      } else {
-        // If animation hasn't completed, set initial state
-        gsap.set(splitText.chars, { 
+      // Manually set opacity based on current progress to prevent flash
+      const chars = heroHeading.querySelectorAll('.char');
+      if (chars.length > 0) {
+        // Use the same animation logic (opacity and z) to set the state
+        const tempTl = gsap.timeline({ paused: true });
+        tempTl.to(chars, {
           opacity: 0,
-          z: 150,
-          scale: 1.2,
-          transformPerspective: 1000,
-          transformOrigin: "center center",
-          filter: 'blur(16px)'
-        });
+          z: -50,
+          stagger: 0.02, // Use same stagger as the animation
+          ease: "power1.in"
+        }, 0);
+        
+        // Apply the progress to this temporary timeline state
+        tempTl.progress(currentProgress);
+        // We don't kill this tempTl, gsap.set effectively applies the calculated style
       }
     }
-  }
-  
-  // Reinitialize hero number if present
-  if (heroNumber) {
-    let originalNumber = heroNumber.getAttribute('data-original-content');
     
-    // If no saved original content, use current value or default
-    if (!originalNumber) {
-      // Get the current displayed number or default to 2026
-      const currentDigits = heroNumber.querySelectorAll('.digit');
-      originalNumber = currentDigits.length > 0 
-        ? Array.from(currentDigits).map(d => d.textContent).join('')
-        : '2026';
-      heroNumber.setAttribute('data-original-content', originalNumber);
+    // Kill the associated scroll trigger AFTER applying state
+    if (heroHeadingFadeScrollTrigger) {
+      console.log('Killing existing hero heading fade ScrollTrigger during reinit...');
+      heroHeadingFadeScrollTrigger.kill();
+      heroHeadingFadeScrollTrigger = null; // Clear reference
     }
     
-    // Reinitialize the digits
-    heroNumber.innerHTML = ''; // Clear content
-    
-    // Create digits with proper classes and attributes
-    originalNumber.split('').forEach(digit => {
-      const digitSpan = document.createElement('span');
-      digitSpan.className = 'digit';
-      digitSpan.textContent = digit;
-      digitSpan.setAttribute('data-digit', digit);
-      heroNumber.appendChild(digitSpan);
-    });
-    
-    // Set proper visibility state based on animation progress
-    if (window.heroAnimationComplete) {
-      // If animation complete, make digits visible with proper opacity
-      gsap.set(heroNumber.querySelectorAll('.digit'), {
-        opacity: 0.44,
-        y: 0,
-        z: 0,
-        transformPerspective: 1000,
-        transformOrigin: "center center"
-      });
+    // Check if chars already exist. If so, DON'T reset innerHTML.
+    if (!heroHeading.querySelector('.char')) {
+      console.log('Hero heading not split, resetting content...');
+      // Only reset innerHTML if it wasn't already split
+      const originalContent = heroHeading.getAttribute('data-original-content') || heroHeading.textContent;
+      heroHeading.innerHTML = originalContent;
+    } else {
+      console.log('Hero heading already split, preserving characters to prevent flash.');
+      // Ensure the manually set styles persist if we didn't reset innerHTML
+      // (GSAP should handle this, but good to be mindful)
     }
   }
+
+  // --- Hero Number Handling on Resize --- 
+  // No changes needed here based on previous fix.
+
+  // Find all *other* split-lines and split-chars elements
+  const splitLinesElements = Array.from(document.querySelectorAll('.split-lines'))
+                                 .filter(el => !el.closest('#hero-area'));
+  const splitCharsElements = Array.from(document.querySelectorAll('.split-chars'))
+                                 .filter(el => !el.closest('#hero-area'));
+                                 
+  // Clean up existing split instances for these elements by restoring original content
+  splitLinesElements.forEach(element => {
+    const originalContent = element.getAttribute('data-original-content');
+    if (originalContent) {
+      element.innerHTML = originalContent;
+    }
+  });
   
-  // Reinitialize both split types with a small delay
+  splitCharsElements.forEach(element => {
+    const originalContent = element.getAttribute('data-original-content');
+    if (originalContent) {
+      element.innerHTML = originalContent;
+    }
+  });
+  
+  // Reinitialize animations AFTER cleaning up and allowing DOM update
   setTimeout(() => {
-    // Find all elements again
-    const splitLinesElements = document.querySelectorAll('.split-lines');
-    const splitCharsElements = document.querySelectorAll('.split-chars');
+    console.log('Reinitializing animations after cleanup...');
     
-    // Reinitialize them if functions exist
-    if (splitLinesElements.length && typeof window.refreshSplitLines === 'function') {
-      window.refreshSplitLines();
+    // Reinitialize generic split animations first
+    if (splitLinesElements.length && typeof initSplitLinesAnimation === 'function') {
+      initSplitLinesAnimation(splitLinesElements); // Pass the non-hero elements
+    }
+    if (splitCharsElements.length && typeof initSplitCharsAnimation === 'function') {
+      initSplitCharsAnimation(splitCharsElements); // Pass the non-hero elements
     }
     
-    if (splitCharsElements.length && typeof window.refreshSplitChars === 'function') {
-      window.refreshSplitChars();
+    // THEN re-setup the hero heading animation (it will find existing or create new chars)
+    if (typeof setupHeroHeadingFadeAnimation === 'function') {
+      setupHeroHeadingFadeAnimation();
     }
     
-    // Refresh ScrollTrigger to ensure correct animation positions
+    // Refresh ScrollTrigger *after* all animations are potentially re-created
     ScrollTrigger.refresh();
+    console.log('ScrollTrigger.refresh() called after reinitializations.');
     
-    console.log('All split-type elements reinitialized');
-  }, 200);
+    console.log('All split-type elements and hero animation reinitialized.');
+  }, 50); // Reduced delay slightly
 }
 
 // Initialize the global resize handler
@@ -2415,10 +2652,25 @@ function initGlobalResizeHandler() {
   
   // Create a properly debounced global resize handler
   window.globalResizeHandler = debounce(() => {
+    console.log('Window resized, reinitializing animations...');
+    // Reinitialize all split elements and animations
     reinitializeAllSplitElements();
+    
+    // Note: setupHeroHeadingFadeAnimation is now called within reinitializeAllSplitElements
+    // Note: ScrollTrigger.refresh() is now called within reinitializeAllSplitElements
   }, 250);
   
   // Add the event listener
   window.addEventListener('resize', window.globalResizeHandler);
-  console.log('Global resize handler initialized for split-type elements');
+  
+  // Also listen for orientation changes which may not trigger resize on some devices
+  window.addEventListener('orientationchange', () => {
+    console.log('Orientation changed, reinitializing animations...');
+    // Use a slightly longer delay for orientation changes
+    // Reinitialize all split elements and animations
+    reinitializeAllSplitElements(); 
+    // Note: Using the same central reinitialization function
+  });
+  
+  console.log('Global resize handler initialized.');
 }

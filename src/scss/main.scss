@@ -190,6 +190,10 @@ html {
     line-height:1.4;
     max-width:66.5vw;
     @media (max-width:$desktop-viewport) {
+      font-size:2.5vw;
+      max-width:82vw;
+    }
+    @media (max-width:$mobile-viewport) {
       font-size:4.75vw;
       max-width:calc(100vw - 32px);
     }

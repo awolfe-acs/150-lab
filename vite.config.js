@@ -5,10 +5,15 @@ import path from 'path';
 
 export default defineConfig(({ mode, command }) => {
   // Determine output directory based on mode
-  const outDir = mode === "standard" ? "dist-aem" : "dist";
+  const outDir = mode === "standard" ? "dist-aem" : 
+                 mode === "assets" ? "dist-assets" : "dist";
+  
+  // Determine base path based on mode
+  const basePath = mode === "github" ? "/150-lab/" : 
+                   mode === "assets" ? "/150/" : "/";
   
   return {
-    base: mode === "github" ? "/150-lab/" : "/",
+    base: basePath,
     build: {
       outDir,
       cssCodeSplit: false,
@@ -47,19 +52,20 @@ export default defineConfig(({ mode, command }) => {
           );
 
           // Use the correct base path based on build mode
-          const basePath = mode === "github" ? "/150-lab/" : "/";
+          const basePath = mode === "github" ? "/150-lab/" : 
+                           mode === "assets" ? "/150/" : "/";
 
           return html.replace(
             "</head>",
             `
               ${
                 cssFile
-                  ? `<link rel="preload" href="${basePath}assets/${cssFile}" as="style">`
+                  ? `<link rel="preload" href="${basePath}${cssFile}" as="style">`
                   : ""
               }
               ${
                 jsFile
-                  ? `<link rel="preload" href="${basePath}assets/${jsFile}" as="script">`
+                  ? `<link rel="preload" href="${basePath}${jsFile}" as="script">`
                   : ""
               }
             </head>`

@@ -33,74 +33,6 @@ header.anniversary {
         }
     }
 
-    button.sound-toggle {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        cursor:pointer;
-        transition: opacity 1.5s ease, transform 0.32s ease;
-        position: relative;
-        opacity:0;
-        &:not(.active) {
-            opacity:0;
-            pointer-events:none;
-        }
-        &.active {
-            transition: opacity 1.5s ease 2s, transform 0.32s ease;
-            opacity:1;
-        }
-        &:active {
-            transform:scale(0.95);
-        }
-        span {
-            font-weight: 300;
-        }
-
-        svg {
-            width: 20px;
-            height: 20px;
-            overflow: hidden;
-            transform: scaleX(1.2);
-        }
-
-        path {
-            fill: none;
-            stroke: #fff;
-            stroke-width: 5;
-        }
-        #waveGroup {
-            transition: opacity 0.4s ease;
-        }
-        &:before, &:after {
-            height:15px;
-            width:1px;
-            background-color: #fff; 
-            transition: all 0.32s ease;
-            transition-delay:0.18s;
-            position: absolute;
-            content:'';
-            top:50%;
-            transform: translateY(-50%) translateZ(0);
-            opacity:0;
-            backface-visibility: hidden;
-            will-change: transform;
-        }
-        &:before {
-            right:13.5px;
-        }
-        &:after {
-            right:6px;
-        }
-        &.muted {
-            #waveGroup {
-                opacity:0;
-            }
-            &:before, &:after {
-                opacity:1;
-            }
-        }
-    }
-
     button.menu {
         font-size: 12px;
         text-transform: uppercase;
@@ -123,7 +55,7 @@ header.anniversary {
             content: '';
             position: absolute;
             width: 16px;
-            height: 1.5px;
+            height: 1px;
             background-color: #fff;
             transition: all 0.3s ease;
             transform: translateY(-50%);
@@ -138,5 +70,73 @@ header.anniversary {
             top: calc(50% + 5px);
         }
 
+    }
+}
+
+button.sound-toggle {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    cursor:pointer;
+    transition: opacity 1.5s ease, transform 0.32s ease;
+    position: relative;
+    opacity:0;
+    &:not(.active) {
+        opacity:0;
+        pointer-events:none;
+    }
+    &.active {
+        transition: opacity 1.5s ease 2s, transform 0.32s ease;
+        opacity:1;
+    }
+    &:active {
+        transform:scale(0.95);
+    }
+    span {
+        font-weight: 300;
+    }
+
+    svg {
+        width: 20px;
+        height: 20px;
+        overflow: hidden;
+        transform: scaleX(1.2);
+    }
+
+    path {
+        fill: none;
+        stroke: #fff;
+        stroke-width: 5;
+    }
+    #waveGroup {
+        transition: opacity 0.4s ease;
+    }
+    &:before, &:after {
+        height:15px;
+        width:1px;
+        background-color: #fff; 
+        transition: all 0.32s ease;
+        transition-delay:0.18s;
+        position: absolute;
+        content:'';
+        top:50%;
+        transform: translateY(-50%) translateZ(0);
+        opacity:0;
+        backface-visibility: hidden;
+        will-change: transform;
+    }
+    &:before {
+        right:13.5px;
+    }
+    &:after {
+        right:6px;
+    }
+    &.muted {
+        #waveGroup {
+            opacity:0;
+        }
+        &:before, &:after {
+            opacity:1;
+        }
     }
 }
