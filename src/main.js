@@ -17,20 +17,31 @@ const targetDate = new Date("2026-04-06T00:00:00").getTime();
 // Function to check if we're on the main 150 pages
 function isMainPage() {
   const currentUrl = window.location.href.toLowerCase();
+  const pathname = window.location.pathname.toLowerCase();
 
-  // Check if editor.html is in the URL - if so, return false
+  // Check if editor.html or globe.html is in the URL - if so, return false
   if (currentUrl.includes("/editor.html/") || currentUrl.includes("globe.html")) {
-    console.log("Not on main page");
+    console.log("Not on main page - editor or globe page detected");
     return false;
   }
 
   // Check if we're on index.html or one of the specified domains with /150
-  return (
+  const isMainPagePattern =
     currentUrl.includes("index.html") ||
     currentUrl.includes("acs.org/150") ||
     currentUrl.includes("localhost:5173") ||
-    currentUrl.includes("cmswwwdev.acs.org/150")
-  );
+    currentUrl.includes("cmswwwdev.acs.org/150") ||
+    // GitHub Pages deployment - check for the specific pattern
+    (currentUrl.includes("awolfe-acs.github.io/150-lab") &&
+      (pathname === "/150-lab/" || pathname === "/150-lab/index.html")) ||
+    // General GitHub Pages pattern for other potential deployments
+    (currentUrl.includes("github.io/150-lab") && (pathname === "/150-lab/" || pathname === "/150-lab/index.html"));
+
+  console.log("URL check:", currentUrl);
+  console.log("Pathname:", pathname);
+  console.log("Is main page:", isMainPagePattern);
+
+  return isMainPagePattern;
 }
 
 // Prevent browser from restoring scroll position on refresh
