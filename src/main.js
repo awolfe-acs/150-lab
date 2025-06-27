@@ -82,8 +82,20 @@ document.addEventListener("DOMContentLoaded", () => {
     infinite: false,
   });
 
-  // Always stop scrolling initially
-  window.lenis.stop();
+  // Check if we're on mobile device
+  const isMobile =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    window.innerWidth <= 768;
+
+  if (isMobile) {
+    // On mobile, allow native scrolling immediately for better UX
+    console.log("Mobile device detected");
+    //window.lenis.start();
+  } else {
+    // On desktop, stop scrolling initially (will be started by enter button)
+    console.log("Desktop device detected");
+    //window.lenis.stop();
+  }
 
   window.lenis.on("scroll", (e) => {
     //console.log(e);

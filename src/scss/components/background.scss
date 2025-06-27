@@ -3,7 +3,7 @@
     top: 0;
     left: 0;
     width: 100vw;
-    height: 100vh;
+    height: 100lvh;
     z-index: 1;
     /* Use transform to force GPU acceleration and prevent mobile address bar issues */
     transform: translateZ(0);
@@ -12,15 +12,17 @@
     will-change: transform;
     /* Prevent any touch events from being captured by the canvas */
     pointer-events: none;
-    background:#060E15;
+    background: #060E15;
 }
 
 /* Add a media query for mobile devices */
 @media (max-width: 768px) {
     #shaderBackground {
         /* Use a larger height to ensure it covers the screen even when address bar appears/disappears */
-        height: 100vh; /* fallback */
-        height: calc(100vh + 80px); /* Add extra height to account for address bar */
+        height: 100lvh;
+        /* fallback */
+        height: calc(100lvh + 80px);
+        /* Add extra height to account for address bar */
         /* Position it slightly higher to ensure it covers the top edge */
         top: -40px;
     }

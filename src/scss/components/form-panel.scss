@@ -18,6 +18,9 @@
     }
 
     .text-column {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
         padding: 48px 100px 48px 48px;
 
         form {
@@ -50,6 +53,7 @@
                 display: flex;
                 gap: 24px;
                 margin-bottom: 24px;
+                transform: translateX(4px);
 
                 >div {
                     display: flex;

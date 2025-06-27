@@ -1526,6 +1526,67 @@ function preloadBackgroundAudio() {
       }
     }
   }
+
+  // Add visibility change detection to pause/resume audio when tab changes
+  let wasPlayingBeforeHidden = false;
+
+  const handleVisibilityChange = () => {
+    if (document.hidden) {
+      // Tab is hidden/minimized - pause audio if it's playing
+      if (window.backgroundAudio && !window.backgroundAudio.paused && window.audioInitialized) {
+        console.log("Tab hidden - pausing background audio");
+        wasPlayingBeforeHidden = true;
+        window.backgroundAudio.pause();
+      }
+    } else {
+      // Tab is visible again - resume audio if it was playing before
+      if (window.backgroundAudio && wasPlayingBeforeHidden && window.audioInitialized && !window.audioMuted) {
+        console.log("Tab visible - resuming background audio");
+        wasPlayingBeforeHidden = false;
+        window.backgroundAudio.play().catch((error) => {
+          console.warn("Could not resume background audio:", error);
+          // If we can't resume, try to reinitialize
+          window.audioInitialized = false;
+          if (window.enterButtonClicked) {
+            setTimeout(() => {
+              window.playBackgroundAudio(true);
+            }, 100);
+          }
+        });
+      }
+    }
+  };
+
+  // Listen for visibility changes (tab switching, minimizing)
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+
+  // Also listen for window focus/blur events as a fallback
+  window.addEventListener("blur", () => {
+    if (window.backgroundAudio && !window.backgroundAudio.paused && window.audioInitialized) {
+      console.log("Window blur - pausing background audio");
+      wasPlayingBeforeHidden = true;
+      window.backgroundAudio.pause();
+    }
+  });
+
+  window.addEventListener("focus", () => {
+    if (window.backgroundAudio && wasPlayingBeforeHidden && window.audioInitialized && !window.audioMuted) {
+      console.log("Window focus - resuming background audio");
+      wasPlayingBeforeHidden = false;
+      window.backgroundAudio.play().catch((error) => {
+        console.warn("Could not resume background audio on focus:", error);
+        // If we can't resume, try to reinitialize
+        window.audioInitialized = false;
+        if (window.enterButtonClicked) {
+          setTimeout(() => {
+            window.playBackgroundAudio(true);
+          }, 100);
+        }
+      });
+    }
+  });
+
+  console.log("Background audio visibility change listeners initialized");
 }
 
 // Function to initialize fancy button effects
@@ -2767,7 +2828,7 @@ export function initEventListItemHover() {
     z-index: 9999;
     opacity: 0;
     border-radius: 12px;
-    transform: translate(-50%, -50%) scale(1.2);
+    transform: translate(-50%, -50%);
     transition: opacity 0.2s ease;
     mix-blend-mode: plus-lighter;
     filter: opacity(0.4) brightness(0.9) contrast(1.2);

@@ -3890,24 +3890,43 @@ function updateLightingGUI() {
 
 // Add helper function to update wave GUI
 function updateWaveGUI() {
-  if (typeof gui === "undefined" || !gui || !gui.__folders || !gui.__folders["Wave Controls"]) return;
+  if (typeof gui === "undefined" || !gui || !gui.__folders) return;
 
-  const waveFolder = gui.__folders["Wave Controls"];
+  console.log(
+    "Updating wave GUI - waveSpeed:",
+    uniforms.waveSpeed.value,
+    "waveAmplitude:",
+    uniforms.waveAmplitude.value
+  );
 
-  // Find the wave controllers and update them
-  for (let i = 0; i < waveFolder.__controllers.length; i++) {
-    const controller = waveFolder.__controllers[i];
+  // Check Speed Controls folder for waveSpeed
+  if (gui.__folders["Speed Controls"]) {
+    const speedFolder = gui.__folders["Speed Controls"];
+    for (let i = 0; i < speedFolder.__controllers.length; i++) {
+      const controller = speedFolder.__controllers[i];
 
-    // Check for wave speed controller
-    if (controller.property === "value" && controller.object === uniforms.waveSpeed) {
-      // Update the displayed value without triggering onChange
-      controller.setValue(uniforms.waveSpeed.value);
+      // Check for wave speed controller in Speed Controls folder
+      if (controller.property === "value" && controller.object === uniforms.waveSpeed) {
+        // Update the displayed value without triggering onChange
+        console.log("Updating waveSpeed GUI from", controller.getValue(), "to", uniforms.waveSpeed.value);
+        controller.setValue(uniforms.waveSpeed.value);
+        break;
+      }
     }
+  }
 
-    // Check for wave amplitude controller
-    if (controller.property === "value" && controller.object === uniforms.waveAmplitude) {
-      // Update the displayed value without triggering onChange
-      controller.setValue(uniforms.waveAmplitude.value);
+  // Check Wave Controls folder for waveAmplitude and other wave properties
+  if (gui.__folders["Wave Controls"]) {
+    const waveFolder = gui.__folders["Wave Controls"];
+    for (let i = 0; i < waveFolder.__controllers.length; i++) {
+      const controller = waveFolder.__controllers[i];
+
+      // Check for wave amplitude controller
+      if (controller.property === "value" && controller.object === uniforms.waveAmplitude) {
+        // Update the displayed value without triggering onChange
+        console.log("Updating waveAmplitude GUI from", controller.getValue(), "to", uniforms.waveAmplitude.value);
+        controller.setValue(uniforms.waveAmplitude.value);
+      }
     }
   }
 }
