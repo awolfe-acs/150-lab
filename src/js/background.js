@@ -15,35 +15,37 @@ export function initShaderBackground() {
 
   // Global state to track special colors activation
   window.specialColorsActive = false;
-  // Track which color phase we're in (1 = original, 2 = past get-involved-earth)
+  // Track which color phase we're in (1 = original, 2 = hero-travel-area, 3 = events section)
   window.colorPhase = 1;
 
   // Import GSAP and ScrollTrigger
   let gsap, ScrollTrigger;
-  
+
   // Try to import GSAP and ScrollTrigger asynchronously
-  import('gsap').then(module => {
-    gsap = module.default;
-    
-    import('gsap/ScrollTrigger').then(module => {
-      ScrollTrigger = module.default;
-      gsap.registerPlugin(ScrollTrigger);
-      
-      // Set up the ScrollTrigger for colorDarkness after GSAP is loaded
-      setupColorDarknessAnimation(gsap, ScrollTrigger);
+  import("gsap")
+    .then((module) => {
+      gsap = module.default;
+
+      import("gsap/ScrollTrigger").then((module) => {
+        ScrollTrigger = module.default;
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Set up the ScrollTrigger for colorDarkness after GSAP is loaded
+        setupColorDarknessAnimation(gsap, ScrollTrigger);
+      });
+    })
+    .catch((error) => {
+      console.error("Error loading GSAP:", error);
     });
-  }).catch(error => {
-    console.error("Error loading GSAP:", error);
-  });
-  
+
   // Function to set up the color darkness animation with ScrollTrigger
   function setupColorDarknessAnimation(gsap, ScrollTrigger) {
     // Store original colors for reverting later
     let originalColor1, originalColor2;
-    
+
     // Find the video-travel-area element
     const videoTravelArea = document.querySelector("#video-travel-area");
-    
+
     if (!videoTravelArea) {
       console.warn("Could not find #video-travel-area element for shader animation");
       return;
@@ -54,25 +56,25 @@ export function initShaderBackground() {
       originalColor1 = uniforms.color1.value.clone();
       originalColor2 = uniforms.color2.value.clone();
     }
-    
+
     // Create ScrollTrigger to animate the colorDarkness value
     gsap.timeline({
       scrollTrigger: {
         trigger: "#video-travel-area",
         start: "top bottom", // Starts when the top of video-travel-area reaches the bottom of viewport
-        end: "top 20%",     // Ends when the top of video-travel-area reaches 20% from the top of viewport
-        scrub: true,        // Smooth scrubbing effect, tied to scroll position
-        markers: false,     // Set to true for debugging
+        end: "top 20%", // Ends when the top of video-travel-area reaches 20% from the top of viewport
+        scrub: true, // Smooth scrubbing effect, tied to scroll position
+        markers: false, // Set to true for debugging
         onUpdate: (self) => {
           // Update the colorDarkness value based on progress
           if (uniforms && uniforms.colorDarkness) {
             // Map progress (0-1) to colorDarkness (0-2)
             uniforms.colorDarkness.value = self.progress * 2.0;
-            
+
             // When colorDarkness reaches 2.0 (or very close to it), change the colors
             if (uniforms.colorDarkness.value >= 1.95) {
               // Only change colors if we're still in phase one
-              // Phase two colors are controlled separately when scrolling past get-involved-earth
+              // Phase two and three colors are controlled separately by scroll triggers
               if (window.colorPhase === 1) {
                 // Phase one special colors
                 if (uniforms.color1) uniforms.color1.value.set(originalColor1);
@@ -87,55 +89,55 @@ export function initShaderBackground() {
                 window.specialColorsActive = false;
               }
             }
-            
+
             // Update the GUI if it exists
             updateColorDarknessGUI();
           }
-        }
-      }
+        },
+      },
     });
-    
-    // Setup anniversary-assets animation with a slight delay to ensure DOM is fully processed
+
+    // Setup events animation with a slight delay to ensure DOM is fully processed
     setTimeout(() => {
-      setupAnniversaryAssetsAnimation(gsap, ScrollTrigger, originalColor1, originalColor2);
+      setupAnniversaryEventsAnimation(gsap, ScrollTrigger, originalColor1, originalColor2);
     }, 100);
-    
+
     // Find the get-involved section
     const getInvolvedSection = document.querySelector("#get-involved");
-    
+
     if (!getInvolvedSection) {
       console.warn("Could not find #get-involved element for globe opacity animation");
       return;
     }
-    
+
     // Create ScrollTrigger to animate both the globe and overlay
     gsap.timeline({
       scrollTrigger: {
         trigger: "#get-involved",
-        start: "top bottom",  // Starts when the top of get-involved reaches the bottom of viewport
-        end: "#get-involved-earth center center",  // Ends when the middle of get-involved-earth reaches the middle of viewport
-        scrub: true,          // Smooth scrubbing effect, tied to scroll position
-        markers: false,       // Set to true for debugging
+        start: "top bottom", // Starts when the top of get-involved reaches the bottom of viewport
+        end: "#get-involved-earth center center", // Ends when the middle of get-involved-earth reaches the middle of viewport
+        scrub: true, // Smooth scrubbing effect, tied to scroll position
+        markers: false, // Set to true for debugging
         onUpdate: (self) => {
           const progress = self.progress;
-          
+
           // Handle Globe Model Visibility and Opacity
           if (globeModel) {
             // First make the globe visible once we have any progress
             if (progress > 0.01 && !globeModel.visible) {
               globeModel.visible = true;
               globeParams.visible = true;
-              
+
               // Update visibility toggle in GUI if it exists
               updateGlobeVisibilityGUI();
             } else if (progress <= 0.01 && globeModel.visible) {
               globeModel.visible = false;
               globeParams.visible = false;
-              
+
               // Update visibility toggle in GUI if it exists
               updateGlobeVisibilityGUI();
             }
-            
+
             // Update opacity on all materials
             if (globeModel.visible) {
               globeModel.traverse((child) => {
@@ -144,32 +146,32 @@ export function initShaderBackground() {
                   child.material.opacity = progress;
                 }
               });
-              
+
               // Update globeParams for reference
               globeParams.opacity = progress;
-              
+
               // Update any opacity controllers in the GUI
               updateGlobeOpacityGUI();
             }
           }
-          
+
           // Handle Overlay Visibility and Opacity
           if (overlayMesh) {
             // First make the overlay visible once we have any progress
             if (progress > 0.01 && !overlayMesh.visible) {
               overlayMesh.visible = true;
               overlayParams.enabled = true;
-              
+
               // Update visibility toggle in GUI if it exists
               updateOverlayVisibilityGUI();
             } else if (progress <= 0.01 && overlayMesh.visible) {
               overlayMesh.visible = false;
               overlayParams.enabled = false;
-              
+
               // Update visibility toggle in GUI if it exists
               updateOverlayVisibilityGUI();
             }
-            
+
             // Update overlay opacity to match globe opacity
             if (overlayMaterial && overlayMaterial.uniforms) {
               if (progress > 0.01 && overlayMesh.visible) {
@@ -183,29 +185,29 @@ export function initShaderBackground() {
               }
             }
           }
-        }
-      }
+        },
+      },
     });
-    
+
     // Create ScrollTrigger to fade out particles when entering #get-involved
     gsap.timeline({
       scrollTrigger: {
         trigger: "#get-involved",
-        start: "top 90%",    // Start when the top of get-involved is 90% from the top of viewport
-        end: "bottom top",   // Continue until the bottom of get-involved exits the top of viewport
-        scrub: 0.5,          // Reduced from true to 0.5 for less delay but still smooth scrubbing
-        markers: false,      // Set to true for debugging
+        start: "top 90%", // Start when the top of get-involved is 90% from the top of viewport
+        end: "bottom top", // Continue until the bottom of get-involved exits the top of viewport
+        scrub: 0.5, // Reduced from true to 0.5 for less delay but still smooth scrubbing
+        markers: false, // Set to true for debugging
         onUpdate: (self) => {
           // Get the current progress from start to end
           const progress = self.progress;
-          
+
           // We only want to fade out in the first portion of this range,
           // but keep particles hidden after that threshold
-          
+
           // Define the portion of the total range where fade-out occurs (0 to 1)
           // Reduced from 0.2 to 0.15 to fade out faster
           const fadeOutThreshold = 0.15;
-          
+
           // Store a flag indicating if particles should be fully hidden
           // This helps prevent any fade-in after Lenis easing settles
           if (!window.particlesFullyHidden && progress >= fadeOutThreshold) {
@@ -218,77 +220,77 @@ export function initShaderBackground() {
             // Resume particle movement when visible again
             window.particlesMovementPaused = false;
           }
-          
+
           // If particles should be fully hidden, force opacity to 0
           if (window.particlesFullyHidden) {
             if (customParticleMaterial && customParticleMaterial.uniforms && customParticleMaterial.uniforms.opacity) {
               customParticleMaterial.uniforms.opacity.value = 0;
-              
+
               // Update GUI if necessary
               updateParticleOpacityGUI(0);
             }
             return; // Skip the rest of the calculation
           }
-          
+
           // If we're here, we're in the fade transition zone
           // Calculate a modified progress that maxes out at fadeOutThreshold
           const fadeOutProgress = Math.min(progress / fadeOutThreshold, 1);
-            
+
           // Calculate the inverse (1 at start, 0 when fully faded)
           const inverseProgress = 1 - fadeOutProgress;
-          
+
           // Apply a steeper power curve for an even quicker initial fade (power of 3 instead of 2)
           const curvedProgress = Math.pow(inverseProgress, 3);
-          
+
           // Use the existing max opacity value
           const maxParticleOpacity = 0.5;
-          
+
           // Calculate the new opacity (will be 0 after the fadeOutThreshold is reached)
           const newOpacity = maxParticleOpacity * curvedProgress;
-          
+
           // Apply to particle material if it exists
           if (customParticleMaterial && customParticleMaterial.uniforms && customParticleMaterial.uniforms.opacity) {
             customParticleMaterial.uniforms.opacity.value = newOpacity;
-            
+
             // Update GUI
             updateParticleOpacityGUI(newOpacity);
           }
-        }
-      }
+        },
+      },
     });
-    
+
     // Create ScrollTrigger to animate the globe rising as we scroll through #get-involved-earth
     gsap.timeline({
       scrollTrigger: {
         trigger: "#get-involved-earth",
-        start: "top bottom",    // Start when the top of get-involved-earth reaches the bottom of viewport
-        end: "bottom top",      // End when the bottom of get-involved-earth exits the top of viewport
-        scrub: 0.3,             // Smooth scrubbing effect with minimal delay
-        markers: false,         // Set to true for debugging
+        start: "top bottom", // Start when the top of get-involved-earth reaches the bottom of viewport
+        end: "bottom top", // End when the bottom of get-involved-earth exits the top of viewport
+        scrub: 0.3, // Smooth scrubbing effect with minimal delay
+        markers: false, // Set to true for debugging
         onUpdate: (self) => {
           const progress = self.progress;
-          
+
           if (globeGroup) {
             // Initial position (where the globe starts)
             const startY = -322;
-            
+
             // How much the globe should rise (in world units)
             const riseAmount = 120; // Adjust this value to control how much the globe rises
-            
+
             // Calculate the new y position based on progress
             // Apply an ease-out curve for more natural movement
             const easedProgress = 1 - Math.pow(1 - progress, 3); // Cubic ease out
-            const newY = startY + (riseAmount * easedProgress);
-            
+            const newY = startY + riseAmount * easedProgress;
+
             // Set the globe group's position
             globeGroup.position.y = newY;
-            
+
             // Update the GUI if it exists
-            if (gui && gui.__folders['Globe Model Controls']) {
-              const positionFolder = gui.__folders['Globe Model Controls'].__folders['Position'];
+            if (gui && gui.__folders["Globe Model Controls"]) {
+              const positionFolder = gui.__folders["Globe Model Controls"].__folders["Position"];
               if (positionFolder && positionFolder.__controllers) {
                 for (let controller of positionFolder.__controllers) {
-                  if (controller.property === 'positionY') {
+                  if (controller.property === "positionY") {
                     // Only update the display, not the actual value to avoid conflicts
                     controller.updateDisplay();
                     break;
@@ -297,106 +299,180 @@ export function initShaderBackground() {
               }
             }
           }
-        }
-      }
+        },
+      },
     });
-    
-    // Create a separate ScrollTrigger to transition to phase two colors after passing get-involved-earth
+
+    // Create a ScrollTrigger to transition through phase 2 colors during #hero-travel-area
     gsap.timeline({
       scrollTrigger: {
-        trigger: "#get-involved-earth",
-        start: "center center",  // Start at center of get-involved-earth in center of viewport
-        end: "bottom top",       // End when bottom of get-involved-earth reaches top of viewport
-        scrub: true,             // Smooth scrubbing effect, tied to scroll position
-        markers: false,          // Set to true for debugging
+        trigger: "#hero-travel-area",
+        start: "top top", // Start when hero-travel-area reaches the top of viewport
+        end: "bottom bottom", // End when hero-travel-area bottom reaches bottom of viewport
+        scrub: true, // Bidirectional scrubbing effect, tied to scroll position
+        markers: false, // Set to true for debugging
         onUpdate: (self) => {
           // Only proceed if we have uniforms
           if (!uniforms || !uniforms.color1 || !uniforms.color2) return;
-          
+
+          // Get the current progress from start to end (0 to 1)
+          const progress = self.progress;
+
+          if (progress > 0.1) {
+            // Transitioning to phase 2 colors
+            console.log("Transitioning to Phase 2 colors - hero travel area", progress);
+
+            // Interpolate between phase 1 and phase 2 colors
+            const phase1Color1 = new THREE.Color("#32c2d6");
+            const phase1Color2 = new THREE.Color("#004199");
+            const phase2Color1 = new THREE.Color("#ff4848");
+            const phase2Color2 = new THREE.Color("#3f00f5");
+
+            // Create smooth interpolation (ease the progress for smoother transition)
+            const easedProgress = Math.min(1, (progress - 0.1) / 0.9); // Map 0.1-1.0 to 0-1
+            const smoothProgress = easedProgress * easedProgress * (3.0 - 2.0 * easedProgress); // Smoothstep
+
+            // Interpolate colors
+            const currentColor1 = phase1Color1.clone().lerp(phase2Color1, smoothProgress);
+            const currentColor2 = phase1Color2.clone().lerp(phase2Color2, smoothProgress);
+
+            uniforms.color1.value.copy(currentColor1);
+            uniforms.color2.value.copy(currentColor2);
+
+            // Mark that we're now in phase 2
+            window.colorPhase = 2;
+            window.specialColorsActive = true;
+
+            // Update the GUI to reflect the new colors
+            updateColorGUI();
+          } else {
+            // Back to phase 1 colors
+            console.log("Reverting to Phase 1 colors - hero travel area");
+
+            uniforms.color1.value.set("#32c2d6");
+            uniforms.color2.value.set("#004199");
+
+            // Reset to phase 1
+            window.colorPhase = 1;
+            window.specialColorsActive = true;
+
+            // Update the GUI to reflect the phase 1 colors
+            updateColorGUI();
+          }
+        },
+      },
+    });
+
+    // Create a ScrollTrigger to transition to phase three colors when #events enters the viewport
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: "#events",
+        start: "top 120%", // Start earlier - when the top of events is 120% from the top of viewport (20% below viewport)
+        end: "top 60%", // End when the top of events reaches 60% from the top of viewport
+        scrub: true, // Smooth scrubbing effect, tied to scroll position
+        markers: false, // Set to true for debugging
+        onUpdate: (self) => {
+          // Only proceed if we have uniforms
+          if (!uniforms || !uniforms.color1 || !uniforms.color2) return;
+
           // Get the current progress from start to end
           const progress = self.progress;
-          
-          // When progress is close to complete, transition to phase two
-          if (progress > 0.8) {
-            // Set phase two colors
-            uniforms.color1.value.set("#ffbeff");
-            uniforms.color2.value.set("#67e3ff");
-            
-            // Set the yOffset to -0.05 for phase two
+
+          // When events section starts entering viewport, transition to phase three
+          if (progress > 0.1) {
+            console.log("Transitioning to Phase 3 colors - events section entering viewport");
+            // Set phase three colors
+            uniforms.color1.value.set("#dcfff6");
+            uniforms.color2.value.set("#5dff9d");
+
+            // Set the yOffset to -0.05 for phase three
             if (uniforms.yOffset) {
               uniforms.yOffset.value = -0.05;
             }
-            
-            // Set phase two lighting values
+
+            // Set phase three lighting values
             uniforms.ambientLight.value = 0.4;
             uniforms.directionalLight.value = 0.4;
-            
-            // Mark that we're now in phase two
-            window.colorPhase = 2;
+
+            // Reduce wave settings for phase three
+            uniforms.waveSpeed.value = 0.9;
+            uniforms.waveAmplitude.value = 1.2;
+
+            // Mark that we're now in phase three
+            window.colorPhase = 3;
             // We're still in special colors mode, just a different set
             window.specialColorsActive = true;
-            
+
             // Update the GUI to reflect the new colors and lighting
             updateColorGUI();
             updateLightingGUI();
-          } else if (progress < 0.2 && window.colorPhase === 2) {
-            // When scrolling back up, restore phase one special colors
-            uniforms.color1.value.set(originalColor1);
-            uniforms.color2.value.set(originalColor2);
-            
-            // Reset the yOffset to its original value for phase one
+            updateWaveGUI();
+          } else if (progress <= 0.1 && window.colorPhase === 3) {
+            // When scrolling back up and events section exits viewport, restore phase two special colors
+            console.log("Reverting to Phase 2 colors - events section exiting viewport");
+
+            // Restore phase 2 colors (red and purple)
+            uniforms.color1.value.set("#ff4848");
+            uniforms.color2.value.set("#3f00f5");
+
+            // Reset the yOffset to its original value
             if (uniforms.yOffset) {
               uniforms.yOffset.value = 0.306;
             }
-            
-            // Reset to phase one lighting values
+
+            // Reset to phase two lighting values (same as phase 1 for now)
             uniforms.ambientLight.value = 0.6;
             uniforms.directionalLight.value = 0.6;
-            
-            // Reset to phase one
-            window.colorPhase = 1;
+
+            // Reset wave settings to phase two values (same as phase 1 for now)
+            uniforms.waveSpeed.value = 2.0;
+            uniforms.waveAmplitude.value = 3.0;
+
+            // Reset to phase two
+            window.colorPhase = 2;
             window.specialColorsActive = true;
-            
-            // Update the GUI to reflect the phase one colors and lighting
+
+            // Update the GUI to reflect the phase two colors and lighting
             updateColorGUI();
             updateLightingGUI();
+            updateWaveGUI();
           }
-          
+
           // Update the color darkness GUI if it exists
           updateColorDarknessGUI();
-        }
-      }
+        },
+      },
     });
-    
+
     // Create ScrollTrigger to fade out the globe when entering #get-involved-cards
     gsap.timeline({
       scrollTrigger: {
         trigger: "#get-involved-cards",
-        start: "top 80%",    // Start when the top of get-involved-cards is 80% from the top of viewport
-        end: "top 20%",      // End when the top of get-involved-cards is 20% from the top of viewport
-        scrub: 0.7,          // Increased scrub for smoother transition
-        markers: false,      // Set to true for debugging
+        start: "top 50%", // Start when the top of get-involved-cards is 50% from the top of viewport (later than before)
+        end: "top -10%", // End when the top of get-involved-cards is 10% from the top of viewport
+        scrub: 1.0, // Slightly increased scrub for even smoother transition
+        markers: false, // Set to true for debugging
         onUpdate: (self) => {
           // Get the current progress from start to end
           const progress = self.progress;
-          
+
           // Calculate the inverse (1 at start, 0 at end)
           const inverseProgress = 1 - progress;
-          
+
           // Apply a smoother curve for natural fade
           // Use cubic easing for a more gradual fade near the end
           const curvedProgress = Math.pow(inverseProgress, 3);
-          
+
           // Apply to globe model if it exists
           if (globeModel) {
             // Keep the globe visible throughout the animation
             globeModel.visible = true;
-            
+
             // Set the opacity on all materials with proper transparency settings
             globeModel.traverse((child) => {
               if (child.isMesh && child.material) {
                 if (Array.isArray(child.material)) {
-                  child.material.forEach(mat => {
+                  child.material.forEach((mat) => {
                     // Ensure proper material settings for transparency
                     mat.transparent = true;
                     mat.opacity = curvedProgress;
@@ -416,49 +492,49 @@ export function initShaderBackground() {
                 }
               }
             });
-            
+
             // Handle the extreme case where opacity is near zero
             if (curvedProgress < 0.01) {
               // For complete invisibility at the end of fade, hide the globe
               // but only when it's practically invisible already
               globeModel.visible = false;
             }
-            
+
             // Update globeParams for reference
             globeParams.opacity = curvedProgress;
-            
+
             // Pause rotation when opacity is very low
             globeParams.rotationPaused = curvedProgress < 0.01;
-            
+
             // Update any opacity controllers in the GUI
             updateGlobeOpacityGUI();
           }
-          
+
           // Also fade out the overlay alongside the globe
           if (overlayMesh && overlayMaterial && overlayMaterial.uniforms) {
             overlayMesh.visible = curvedProgress > 0.01;
-            
+
             // Ensure the overlay opacity matches the globe's fade out
             overlayMaterial.uniforms.startOpacity.value = overlayParams.startOpacity * curvedProgress;
             overlayMaterial.uniforms.endOpacity.value = overlayParams.endOpacity * curvedProgress;
-            
+
             // Update overlay visibility in parameters
             overlayParams.enabled = curvedProgress > 0.01;
-            
+
             // Update overlay visibility in GUI if necessary
             updateOverlayVisibilityGUI();
           }
-        }
-      }
+        },
+      },
     });
-    
+
     // Helper function to update particle opacity in the GUI
     function updateParticleOpacityGUI(opacity) {
-      if (typeof gui !== 'undefined' && gui && gui.__folders && gui.__folders['Particle System']) {
-        const particleFolder = gui.__folders['Particle System'];
+      if (typeof gui !== "undefined" && gui && gui.__folders && gui.__folders["Particle System"]) {
+        const particleFolder = gui.__folders["Particle System"];
         if (particleFolder && particleFolder.__controllers) {
           for (let controller of particleFolder.__controllers) {
-            if (controller.property === 'value' && controller.object === customParticleMaterial.uniforms.opacity) {
+            if (controller.property === "value" && controller.object === customParticleMaterial.uniforms.opacity) {
               controller.updateDisplay();
               break;
             }
@@ -466,81 +542,110 @@ export function initShaderBackground() {
         }
       }
     }
-    
+
     console.log("Set up ScrollTrigger animations for shader, globe, overlay, and particles");
   }
-  
-  // Separate function to set up anniversary assets animation
-  function setupAnniversaryAssetsAnimation(gsap, ScrollTrigger, originalColor1, originalColor2) {
-    // Find the anniversary-assets section
-    const anniversaryAssetsSection = document.querySelector("#anniversary-assets");
-    
-    if (!anniversaryAssetsSection) {
-      console.warn("Could not find #anniversary-assets element for shader animation");
+
+  // Separate function to set up anniversary events animation
+  function setupAnniversaryEventsAnimation(gsap, ScrollTrigger, originalColor1, originalColor2) {
+    // Find the events section (formerly #anniversary-assets)
+    const anniversaryEventsSection = document.querySelector("#events");
+
+    if (!anniversaryEventsSection) {
+      console.warn("Could not find #events element for shader animation");
       console.log("Waiting for DOM to be ready before trying again...");
-      
+
       // Try again when DOM is fully loaded
-      document.addEventListener('DOMContentLoaded', () => {
-        setupAnniversaryAssetsAnimation(gsap, ScrollTrigger, originalColor1, originalColor2);
+      document.addEventListener("DOMContentLoaded", () => {
+        setupAnniversaryEventsAnimation(gsap, ScrollTrigger, originalColor1, originalColor2);
       });
       return;
     }
-    
-    console.log("Anniversary assets section found, setting up animation");
-    
-    // Create a second ScrollTrigger to animate colorDarkness back to 0 when scrolling through #anniversary-assets
+
+    console.log("Events section found, setting up animation");
+
+    // Create a second ScrollTrigger to animate colorDarkness back to 0 when scrolling through #events
     gsap.timeline({
       scrollTrigger: {
-        trigger: "#anniversary-assets",
-        start: "top bottom", // Starts when the top of anniversary-assets reaches the bottom of viewport
-        end: "center center", // Ends when the center of anniversary-assets reaches the center of viewport
-        scrub: true,        // Smooth scrubbing effect, tied to scroll position
-        markers: false,     // Set to true for debugging
+        trigger: "#events",
+        start: "top 120%", // Start earlier - same timing as Phase 3 color transition
+        end: "top 50%", // End when the top of events reaches 50% from the top of viewport
+        scrub: true, // Smooth scrubbing effect, tied to scroll position
+        markers: false, // Set to true for debugging
         onUpdate: (self) => {
           // Update the colorDarkness value based on progress
           if (uniforms && uniforms.colorDarkness) {
             // Map progress (0-1) to colorDarkness (2-0), starting at 2 and going to 0
-            uniforms.colorDarkness.value = 2.0 - (self.progress * 2.0);
-            
-            // Maintain colors based on the current phase, never revert to original colors
-            if (window.colorPhase === 2) {
-              // We're in phase two, always maintain the phase two colors
-              if (uniforms.color1) uniforms.color1.value.set("#fcdcff");
-              if (uniforms.color2) uniforms.color2.value.set("#905dff");
-              // Set phase two lighting values
+            uniforms.colorDarkness.value = 2.0 - self.progress * 2.0;
+
+            // Maintain colors based on the current phase, but respect scroll direction
+            if (window.colorPhase === 3) {
+              // We're in phase three, maintain the phase three colors only if we're scrolling within the events section
+              console.log("Maintaining Phase 3 colors in events section");
+              if (uniforms.color1) uniforms.color1.value.set("#dcfff6");
+              if (uniforms.color2) uniforms.color2.value.set("#5dff9d");
+              // Set phase three lighting values
               if (uniforms.ambientLight) uniforms.ambientLight.value = 0.4;
               if (uniforms.directionalLight) uniforms.directionalLight.value = 0.4;
+              // Maintain phase three wave settings
+              if (uniforms.waveSpeed) uniforms.waveSpeed.value = 0.9;
+              if (uniforms.waveAmplitude) uniforms.waveAmplitude.value = 1.2;
               window.specialColorsActive = true;
-              
+
+              // Update the GUI to reflect the phase three colors
+              updateColorGUI();
+              updateLightingGUI();
+              updateWaveGUI();
+            } else if (window.colorPhase === 2) {
+              // We're in phase two, maintain phase two special colors
+              console.log("Maintaining Phase 2 colors - reverting from events section");
+              // Use the phase 2 colors (red and purple)
+              if (uniforms.color1) uniforms.color1.value.set("#ff4848");
+              if (uniforms.color2) uniforms.color2.value.set("#3f00f5");
+              // Reset to phase two lighting values
+              if (uniforms.ambientLight) uniforms.ambientLight.value = 0.6;
+              if (uniforms.directionalLight) uniforms.directionalLight.value = 0.6;
+              // Reset to phase two wave settings
+              if (uniforms.waveSpeed) uniforms.waveSpeed.value = 2.0;
+              if (uniforms.waveAmplitude) uniforms.waveAmplitude.value = 3.0;
+              window.specialColorsActive = true;
+
               // Update the GUI to reflect the phase two colors
               updateColorGUI();
               updateLightingGUI();
+              updateWaveGUI();
             } else {
               // We're in phase one, maintain phase one special colors
-              if (uniforms.color1) uniforms.color1.value.set(originalColor1);
-              if (uniforms.color2) uniforms.color2.value.set(originalColor2);
+              console.log("Maintaining Phase 1 colors - reverting from events section");
+              // Use the actual default phase 1 colors
+              if (uniforms.color1) uniforms.color1.value.set("#32c2d6");
+              if (uniforms.color2) uniforms.color2.value.set("#004199");
               // Reset to phase one lighting values
               if (uniforms.ambientLight) uniforms.ambientLight.value = 0.6;
               if (uniforms.directionalLight) uniforms.directionalLight.value = 0.6;
+              // Reset to phase one wave settings
+              if (uniforms.waveSpeed) uniforms.waveSpeed.value = 2.0;
+              if (uniforms.waveAmplitude) uniforms.waveAmplitude.value = 3.0;
               window.specialColorsActive = true;
-              
+
               // Update the GUI to reflect the phase one colors
               updateColorGUI();
               updateLightingGUI();
+              updateWaveGUI();
             }
-            
+
             // Update the GUI if it exists
             updateColorDarknessGUI();
           }
-        }
-      }
+        },
+      },
     });
   }
-  
+
   // Helper function to update the GUI control for colorDarkness if it exists
   function updateColorDarknessGUI() {
-    if (typeof gui !== 'undefined' && gui && gui.__folders && gui.__folders['Color Controls']) {
-      const colorFolder = gui.__folders['Color Controls'];
+    if (typeof gui !== "undefined" && gui && gui.__folders && gui.__folders["Color Controls"]) {
+      const colorFolder = gui.__folders["Color Controls"];
       if (colorFolder && colorFolder.__controllers) {
         for (let controller of colorFolder.__controllers) {
           if (controller.property === "value" && controller.object === uniforms.colorDarkness) {
@@ -551,22 +656,30 @@ export function initShaderBackground() {
       }
     }
   }
-  
+
   // Helper function to update color pickers in the GUI
   function updateColorGUI() {
-    if (typeof gui !== 'undefined' && gui && gui.__folders && gui.__folders['Color Controls']) {
-      const colorFolder = gui.__folders['Color Controls'];
+    if (typeof gui !== "undefined" && gui && gui.__folders && gui.__folders["Color Controls"]) {
+      const colorFolder = gui.__folders["Color Controls"];
       if (colorFolder && colorFolder.__controllers) {
         // Update both color controllers
-        colorFolder.__controllers.forEach(controller => {
+        colorFolder.__controllers.forEach((controller) => {
           if (controller.property === "color") {
             const colorObject = controller.__color;
             if (colorObject) {
-              if (controller.property === "color" && controller.__li && controller.__li.querySelector(".property-name").textContent === "Color 1") {
+              if (
+                controller.property === "color" &&
+                controller.__li &&
+                controller.__li.querySelector(".property-name").textContent === "Color 1"
+              ) {
                 // Update Color 1
                 const hexColor = "#" + uniforms.color1.value.getHexString();
                 controller.setValue(hexColor);
-              } else if (controller.property === "color" && controller.__li && controller.__li.querySelector(".property-name").textContent === "Color 2") {
+              } else if (
+                controller.property === "color" &&
+                controller.__li &&
+                controller.__li.querySelector(".property-name").textContent === "Color 2"
+              ) {
                 // Update Color 2
                 const hexColor = "#" + uniforms.color2.value.getHexString();
                 controller.setValue(hexColor);
@@ -580,12 +693,16 @@ export function initShaderBackground() {
 
   // Helper function to update any globe opacity controllers in the GUI
   function updateGlobeOpacityGUI() {
-    if (typeof gui !== 'undefined' && gui && gui.__folders && 
-        gui.__folders['Globe Model Controls'] && 
-        gui.__folders['Globe Model Controls'].__folders && 
-        gui.__folders['Globe Model Controls'].__folders['Material']) {
-      const materialFolder = gui.__folders['Globe Model Controls'].__folders['Material'];
-      
+    if (
+      typeof gui !== "undefined" &&
+      gui &&
+      gui.__folders &&
+      gui.__folders["Globe Model Controls"] &&
+      gui.__folders["Globe Model Controls"].__folders &&
+      gui.__folders["Globe Model Controls"].__folders["Material"]
+    ) {
+      const materialFolder = gui.__folders["Globe Model Controls"].__folders["Material"];
+
       if (materialFolder && materialFolder.__controllers) {
         for (let controller of materialFolder.__controllers) {
           if (controller.property === "opacity") {
@@ -595,12 +712,12 @@ export function initShaderBackground() {
       }
     }
   }
-  
+
   // Helper function to update globe visibility control in the GUI
   function updateGlobeVisibilityGUI() {
-    if (typeof gui !== 'undefined' && gui && gui.__folders && gui.__folders['Globe Model Controls']) {
-      const globeFolder = gui.__folders['Globe Model Controls'];
-      
+    if (typeof gui !== "undefined" && gui && gui.__folders && gui.__folders["Globe Model Controls"]) {
+      const globeFolder = gui.__folders["Globe Model Controls"];
+
       if (globeFolder && globeFolder.__controllers) {
         for (let controller of globeFolder.__controllers) {
           if (controller.property === "visible") {
@@ -611,12 +728,12 @@ export function initShaderBackground() {
       }
     }
   }
-  
+
   // Helper function to update overlay visibility control in the GUI
   function updateOverlayVisibilityGUI() {
-    if (typeof gui !== 'undefined' && gui && gui.__folders && gui.__folders['Gradient Overlay Controls']) {
-      const overlayFolder = gui.__folders['Gradient Overlay Controls'];
-      
+    if (typeof gui !== "undefined" && gui && gui.__folders && gui.__folders["Gradient Overlay Controls"]) {
+      const overlayFolder = gui.__folders["Gradient Overlay Controls"];
+
       if (overlayFolder && overlayFolder.__controllers) {
         for (let controller of overlayFolder.__controllers) {
           if (controller.property === "enabled") {
@@ -638,7 +755,7 @@ export function initShaderBackground() {
   // Set initial size based on true viewport dimensions
   const initialWidth = window.innerWidth;
   const initialHeight = getTrueViewportHeight();
-  
+
   // Set canvas to fill the viewport and position it fixed in the background
   canvas.style.position = "fixed";
   canvas.style.top = "0";
@@ -646,7 +763,7 @@ export function initShaderBackground() {
   canvas.style.width = "100vw";
   canvas.style.height = "100vh";
   canvas.style.zIndex = "-1"; // Place behind other content
-  
+
   // Force hardware acceleration to prevent address bar issues
   canvas.style.transform = "translateZ(0)";
   canvas.style.transformStyle = "preserve-3d";
@@ -662,7 +779,7 @@ export function initShaderBackground() {
 
   // Create a separate scene for particles to ensure they render on top
   const particleScene = new THREE.Scene();
-  
+
   // Variable to track particle opacity for fade-in
   let particleOpacity = 0;
   let targetParticleOpacity = 0; // Will be set to 1 when hero animation completes
@@ -694,18 +811,18 @@ export function initShaderBackground() {
 
   // Create gradient overlay
   let overlayMaterial, overlayMesh;
-  
+
   // Gradient overlay parameters
   const overlayParams = {
-    enabled: false,     // Start with overlay disabled
-    startOpacity: 0.0,  // Top opacity (fully transparent)
-    endOpacity: 1.0,    // Bottom opacity (fully opaque black)
-    offsetY: 0.22,      // Y position offset (for gradient calculation) - changed to 0.22
-    height: 3.0,        // Height multiplier for gradient - changed to 3.0
-    color: "#000000",   // Pure black color
-    yOffset: -0.03      // Y position of the entire overlay (in viewport height %) - changed to -0.3
+    enabled: false, // Start with overlay disabled
+    startOpacity: 0.0, // Top opacity (fully transparent)
+    endOpacity: 1.0, // Bottom opacity (fully opaque black)
+    offsetY: 0.22, // Y position offset (for gradient calculation) - changed to 0.22
+    height: 3.0, // Height multiplier for gradient - changed to 3.0
+    color: "#000000", // Pure black color
+    yOffset: -0.03, // Y position of the entire overlay (in viewport height %) - changed to -0.3
   };
-  
+
   function createGradientOverlay() {
     // Create a shader material for the gradient overlay
     overlayMaterial = new THREE.ShaderMaterial({
@@ -715,7 +832,7 @@ export function initShaderBackground() {
         endOpacity: { value: overlayParams.endOpacity },
         overlayColor: { value: new THREE.Color(overlayParams.color) },
         offsetY: { value: overlayParams.offsetY },
-        heightMultiplier: { value: overlayParams.height }
+        heightMultiplier: { value: overlayParams.height },
       },
       vertexShader: `
         varying vec2 vUv;
@@ -751,287 +868,281 @@ export function initShaderBackground() {
       // Ensure the overlay renders on top of other content
       depthTest: false,
       depthWrite: false,
-      side: THREE.DoubleSide
+      side: THREE.DoubleSide,
     });
-    
+
     // Calculate the world space height for exactly 66% of viewport height
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    
+
     // Get the dimensions in world units
-    const worldWidth = (camera.right - camera.left);
-    const worldHeight = (camera.top - camera.bottom);
-    
+    const worldWidth = camera.right - camera.left;
+    const worldHeight = camera.top - camera.bottom;
+
     // Calculate world units for 66% viewport height
-    const fixedHeightWorld = (viewportHeight * 0.66) * (worldHeight / viewportHeight);
-    
+    const fixedHeightWorld = viewportHeight * 0.66 * (worldHeight / viewportHeight);
+
     // Create the plane geometry with exact width and fixed height
-    const overlayGeometry = new THREE.PlaneGeometry(
-      worldWidth,
-      fixedHeightWorld
-    );
-    
+    const overlayGeometry = new THREE.PlaneGeometry(worldWidth, fixedHeightWorld);
+
     // Create mesh with the configured material
     overlayMesh = new THREE.Mesh(overlayGeometry, overlayMaterial);
-    
+
     // Keep the overlay flat and in front of everything
     overlayMesh.rotation.set(0, 0, 0);
     overlayMesh.position.x = 0; // Center horizontally
     overlayMesh.position.y = overlayParams.yOffset * worldHeight;
     overlayMesh.position.z = -100; // Fixed distance in front
-    
+
     overlayMesh.frustumCulled = false; // Never cull this object
     overlayMesh.renderOrder = 9999; // Ensure it renders last/on top
     overlayMesh.visible = overlayParams.enabled;
-    
+
     // Add to scene, not to camera
     scene.add(overlayMesh);
-    
+
     console.log("Created gradient overlay with fixed 66% viewport height");
   }
-  
+
   // Function to update overlay position relative to camera
   function updateOverlayPosition() {
     if (!overlayMesh) return;
-    
-    // For an orthographic camera, the overlay must stay perfectly flat 
+
+    // For an orthographic camera, the overlay must stay perfectly flat
     // and aligned with the view plane (parallel to the viewport)
-    
+
     // Make sure rotation is reset to perfectly flat (parallel to view)
     overlayMesh.rotation.set(0, 0, 0);
-    
-    // Center horizontally 
+
+    // Center horizontally
     overlayMesh.position.x = 0;
-    
+
     // Calculate the world space coordinates for positioning
     const viewportHeight = window.innerHeight;
-    const worldHeight = (camera.top - camera.bottom);
+    const worldHeight = camera.top - camera.bottom;
     const worldToPixelRatio = worldHeight / viewportHeight;
-    
+
     // Apply vertical offset in world units
     overlayMesh.position.y = overlayParams.yOffset * worldHeight;
-    
+
     // Keep at fixed distance in front of everything
     overlayMesh.position.z = -100;
   }
-  
-  // Function to update the overlay on window resize
-  function updateOverlaySize() {
-    if (overlayMesh) {
-    // Get viewport dimensions
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-    
-      // Get world dimensions from camera
-      const worldWidth = (camera.right - camera.left);
-      const worldHeight = (camera.top - camera.bottom);
-    
-      // Calculate the fixed height in world units - exactly 66% of viewport
-      const fixedHeightWorld = (viewportHeight * 0.66) * (worldHeight / viewportHeight);
-    
-      // Dispose of old geometry and create new one with fixed height
-      overlayMesh.geometry.dispose();
-    overlayMesh.geometry = new THREE.PlaneGeometry(
-        worldWidth,
-        fixedHeightWorld
-    );
-    
-      // Ensure overlay stays perfectly flat and parallel to view
-      overlayMesh.rotation.set(0, 0, 0);
-      
-      // Update the position after resizing
-    updateOverlayPosition();
-    
-      console.log("Updated overlay to 66% viewport height");
-    }
-  }
 
-  // Create the initial overlay
-  createGradientOverlay();
-  
   // Function to update the overlay on window resize
   function updateOverlaySize() {
     if (overlayMesh) {
       // Get viewport dimensions
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
-      
+
       // Get world dimensions from camera
-      const worldWidth = (camera.right - camera.left);
-      const worldHeight = (camera.top - camera.bottom);
-      
+      const worldWidth = camera.right - camera.left;
+      const worldHeight = camera.top - camera.bottom;
+
       // Calculate the fixed height in world units - exactly 66% of viewport
-      const fixedHeightWorld = (viewportHeight * 0.66) * (worldHeight / viewportHeight);
-      
+      const fixedHeightWorld = viewportHeight * 0.66 * (worldHeight / viewportHeight);
+
       // Dispose of old geometry and create new one with fixed height
       overlayMesh.geometry.dispose();
-    overlayMesh.geometry = new THREE.PlaneGeometry(
-        worldWidth,
-        fixedHeightWorld
-      );
-      
+      overlayMesh.geometry = new THREE.PlaneGeometry(worldWidth, fixedHeightWorld);
+
       // Ensure overlay stays perfectly flat and parallel to view
       overlayMesh.rotation.set(0, 0, 0);
-      
+
       // Update the position after resizing
       updateOverlayPosition();
-      
+
+      console.log("Updated overlay to 66% viewport height");
+    }
+  }
+
+  // Create the initial overlay
+  createGradientOverlay();
+
+  // Function to update the overlay on window resize
+  function updateOverlaySize() {
+    if (overlayMesh) {
+      // Get viewport dimensions
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      // Get world dimensions from camera
+      const worldWidth = camera.right - camera.left;
+      const worldHeight = camera.top - camera.bottom;
+
+      // Calculate the fixed height in world units - exactly 66% of viewport
+      const fixedHeightWorld = viewportHeight * 0.66 * (worldHeight / viewportHeight);
+
+      // Dispose of old geometry and create new one with fixed height
+      overlayMesh.geometry.dispose();
+      overlayMesh.geometry = new THREE.PlaneGeometry(worldWidth, fixedHeightWorld);
+
+      // Ensure overlay stays perfectly flat and parallel to view
+      overlayMesh.rotation.set(0, 0, 0);
+
+      // Update the position after resizing
+      updateOverlayPosition();
+
       console.log("Updated overlay to 66% viewport height");
     }
   }
 
   // Globe model parameters with default values
   const globeParams = {
-    visible: false,     // Start invisible
+    visible: false, // Start invisible
     scale: 25.0,
     positionX: 0,
-    positionY: -280,    // Updated from -166 to -280
+    positionY: -280, // Updated from -166 to -280
     positionZ: 0,
     rotationX: 0,
     rotationY: 0,
     rotationZ: 0,
     autoRotate: true,
-    autoRotateSpeed: 0.05,  // Reduced by 50% from 0.1 to 0.05
-    baseRotateSpeed: 0.05,  // Store the base rotation speed for reference
+    autoRotateSpeed: 0.05, // Reduced by 50% from 0.1 to 0.05
+    baseRotateSpeed: 0.05, // Store the base rotation speed for reference
     scrollRotateSpeed: 0.075, // 50% faster than base speed (for when scrolling)
-    responsive: true,  // New parameter to enable/disable responsive scaling
-    baseScale: 25.0,   // Store the base scale for responsive calculations
-    opacity: 0.0,       // Start with opacity 0
-    rotationPaused: false // New parameter to track if rotation should be paused
+    responsive: true, // New parameter to enable/disable responsive scaling
+    baseScale: 25.0, // Store the base scale for responsive calculations
+    opacity: 0.0, // Start with opacity 0
+    rotationPaused: false, // New parameter to track if rotation should be paused
   };
 
   // Load the GLTF model
   const gltfLoader = new GLTFLoader();
   let globeModel;
-  
-  gltfLoader.load('models/globe-hd.glb', (gltf) => {
-    globeModel = gltf.scene;
-    
-    // Center the model's geometry to ensure proper rotation around its center
-    let boundingBox = new THREE.Box3().setFromObject(globeModel);
-    let center = boundingBox.getCenter(new THREE.Vector3());
-    
-    // Create a centered wrapper group
-    let centeredGroup = new THREE.Group();
-    // Add the model to the centered group with offset to center it
-    centeredGroup.add(globeModel);
-    // Position the model so its center is at the origin of the group
-    globeModel.position.set(-center.x, -center.y, -center.z);
-    
-    // Use the centered group instead of the raw model
-    globeModel = centeredGroup;
-    
-    // Apply initial parameters
-    globeModel.visible = globeParams.visible;
-    
-    // Enable frustum culling for performance optimization
-    globeModel.frustumCulled = true;
-    
-    // Apply frustum culling to all child meshes for more granular culling
-    globeModel.traverse((child) => {
-      if (child.isMesh) {
-        child.frustumCulled = true;
-      }
-    });
-    
-    // First add to the scene
-    globeGroup.add(globeModel);
-    
-    // Set initial position and rotation
-    globeModel.position.set(globeParams.positionX, globeParams.positionY, globeParams.positionZ);
-    globeModel.rotation.set(
-      globeParams.rotationX * Math.PI / 180,
-      globeParams.rotationY * Math.PI / 180,
-      globeParams.rotationZ * Math.PI / 180
-    );
-    
-    // Apply initial scale after adding to scene
-    if (globeParams.responsive) {
-      // Use responsive sizing
-      updateGlobeSize();
-    } else {
-      // Use fixed scale
-      globeModel.scale.set(globeParams.scale, globeParams.scale, globeParams.scale);
-      
-      // Position behind the bottom wave
-      positionGlobeBehindBottomWave();
-    }
-    
-    // Set up material controls for the globe
-    const materialFolder = globeFolder.addFolder("Material");
-    
-    // Traverse the model to find materials
-    let materialCount = 0;
-    globeModel.traverse((child) => {
-      if (child.isMesh && child.material) {
-        const globeMaterial = child.material;
-        materialCount++;
-        
-        // Add material properties to GUI if it's a MeshStandardMaterial or MeshPhongMaterial
-        if (globeMaterial.isMeshStandardMaterial || globeMaterial.isMeshPhongMaterial) {
-          // Add metalness control if available
-          if (globeMaterial.metalness !== undefined) {
-            materialFolder
-              .add({ metalness: globeMaterial.metalness }, "metalness", 0, 1)
-              .name(`Metalness${materialCount > 1 ? ' ' + materialCount : ''}`)
-              .onChange((value) => {
-                globeMaterial.metalness = value;
-              });
-          }
-          
-          // Add roughness control if available
-          if (globeMaterial.roughness !== undefined) {
-            materialFolder
-              .add({ roughness: globeMaterial.roughness }, "roughness", 0, 1)
-              .name(`Roughness${materialCount > 1 ? ' ' + materialCount : ''}`)
-              .onChange((value) => {
-                globeMaterial.roughness = value;
-              });
-          }
-          
-          // Add shininess control for MeshPhongMaterial
-          if (globeMaterial.shininess !== undefined) {
-            materialFolder
-              .add({ shininess: globeMaterial.shininess }, "shininess", 0, 100)
-              .name(`Shininess${materialCount > 1 ? ' ' + materialCount : ''}`)
-              .onChange((value) => {
-                globeMaterial.shininess = value;
-              });
-          }
-          
-          // Add opacity control
-          materialFolder
-            .add({ opacity: globeMaterial.opacity }, "opacity", 0, 1)
-            .name(`Opacity${materialCount > 1 ? ' ' + materialCount : ''}`)
-            .onChange((value) => {
-              globeMaterial.opacity = value;
-              globeMaterial.transparent = value < 1;
-            });
-          
-          // Add emissive color control
-          const emissiveColor = globeMaterial.emissive ? '#' + globeMaterial.emissive.getHexString() : "#000000";
-          materialFolder
-            .addColor({ color: emissiveColor }, "color")
-            .name(`Emissive Color${materialCount > 1 ? ' ' + materialCount : ''}`)
-            .onChange((value) => {
-              if (globeMaterial.emissive) {
-                globeMaterial.emissive.set(value);
-              }
-            });
+
+  gltfLoader.load(
+    "models/globe-hd.glb",
+    (gltf) => {
+      globeModel = gltf.scene;
+
+      // Center the model's geometry to ensure proper rotation around its center
+      let boundingBox = new THREE.Box3().setFromObject(globeModel);
+      let center = boundingBox.getCenter(new THREE.Vector3());
+
+      // Create a centered wrapper group
+      let centeredGroup = new THREE.Group();
+      // Add the model to the centered group with offset to center it
+      centeredGroup.add(globeModel);
+      // Position the model so its center is at the origin of the group
+      globeModel.position.set(-center.x, -center.y, -center.z);
+
+      // Use the centered group instead of the raw model
+      globeModel = centeredGroup;
+
+      // Apply initial parameters
+      globeModel.visible = globeParams.visible;
+
+      // Enable frustum culling for performance optimization
+      globeModel.frustumCulled = true;
+
+      // Apply frustum culling to all child meshes for more granular culling
+      globeModel.traverse((child) => {
+        if (child.isMesh) {
+          child.frustumCulled = true;
         }
+      });
+
+      // First add to the scene
+      globeGroup.add(globeModel);
+
+      // Set initial position and rotation
+      globeModel.position.set(globeParams.positionX, globeParams.positionY, globeParams.positionZ);
+      globeModel.rotation.set(
+        (globeParams.rotationX * Math.PI) / 180,
+        (globeParams.rotationY * Math.PI) / 180,
+        (globeParams.rotationZ * Math.PI) / 180
+      );
+
+      // Apply initial scale after adding to scene
+      if (globeParams.responsive) {
+        // Use responsive sizing
+        updateGlobeSize();
+      } else {
+        // Use fixed scale
+        globeModel.scale.set(globeParams.scale, globeParams.scale, globeParams.scale);
+
+        // Position behind the bottom wave
+        positionGlobeBehindBottomWave();
       }
-    });
-    
-    console.log("Globe model loaded successfully");
-  }, 
-  // Progress callback
-  (xhr) => {
-    console.log(`Globe model ${(xhr.loaded / xhr.total) * 100}% loaded`);
-  },
-  // Error callback
-  (error) => {
-    console.error('Error loading globe model:', error);
-  });
+
+      // Set up material controls for the globe
+      const materialFolder = globeFolder.addFolder("Material");
+
+      // Traverse the model to find materials
+      let materialCount = 0;
+      globeModel.traverse((child) => {
+        if (child.isMesh && child.material) {
+          const globeMaterial = child.material;
+          materialCount++;
+
+          // Add material properties to GUI if it's a MeshStandardMaterial or MeshPhongMaterial
+          if (globeMaterial.isMeshStandardMaterial || globeMaterial.isMeshPhongMaterial) {
+            // Add metalness control if available
+            if (globeMaterial.metalness !== undefined) {
+              materialFolder
+                .add({ metalness: globeMaterial.metalness }, "metalness", 0, 1)
+                .name(`Metalness${materialCount > 1 ? " " + materialCount : ""}`)
+                .onChange((value) => {
+                  globeMaterial.metalness = value;
+                });
+            }
+
+            // Add roughness control if available
+            if (globeMaterial.roughness !== undefined) {
+              materialFolder
+                .add({ roughness: globeMaterial.roughness }, "roughness", 0, 1)
+                .name(`Roughness${materialCount > 1 ? " " + materialCount : ""}`)
+                .onChange((value) => {
+                  globeMaterial.roughness = value;
+                });
+            }
+
+            // Add shininess control for MeshPhongMaterial
+            if (globeMaterial.shininess !== undefined) {
+              materialFolder
+                .add({ shininess: globeMaterial.shininess }, "shininess", 0, 100)
+                .name(`Shininess${materialCount > 1 ? " " + materialCount : ""}`)
+                .onChange((value) => {
+                  globeMaterial.shininess = value;
+                });
+            }
+
+            // Add opacity control
+            materialFolder
+              .add({ opacity: globeMaterial.opacity }, "opacity", 0, 1)
+              .name(`Opacity${materialCount > 1 ? " " + materialCount : ""}`)
+              .onChange((value) => {
+                globeMaterial.opacity = value;
+                globeMaterial.transparent = value < 1;
+              });
+
+            // Add emissive color control
+            const emissiveColor = globeMaterial.emissive ? "#" + globeMaterial.emissive.getHexString() : "#000000";
+            materialFolder
+              .addColor({ color: emissiveColor }, "color")
+              .name(`Emissive Color${materialCount > 1 ? " " + materialCount : ""}`)
+              .onChange((value) => {
+                if (globeMaterial.emissive) {
+                  globeMaterial.emissive.set(value);
+                }
+              });
+          }
+        }
+      });
+
+      console.log("Globe model loaded successfully");
+    },
+    // Progress callback
+    (xhr) => {
+      console.log(`Globe model ${(xhr.loaded / xhr.total) * 100}% loaded`);
+    },
+    // Error callback
+    (error) => {
+      console.error("Error loading globe model:", error);
+    }
+  );
 
   // Define uniforms with tunable parameters - increased default values for larger displacement
   const uniforms = {
@@ -1703,23 +1814,23 @@ export function initShaderBackground() {
   gui.domElement.style.position = "absolute";
   gui.domElement.style.top = "10px";
   gui.domElement.style.right = "10px";
-  
+
   // Change the close button text from "Close Controls" to "Open Controls"
-  const closeButton = gui.domElement.querySelector('.close-button');
+  const closeButton = gui.domElement.querySelector(".close-button");
   if (closeButton) {
-    closeButton.innerHTML = 'Open Controls';
-    
+    closeButton.innerHTML = "Open Controls";
+
     // Add event listener to toggle the text when clicked
-    closeButton.addEventListener('click', function() {
+    closeButton.addEventListener("click", function () {
       setTimeout(() => {
-        this.innerHTML = gui.closed ? 'Open Controls' : 'Close Controls';
+        this.innerHTML = gui.closed ? "Open Controls" : "Close Controls";
       }, 50);
     });
   }
 
   // Create a folder for camera controls
   const cameraFolder = gui.addFolder("Camera Controls");
-  
+
   // Add zoom control
   cameraFolder
     .add(cameraParams, "zoom", 0.1, 5)
@@ -1730,7 +1841,7 @@ export function initShaderBackground() {
       camera.zoom = value;
       camera.updateProjectionMatrix();
     });
-  
+
   // Close the camera folder by default
   cameraFolder.close();
 
@@ -1951,7 +2062,7 @@ export function initShaderBackground() {
     .onChange((value) => {
       uniforms.xOffset.value = value;
     });
-    
+
   // Add controls for y-offset with a much larger range
   appearanceFolder
     .add(uniforms.yOffset, "value", -1.0, 1.0)
@@ -1960,7 +2071,6 @@ export function initShaderBackground() {
     .onChange((value) => {
       uniforms.yOffset.value = value;
     });
-  
 
   // Add controls for fade edges and width
   appearanceFolder
@@ -2105,7 +2215,7 @@ export function initShaderBackground() {
   lightingFolder
     .add(uniforms.directionalLight, "value", 0, 1)
     .name("Directional Light")
-      .step(0.001)
+    .step(0.001)
     .onChange((value) => {
       uniforms.directionalLight.value = value;
     });
@@ -2165,17 +2275,16 @@ export function initShaderBackground() {
 
   // Globe lighting controls
   const globeLightingFolder = globeFolder.addFolder("Lighting");
-  
+
   globeLightingFolder
     .add({ intensity: 3 }, "intensity", 0, 5)
     .name("Direct Light")
     .onChange((value) => {
       globeLight.intensity = value;
     });
-    
-  // Set direct light intensity to 5.0
+
   globeLight.intensity = 3.0;
-  
+
   globeLightingFolder
     .add({ intensity: globeAmbientLight.intensity }, "intensity", 0, 5)
     .name("Ambient Light")
@@ -2206,7 +2315,7 @@ export function initShaderBackground() {
         globeModel.scale.set(value, value, value);
       }
     });
-    
+
   // Responsive scaling toggle
   globeFolder
     .add(globeParams, "responsive")
@@ -2220,103 +2329,109 @@ export function initShaderBackground() {
         updateGlobeSize();
       }
     });
-    
+
   // Add a manual resize button
   globeFolder
-    .add({ 
-      resizeGlobe: function() {
-        if (globeModel) {
-          updateGlobeSize();
-        }
-      }
-    }, "resizeGlobe")
+    .add(
+      {
+        resizeGlobe: function () {
+          if (globeModel) {
+            updateGlobeSize();
+          }
+        },
+      },
+      "resizeGlobe"
+    )
     .name("Force Resize");
-    
+
   // Add button to position behind wave
   globeFolder
-    .add({
-      positionBehindWave: function() {
-        if (globeModel) {
-          positionGlobeBehindBottomWave();
-        }
-      }
-    }, "positionBehindWave")
+    .add(
+      {
+        positionBehindWave: function () {
+          if (globeModel) {
+            positionGlobeBehindBottomWave();
+          }
+        },
+      },
+      "positionBehindWave"
+    )
     .name("Position Behind Wave");
-    
+
   // Function to position the globe behind the bottom wave edge
   function positionGlobeBehindBottomWave() {
     if (!globeModel) return;
-    
+
     // Get the current viewport dimensions
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    
+
     // Check if we're in mobile viewport (640px or less)
     if (vw <= 640) {
       // Set the Y position to 192 for mobile viewports as requested
       globeModel.position.y = 192;
       globeModel.position.z = -10; // Keep Z position consistent
-      
+
       // Update the position values in the GUI
       for (let i = 0; i < positionFolder.__controllers.length; i++) {
         const controller = positionFolder.__controllers[i];
-        if (controller.property === 'positionY') {
+        if (controller.property === "positionY") {
           // Update without triggering onChange
           controller.setValue(192);
-        } else if (controller.property === 'positionZ') {
+        } else if (controller.property === "positionZ") {
           // Update without triggering onChange
           controller.setValue(-10);
         }
       }
-      
+
       console.log(`Positioned globe for mobile viewport at Y: 192, Z: -10`);
       return;
     }
-    
+
     // For non-mobile viewports, use the existing positioning logic
     // Get the wave parameters from the shader uniforms
     const waveEnabled = uniforms.bottomWaveEnabled.value;
     const waveDepth = uniforms.bottomWaveDepth.value;
     const edgeDepth = uniforms.edgeDepth.value;
-    
+
     // Calculate the position needed to place the globe behind the bottom edge
     // The bottom wave creates an edge at the bottom of the screen
     // We need to move the globe down enough that it appears behind this edge
-    
+
     // First determine if the wave effect is enabled
     if (waveEnabled) {
       // Calculate an approximation of how much the wave extends into the screen
       // This is based on the shader's wave depth and edge depth calculations
       const waveExtension = vh * waveDepth * edgeDepth * 0.5;
-      
+
       // Set the Y position of the globe to place it partially behind the wave
       // The position needs to be in THREE.js world units
       const cameraViewHeight = (camera.top - camera.bottom) / camera.zoom;
       const pixelsToWorldRatio = cameraViewHeight / vh;
-      
+
       // Calculate the world space position - move it down beyond the wave
       // We add a little extra (-10% of viewport) to ensure it goes behind the wave
-      const worldYPosition = (-waveExtension * pixelsToWorldRatio) - (vh * 0.1 * pixelsToWorldRatio);
-      
+      const worldYPosition = -waveExtension * pixelsToWorldRatio - vh * 0.1 * pixelsToWorldRatio;
+
       // Set Z position to ensure the globe is behind the shader layer
       const worldZPosition = -10; // Negative value to move "behind" the camera
-      
+
       // Apply the positions to the globe model
       globeModel.position.y = worldYPosition;
       globeModel.position.z = worldZPosition;
-      
+
       // Update the position values in the GUI
       for (let i = 0; i < positionFolder.__controllers.length; i++) {
         const controller = positionFolder.__controllers[i];
-        if (controller.property === 'positionY') {
+        if (controller.property === "positionY") {
           // Update without triggering onChange
           controller.setValue(worldYPosition);
-        } else if (controller.property === 'positionZ') {
+        } else if (controller.property === "positionZ") {
           // Update without triggering onChange
           controller.setValue(worldZPosition);
         }
       }
-      
+
       console.log(`Positioned globe behind bottom wave at Y: ${worldYPosition.toFixed(2)}, Z: ${worldZPosition}`);
     }
   }
@@ -2324,50 +2439,50 @@ export function initShaderBackground() {
   // Function to update globe size based on viewport
   function updateGlobeSize() {
     if (!globeModel || !globeParams.responsive) return;
-    
+
     // Get the current viewport width
     const vw = window.innerWidth;
-    
+
     // Calculate 90vw in actual pixels
     const targetWidth = vw * 0.9;
-    
+
     // We need the actual size of the model in its natural state
     // Store the original scale
-    const originalScale = { 
-      x: globeModel.scale.x, 
-      y: globeModel.scale.y, 
-      z: globeModel.scale.z 
+    const originalScale = {
+      x: globeModel.scale.x,
+      y: globeModel.scale.y,
+      z: globeModel.scale.z,
     };
-    
+
     try {
       // Temporarily set scale to 1 to get natural size
       globeModel.scale.set(1, 1, 1);
-      
+
       // Force update of matrix to ensure accurate bounding box calculation
       globeModel.updateMatrixWorld(true);
-      
+
       // Compute the bounding box
       const bbox = new THREE.Box3().setFromObject(globeModel);
       const modelWidth = bbox.max.x - bbox.min.x;
-      
+
       // Restore original scale immediately after measurement
       globeModel.scale.set(originalScale.x, originalScale.y, originalScale.z);
-      
+
       // Calculate scale needed to make the model 90vw in pixels
       // We convert from pixels to THREE.js world units
       // The view frustrum width in world units is (camera.right - camera.left) / camera.zoom
       const viewFrustrumWidthInWorld = (camera.right - camera.left) / camera.zoom;
       const pixelsToWorldRatio = viewFrustrumWidthInWorld / vw;
-      
+
       // Target width in world units
       const targetWorldWidth = targetWidth * pixelsToWorldRatio;
-      
+
       // Calculate the needed scale
       const newScale = targetWorldWidth / modelWidth;
-      
+
       // Apply the new scale
       globeModel.scale.set(newScale, newScale, newScale);
-      
+
       // Update GUI slider without triggering onChange
       for (let i = 0; i < globeFolder.__controllers.length; i++) {
         if (globeFolder.__controllers[i].property === "scale") {
@@ -2375,9 +2490,13 @@ export function initShaderBackground() {
           break;
         }
       }
-      
-      console.log(`Updated globe size: ${targetWidth.toFixed(0)}px (90vw), Scale: ${newScale.toFixed(2)}, Original width: ${modelWidth.toFixed(2)}`);
-      
+
+      console.log(
+        `Updated globe size: ${targetWidth.toFixed(0)}px (90vw), Scale: ${newScale.toFixed(
+          2
+        )}, Original width: ${modelWidth.toFixed(2)}`
+      );
+
       // After sizing the globe, position it behind the bottom wave
       // This will now account for mobile viewport positioning
       positionGlobeBehindBottomWave();
@@ -2390,7 +2509,7 @@ export function initShaderBackground() {
 
   // Position controls
   const positionFolder = globeFolder.addFolder("Position");
-  
+
   positionFolder
     .add(globeParams, "positionX", -500, 500)
     .name("X Position")
@@ -2400,7 +2519,7 @@ export function initShaderBackground() {
         globeModel.position.x = value;
       }
     });
-  
+
   positionFolder
     .add(globeParams, "positionY", -500, 500)
     .name("Y Position")
@@ -2410,7 +2529,7 @@ export function initShaderBackground() {
         globeModel.position.y = value;
       }
     });
-  
+
   positionFolder
     .add(globeParams, "positionZ", -500, 500)
     .name("Z Position")
@@ -2423,34 +2542,34 @@ export function initShaderBackground() {
 
   // Rotation controls
   const rotationFolder = globeFolder.addFolder("Rotation");
-  
+
   rotationFolder
     .add(globeParams, "rotationX", 0, 360)
     .name("X Rotation")
     .step(1)
     .onChange((value) => {
       if (globeModel) {
-        globeModel.rotation.x = value * Math.PI / 180;
+        globeModel.rotation.x = (value * Math.PI) / 180;
       }
     });
-  
+
   rotationFolder
     .add(globeParams, "rotationY", 0, 360)
     .name("Y Rotation")
     .step(1)
     .onChange((value) => {
       if (globeModel) {
-        globeModel.rotation.y = value * Math.PI / 180;
+        globeModel.rotation.y = (value * Math.PI) / 180;
       }
     });
-  
+
   rotationFolder
     .add(globeParams, "rotationZ", 0, 360)
     .name("Z Rotation")
     .step(1)
     .onChange((value) => {
       if (globeModel) {
-        globeModel.rotation.z = value * Math.PI / 180;
+        globeModel.rotation.z = (value * Math.PI) / 180;
       }
     });
 
@@ -2461,7 +2580,7 @@ export function initShaderBackground() {
     .onChange((value) => {
       globeParams.autoRotate = value;
     });
-  
+
   globeFolder
     .add(globeParams, "baseRotateSpeed", 0.05, 1)
     .name("Base Rotation Speed")
@@ -2469,7 +2588,7 @@ export function initShaderBackground() {
     .onChange((value) => {
       globeParams.baseRotateSpeed = value;
     });
-    
+
   globeFolder
     .add(globeParams, "scrollRotateSpeed", 0.05, 1)
     .name("Scroll Rotation Speed")
@@ -2480,10 +2599,10 @@ export function initShaderBackground() {
 
   // Open the globe folder by default
   globeFolder.open();
-  
+
   // Create a folder for gradient overlay controls
   const overlayFolder = gui.addFolder("Gradient Overlay Controls");
-  
+
   // Visibility toggle
   overlayFolder
     .add(overlayParams, "enabled")
@@ -2493,7 +2612,7 @@ export function initShaderBackground() {
         overlayMesh.visible = value;
       }
     });
-  
+
   // Top opacity control with clarified name
   const topOpacityController = overlayFolder
     .add(overlayParams, "startOpacity", 0, 1)
@@ -2505,8 +2624,8 @@ export function initShaderBackground() {
       }
     });
   // Modify the display name
-  topOpacityController.__li.querySelector('.property-name').innerHTML = 'Top Opacity (Top Edge)';
-  
+  topOpacityController.__li.querySelector(".property-name").innerHTML = "Top Opacity (Top Edge)";
+
   // Bottom opacity control with clarified name
   const bottomOpacityController = overlayFolder
     .add(overlayParams, "endOpacity", 0, 1)
@@ -2518,8 +2637,8 @@ export function initShaderBackground() {
       }
     });
   // Modify the display name
-  bottomOpacityController.__li.querySelector('.property-name').innerHTML = 'Bottom Opacity (Bottom Edge)';
-  
+  bottomOpacityController.__li.querySelector(".property-name").innerHTML = "Bottom Opacity (Bottom Edge)";
+
   // Plane Y position control (moves the entire overlay)
   overlayFolder
     .add(overlayParams, "yOffset", -2, 2)
@@ -2531,7 +2650,7 @@ export function initShaderBackground() {
         updateOverlayPosition();
       }
     });
-  
+
   // Gradient Y offset control (affects only the gradient within the plane)
   overlayFolder
     .add(overlayParams, "offsetY", -1, 1)
@@ -2542,7 +2661,7 @@ export function initShaderBackground() {
         overlayMaterial.uniforms.offsetY.value = value;
       }
     });
-  
+
   // Height control
   overlayFolder
     .add(overlayParams, "height", 0.1, 5)
@@ -2553,7 +2672,7 @@ export function initShaderBackground() {
         overlayMaterial.uniforms.heightMultiplier.value = value;
       }
     });
-  
+
   // Color control
   overlayFolder
     .addColor(overlayParams, "color")
@@ -2563,37 +2682,40 @@ export function initShaderBackground() {
         overlayMaterial.uniforms.overlayColor.value.set(value);
       }
     });
-    
+
   // Debug button to make overlay fully opaque temporarily
   overlayFolder
-    .add({
-      debugOverlay: function() {
-        if (overlayMaterial) {
-          // Save current values
-          const savedStart = overlayMaterial.uniforms.startOpacity.value;
-          const savedEnd = overlayMaterial.uniforms.endOpacity.value;
-          
-          // Make overlay fully opaque with a bright color to check visibility
-          overlayMaterial.uniforms.startOpacity.value = 1.0;
-          overlayMaterial.uniforms.endOpacity.value = 1.0;
-          overlayMaterial.uniforms.overlayColor.value.set('#FF00FF'); // Bright magenta
-          
-          console.log("Debug mode activated - overlay set to fully opaque magenta");
-          console.log("Overlay position:", overlayMesh.position);
-          console.log("Camera position:", camera.position);
-          
-          // Reset after 2 seconds
-          setTimeout(() => {
-            overlayMaterial.uniforms.startOpacity.value = savedStart;
-            overlayMaterial.uniforms.endOpacity.value = savedEnd;
-            overlayMaterial.uniforms.overlayColor.value.set(overlayParams.color);
-            console.log("Debug mode deactivated - overlay restored to previous settings");
-          }, 2000);
-        }
-      }
-    }, "debugOverlay")
+    .add(
+      {
+        debugOverlay: function () {
+          if (overlayMaterial) {
+            // Save current values
+            const savedStart = overlayMaterial.uniforms.startOpacity.value;
+            const savedEnd = overlayMaterial.uniforms.endOpacity.value;
+
+            // Make overlay fully opaque with a bright color to check visibility
+            overlayMaterial.uniforms.startOpacity.value = 1.0;
+            overlayMaterial.uniforms.endOpacity.value = 1.0;
+            overlayMaterial.uniforms.overlayColor.value.set("#FF00FF"); // Bright magenta
+
+            console.log("Debug mode activated - overlay set to fully opaque magenta");
+            console.log("Overlay position:", overlayMesh.position);
+            console.log("Camera position:", camera.position);
+
+            // Reset after 2 seconds
+            setTimeout(() => {
+              overlayMaterial.uniforms.startOpacity.value = savedStart;
+              overlayMaterial.uniforms.endOpacity.value = savedEnd;
+              overlayMaterial.uniforms.overlayColor.value.set(overlayParams.color);
+              console.log("Debug mode deactivated - overlay restored to previous settings");
+            }, 2000);
+          }
+        },
+      },
+      "debugOverlay"
+    )
     .name("Debug Visibility");
-  
+
   // Open the overlay folder by default
   overlayFolder.open();
 
@@ -2602,54 +2724,54 @@ export function initShaderBackground() {
   let particles = new Float32Array(particleCount * 3);
   let particleVelocities = new Float32Array(particleCount * 3);
   let particleColors = new Float32Array(particleCount * 3);
-  
+
   // Track scroll position
   let scrollY = 0;
   let lastScrollY = 0;
-  
+
   // Define scroll control object before it's used in any calculations
-  const scrollObj = { 
+  const scrollObj = {
     scrollSpeed: 0.005,
     verticalSpread: 1.0,
     damping: 0.95,
-    depthRange: 1000,  // Default depth range
-    sizeMin: 1,        // Minimum particle size
-    sizeMax: 5,       // Maximum particle size
-    floatSpeed: 0.8,   // Floating speed multiplier
-    verticalOffset: 0  // Vertical offset for the entire particle system
+    depthRange: 1000, // Default depth range
+    sizeMin: 1, // Minimum particle size
+    sizeMax: 5, // Maximum particle size
+    floatSpeed: 0.8, // Floating speed multiplier
+    verticalOffset: 0, // Vertical offset for the entire particle system
   };
-  
+
   // Set vertical distribution area based on the verticalSpread value
   let verticalDistribution = window.innerHeight * scrollObj.verticalSpread;
-  
+
   // Function to redistribute particles with size variation
   function redistributeParticles() {
     // Create a size attribute for individual particle sizes
     const sizes = new Float32Array(particleCount);
-    
+
     for (let i = 0; i < particleCount; i++) {
       const i3 = i * 3;
-      
+
       // Randomly assign a size between min and max
       const sizeRatio = Math.random();
       // Calculate the actual size value between min and max
-      const particleSize = scrollObj.sizeMin + (sizeRatio * (scrollObj.sizeMax - scrollObj.sizeMin));
-      
+      const particleSize = scrollObj.sizeMin + sizeRatio * (scrollObj.sizeMax - scrollObj.sizeMin);
+
       // Store the size value directly - we'll divide by baseSize in the shader
       sizes[i] = particleSize / customParticleMaterial.uniforms.baseSize.value;
-      
+
       // Adjust particle color slightly based on size to enhance depth perception
       const depthColor = new THREE.Color(particleColorObj.color);
       // Larger particles are brighter (appear closer) - increased brightness factor
-      const brightnessAdjust = 0.8 + (sizeRatio * 0.6); // Increased from 0.6 + 0.4 to 0.8 + 0.6
+      const brightnessAdjust = 0.8 + sizeRatio * 0.6; // Increased from 0.6 + 0.4 to 0.8 + 0.6
       particleColors[i3] = depthColor.r * brightnessAdjust;
       particleColors[i3 + 1] = depthColor.g * brightnessAdjust;
       particleColors[i3 + 2] = depthColor.b * brightnessAdjust;
     }
-    
+
     // Add the size attribute to the geometry
-    particleGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-    
+    particleGeometry.setAttribute("size", new THREE.BufferAttribute(sizes, 1));
+
     particleGeometry.attributes.position.needsUpdate = true;
     particleGeometry.attributes.color.needsUpdate = true;
     particleGeometry.attributes.size.needsUpdate = true;
@@ -2661,93 +2783,101 @@ export function initShaderBackground() {
     // Random positions within viewport width but with correct vertical range
     particles[i3] = (Math.random() - 0.5) * window.innerWidth;
     particles[i3 + 1] = (Math.random() - 0.5) * verticalDistribution + scrollObj.verticalOffset;
-    particles[i3 + 2] = (Math.random() * 500) - 250; // Random z position for rendering order
-    
+    particles[i3 + 2] = Math.random() * 500 - 250; // Random z position for rendering order
+
     // Random velocities
     particleVelocities[i3] = (Math.random() - 0.5) * 0.5;
     particleVelocities[i3 + 1] = (Math.random() - 0.5) * 0.5;
     particleVelocities[i3 + 2] = (Math.random() - 0.5) * 0.2;
-    
+
     // Set default color to #25e5ff (bright cyan)
     const color = new THREE.Color("#25e5ff");
     particleColors[i3] = color.r;
     particleColors[i3 + 1] = color.g;
     particleColors[i3 + 2] = color.b;
   }
-  
+
   // Create particle geometry and material
   const particleGeometry = new THREE.BufferGeometry();
-  particleGeometry.setAttribute('position', new THREE.BufferAttribute(particles, 3));
-  particleGeometry.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
-  
+  particleGeometry.setAttribute("position", new THREE.BufferAttribute(particles, 3));
+  particleGeometry.setAttribute("color", new THREE.BufferAttribute(particleColors, 3));
+
   // Create a sparkle texture for particles
   const sparkleTexture = createSparkleTexture();
-  
+
   // Function to create a sparkle texture
   function createSparkleTexture() {
-    const canvas = document.createElement('canvas');
+    const canvas = document.createElement("canvas");
     canvas.width = 256; // Increased from 128 to 256 for more detail
     canvas.height = 256;
-    const context = canvas.getContext('2d');
-    
+    const context = canvas.getContext("2d");
+
     // Create a radial gradient for the base glow
     const gradient = context.createRadialGradient(
-      canvas.width / 2, canvas.height / 2, 0,
-      canvas.width / 2, canvas.height / 2, canvas.width / 2
+      canvas.width / 2,
+      canvas.height / 2,
+      0,
+      canvas.width / 2,
+      canvas.height / 2,
+      canvas.width / 2
     );
-    
+
     // Create a multi-layered glow effect with a bright core and soft outer halo
-    gradient.addColorStop(0, 'rgba(255, 255, 255, 1.0)'); // Bright center
-    gradient.addColorStop(0.05, 'rgba(255, 255, 255, 1.0)'); // Maintain brightness for core
-    gradient.addColorStop(0.2, 'rgba(255, 255, 255, 0.9)'); // Start of first halo
-    gradient.addColorStop(0.4, 'rgba(255, 255, 255, 0.5)'); // Middle of first halo
-    gradient.addColorStop(0.6, 'rgba(255, 255, 255, 0.3)'); // Outer edge of first halo
-    gradient.addColorStop(0.8, 'rgba(255, 255, 255, 0.1)'); // Start of outer halo
-    gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');     // Fade to transparent
-    
+    gradient.addColorStop(0, "rgba(255, 255, 255, 1.0)"); // Bright center
+    gradient.addColorStop(0.05, "rgba(255, 255, 255, 1.0)"); // Maintain brightness for core
+    gradient.addColorStop(0.2, "rgba(255, 255, 255, 0.9)"); // Start of first halo
+    gradient.addColorStop(0.4, "rgba(255, 255, 255, 0.5)"); // Middle of first halo
+    gradient.addColorStop(0.6, "rgba(255, 255, 255, 0.3)"); // Outer edge of first halo
+    gradient.addColorStop(0.8, "rgba(255, 255, 255, 0.1)"); // Start of outer halo
+    gradient.addColorStop(1, "rgba(255, 255, 255, 0)"); // Fade to transparent
+
     // Fill with gradient
     context.fillStyle = gradient;
     context.fillRect(0, 0, canvas.width, canvas.height);
-    
+
     // Add star-like cross shape for the core
     context.beginPath();
     context.moveTo(canvas.width / 2, canvas.width * 0.3); // Shorter lines (70% of previous length)
     context.lineTo(canvas.width / 2, canvas.width * 0.7);
     context.moveTo(canvas.width * 0.3, canvas.height / 2);
     context.lineTo(canvas.width * 0.7, canvas.height / 2);
-    
+
     // Add diagonal lines for more star-like appearance
     context.moveTo(canvas.width * 0.35, canvas.height * 0.35); // Shorter diagonals
     context.lineTo(canvas.width * 0.65, canvas.height * 0.65);
     context.moveTo(canvas.width * 0.65, canvas.height * 0.35);
     context.lineTo(canvas.width * 0.35, canvas.height * 0.65);
-    
+
     // Set line style - make lines brighter and thicker
-    context.strokeStyle = 'rgba(255, 255, 255, 1.0)';
+    context.strokeStyle = "rgba(255, 255, 255, 1.0)";
     context.lineWidth = 4;
     context.stroke();
-    
+
     // Add a second, larger glow layer
     const outerGlow = context.createRadialGradient(
-      canvas.width / 2, canvas.height / 2, canvas.width * 0.2, // Start outside the core
-      canvas.width / 2, canvas.height / 2, canvas.width * 0.7  // Extend further than the main gradient
+      canvas.width / 2,
+      canvas.height / 2,
+      canvas.width * 0.2, // Start outside the core
+      canvas.width / 2,
+      canvas.height / 2,
+      canvas.width * 0.7 // Extend further than the main gradient
     );
-    
-    outerGlow.addColorStop(0, 'rgba(255, 255, 255, 0.3)'); // Subtle start
-    outerGlow.addColorStop(0.5, 'rgba(255, 255, 255, 0.1)'); // Very faint middle
-    outerGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');     // Fade to transparent
-    
+
+    outerGlow.addColorStop(0, "rgba(255, 255, 255, 0.3)"); // Subtle start
+    outerGlow.addColorStop(0.5, "rgba(255, 255, 255, 0.1)"); // Very faint middle
+    outerGlow.addColorStop(1, "rgba(255, 255, 255, 0)"); // Fade to transparent
+
     // Apply the outer glow with additive blending
-    context.globalCompositeOperation = 'lighter';
+    context.globalCompositeOperation = "lighter";
     context.fillStyle = outerGlow;
     context.fillRect(0, 0, canvas.width, canvas.height);
-    
+
     // Create texture from canvas
     const texture = new THREE.Texture(canvas);
     texture.needsUpdate = true;
     return texture;
   }
-  
+
   // Convert to ShaderMaterial to support custom size attribute
   const customParticleMaterial = new THREE.ShaderMaterial({
     uniforms: {
@@ -2756,7 +2886,7 @@ export function initShaderBackground() {
       map: { value: sparkleTexture },
       brightness: { value: 1.4 },
       haloStrength: { value: 1.4 }, // Control halo intensity
-      haloSize: { value: 1.3 }      // Control halo size relative to particle
+      haloSize: { value: 1.3 }, // Control halo size relative to particle
     },
     vertexShader: `
       attribute vec3 color;
@@ -2824,9 +2954,9 @@ export function initShaderBackground() {
     transparent: true,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
-    depthTest: false
+    depthTest: false,
   });
-  
+
   const particleSystem = new THREE.Points(particleGeometry, customParticleMaterial);
   // Enable frustum culling for particle system
   particleSystem.frustumCulled = true;
@@ -2834,35 +2964,36 @@ export function initShaderBackground() {
   particleScene.add(particleSystem);
 
   // Add particle controls to GUI
-  const particleFolder = gui.addFolder('Particle System');
-  
+  const particleFolder = gui.addFolder("Particle System");
+
   // Particle count control
   const particleCountObj = { count: particleCount };
-  particleFolder.add(particleCountObj, 'count', 100, 1000, 10)
-    .name('Particle Count')
+  particleFolder
+    .add(particleCountObj, "count", 100, 1000, 10)
+    .name("Particle Count")
     .onChange((value) => {
       // Update the particle count
       particleCount = Math.floor(value);
-      
+
       // Create new arrays with the new size
       const newParticles = new Float32Array(particleCount * 3);
       const newVelocities = new Float32Array(particleCount * 3);
       const newColors = new Float32Array(particleCount * 3);
-      
+
       // Initialize all particles
       for (let i = 0; i < particleCount; i++) {
         const i3 = i * 3;
-        
+
         // Copy existing data if available
         if (i < particles.length / 3) {
           newParticles[i3] = particles[i3];
           newParticles[i3 + 1] = particles[i3 + 1];
           newParticles[i3 + 2] = particles[i3 + 2];
-          
+
           newVelocities[i3] = particleVelocities[i3];
           newVelocities[i3 + 1] = particleVelocities[i3 + 1];
           newVelocities[i3 + 2] = particleVelocities[i3 + 2];
-          
+
           newColors[i3] = particleColors[i3];
           newColors[i3 + 1] = particleColors[i3 + 1];
           newColors[i3 + 2] = particleColors[i3 + 2];
@@ -2870,12 +3001,12 @@ export function initShaderBackground() {
           // Create new particles with extended vertical range
           newParticles[i3] = (Math.random() - 0.5) * window.innerWidth;
           newParticles[i3 + 1] = (Math.random() - 0.5) * verticalDistribution + scrollObj.verticalOffset;
-          newParticles[i3 + 2] = (Math.random() * 500) - 250; // Random z position
-          
+          newParticles[i3 + 2] = Math.random() * 500 - 250; // Random z position
+
           newVelocities[i3] = (Math.random() - 0.5) * 0.5;
           newVelocities[i3 + 1] = (Math.random() - 0.5) * 0.5;
           newVelocities[i3 + 2] = (Math.random() - 0.5) * 0.2;
-          
+
           // Use the current color from the color picker
           const color = new THREE.Color(particleColorObj.color);
           newColors[i3] = color.r;
@@ -2883,30 +3014,31 @@ export function initShaderBackground() {
           newColors[i3 + 2] = color.b;
         }
       }
-      
+
       // Replace the old arrays with the new ones
       particles = newParticles;
       particleVelocities = newVelocities;
       particleColors = newColors;
-      
+
       // Update the geometry attributes
-      particleGeometry.setAttribute('position', new THREE.BufferAttribute(particles, 3));
-      particleGeometry.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
-      
+      particleGeometry.setAttribute("position", new THREE.BufferAttribute(particles, 3));
+      particleGeometry.setAttribute("color", new THREE.BufferAttribute(particleColors, 3));
+
       // Force update the geometry
       particleGeometry.attributes.position.needsUpdate = true;
       particleGeometry.attributes.color.needsUpdate = true;
-      
+
       // Redistribute particle sizes
       redistributeParticles();
     });
 
   // Particle color control
   const particleColorObj = {
-    color: '#25e5ff'  // Default to bright cyan
+    color: "#25e5ff", // Default to bright cyan
   };
-  particleFolder.addColor(particleColorObj, 'color')
-    .name('Particle Color')
+  particleFolder
+    .addColor(particleColorObj, "color")
+    .name("Particle Color")
     .onChange((value) => {
       const color = new THREE.Color(value);
       for (let i = 0; i < particleCount; i++) {
@@ -2915,43 +3047,47 @@ export function initShaderBackground() {
         particleColors[i3 + 1] = color.g;
         particleColors[i3 + 2] = color.b;
       }
-      particleGeometry.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
+      particleGeometry.setAttribute("color", new THREE.BufferAttribute(particleColors, 3));
       particleGeometry.attributes.color.needsUpdate = true;
     });
 
   // Add particle size and glow controls
-  particleFolder.add(customParticleMaterial.uniforms.baseSize, 'value', 2, 15, 0.5)
-    .name('Base Particle Size')
+  particleFolder
+    .add(customParticleMaterial.uniforms.baseSize, "value", 2, 15, 0.5)
+    .name("Base Particle Size")
     .onChange((value) => {
       // Update all individual particle sizes when base size changes
       redistributeParticles();
     });
-  particleFolder.add(customParticleMaterial.uniforms.opacity, 'value', 0, 1, 0.1).name('Opacity');
-  
+  particleFolder.add(customParticleMaterial.uniforms.opacity, "value", 0, 1, 0.1).name("Opacity");
+
   // Add brightness control
-  particleFolder.add(customParticleMaterial.uniforms.brightness, 'value', 1.0, 3.0, 0.1)
-    .name('Brightness')
+  particleFolder
+    .add(customParticleMaterial.uniforms.brightness, "value", 1.0, 3.0, 0.1)
+    .name("Brightness")
     .onChange((value) => {
       // No need to redistribute particles, just update the uniform
       customParticleMaterial.uniforms.brightness.value = value;
     });
-  
+
   // Add sparkle intensity control
   const sparkleObj = { intensity: 1.5 };
-  particleFolder.add(sparkleObj, 'intensity', 0.1, 3.0, 0.1)
-    .name('Sparkle Intensity')
+  particleFolder
+    .add(sparkleObj, "intensity", 0.1, 3.0, 0.1)
+    .name("Sparkle Intensity")
     .onChange((value) => {
       customParticleMaterial.uniforms.opacity.value = value; // Direct mapping to opacity
     });
-  
+
   // Size Attenuation control with proper explanation
-  const sizeAttenuationObj = { 
-    enabled: false // Start with size attenuation disabled
+  const sizeAttenuationObj = {
+    enabled: false, // Start with size attenuation disabled
   };
-  
+
   // Add a more descriptive tooltip to explain what Size Attenuation does
-  const sizeAttenuationController = particleFolder.add(sizeAttenuationObj, 'enabled')
-    .name('Size Attenuation')
+  const sizeAttenuationController = particleFolder
+    .add(sizeAttenuationObj, "enabled")
+    .name("Size Attenuation")
     .onChange((value) => {
       // Update the shader to include size attenuation if enabled
       if (value) {
@@ -2994,46 +3130,46 @@ export function initShaderBackground() {
           }
         `;
       }
-      
+
       // Need to set this flag to tell THREE.js to recompile the shader
       customParticleMaterial.needsUpdate = true;
-      
+
       // Redistribute particles with appropriate depth when toggling size attenuation
       redistributeParticles();
     });
-  
+
   // Add a tooltip element to the controller
-  const tooltip = document.createElement('div');
-  tooltip.className = 'gui-tooltip';
-  tooltip.textContent = 'When enabled, particles appear smaller as they move further away';
-  tooltip.style.position = 'absolute';
-  tooltip.style.backgroundColor = 'rgba(0,0,0,0.8)';
-  tooltip.style.color = '#fff';
-  tooltip.style.padding = '5px';
-  tooltip.style.borderRadius = '3px';
-  tooltip.style.fontSize = '11px';
-  tooltip.style.zIndex = '10000';
-  tooltip.style.display = 'none';
+  const tooltip = document.createElement("div");
+  tooltip.className = "gui-tooltip";
+  tooltip.textContent = "When enabled, particles appear smaller as they move further away";
+  tooltip.style.position = "absolute";
+  tooltip.style.backgroundColor = "rgba(0,0,0,0.8)";
+  tooltip.style.color = "#fff";
+  tooltip.style.padding = "5px";
+  tooltip.style.borderRadius = "3px";
+  tooltip.style.fontSize = "11px";
+  tooltip.style.zIndex = "10000";
+  tooltip.style.display = "none";
   document.body.appendChild(tooltip);
-  
+
   // Show tooltip on hover
   const controllerElement = sizeAttenuationController.domElement;
-  controllerElement.addEventListener('mouseenter', (e) => {
+  controllerElement.addEventListener("mouseenter", (e) => {
     const rect = controllerElement.getBoundingClientRect();
-    tooltip.style.left = rect.right + 'px';
-    tooltip.style.top = rect.top + 'px';
-    tooltip.style.display = 'block';
+    tooltip.style.left = rect.right + "px";
+    tooltip.style.top = rect.top + "px";
+    tooltip.style.display = "block";
   });
-  
-  controllerElement.addEventListener('mouseleave', () => {
-    tooltip.style.display = 'none';
+
+  controllerElement.addEventListener("mouseleave", () => {
+    tooltip.style.display = "none";
   });
-  
+
   // Add twinkle effect to particles
   let twinkleTime = 0;
-  
+
   // Add scroll event listener
-  window.addEventListener('scroll', () => {
+  window.addEventListener("scroll", () => {
     scrollY = window.scrollY;
   });
 
@@ -3042,27 +3178,27 @@ export function initShaderBackground() {
     const positions = particleGeometry.attributes.position.array;
     const oldOffset = scrollObj.previousOffset || 0;
     const offsetDelta = scrollObj.verticalOffset - oldOffset;
-    
+
     // Store the current offset for future reference
     scrollObj.previousOffset = scrollObj.verticalOffset;
-    
+
     for (let i = 0; i < particleCount; i++) {
       const i3 = i * 3;
-      
+
       // Simply apply the delta offset to all particles
       positions[i3 + 1] += offsetDelta;
-      
+
       // Check if particles are now outside the distribution range and wrap if needed
       const relativePos = positions[i3 + 1] - scrollObj.verticalOffset;
       const halfDist = verticalDistribution / 2;
-      
+
       if (relativePos > halfDist) {
         positions[i3 + 1] = -halfDist + scrollObj.verticalOffset;
       } else if (relativePos < -halfDist) {
         positions[i3 + 1] = halfDist + scrollObj.verticalOffset;
       }
     }
-    
+
     particleGeometry.attributes.position.needsUpdate = true;
   }
 
@@ -3071,84 +3207,84 @@ export function initShaderBackground() {
     const positions = particleGeometry.attributes.position.array;
     const colors = particleGeometry.attributes.color.array;
     const sizes = particleGeometry.attributes.size ? particleGeometry.attributes.size.array : null;
-    
+
     // Update twinkle time
     twinkleTime += 0.01;
-    
+
     // Calculate scroll delta for smooth movement with easing
     const scrollDelta = (scrollY - lastScrollY) * scrollObj.scrollSpeed;
-    
+
     // Apply easing to the scroll movement with stronger damping
     // This makes particles slow down and stop more quickly
     lastScrollY = scrollY * (1 - scrollObj.damping) + lastScrollY * scrollObj.damping;
-    
+
     // Only update particle positions if movement is not paused
     if (!window.particlesMovementPaused) {
       for (let i = 0; i < particleCount; i++) {
         const i3 = i * 3;
-        
+
         // Get the size ratio for this particle (if sizes exist)
         const sizeRatio = sizes ? (sizes[i] - scrollObj.sizeMin) / (scrollObj.sizeMax - scrollObj.sizeMin) : 0.5;
-        
+
         // Adjust float speed based on size - smaller particles move more slowly
         const particleFloatSpeed = scrollObj.floatSpeed * (0.5 + sizeRatio * 0.5);
-        
+
         // Update positions with float speed applied
         positions[i3] += particleVelocities[i3] * particleFloatSpeed;
         positions[i3 + 1] += particleVelocities[i3 + 1] * particleFloatSpeed;
         positions[i3 + 2] += particleVelocities[i3 + 2] * particleFloatSpeed;
-        
+
         // Move particles up based on scroll with size-based parallax effect
         // Larger particles (appearing closer) move faster
         positions[i3 + 1] += scrollDelta * (0.5 + sizeRatio * 0.5);
-        
+
         // Bounce off horizontal boundaries
         if (Math.abs(positions[i3]) > window.innerWidth / 2) {
           particleVelocities[i3] *= -1;
         }
-        
+
         // Wrap around vertical boundaries instead of bouncing
         // This creates an infinite scrolling effect
         // Account for vertical offset in the boundary check
         const relativePos = positions[i3 + 1] - scrollObj.verticalOffset;
         const halfDist = verticalDistribution / 2;
-        
+
         if (relativePos > halfDist) {
           positions[i3 + 1] = -halfDist + scrollObj.verticalOffset;
         } else if (relativePos < -halfDist) {
           positions[i3 + 1] = halfDist + scrollObj.verticalOffset;
         }
-        
+
         // Bounce off z boundaries
         if (Math.abs(positions[i3 + 2]) > 250) {
           particleVelocities[i3 + 2] *= -1;
         }
       }
-      
+
       // Only need to update position attribute if we actually changed positions
       particleGeometry.attributes.position.needsUpdate = true;
     }
-    
+
     // Always update colors for twinkle effect, even when movement is paused
     // This ensures a smooth transition when particles become visible again
     for (let i = 0; i < particleCount; i++) {
       const i3 = i * 3;
-      
+
       // Get the size ratio for this particle (if sizes exist)
       const sizeRatio = sizes ? (sizes[i] - scrollObj.sizeMin) / (scrollObj.sizeMax - scrollObj.sizeMin) : 0.5;
-      
+
       // Add twinkle effect - subtle brightness variation over time
       const baseColor = new THREE.Color(particleColorObj.color);
       const twinkleFactor = 0.2 * Math.sin(twinkleTime + i * 0.1) + 0.9; // Increased from 0.15/0.85 to 0.2/0.9
-      
+
       // Apply size-based brightness - larger particles are brighter
-      const sizeBrightness = 0.8 + (sizeRatio * 0.6); // Increased from 0.6/0.4 to 0.8/0.6
-      
+      const sizeBrightness = 0.8 + sizeRatio * 0.6; // Increased from 0.6/0.4 to 0.8/0.6
+
       colors[i3] = baseColor.r * twinkleFactor * sizeBrightness;
       colors[i3 + 1] = baseColor.g * twinkleFactor * sizeBrightness;
       colors[i3 + 2] = baseColor.b * twinkleFactor * sizeBrightness;
     }
-    
+
     particleGeometry.attributes.color.needsUpdate = true;
     requestAnimationFrame(animateParticles);
   }
@@ -3159,10 +3295,10 @@ export function initShaderBackground() {
   // Main shader animation loop
   function animate() {
     requestAnimationFrame(animate);
-    
+
     // Update shader uniforms with slower speed
     uniforms.time.value += 0.001; // Reduced from 0.01 to 0.001
-    
+
     // Gradually fade in particles if needed - but only if not fully hidden by scrolling
     if (!window.particlesFullyHidden && customParticleMaterial.uniforms.opacity.value < targetParticleOpacity) {
       customParticleMaterial.uniforms.opacity.value += 0.002; // Much slower fade in
@@ -3170,61 +3306,61 @@ export function initShaderBackground() {
         customParticleMaterial.uniforms.opacity.value = targetParticleOpacity;
       }
     }
-    
+
     // Ensure particles stay hidden when they should be
     if (window.particlesFullyHidden && customParticleMaterial.uniforms.opacity.value > 0) {
       customParticleMaterial.uniforms.opacity.value = 0;
     }
-    
+
     // Update globe model rotation if auto-rotate is enabled
     if (globeModel && globeParams.autoRotate && !globeParams.rotationPaused) {
       // Determine which rotation speed to use based on scroll state
-      const rotationSpeed = isScrolling 
-        ? globeParams.scrollRotateSpeed  // Use faster speed when scrolling
-        : globeParams.baseRotateSpeed;   // Use normal speed when not scrolling
-      
+      const rotationSpeed = isScrolling
+        ? globeParams.scrollRotateSpeed // Use faster speed when scrolling
+        : globeParams.baseRotateSpeed; // Use normal speed when not scrolling
+
       // Apply rotation to the model directly, keeping its position fixed
       globeModel.rotation.y += rotationSpeed * 0.01;
     }
-    
+
     // Update overlay position to keep it in front of the camera
     if (overlayMesh) {
       // Always ensure overlay remains perfectly flat
       overlayMesh.rotation.set(0, 0, 0);
       updateOverlayPosition();
     }
-    
+
     // Correct rendering order:
     // 1. First render main background shader
     renderer.autoClear = true; // Clear before first render
     renderer.render(scene, camera); // Render scene with background shader
-    
+
     // 2. Then render particles on top of background (only if visible)
     if (!window.particlesFullyHidden) {
       renderer.autoClear = false; // Don't clear after first render
       renderer.render(particleScene, camera); // Render particles
     }
-    
+
     // Note: The globe is part of the main scene, so it's already rendered appropriately
     // This ensures: Background -> Particles -> Globe+Overlay (correct z-order)
   }
 
   animate();
-  
+
   // Listen for very early particle fade start event (before hero animation)
-  document.addEventListener('veryEarlyParticleFade', () => {
+  document.addEventListener("veryEarlyParticleFade", () => {
     // Start with a very low opacity target to begin the fade-in
     targetParticleOpacity = 0.1;
   });
-  
+
   // Listen for early particle fade start event (after text animation)
-  document.addEventListener('particleFadeStart', () => {
+  document.addEventListener("particleFadeStart", () => {
     // Increase target opacity to continue fade-in
     targetParticleOpacity = 0.3;
   });
-  
+
   // Also keep the original event listener for completion
-  document.addEventListener('heroAnimationComplete', () => {
+  document.addEventListener("heroAnimationComplete", () => {
     // Ensure particles are fully visible when hero animation completes
     targetParticleOpacity = 0.5;
   });
@@ -3233,38 +3369,33 @@ export function initShaderBackground() {
   function handleResize() {
     const width = window.innerWidth;
     const height = getTrueViewportHeight();
-    
+
     // Update canvas and renderer size
     renderer.setSize(width, height);
-    
+
     // Update camera
     camera.left = -width / 2;
     camera.right = width / 2;
     camera.top = height / 2;
     camera.bottom = -height / 2;
     camera.updateProjectionMatrix();
-    
+
     // Update resolution uniform
     uniforms.resolution.value.set(width, height);
-    
+
     // Update the plane geometry to match the new window size
     mesh.geometry.dispose(); // Clean up old geometry
-    mesh.geometry = new THREE.PlaneGeometry(
-      width,
-      height,
-      width / 10,
-      height / 10
-    );
-    
+    mesh.geometry = new THREE.PlaneGeometry(width, height, width / 10, height / 10);
+
     // Update vertical distribution based on new window height
     verticalDistribution = height * scrollObj.verticalSpread;
-    
+
     // Update the vertical offset range in the GUI only if GUI exists
-    if (typeof gui !== 'undefined' && gui && gui.__folders && gui.__folders['Particle System']) {
-      const particleFolder = gui.__folders['Particle System'];
+    if (typeof gui !== "undefined" && gui && gui.__folders && gui.__folders["Particle System"]) {
+      const particleFolder = gui.__folders["Particle System"];
       if (particleFolder && particleFolder.__controllers) {
         for (let i = 0; i < particleFolder.__controllers.length; i++) {
-          if (particleFolder.__controllers[i].property === 'verticalOffset') {
+          if (particleFolder.__controllers[i].property === "verticalOffset") {
             particleFolder.__controllers[i].min(-height * 3);
             particleFolder.__controllers[i].max(height * 2);
             break;
@@ -3272,7 +3403,7 @@ export function initShaderBackground() {
         }
       }
     }
-    
+
     // Reposition and resize the globe model to maintain 90vw
     if (globeModel && globeParams.responsive) {
       // Add a delay before resizing the globe to ensure resize is fully complete
@@ -3281,19 +3412,24 @@ export function initShaderBackground() {
         // Explicitly call updateGlobeSize to ensure the globe maintains 90vw
         updateGlobeSize();
       }, 150); // 150ms delay
-      
+
       // Update position controllers with new ranges based on new dimensions
-      if (typeof gui !== 'undefined' && gui && gui.__folders && gui.__folders['Globe Model Controls'] && 
-          gui.__folders['Globe Model Controls'].__folders && 
-          gui.__folders['Globe Model Controls'].__folders['Position']) {
-        const positionFolder = gui.__folders['Globe Model Controls'].__folders['Position'];
+      if (
+        typeof gui !== "undefined" &&
+        gui &&
+        gui.__folders &&
+        gui.__folders["Globe Model Controls"] &&
+        gui.__folders["Globe Model Controls"].__folders &&
+        gui.__folders["Globe Model Controls"].__folders["Position"]
+      ) {
+        const positionFolder = gui.__folders["Globe Model Controls"].__folders["Position"];
         if (positionFolder && positionFolder.__controllers) {
           for (let i = 0; i < positionFolder.__controllers.length; i++) {
             const controller = positionFolder.__controllers[i];
-            if (controller.property === 'positionX') {
+            if (controller.property === "positionX") {
               controller.min(-width / 2);
               controller.max(width / 2);
-            } else if (controller.property === 'positionY') {
+            } else if (controller.property === "positionY") {
               controller.min(-height / 2);
               controller.max(height / 2);
             }
@@ -3301,43 +3437,40 @@ export function initShaderBackground() {
         }
       }
     }
-    
+
     // Update the gradient overlay size
     updateOverlaySize();
   }
-  
+
   // Function to update overlay size based on current viewport
   function updateOverlaySize() {
     if (overlayMesh) {
       // Get viewport dimensions
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
-      
+
       // Camera world units
       const worldWidth = camera.right - camera.left;
       const worldHeight = camera.top - camera.bottom;
-      
+
       // Calculate the scale to convert from pixels to world units
       const pixelToWorldX = worldWidth / viewportWidth;
       const pixelToWorldY = worldHeight / viewportHeight;
-      
+
       // Always use exactly 66% of viewport height for the overlay
       const fixedOverlayWidthWorld = worldWidth;
-      const fixedOverlayHeightWorld = (viewportHeight * 0.66) * pixelToWorldY;
-      
+      const fixedOverlayHeightWorld = viewportHeight * 0.66 * pixelToWorldY;
+
       // Update geometry with new dimensions - keep it perfectly flat
       overlayMesh.geometry.dispose(); // Clean up old geometry
-      overlayMesh.geometry = new THREE.PlaneGeometry(
-        fixedOverlayWidthWorld,
-        fixedOverlayHeightWorld
-      );
-      
+      overlayMesh.geometry = new THREE.PlaneGeometry(fixedOverlayWidthWorld, fixedOverlayHeightWorld);
+
       // Keep the overlay perfectly parallel to the view plane
       overlayMesh.rotation.set(0, 0, 0);
-      
+
       // Update position based on current y-offset
       updateOverlayPosition();
-      
+
       console.log("Updated overlay size to 66% viewport height");
     }
   }
@@ -3348,38 +3481,33 @@ export function initShaderBackground() {
   function handleResize() {
     const width = window.innerWidth;
     const height = getTrueViewportHeight();
-    
+
     // Update canvas and renderer size
     renderer.setSize(width, height);
-    
+
     // Update camera
     camera.left = -width / 2;
     camera.right = width / 2;
     camera.top = height / 2;
     camera.bottom = -height / 2;
     camera.updateProjectionMatrix();
-    
+
     // Update resolution uniform
     uniforms.resolution.value.set(width, height);
-    
+
     // Update the plane geometry to match the new window size
     mesh.geometry.dispose(); // Clean up old geometry
-    mesh.geometry = new THREE.PlaneGeometry(
-      width,
-      height,
-      width / 10,
-      height / 10
-    );
-    
+    mesh.geometry = new THREE.PlaneGeometry(width, height, width / 10, height / 10);
+
     // Update vertical distribution based on new window height
     verticalDistribution = height * scrollObj.verticalSpread;
-    
+
     // Update the vertical offset range in the GUI only if GUI exists
-    if (typeof gui !== 'undefined' && gui && gui.__folders['Particle System']) {
-      const particleFolder = gui.__folders['Particle System'];
+    if (typeof gui !== "undefined" && gui && gui.__folders["Particle System"]) {
+      const particleFolder = gui.__folders["Particle System"];
       if (particleFolder && particleFolder.__controllers) {
         for (let i = 0; i < particleFolder.__controllers.length; i++) {
-          if (particleFolder.__controllers[i].property === 'verticalOffset') {
+          if (particleFolder.__controllers[i].property === "verticalOffset") {
             particleFolder.__controllers[i].min(-height * 3);
             particleFolder.__controllers[i].max(height * 2);
             break;
@@ -3387,7 +3515,7 @@ export function initShaderBackground() {
         }
       }
     }
-    
+
     // Reposition and resize the globe model to maintain 90vw
     if (globeModel && globeParams.responsive) {
       // Add a delay before resizing the globe to ensure resize is fully complete
@@ -3396,20 +3524,20 @@ export function initShaderBackground() {
         // Explicitly call updateGlobeSize to ensure the globe maintains 90vw
         updateGlobeSize();
       }, 150); // 150ms delay
-      
+
       // Update position controllers with new ranges based on new dimensions
       for (let i = 0; i < positionFolder.__controllers.length; i++) {
         const controller = positionFolder.__controllers[i];
-        if (controller.property === 'positionX') {
+        if (controller.property === "positionX") {
           controller.min(-width / 2);
           controller.max(width / 2);
-        } else if (controller.property === 'positionY') {
+        } else if (controller.property === "positionY") {
           controller.min(-height / 2);
           controller.max(height / 2);
         }
       }
     }
-    
+
     // Update the gradient overlay size
     updateOverlaySize();
   }
@@ -3418,74 +3546,79 @@ export function initShaderBackground() {
   window.addEventListener("resize", () => {
     clearTimeout(resizeTimeout);
     clearTimeout(globeResizeTimeout); // Clear any pending globe resize
-    
+
     // Add a delay before resizing the globe to ensure resize is fully complete
     if (globeModel && globeParams.responsive) {
       globeResizeTimeout = setTimeout(() => {
         updateGlobeSize();
       }, 150); // 150ms delay
     }
-    
+
     // Debounce other resize operations that might be more expensive
     resizeTimeout = setTimeout(handleResize, 150); // Debounce resize events
   });
-  
+
   // Also listen for orientation change events specifically for mobile
   window.addEventListener("orientationchange", () => {
     clearTimeout(resizeTimeout);
     clearTimeout(globeResizeTimeout); // Clear any pending globe resize
-    
+
     // Add a delay before resizing the globe on orientation change
     if (globeModel && globeParams.responsive) {
       globeResizeTimeout = setTimeout(() => {
         updateGlobeSize();
       }, 300); // Longer delay for orientation changes
     }
-    
+
     // Wait a bit longer after orientation change as it takes time for the browser to settle
     resizeTimeout = setTimeout(handleResize, 300);
   });
-  
+
   // Listen for the visibilitychange event to handle when the page becomes visible again
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
       clearTimeout(globeResizeTimeout); // Clear any pending globe resize
-      
+
       // Store current dimensions to check if there's been a significant change
       const currentWidth = window.innerWidth;
       const currentHeight = getTrueViewportHeight();
-      
+
       // We store the last known dimensions to compare against
       if (!window.lastKnownDimensions) {
         window.lastKnownDimensions = {
           width: currentWidth,
-          height: currentHeight
+          height: currentHeight,
         };
       }
-      
+
       // Calculate the percentage change in dimensions
       const widthChange = Math.abs(currentWidth - window.lastKnownDimensions.width) / window.lastKnownDimensions.width;
-      const heightChange = Math.abs(currentHeight - window.lastKnownDimensions.height) / window.lastKnownDimensions.height;
-      
+      const heightChange =
+        Math.abs(currentHeight - window.lastKnownDimensions.height) / window.lastKnownDimensions.height;
+
       // Only resize if there's a significant change in viewport dimensions (more than 5%)
       const significantChange = widthChange > 0.05 || heightChange > 0.05;
-      
+
       if (significantChange) {
         // Update the stored dimensions
         window.lastKnownDimensions.width = currentWidth;
         window.lastKnownDimensions.height = currentHeight;
-        
+
         // Only update globe size if there's a significant change
-      if (globeModel && globeParams.responsive) {
-        globeResizeTimeout = setTimeout(() => {
-          updateGlobeSize();
-        }, 150); // 150ms delay
-      }
-      
+        if (globeModel && globeParams.responsive) {
+          globeResizeTimeout = setTimeout(() => {
+            updateGlobeSize();
+          }, 150); // 150ms delay
+        }
+
         // Only force a resize if there's a significant change
-      setTimeout(handleResize, 100);
-        
-        console.log(`Tab refocused with significant viewport change: Width ${widthChange.toFixed(2)}%, Height ${heightChange.toFixed(2)}%`);
+        setTimeout(handleResize, 100);
+
+        console.log(
+          `Tab refocused with significant viewport change: Width ${widthChange.toFixed(
+            2
+          )}%, Height ${heightChange.toFixed(2)}%`
+        );
       } else {
         console.log("Tab refocused but no significant viewport change, skipping resize");
       }
@@ -3493,26 +3626,26 @@ export function initShaderBackground() {
       // When tab becomes hidden, store the current dimensions
       window.lastKnownDimensions = {
         width: window.innerWidth,
-        height: getTrueViewportHeight()
+        height: getTrueViewportHeight(),
       };
     }
   });
-  
+
   // Special handler for mobile browsers where the address bar can appear/disappear
   let lastHeight = getTrueViewportHeight();
   function checkForAddressBarChange() {
     const currentHeight = getTrueViewportHeight();
-    
+
     // If height changed significantly (address bar appeared/disappeared)
     if (Math.abs(currentHeight - lastHeight) > 50) {
       handleResize();
       lastHeight = currentHeight;
     }
-    
+
     // Continue checking periodically
     requestAnimationFrame(checkForAddressBarChange);
   }
-  
+
   // Start checking for address bar changes
   checkForAddressBarChange();
 
@@ -3524,8 +3657,8 @@ export function initShaderBackground() {
       camera.zoom = cameraParams.zoom;
       camera.updateProjectionMatrix();
       // Update the GUI display
-      if (typeof gui !== 'undefined' && gui && gui.__folders['Camera Controls']) {
-        const cameraFolder = gui.__folders['Camera Controls'];
+      if (typeof gui !== "undefined" && gui && gui.__folders["Camera Controls"]) {
+        const cameraFolder = gui.__folders["Camera Controls"];
         if (cameraFolder && cameraFolder.__controllers) {
           for (let i = 0; i < cameraFolder.__controllers.length; i++) {
             if (cameraFolder.__controllers[i].property === "zoom") {
@@ -3542,8 +3675,8 @@ export function initShaderBackground() {
       camera.zoom = cameraParams.zoom;
       camera.updateProjectionMatrix();
       // Update the GUI display
-      if (typeof gui !== 'undefined' && gui && gui.__folders['Camera Controls']) {
-        const cameraFolder = gui.__folders['Camera Controls'];
+      if (typeof gui !== "undefined" && gui && gui.__folders["Camera Controls"]) {
+        const cameraFolder = gui.__folders["Camera Controls"];
         if (cameraFolder && cameraFolder.__controllers) {
           for (let i = 0; i < cameraFolder.__controllers.length; i++) {
             if (cameraFolder.__controllers[i].property === "zoom") {
@@ -3557,84 +3690,89 @@ export function initShaderBackground() {
   });
 
   // Add a scroll speed control to GUI
-  particleFolder.add(scrollObj, 'scrollSpeed', 0.001, 0.05, 0.018)
-    .name('Scroll Sensitivity')
+  particleFolder
+    .add(scrollObj, "scrollSpeed", 0.001, 0.05, 0.018)
+    .name("Scroll Sensitivity")
     .step(0.001)
     .onChange((value) => {
       // This value will be used in the animation loop
       scrollObj.scrollSpeed = value;
     });
-    
+
   // Add damping control to GUI
-  particleFolder.add(scrollObj, 'damping', 0.8, 0.99, 0.01)
-    .name('Scroll Damping')
+  particleFolder
+    .add(scrollObj, "damping", 0.8, 0.99, 0.01)
+    .name("Scroll Damping")
     .onChange((value) => {
       scrollObj.damping = value;
     });
-    
-  particleFolder.add(scrollObj, 'verticalSpread', 1.0, 5.0, 0.5)
-    .name('Vertical Spread')
+
+  particleFolder
+    .add(scrollObj, "verticalSpread", 1.0, 5.0, 0.5)
+    .name("Vertical Spread")
     .onChange((value) => {
       // Store the old distribution value
       const oldDistribution = verticalDistribution;
-      
+
       // Update vertical distribution
       verticalDistribution = window.innerHeight * value;
-      
+
       // Calculate the scale factor for adjusting positions
       const scaleFactor = verticalDistribution / oldDistribution;
-      
+
       // Redistribute particles vertically while maintaining relative positions
       const positions = particleGeometry.attributes.position.array;
-      
+
       for (let i = 0; i < particleCount; i++) {
         const i3 = i * 3;
-        
+
         // Get the relative position from the center of distribution
         const relativePos = positions[i3 + 1] - scrollObj.verticalOffset;
-        
+
         // Scale the relative position by the new distribution size
         const newRelativePos = relativePos * scaleFactor;
-        
+
         // Apply the new position with offset
         positions[i3 + 1] = newRelativePos + scrollObj.verticalOffset;
-        
+
         // Check if the particle is outside the new bounds and reset if needed
         if (Math.abs(newRelativePos) > verticalDistribution / 2) {
-          positions[i3 + 1] = ((Math.random() - 0.5) * verticalDistribution) + scrollObj.verticalOffset;
+          positions[i3 + 1] = (Math.random() - 0.5) * verticalDistribution + scrollObj.verticalOffset;
         }
       }
-      
+
       particleGeometry.attributes.position.needsUpdate = true;
     });
-    
+
   // Add vertical offset control with extended range
-  particleFolder.add(scrollObj, 'verticalOffset', -window.innerHeight * 3, window.innerHeight * 2, 10)
-    .name('Vertical Position')
+  particleFolder
+    .add(scrollObj, "verticalOffset", -window.innerHeight * 3, window.innerHeight * 2, 10)
+    .name("Vertical Position")
     .onChange((value) => {
       // Store the previous value before updating
       if (scrollObj.previousOffset === undefined) {
         scrollObj.previousOffset = 0;
       }
-      
+
       scrollObj.verticalOffset = value;
       applyVerticalOffset();
     });
-    
+
   // Add size range controls
-  particleFolder.add(scrollObj, 'sizeMin', 1, 5, 0.01)
-    .name('Min Particle Size')
+  particleFolder
+    .add(scrollObj, "sizeMin", 1, 5, 0.01)
+    .name("Min Particle Size")
     .onChange((value) => {
       scrollObj.sizeMin = value;
       // Make sure min is always less than max
       if (scrollObj.sizeMin >= scrollObj.sizeMax) {
         scrollObj.sizeMax = scrollObj.sizeMin + 1;
         // Update the max controller display
-        if (typeof gui !== 'undefined' && gui && gui.__folders['Particle System']) {
-          const particleFolder = gui.__folders['Particle System'];
+        if (typeof gui !== "undefined" && gui && gui.__folders["Particle System"]) {
+          const particleFolder = gui.__folders["Particle System"];
           if (particleFolder && particleFolder.__controllers) {
             for (let i = 0; i < particleFolder.__controllers.length; i++) {
-              if (particleFolder.__controllers[i].property === 'sizeMax') {
+              if (particleFolder.__controllers[i].property === "sizeMax") {
                 particleFolder.__controllers[i].updateDisplay();
                 break;
               }
@@ -3645,20 +3783,21 @@ export function initShaderBackground() {
       // Redistribute particles with new size range
       redistributeParticles();
     });
-    
-  particleFolder.add(scrollObj, 'sizeMax', 5, 10, 0.01)
-    .name('Max Particle Size')
+
+  particleFolder
+    .add(scrollObj, "sizeMax", 5, 10, 0.01)
+    .name("Max Particle Size")
     .onChange((value) => {
       scrollObj.sizeMax = value;
       // Make sure max is always greater than min
       if (scrollObj.sizeMax <= scrollObj.sizeMin) {
         scrollObj.sizeMin = scrollObj.sizeMax - 1;
         // Update the min controller display
-        if (typeof gui !== 'undefined' && gui && gui.__folders['Particle System']) {
-          const particleFolder = gui.__folders['Particle System'];
+        if (typeof gui !== "undefined" && gui && gui.__folders["Particle System"]) {
+          const particleFolder = gui.__folders["Particle System"];
           if (particleFolder && particleFolder.__controllers) {
             for (let i = 0; i < particleFolder.__controllers.length; i++) {
-              if (particleFolder.__controllers[i].property === 'sizeMin') {
+              if (particleFolder.__controllers[i].property === "sizeMin") {
                 particleFolder.__controllers[i].updateDisplay();
                 break;
               }
@@ -3669,14 +3808,15 @@ export function initShaderBackground() {
       // Redistribute particles with new size range
       redistributeParticles();
     });
-    
+
   // Add float speed control
-  particleFolder.add(scrollObj, 'floatSpeed', 0.1, 3.0, 0.1)
-    .name('Float Speed')
+  particleFolder
+    .add(scrollObj, "floatSpeed", 0.1, 3.0, 0.1)
+    .name("Float Speed")
     .onChange((value) => {
       scrollObj.floatSpeed = value;
     });
-    
+
   // Initialize particle sizes
   redistributeParticles();
 
@@ -3690,14 +3830,16 @@ export function initShaderBackground() {
   particleGeometry.attributes.position.needsUpdate = true;
 
   // Add halo controls
-  particleFolder.add(customParticleMaterial.uniforms.haloStrength, 'value', 0.0, 2.0, 0.1)
-    .name('Halo Intensity')
+  particleFolder
+    .add(customParticleMaterial.uniforms.haloStrength, "value", 0.0, 2.0, 0.1)
+    .name("Halo Intensity")
     .onChange((value) => {
       customParticleMaterial.uniforms.haloStrength.value = value;
     });
-    
-  particleFolder.add(customParticleMaterial.uniforms.haloSize, 'value', 1.0, 2.0, 0.1)
-    .name('Halo Size')
+
+  particleFolder
+    .add(customParticleMaterial.uniforms.haloSize, "value", 1.0, 2.0, 0.1)
+    .name("Halo Size")
     .onChange((value) => {
       customParticleMaterial.uniforms.haloSize.value = value;
     });
@@ -3705,43 +3847,67 @@ export function initShaderBackground() {
   // Variables to track scrolling
   let isScrolling = false;
   let scrollTimeout;
-  
+
   // Function to set isScrolling to true when scrolling starts
-  window.addEventListener('scroll', () => {
+  window.addEventListener("scroll", () => {
     isScrolling = true;
-    
+
     // Clear the timeout if it exists
     if (scrollTimeout) {
       clearTimeout(scrollTimeout);
     }
-    
+
     // Set a timeout to reset isScrolling when scrolling stops
     scrollTimeout = setTimeout(() => {
       isScrolling = false;
     }, 150); // Consider scrolling stopped after 150ms of no scroll events
-    });
+  });
 }
 
 // Add helper function to update lighting GUI
 function updateLightingGUI() {
-  if (typeof gui === 'undefined' || !gui || !gui.__folders || !gui.__folders['Lighting Controls']) return;
-  
-  const lightingFolder = gui.__folders['Lighting Controls'];
-  
+  if (typeof gui === "undefined" || !gui || !gui.__folders || !gui.__folders["Lighting Controls"]) return;
+
+  const lightingFolder = gui.__folders["Lighting Controls"];
+
   // Find the ambient light controller and update it
   for (let i = 0; i < lightingFolder.__controllers.length; i++) {
     const controller = lightingFolder.__controllers[i];
-    
+
     // Check for ambient light controller
     if (controller.property === "value" && controller.object === uniforms.ambientLight) {
       // Update the displayed value without triggering onChange
       controller.setValue(uniforms.ambientLight.value);
     }
-    
+
     // Check for directional light controller
     if (controller.property === "value" && controller.object === uniforms.directionalLight) {
       // Update the displayed value without triggering onChange
       controller.setValue(uniforms.directionalLight.value);
+    }
+  }
+}
+
+// Add helper function to update wave GUI
+function updateWaveGUI() {
+  if (typeof gui === "undefined" || !gui || !gui.__folders || !gui.__folders["Wave Controls"]) return;
+
+  const waveFolder = gui.__folders["Wave Controls"];
+
+  // Find the wave controllers and update them
+  for (let i = 0; i < waveFolder.__controllers.length; i++) {
+    const controller = waveFolder.__controllers[i];
+
+    // Check for wave speed controller
+    if (controller.property === "value" && controller.object === uniforms.waveSpeed) {
+      // Update the displayed value without triggering onChange
+      controller.setValue(uniforms.waveSpeed.value);
+    }
+
+    // Check for wave amplitude controller
+    if (controller.property === "value" && controller.object === uniforms.waveAmplitude) {
+      // Update the displayed value without triggering onChange
+      controller.setValue(uniforms.waveAmplitude.value);
     }
   }
 }

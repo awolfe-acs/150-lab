@@ -5,29 +5,34 @@ header.anniversary {
     z-index: 500;
     width: 100%;
     padding: 2vw 4vw;
-    position:fixed;
-    top:0;
-    left:0;
-    right:0;
-    transform:translateY(-120px);
-    transition:transform 0.32s ease;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    transform: translateY(-120px);
+    transition: transform 0.32s ease;
+
     &.active {
-        transform:translateY(0);
+        transform: translateY(0);
     }
+
     &.nav-active {
         div.logo, button {
-            opacity:0!important;
-            pointer-events:none!important;
-            transition:opacity 0.24s ease;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transition: opacity 0.24s ease;
+
             * {
-                transition:opacity 0.24s ease;
-                opacity:0!important;
-                pointer-events:none!important;
+                transition: opacity 0.24s ease;
+                opacity: 0 !important;
+                pointer-events: none !important;
             }
         }
     }
+
     div.logo {
-        cursor:pointer;
+        cursor: pointer;
+
         svg {
             height: 44px;
         }
@@ -36,7 +41,7 @@ header.anniversary {
     button.menu {
         font-size: 12px;
         text-transform: uppercase;
-        background: rgba(255,255,255,0.01);
+        background: rgba(255, 255, 255, 0.01);
         border: none;
         cursor: pointer;
         color: #fff;
@@ -44,12 +49,14 @@ header.anniversary {
         letter-spacing: 6px;
         padding-right: 24px;
         align-self: center;
-        height:24px;
+        height: 24px;
+
         span {
-            font-weight:400;
-            transform:translateY(1px);
-            display:block;
+            font-weight: 400;
+            transform: translateY(1px);
+            display: block;
         }
+
         &:before,
         &:after {
             content: '';
@@ -77,21 +84,27 @@ button.sound-toggle {
     display: flex;
     align-items: center;
     gap: 16px;
-    cursor:pointer;
+    cursor: pointer;
     transition: opacity 1.5s ease, transform 0.32s ease;
     position: relative;
-    opacity:0;
+    opacity: 0;
+    margin-right: 80px;
+    margin-left: auto;
+
     &:not(.active) {
-        opacity:0;
-        pointer-events:none;
+        opacity: 0;
+        pointer-events: none;
     }
+
     &.active {
-        transition: opacity 1.5s ease 2s, transform 0.32s ease;
-        opacity:1;
+        transition: opacity 1.5s ease 1s, transform 0.32s ease;
+        opacity: 1;
     }
+
     &:active {
-        transform:scale(0.95);
+        transform: scale(0.95);
     }
+
     span {
         font-weight: 300;
     }
@@ -108,35 +121,41 @@ button.sound-toggle {
         stroke: #fff;
         stroke-width: 5;
     }
+
     #waveGroup {
         transition: opacity 0.4s ease;
     }
+
     &:before, &:after {
-        height:15px;
-        width:1px;
-        background-color: #fff; 
+        height: 15px;
+        width: 1px;
+        background-color: #fff;
         transition: all 0.32s ease;
-        transition-delay:0.18s;
+        transition-delay: 0.18s;
         position: absolute;
-        content:'';
-        top:50%;
+        content: '';
+        top: 50%;
         transform: translateY(-50%) translateZ(0);
-        opacity:0;
+        opacity: 0;
         backface-visibility: hidden;
         will-change: transform;
     }
+
     &:before {
-        right:13.5px;
+        right: 13.5px;
     }
+
     &:after {
-        right:6px;
+        right: 6px;
     }
+
     &.muted {
         #waveGroup {
-            opacity:0;
+            opacity: 0;
         }
+
         &:before, &:after {
-            opacity:1;
+            opacity: 1;
         }
     }
 }

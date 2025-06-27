@@ -16,10 +16,11 @@
     "vite": "^6.1.0"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.50.0",
     "dat.gui": "^0.7.9",
+    "globe.gl": "^2.41.6",
     "gsap": "file:gsap-bonus.tgz",
     "lenis": "^1.1.20",
-    "split-type": "^0.3.4",
-    "three": "^0.173.0"
+    "split-type": "^0.3.4"
   }
 }

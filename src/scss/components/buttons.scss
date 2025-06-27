@@ -1,9 +1,9 @@
 .fancy-btn {
     --gradient-angle: 45deg;
     --gradient-position: 50% 50%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     height: 64px;
     border-radius: 32px;
     border: 1px solid rgba(255, 255, 255, 0.5);
@@ -17,14 +17,14 @@
     backface-visibility: hidden;
     perspective: 1000px;
     backdrop-filter: blur(12px);
-    transition: all 0.7s cubic-bezier(0.2, 0.1, 0.2, 1), 
-                box-shadow 0.7s cubic-bezier(0.2, 0.1, 0.2, 1), 
-                border-color 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
-    
+    transition: all 0.7s cubic-bezier(0.2, 0.1, 0.2, 1),
+        box-shadow 0.7s cubic-bezier(0.2, 0.1, 0.2, 1),
+        border-color 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
+
     /* Add multi-chromatic glow effect with initial subtle glow */
-    box-shadow: 0 0 15px rgba(251, 225, 57, 0.05), 
-                0 0 25px rgba(128, 0, 255, 0.03);
-    
+    box-shadow: 0 0 15px rgba(251, 225, 57, 0.05),
+        0 0 25px rgba(128, 0, 255, 0.03);
+
     /* Create gradient border effect */
     &::before {
         content: '';
@@ -33,12 +33,10 @@
         left: -50%;
         right: -50%;
         bottom: -50%;
-        background: radial-gradient(
-            circle at var(--gradient-position, 50% 50%), 
-            rgba(251, 225, 57, 0.6), 
-            rgba(190, 117, 158, 0.6) 40%, 
-            rgba(251, 225, 57, 0.4) 80%
-        );
+        background: radial-gradient(circle at var(--gradient-position, 50% 50%),
+                rgba(251, 225, 57, 0.6),
+                rgba(190, 117, 158, 0.6) 40%,
+                rgba(251, 225, 57, 0.4) 80%);
         background-size: 400% 400%;
         border-radius: 34px;
         z-index: -1;
@@ -46,80 +44,78 @@
         filter: blur(8px);
         transition: opacity 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
         animation: subtleGradientShift 10s ease-in-out infinite alternate;
-        pointer-events:none;
+        pointer-events: none;
     }
-    
+
     /* Create hover effect for button fill */
     &::after {
         content: '';
         position: absolute;
         inset: -20%;
         border-radius: 32px;
-        background: radial-gradient(
-            circle at var(--gradient-position, 50% 50%), 
-            rgba(251, 225, 57, 0.15), 
-            rgba(128, 0, 255, 0.15) 40%, 
-            rgba(251, 225, 57, 0.1) 80%
-        );
+        background: radial-gradient(circle at var(--gradient-position, 50% 50%),
+                rgba(251, 225, 57, 0.15),
+                rgba(128, 0, 255, 0.15) 40%,
+                rgba(251, 225, 57, 0.1) 80%);
         background-size: 400% 400%;
         opacity: 0;
         filter: blur(5px);
         transition: opacity 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
         animation: subtleGradientShift 20s ease-in-out infinite alternate;
         z-index: -1;
-        pointer-events:none;
+        pointer-events: none;
     }
-    
+
     span {
         display: block;
-        font-size: 14px!important;
+        font-size: 14px !important;
         text-transform: uppercase;
         letter-spacing: 6px;
         color: white;
         text-align: center;
-        font-weight: 400!important;
+        font-weight: 400 !important;
         pointer-events: none;
         transform: translateX(3px) translateY(0.5px);
         position: relative;
         z-index: 2;
-        transition: color 0.7s cubic-bezier(0.2, 0.1, 0.2, 1), 
-                    text-shadow 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
+        transition: color 0.7s cubic-bezier(0.2, 0.1, 0.2, 1),
+            text-shadow 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
     }
-    
+
     &:hover {
         transform: translate3d(0, -2px, 0) scale3d(1.02, 1.02, 1);
         border-color: transparent;
-        box-shadow: 0 0 20px rgba(251, 225, 57, 0.2), 
-                    0 0 30px rgba(128, 0, 255, 0.1);
-        
+        box-shadow: 0 0 20px rgba(251, 225, 57, 0.2),
+            0 0 30px rgba(128, 0, 255, 0.1);
+
         &::before {
             opacity: 0.6;
         }
-        
+
         &::after {
             opacity: 0.8;
         }
-        
+
         span {
             color: #ffffff;
             text-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
         }
     }
-    
+
     &:active {
         transform: translate3d(0, 1px, 0) scale3d(0.98, 0.98, 1);
         transition: transform 0.3s cubic-bezier(0.2, 0.1, 0.2, 1);
     }
 
     &.wide {
-        width:240px;
+        width: 240px;
     }
 
     &.scroll-reveal {
-        will-change:transform;
-        transition: filter 0.7s cubic-bezier(0.2, 0.1, 0.2, 1), 
-        box-shadow 0.7s cubic-bezier(0.2, 0.1, 0.2, 1), 
-        border-color 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
+        will-change: transform;
+        transition: filter 0.7s cubic-bezier(0.2, 0.1, 0.2, 1),
+            box-shadow 0.7s cubic-bezier(0.2, 0.1, 0.2, 1),
+            border-color 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
     }
 }
 
@@ -128,15 +124,19 @@
     0% {
         background-position: 0% 0%;
     }
+
     25% {
         background-position: 100% 0%;
     }
+
     50% {
         background-position: 100% 100%;
     }
+
     75% {
         background-position: 0% 100%;
     }
+
     100% {
         background-position: 0% 0%;
     }
@@ -145,12 +145,12 @@
 /* Add a class for cursor interaction effects */
 .fancy-btn-active {
     border-color: rgba(255, 255, 255, 0.2);
-    
+
     &::before {
         opacity: 0.4;
         filter: blur(10px);
     }
-    
+
     &::after {
         opacity: 0.6;
         filter: blur(6px);
@@ -158,17 +158,85 @@
 }
 
 .btn.btn-primary {
-    height:44px;
-    border-radius:8px;
-    background:#0029CF;
-    color:white;
-    font-size:14px;
-    font-weight:600;
-    text-transform:uppercase;
-    padding:0 16px;
-    cursor:pointer;
-    transition:all 0.3s ease;
+    height: 44px;
+    border-radius: 8px;
+    background: #0029CF;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 0 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
     &:hover {
-        background:#001E9C;
+        background: #001E9C;
+    }
+}
+
+.secondary-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 64px;
+    border-radius: 32px;
+    border: 1px solid rgba(255, 255, 255, 0);
+    background: #000000;
+    width: 180px;
+    cursor: pointer;
+    z-index: 1000;
+    transition: all 0.3s cubic-bezier(0.2, 0.1, 0.2, 1);
+    user-select: none;
+
+    span {
+        display: block;
+        font-size: 14px !important;
+        text-transform: uppercase;
+        letter-spacing: 6px;
+        color: white;
+        text-align: center;
+        font-weight: 400 !important;
+        pointer-events: none;
+        transform: translateX(3px) translateY(0.5px);
+        position: relative;
+        z-index: 2;
+        transition: color 0.3s ease;
+    }
+
+    svg {
+        width: 16px;
+
+        path {
+            fill: white;
+            stroke: white;
+        }
+
+        transition: all 0.3s ease;
+    }
+
+    &:hover {
+        transform: translateY(-2px);
+        border-color: rgba(255, 255, 255, 0.4);
+        background: #1a1a1a;
+
+        span {
+            color: #ffffff;
+        }
+
+        svg {
+            fill: white;
+            stroke: white;
+            transform: translateX(4px);
+        }
+    }
+
+    &:active {
+        transform: translateY(1px);
+        transition: transform 0.15s ease;
+    }
+
+    &.wide {
+        width: 240px;
     }
 }

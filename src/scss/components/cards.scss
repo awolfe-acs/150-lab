@@ -2,160 +2,194 @@
 @use '../animation' as *;
 
 .sliding-card-row-wrapper {
-    width:88vw;
-    max-width:2000px;
-    margin-left:auto;
-    margin-right:auto;
-    overflow:visible;
-    position:relative;
-    transform:translateX(44vw);
-    will-change:transform;
+    width: 88vw;
+    max-width: 2000px;
+    margin-left: auto;
+    margin-right: auto;
+    overflow: visible;
+    position: relative;
+    transform: translateX(44vw);
+    will-change: transform;
+
     @media (max-width:1280px) {
-        width:480px;
-        transform:translateX(0);
-        max-width:calc(100vw - 32px);
-        margin-left:auto;
-        margin-right:auto;
+        width: 480px;
+        transform: translateX(0);
+        max-width: calc(100vw - 32px);
+        margin-left: auto;
+        margin-right: auto;
     }
 }
 
 .sliding-card-row {
     display: flex;
     flex-direction: row;
-    flex-wrap:nowrap;
+    flex-wrap: nowrap;
+
     @media (max-width:1280px) {
-        flex-direction:column;
-        gap:8vw;
+        flex-direction: column;
+        gap: 8vw;
     }
 
-  .card {
-    flex: 1;
-    background-color: #111;
-    aspect-ratio:3/4;
-    position:relative;
-    @media (max-width:1280px) and (min-width:$mobile-viewport) {
-        &:nth-of-type(1),
-        &:nth-of-type(3),
-        &:nth-of-type(5) {
-            left:-10vw;
-        }
-        &:nth-of-type(2),
-        &:nth-of-type(4),
-        &:nth-of-type(6) {
-            right:-10vw;
-        }
-    }
-    a {
-        position:absolute;
-        top:0;
-        left:0;
-        right:0;
-        bottom:0;
-        height:100%;
-        width:100%;
-        z-index:2;
-        padding:24px;
-        display:flex;
-        flex-direction:column;
-        justify-content:space-between;
-        @media (min-width:$large-desktop-viewport) {
-            padding:40px;
-        }
-        h5, p, span {
-            color:white;
-            position:relative;
-            z-index:2;
-            text-shadow:0px 2px 8px rgba(0,0,0,0.5);
-        }
-        h5 {
-            text-transform: uppercase;
-            font-size:16px;
-            font-weight:600;
-            margin-bottom:20px;
-            letter-spacing:2px;
-            @media (min-width:1280px) and (max-width:$large-desktop-viewport) {
-                font-size:14px;
+    .card {
+        flex: 1;
+        background-color: #111;
+        aspect-ratio: 3/4;
+        position: relative;
+
+        @media (max-width:1280px) and (min-width:$mobile-viewport) {
+
+            &:nth-of-type(1),
+            &:nth-of-type(3),
+            &:nth-of-type(5) {
+                left: -10vw;
             }
+
+            &:nth-of-type(2),
+            &:nth-of-type(4),
+            &:nth-of-type(6) {
+                right: -10vw;
+            }
+        }
+
+        a {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 100%;
+            width: 100%;
+            z-index: 3;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+
             @media (min-width:$large-desktop-viewport) {
-                font-size:18px;
+                padding: 40px;
             }
-        }
-        p {
-            font-size:16px;
-            @media (min-width:$large-desktop-viewport) {
-                font-size:18px;
+
+            h5, p, span {
+                color: white;
+                position: relative;
+                z-index: 2;
+                text-shadow: 0px 2px 8px rgba(0, 0, 0, 0.5);
             }
-        }
-        &:after {
-            content:'';
-            position:absolute;
-            top:0;
-            left:0;
-            right:0;
-            bottom:0;
-            background-color:rgba(0,0,0,0.44);
-            z-index:1;
-            @include ease;
-        }
-        &:hover {
+
+            h5 {
+                text-transform: uppercase;
+                font-size: 16px;
+                font-weight: 600;
+                margin-bottom: 20px;
+                letter-spacing: 2px;
+                text-shadow: 0px 2px 4px rgba(0, 0, 0, 0.6), 0px 2px 8px rgba(0, 0, 0, 0.4), 0px 2px 12px rgba(0, 0, 0, 0.24);
+
+                @media (min-width:1280px) and (max-width:$large-desktop-viewport) {
+                    font-size: 14px;
+                }
+
+                @media (min-width:$large-desktop-viewport) {
+                    font-size: 18px;
+                }
+            }
+
+            p {
+                font-size: 16px;
+
+                @media (min-width:$large-desktop-viewport) {
+                    font-size: 18px;
+                }
+            }
+
+            &:before {
+                content: '';
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                height: 250px;
+                background: linear-gradient(to top, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0) 100%);
+                z-index: 1;
+            }
+
             &:after {
-                background-color:rgba(0,0,0,0.24);
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: rgba(0, 0, 0, 0.44);
+                z-index: 1;
+                @include ease;
+            }
+
+            &:hover {
+                &:after {
+                    background-color: rgba(0, 0, 0, 0.16);
+                }
             }
         }
-    }
-    &:nth-of-type(1) {
-        background-image:url('images/meetings-and-conferences.png');
-        background-size:cover;
-        background-position:center;
-    }
-    &:nth-of-type(2) {
-        background-image:url('images/engaging-talks-and-panels.png');
-        background-size:cover;
-        background-position:center;
-    }
-    &:nth-of-type(3) {
-        background-image:url('images/inspiring-video.png');
-        background-size:cover;
-        background-position:center;
-    }
-    &:nth-of-type(4) {
-        background-image:url('images/special-events-and-more.png');
-        background-size:cover;
-        background-position:center;
-    }
 
-    .card-content {
-        display:flex;
-        flex-direction:column;
-        gap:16px;
-        align-items:flex-start;
+        &:nth-of-type(1) {
+            background-image: url('images/meetings-and-conferences.png');
+            background-size: cover;
+            background-position: center;
+        }
+
+        &:nth-of-type(2) {
+            background-image: url('images/engaging-talks-and-panels.png');
+            background-size: cover;
+            background-position: center;
+        }
+
+        &:nth-of-type(3) {
+            background-image: url('images/inspiring-video.png');
+            background-size: cover;
+            background-position: center;
+        }
+
+        &:nth-of-type(4) {
+            background-image: url('images/special-events-and-more.png');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .card-content {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            align-items: flex-start;
+        }
     }
-  }
 }
 
 
 .asset-card {
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-    align-items:center;
-    border:2px solid white;
-    border-radius:24px;
-    padding:40px;
-    width:800px;
-    max-width:calc(100vw - 80px);
-    aspect-ratio:16/9;
-    margin-left:auto;
-    margin-right:auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid white;
+    border-radius: 24px;
+    padding: 40px;
+    width: 800px;
+    max-width: calc(100vw - 80px);
+    aspect-ratio: 16/9;
+    margin-left: auto;
+    margin-right: auto;
+
     h4 {
-        margin-bottom:12px;
-        font-size:20px;
-        font-weight:600;
+        margin-bottom: 12px;
+        font-size: 20px;
+        font-weight: 600;
     }
+
     p {
-        font-size:16px;
+        font-size: 16px;
     }
+
     button {
-        margin-top:24px;
+        margin-top: 24px;
     }
 }

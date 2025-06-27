@@ -8,24 +8,26 @@ h1 {
 }
 
 h2 {
-    font-size: 7vw;
-    font-weight: 400;
+    font-size: 64px;
+    font-weight: 900;
     line-height: 1;
     letter-spacing: -0.05em;
+
     @media (max-width:$desktop-viewport) {
-        font-size:10vw;
+        font-size: 10vw;
     }
 }
 
 h3 {
     font-size: 4vw;
-    margin-bottom:40px;
-    font-weight: 400;
+    margin-bottom: 40px;
+    font-weight: 900;
     line-height: 1;
     letter-spacing: -0.05em;
-    text-shadow:$text-shadow;
+    text-shadow: $text-shadow;
+
     @media (max-width:$desktop-viewport) {
-        font-size:7vw;
+        font-size: 64px;
     }
 }
 
@@ -34,34 +36,37 @@ h4 {
     font-weight: 400;
     line-height: 1;
     letter-spacing: -0.05em;
-    margin-bottom:20px;
+    margin-bottom: 20px;
+
     @media (max-width:$desktop-viewport) {
-        font-size:5vw;
+        font-size: 5vw;
     }
 }
 
 p {
-    font-size:16px;
-    font-weight:300;
-    color:#fff;
-    line-height:1.5;
+    font-size: 16px;
+    font-weight: 300;
+    color: #fff;
+    line-height: 1.5;
 }
 
 p.large-paragraph, span:not(.split-char) {
-    max-width:82vw;
-    margin:0 auto;
+    max-width: 82vw;
+    margin: 0 auto;
+
     @media (max-width:$mobile-viewport) {
-      max-width:calc(100vw - 32px);
+        max-width: calc(100vw - 32px);
     }
-  }
-  p.large-paragraph {
+}
+
+p.large-paragraph {
     font-size: 2.5vw;
     text-align: center;
     font-weight: 100;
-    color:#fff;
-    text-shadow:$text-shadow;
+    color: #fff;
+    text-shadow: $text-shadow;
 
     @media (max-width:$mobile-viewport) {
-      font-size:4.75vw;
+        font-size: 4.75vw;
     }
-  }
+}

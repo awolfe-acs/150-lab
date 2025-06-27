@@ -1,0 +1,89 @@
+.events-panel {
+    border-top-left-radius: 64px;
+    border-top-right-radius: 64px;
+    //background: #2B2FA8;
+    padding-top: 92px;
+
+    >div {
+        position: relative;
+        z-index: 1;
+    }
+
+    &::after {
+        content: '';
+        display: block;
+        width: 100%;
+        height: 100%;
+        background: #6b46ff;
+        position: absolute;
+        top: 0;
+        border-top-left-radius: 64px;
+        border-top-right-radius: 64px;
+        z-index: 0;
+        mix-blend-mode: difference;
+    }
+
+    .content-area {
+        width: 1366px;
+        padding: 0 16px;
+        margin: 0 auto;
+
+        .title-row {
+            display: flex;
+            justify-content: space-between;
+            padding-bottom: 40px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+        }
+
+
+        .events-list {
+            margin-bottom: 92px;
+        }
+
+        .event-list-item {
+            height: 100px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+            padding: 32px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+
+            .event-title, .event-date {
+                font-size: 36px;
+                margin-left: 0;
+                margin-right: 48px;
+                transition: all 0.3s ease;
+            }
+
+            .event-title {
+                font-weight: 700;
+                width: 55%;
+
+                .external-link-icon {
+                    transition: opacity 0.3s ease;
+                    opacity: 0;
+                    margin-left: 8px;
+                }
+            }
+
+            .event-date {
+                font-weight: 400;
+            }
+
+            &:hover,
+            &.active {
+                background-color: rgba(255, 255, 255, 0.1);
+
+                .event-title, .event-date {
+                    color: #ffffff;
+                    transform: translateX(8px);
+                }
+
+                .event-title .external-link-icon {
+                    opacity: 1;
+                }
+            }
+        }
+    }
+}

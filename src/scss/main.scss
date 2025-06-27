@@ -10,6 +10,9 @@
 @use './components/section-timeline' as *;
 @use './components/nav' as *;
 @use './components/cards' as *;
+@use './components/events-panel' as *;
+@use './components/form-panel' as *;
+@use './components/footer-bar' as *;
 @use './typography' as *;
 
 
@@ -30,24 +33,25 @@ html.lenis {
 }
 
 html {
-  background:#060E15;
-  overflow-x: hidden!important;
+  background: #060E15;
+  overflow-x: hidden !important;
+
   ::selection {
-    background:#0029cf7f;
+    background: #0029cf7f;
   }
 
   *,
   *:before,
   *:after {
     //font-family: "Plus Jakarta Sans", sans-serif;
-    font-family: "Poppins", sans-serif;
-    font-optical-sizing: auto;
+    //font-family: "Poppins", sans-serif;
+    font-family: "Open Sans", sans-serif;
     font-style: normal;
     color: #fff;
   }
 
   body {
-    width:100vw;
+    width: 100vw;
     background: #060E15;
     color: #fff;
     font-family: sans-serif;
@@ -67,10 +71,12 @@ html {
 
 //Hero Area
 #hero-area {
-  pointer-events:none;
+  pointer-events: none;
+
   h1, span {
-    cursor:default;
+    cursor: default;
   }
+
   h1 {
     font-size: 4vw;
     text-align: center;
@@ -79,17 +85,19 @@ html {
     position: absolute;
     z-index: 5;
     perspective: 1000px; // Add perspective to parent for 3D effect
+
     @media (max-width:$mobile-viewport) {
       width: 98vw;
       font-size: 7vw;
     }
+
     // Styles for SplitType
     .word {
       display: inline-block;
       margin-right: 0.25em; // Space between words
       white-space: nowrap; // Prevent words from breaking
     }
-    
+
     .char {
       display: inline-block;
       position: relative;
@@ -100,7 +108,7 @@ html {
       transform-origin: center center;
       transform-style: preserve-3d; // Enhance 3D effect
       will-change: opacity, transform; // Optimize for animation
-      font-weight:150;
+      font-weight: 150;
     }
   }
 
@@ -112,28 +120,29 @@ html {
     position: relative;
     display: flex;
     justify-content: center;
+
     @media (max-width:$mobile-viewport) {
-      font-size:34vw;
+      font-size: 34vw;
     }
 
     // Style for each digit
     .digit {
       position: relative;
-      color: rgba(251, 225, 57, 1);
+      color: rgba(251, 225, 57, 0.66);
       transform-style: preserve-3d;
-      -webkit-text-stroke: 1px rgba(255, 240, 143,0.66);
+      -webkit-text-stroke: 1px rgba(255, 240, 143, 0.7);
       font-weight: 800;
       transition: color 0.1s ease;
-      line-height:1.52;
-      user-select:none;
-      opacity:0.44;
+      line-height: 1.52;
+      user-select: none;
+      opacity: 0.44;
       filter: drop-shadow(0px 0px 4px rgba(251, 225, 57, 0.9)) drop-shadow(0px 0px 8px rgba(251, 225, 57, 0.4));
 
       @media (max-width:$desktop-viewport) {
-        -webkit-text-stroke: 0.5px rgba(255, 240, 143,0.66);
+        -webkit-text-stroke: 0.5px rgba(255, 240, 143, 0.66);
       }
     }
-    
+
     // Style for digit overlay during transitions
     .digit-overlay {
       position: absolute;
@@ -150,55 +159,81 @@ html {
   }
 
   button.enter-experience {
-    bottom:20vh;
-    position:absolute;
-    pointer-events:auto;
+    bottom: 20vh;
+    position: absolute;
+    pointer-events: auto;
+
+    @media (min-width:1600px) {
+      bottom: 14vh;
+    }
   }
 }
 
 #get-involved {
+  .get-involved-header {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    transform: translateY(12vh);
+
+    h2 {
+      text-shadow: 0px 2px 4px rgba(0, 0, 0, 0.16), 0px 2px 8px rgba(0, 0, 0, 0.12), 0px 2px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    svg {
+      filter: drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.16)) drop-shadow(0px 2px 8px rgba(0, 0, 0, 0.12)) drop-shadow(0px 2px 12px rgba(0, 0, 0, 0.08));
+    }
+  }
+
   p.large-paragraph, span.description {
-    text-shadow:$text-shadow;
+    text-shadow: $text-shadow;
   }
 
   .line {
-    font-size: inherit!important;
+    font-size: inherit !important;
     text-align: center;
     font-weight: 100;
-    color:#fff;
+    color: #fff;
   }
 }
 
 #get-involved-text {
   .line:last-of-type {
-    margin-top:24px;
+    margin-top: 24px;
   }
 }
+
 #get-involved-earth {
-  gap:3vh;
+  gap: 3vh;
+
   h2, p, span:not(.split-char) {
-    text-align:center;
+    text-align: center;
   }
+
   h2 {
-    font-weight:900;
+    font-weight: 900;
     //text-shadow:$text-shadow;
   }
+
   span.description {
-    display:block;
-    font-size:1.5vw;
-    font-weight:120;
-    line-height:1.4;
-    max-width:66.5vw;
+    display: block;
+    font-size: 1.5vw;
+    font-weight: 120;
+    line-height: 1.4;
+    max-width: 66.5vw;
+
     @media (max-width:$desktop-viewport) {
-      font-size:2.5vw;
-      max-width:82vw;
+      font-size: 2.5vw;
+      max-width: 82vw;
     }
+
     @media (max-width:$mobile-viewport) {
-      font-size:4.75vw;
-      max-width:calc(100vw - 32px);
+      font-size: 4.75vw;
+      max-width: calc(100vw - 32px);
     }
   }
 }
+
 .years {
   position: relative;
   color: #fff;
@@ -281,23 +316,26 @@ html {
     .cr.boolean {
       position: relative;
       height: 27px;
-      display:flex;
-      align-items:center;
-      > div {
-        width:100%;
+      display: flex;
+      align-items: center;
+
+      >div {
+        width: 100%;
       }
+
       // Improve boolean checkbox visibility
       .property-name {
-        display:flex;
-        align-items:center;
-        white-space:nowrap;
+        display: flex;
+        align-items: center;
+        white-space: nowrap;
       }
-      
+
       .c {
-        width:16px;
-        height:16px;
-        position:relative;
+        width: 16px;
+        height: 16px;
+        position: relative;
       }
+
       // Style for the checkbox
       input[type="checkbox"] {
         appearance: none;
@@ -309,13 +347,13 @@ html {
         background-color: #303030;
         position: absolute;
         cursor: pointer;
-        margin:0;
+        margin: 0;
         vertical-align: middle;
-        
+
         &:checked {
           background-color: #25e5ff;
           border-color: #25e5ff;
-          
+
           &:after {
             content: '✓';
             position: absolute;
@@ -324,11 +362,11 @@ html {
             font-weight: bold;
             top: 0px;
             left: 3px;
-            height:16px;
-            line-height:1.4;
+            height: 16px;
+            line-height: 1.4;
           }
         }
-        
+
         &:focus {
           outline: none;
           box-shadow: 0 0 0 2px rgba(37, 229, 255, 0.5);
@@ -339,12 +377,12 @@ html {
     .cr.function {
       height: 27px;
     }
-    
+
     // Improve hover states for all controls
     .cr:hover {
       //background-color: rgba(255, 255, 255, 0.1);
     }
-    
+
     // Active control highlighting
     .cr.active {
       //background-color: rgba(37, 229, 255, 0.2);
