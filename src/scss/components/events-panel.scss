@@ -1,8 +1,16 @@
+@use '../utilities' as *;
+
 .events-panel {
     border-top-left-radius: 64px;
     border-top-right-radius: 64px;
     //background: #2B2FA8;
     padding-top: 92px;
+
+    @media (max-width:$mobile-viewport) {
+        border-top-left-radius: 24px;
+        border-top-right-radius: 24px;
+        padding-top: 48px;
+    }
 
     >div {
         position: relative;
@@ -21,10 +29,16 @@
         border-top-right-radius: 64px;
         z-index: 0;
         mix-blend-mode: difference;
+
+        @media (max-width:$mobile-viewport) {
+            border-top-left-radius: 24px;
+            border-top-right-radius: 24px;
+        }
     }
 
     .content-area {
         width: 1366px;
+        max-width: 100%;
         padding: 0 16px;
         margin: 0 auto;
 
@@ -33,11 +47,20 @@
             justify-content: space-between;
             padding-bottom: 40px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+            align-items: center;
+
+            h2 {
+                margin-left: 0 !important;
+            }
         }
 
 
         .events-list {
             margin-bottom: 92px;
+
+            @media (max-width:$mobile-viewport) {
+                margin-bottom: 48px;
+            }
         }
 
         .event-list-item {
@@ -48,17 +71,35 @@
             padding: 32px;
             cursor: pointer;
             transition: all 0.3s ease;
+            position: relative;
+
+            @media (max-width:$mobile-viewport) {
+                height: auto;
+                padding: 16px 0;
+            }
 
             .event-title, .event-date {
                 font-size: 36px;
                 margin-left: 0;
                 margin-right: 48px;
                 transition: all 0.3s ease;
+                line-height: 125%;
+
+                @media (max-width:$mobile-viewport) {
+                    font-size: 16px;
+                    flex: 1;
+                }
             }
 
             .event-title {
                 font-weight: 700;
                 width: 55%;
+
+                @media (max-width:$mobile-viewport) {
+                    font-size: 16px;
+                    width: auto;
+                    display: inherit;
+                }
 
                 .external-link-icon {
                     transition: opacity 0.3s ease;
@@ -69,6 +110,12 @@
 
             .event-date {
                 font-weight: 400;
+
+                @media (max-width:$mobile-viewport) {
+                    flex: 1;
+                    margin-right: 0;
+                    margin-left: auto;
+                }
             }
 
             &:hover,

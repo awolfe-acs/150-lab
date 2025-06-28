@@ -1,3 +1,5 @@
+@use '../utilities' as *;
+
 .form-panel {
     display: flex;
     flex-direction: column;
@@ -9,6 +11,11 @@
     margin: 0 auto;
     height: 486px;
     overflow: hidden;
+
+    @media (max-width:$mobile-viewport) {
+        width: calc(100% - 32px);
+        height: auto;
+    }
 
     .inner-wrapper {
         display: flex;
@@ -22,6 +29,24 @@
         flex-direction: column;
         justify-content: center;
         padding: 48px 100px 48px 48px;
+        max-width: 100%;
+
+        @media (max-width:$mobile-viewport) {
+            padding: 32px;
+        }
+
+        h3 {
+            margin-left: 0 !important;
+        }
+
+        p {
+            margin-bottom: 24px;
+            font-size: 18px;
+
+            @media (max-width:$mobile-viewport) {
+                font-size: 14px;
+            }
+        }
 
         form {
             input[type="text"], select {
@@ -39,10 +64,16 @@
 
             input[type="text"] {
                 width: 400px;
+                max-width: 100%;
             }
 
             select {
                 width: 240px;
+                max-width: 100%;
+
+                @media (max-width:$mobile-viewport) {
+                    width: 100%;
+                }
             }
 
             select option {
@@ -54,6 +85,11 @@
                 gap: 24px;
                 margin-bottom: 24px;
                 transform: translateX(4px);
+
+                @media (max-width:$mobile-viewport) {
+                    flex-direction: column;
+                    gap: 16px;
+                }
 
                 >div {
                     display: flex;

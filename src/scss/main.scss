@@ -184,17 +184,34 @@ html {
 }
 
 #get-involved {
+  padding-top: 25vh;
+
+  @media (max-width:$mobile-viewport) {
+    padding-top: 4vh;
+  }
+
   .get-involved-header {
     display: flex;
     flex-direction: column;
     gap: 40px;
     transform: translateY(12lvh);
 
+    @media (max-width:$mobile-viewport) {
+      transform: translateY(0);
+      gap: 16px;
+    }
+
     h2 {
       text-shadow: 0px 2px 4px rgba(0, 0, 0, 0.16), 0px 2px 8px rgba(0, 0, 0, 0.12), 0px 2px 12px rgba(0, 0, 0, 0.08);
     }
 
     svg {
+      @media (max-width:$mobile-viewport) {
+        width: 300px;
+        height: 92px;
+        max-width: calc(100% - 32px);
+      }
+
       filter: drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.16)) drop-shadow(0px 2px 8px rgba(0, 0, 0, 0.12)) drop-shadow(0px 2px 12px rgba(0, 0, 0, 0.08));
     }
   }
@@ -208,6 +225,12 @@ html {
     text-align: center;
     font-weight: 100;
     color: #fff;
+  }
+}
+
+#get-involved-cards {
+  @media (max-width:$mobile-viewport) {
+    padding: 8vh 0;
   }
 }
 

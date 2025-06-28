@@ -16,6 +16,13 @@ h2 {
     @media (max-width:$desktop-viewport) {
         font-size: 10vw;
     }
+
+    @media (max-width:$mobile-viewport) {
+        font-size: 36px;
+        max-width: 82vw;
+        margin-left: auto;
+        margin-right: auto;
+    }
 }
 
 h3 {
@@ -28,6 +35,13 @@ h3 {
 
     @media (max-width:$desktop-viewport) {
         font-size: 64px;
+    }
+
+    @media (max-width:$mobile-viewport) {
+        font-size: 36px;
+        max-width: 82vw;
+        margin-left: auto;
+        margin-right: auto;
     }
 }
 

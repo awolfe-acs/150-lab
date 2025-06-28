@@ -1,6 +1,13 @@
+@use '../utilities' as *;
+
 .footer-bar {
     height: 24px;
     margin-bottom: 134px;
+
+    @media (max-width:$mobile-viewport) {
+        height: auto;
+        margin-bottom: 40px;
+    }
 
     .inner-wrapper {
         display: flex;
@@ -10,14 +17,65 @@
         max-width: 100%;
         margin: 0 auto;
         height: 24px;
+        flex-wrap: wrap;
+
+        @media (max-width:$mobile-viewport) {
+            height: auto;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        >svg {
+            @media (max-width:$mobile-viewport) {
+                width: 100%;
+                display: block;
+            }
+        }
 
         >span {
             margin-left: 0;
             margin-right: auto;
+
+            @media (max-width:$mobile-viewport) {
+                font-size: 10px;
+                text-align: center;
+                display: block;
+                width: 100%;
+            }
         }
 
         .right-column {
             height: 24px;
+            display: flex;
+            gap: 48px;
+            margin-right: 0;
+            margin-left: auto;
+
+            @media (max-width:$mobile-viewport) {
+                height: auto;
+                flex-direction: column;
+                gap: 16px;
+                margin: 0 auto;
+            }
+
+            .email {
+                @media (max-width:$mobile-viewport) {
+                    width: 100%;
+                    display: flex;
+                    justify-content: center;
+                    margin: 24px auto 8px !important;
+                }
+            }
+
+            .social-wrapper {
+                @media (max-width:$mobile-viewport) {
+                    width: 100%;
+                    display: flex;
+                    justify-content: center;
+                    margin: 0 auto 24px !important;
+                    padding: 0 16px;
+                }
+            }
 
             a {
                 width: 24px;

@@ -39,23 +39,53 @@
         transition: transform 0.3s ease;
         will-change: transform;
 
+        // Fallback for browsers that don't support aspect-ratio
+        // Calculate height to maintain 3/4 aspect ratio (height = width * 4/3)
+        @supports not (aspect-ratio: 3/4) {
+            &::before {
+                content: '';
+                display: block;
+                width: 100%;
+                padding-top: 133.333%; // (4/3) * 100% = 133.333% for 3:4 aspect ratio (width:height = 3:4)
+            }
+
+            // Position content absolutely to overlay the aspect ratio container
+            >a {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+            }
+        }
+
         &:hover {
             transform: scale(1.02) !important;
             z-index: 3;
         }
 
+        @media (max-width: 1280px) {
+            // Ensure cards fill the full width of their container on mobile
+            width: 100%;
+            // Remove conflicting min-height rules that might interfere with aspect-ratio
+            min-height: auto;
+        }
+
+        // Only apply the offset positioning on specific mobile sizes, not all mobile
         @media (max-width:1280px) and (min-width:$mobile-viewport) {
 
             &:nth-of-type(1),
             &:nth-of-type(3),
             &:nth-of-type(5) {
                 left: -10vw;
+                width: calc(100% + 10vw); // Compensate for the left offset
             }
 
             &:nth-of-type(2),
             &:nth-of-type(4),
             &:nth-of-type(6) {
                 right: -10vw;
+                width: calc(100% + 10vw); // Compensate for the right offset
             }
         }
 

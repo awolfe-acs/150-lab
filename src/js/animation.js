@@ -2814,6 +2814,9 @@ export function initEventListItemHover() {
     }
   };
 
+  // Detect if device supports touch
+  const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+
   // Create the mouse-following image element
   const mouseImage = document.createElement("img");
   mouseImage.className = "mouse-following-image";
@@ -2832,6 +2835,7 @@ export function initEventListItemHover() {
     transition: opacity 0.2s ease;
     mix-blend-mode: plus-lighter;
     filter: opacity(0.4) brightness(0.9) contrast(1.2);
+    ${isTouchDevice ? "display: none;" : ""}
   `;
   document.body.appendChild(mouseImage);
 

@@ -1,3 +1,5 @@
+@use '../utilities' as *;
+
 .fancy-btn {
     --gradient-angle: 45deg;
     --gradient-position: 50% 50%;
@@ -24,6 +26,10 @@
     /* Add multi-chromatic glow effect with initial subtle glow */
     box-shadow: 0 0 15px rgba(251, 225, 57, 0.05),
         0 0 25px rgba(128, 0, 255, 0.03);
+
+    @media (max-width:$mobile-viewport) {
+        height: 44px;
+    }
 
     /* Create gradient border effect */
     &::before {
@@ -188,6 +194,13 @@
     z-index: 1000;
     transition: all 0.3s cubic-bezier(0.2, 0.1, 0.2, 1);
     user-select: none;
+
+    @media (max-width:$mobile-viewport) {
+        width: auto;
+        min-width: 120px;
+        height: 44px;
+        padding: 0 16px;
+    }
 
     span {
         display: block;
