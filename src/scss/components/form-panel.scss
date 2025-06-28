@@ -64,15 +64,15 @@
 
             input[type="text"] {
                 width: 400px;
-                max-width: 100%;
+                max-width: calc(100% - 8px);
             }
 
             select {
                 width: 240px;
-                max-width: 100%;
+                max-width: calc(100% - 8px);
 
                 @media (max-width:$mobile-viewport) {
-                    width: 100%;
+                    width: calc(100% - 8px);
                 }
             }
 

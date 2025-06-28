@@ -76,30 +76,72 @@ document.addEventListener("DOMContentLoaded", () => {
   // Force scroll to top again when DOM is ready
   window.scrollTo(0, 0);
 
+  // Add mobile-specific device detection first
+  const isMobileDevice =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    window.innerWidth <= 768 ||
+    "ontouchstart" in window;
+
   // Always create the Lenis instance, but only start it on main pages
   window.lenis = new Lenis({
     autoRaf: true,
     infinite: false,
+    syncTouch: true, // Enable touch scrolling
+    smoothWheel: true, // Keep smooth wheel scrolling
+    touchInertiaMultiplier: 35, // Adjust touch inertia for better feel
+    duration: 1.2, // Smooth scrolling duration
+    easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // Custom easing
   });
 
   // Check if we're on mobile device
-  const isMobile =
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-    window.innerWidth <= 768;
+  const isMobile = isMobileDevice;
 
   if (isMobile) {
-    // On mobile, allow native scrolling immediately for better UX
-    console.log("Mobile device detected");
-    //window.lenis.start();
+    // On mobile, ensure Lenis is configured for touch
+    console.log("Mobile device detected - optimizing for touch");
+    // Lenis will be started when the enter button is clicked or for non-main pages
   } else {
     // On desktop, stop scrolling initially (will be started by enter button)
     console.log("Desktop device detected");
-    //window.lenis.stop();
   }
 
   window.lenis.on("scroll", (e) => {
     //console.log(e);
   });
+
+  if (isMobileDevice) {
+    // Ensure touch events are properly handled
+    document.addEventListener(
+      "touchstart",
+      function (e) {
+        // Allow touch events to propagate normally
+        // Don't prevent default unless absolutely necessary
+      },
+      { passive: true }
+    );
+
+    document.addEventListener(
+      "touchmove",
+      function (e) {
+        // Allow touch move events to propagate normally for scrolling
+        // Only prevent default if we're trying to prevent horizontal scrolling
+        if (
+          Math.abs(e.touches[0].clientX - e.touches[0].clientY) > Math.abs(e.touches[0].clientY - e.touches[0].clientX)
+        ) {
+          // This is more horizontal than vertical, you might want to prevent it
+          // e.preventDefault();
+        }
+      },
+      { passive: false }
+    );
+
+    // Add a specific handler to ensure Lenis works on mobile
+    window.addEventListener("resize", () => {
+      if (window.lenis) {
+        window.lenis.resize();
+      }
+    });
+  }
 
   // Initialize countdown timer
   // initCountdown(targetDate);

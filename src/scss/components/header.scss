@@ -12,6 +12,14 @@ header.anniversary {
     right: 0;
     transform: translateY(-120px);
     transition: transform 0.32s ease;
+    // Ensure header doesn't interfere with touch scrolling
+    pointer-events: none;
+
+    // Re-enable pointer events for interactive elements
+    div.logo, button {
+        pointer-events: auto;
+        touch-action: manipulation;
+    }
 
     &.active {
         transform: translateY(0);
@@ -98,7 +106,7 @@ button.sound-toggle {
     margin-left: auto;
 
     @media (max-width:$mobile-viewport) {
-        margin-right: 24px;
+        margin: 0 auto;
     }
 
     &:not(.active) {

@@ -30,6 +30,11 @@ html.lenis {
   // Ensure content doesn't cause overflow beyond intended
   overflow: auto; // Changed from 'hidden' to 'auto' to keep scrollbar
   scrollbar-width: thin; // For Firefox
+
+  // Ensure touch events work properly with Lenis
+  &.lenis-smooth {
+    scroll-behavior: auto; // Let Lenis handle smooth scrolling
+  }
 }
 
 html {
@@ -37,7 +42,7 @@ html {
   overflow-x: hidden !important;
   // Ensure touch scrolling works on mobile
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
+  touch-action: manipulation; // Allow all touch gestures
 
   ::selection {
     background: #0029cf7f;
@@ -65,13 +70,89 @@ html {
     overflow-x: hidden;
     // Ensure touch scrolling works on mobile
     -webkit-overflow-scrolling: touch;
-    touch-action: pan-y;
+    touch-action: manipulation; // Allow all touch gestures for better touch response
 
     button, a {
       @include keyboard-focus;
     }
+
+    // Ensure main container allows touch events
+    #app {
+      touch-action: manipulation;
+      -webkit-overflow-scrolling: touch;
+    }
   }
 
+}
+
+// Mobile-specific touch optimizations
+@media (max-width: 768px) {
+  html, body {
+    // Optimize for mobile touch scrolling
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
+
+    // Ensure touch events work properly
+    touch-action: manipulation;
+  }
+
+  // Ensure all sections allow touch scrolling
+  section {
+    touch-action: manipulation;
+  }
+
+  // Ensure fixed elements don't interfere with touch
+  *[style*="position: fixed"],
+  .fixed {
+    touch-action: none;
+    pointer-events: none;
+
+    // Re-enable pointer events for interactive elements
+    &.interactive,
+    button,
+    a,
+    input,
+    select,
+    textarea {
+      pointer-events: auto;
+      touch-action: manipulation;
+    }
+  }
+}
+
+// Mobile-specific touch optimizations
+@media (max-width: 768px) {
+  html, body {
+    // Optimize for mobile touch scrolling
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
+
+    // Ensure touch events work properly
+    touch-action: manipulation;
+  }
+
+  // Ensure all sections allow touch scrolling
+  section {
+    touch-action: manipulation;
+  }
+
+  // Ensure fixed elements don't interfere with touch
+  *[style*="position: fixed"],
+  .fixed {
+    touch-action: none;
+    pointer-events: none;
+
+    // Re-enable pointer events for interactive elements
+    &.interactive,
+    button,
+    a,
+    input,
+    select,
+    textarea {
+      pointer-events: auto;
+      touch-action: manipulation;
+    }
+  }
 }
 
 
@@ -206,13 +287,13 @@ html {
     }
 
     svg {
+      filter: drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.16)) drop-shadow(0px 2px 8px rgba(0, 0, 0, 0.12)) drop-shadow(0px 2px 12px rgba(0, 0, 0, 0.08));
+
       @media (max-width:$mobile-viewport) {
         width: 300px;
         height: 92px;
         max-width: calc(100% - 32px);
       }
-
-      filter: drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.16)) drop-shadow(0px 2px 8px rgba(0, 0, 0, 0.12)) drop-shadow(0px 2px 12px rgba(0, 0, 0, 0.08));
     }
   }
 
