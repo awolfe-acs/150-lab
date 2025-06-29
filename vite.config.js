@@ -8,7 +8,14 @@ export default defineConfig(({ mode, command }) => {
   const outDir = mode === "standard" ? "dist-aem" : mode === "assets" ? "dist-assets" : "dist";
 
   // Determine base path based on mode
-  const basePath = mode === "github" ? "/150-lab/" : mode === "assets" ? "/150/" : "/";
+  const basePath =
+    mode === "github"
+      ? "/150-lab/"
+      : mode === "assets"
+      ? "/150/"
+      : mode === "standard"
+      ? "/content/dam/acsorg/150/"
+      : "/";
 
   return {
     base: basePath,
@@ -122,7 +129,14 @@ export default defineConfig(({ mode, command }) => {
           const jsFile = Object.keys(ctx.bundle).find((key) => key.endsWith(".js"));
 
           // Use the correct base path based on build mode
-          const basePath = mode === "github" ? "/150-lab/" : mode === "assets" ? "/150/" : "/";
+          const basePath =
+            mode === "github"
+              ? "/150-lab/"
+              : mode === "assets"
+              ? "/150/"
+              : mode === "standard"
+              ? "/content/dam/acsorg/150/"
+              : "/";
 
           return html.replace(
             "</head>",

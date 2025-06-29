@@ -352,6 +352,17 @@ html {
   }
 }
 
+
+
+#events {
+  margin-bottom: -6vh;
+
+  @media (max-width:$mobile-viewport) {
+    margin-bottom: 0;
+  }
+}
+
+
 .years {
   position: relative;
   color: #fff;
@@ -367,6 +378,11 @@ html {
   font-weight: 900;
   white-space: nowrap;
 }
+
+
+
+
+
 
 /* Added custom style to position #anniversary-area at the bottom of #years-travel-area */
 #anniversary-area {

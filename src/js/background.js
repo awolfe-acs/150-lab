@@ -43,6 +43,9 @@ export function initShaderBackground() {
     // Store original colors for reverting later
     let originalColor1, originalColor2;
 
+    // Store original wave and lighting parameters for reverting later
+    let originalWaveSpeed, originalWaveAmplitude, originalAmbientLight, originalDirectionalLight, originalYOffset;
+
     // Find the video-travel-area element
     const videoTravelArea = document.querySelector("#video-travel-area");
 
@@ -51,10 +54,17 @@ export function initShaderBackground() {
       return;
     }
 
-    // Save original colors when the function runs
+    // Save original colors and wave parameters when the function runs
     if (uniforms && uniforms.color1 && uniforms.color2) {
       originalColor1 = uniforms.color1.value.clone();
       originalColor2 = uniforms.color2.value.clone();
+
+      // Store original wave and lighting parameters
+      originalWaveSpeed = uniforms.waveSpeed.value;
+      originalWaveAmplitude = uniforms.waveAmplitude.value;
+      originalAmbientLight = uniforms.ambientLight.value;
+      originalDirectionalLight = uniforms.directionalLight.value;
+      originalYOffset = uniforms.yOffset.value;
     }
 
     // Create ScrollTrigger to animate the colorDarkness value
@@ -416,17 +426,17 @@ export function initShaderBackground() {
             uniforms.color2.value.set("#3f00f5");
 
             // Reset the yOffset to its original value
-            if (uniforms.yOffset) {
-              uniforms.yOffset.value = 0.306;
+            if (uniforms.yOffset && originalYOffset !== undefined) {
+              uniforms.yOffset.value = originalYOffset;
             }
 
-            // Reset to phase two lighting values (same as phase 1 for now)
-            uniforms.ambientLight.value = 0.6;
-            uniforms.directionalLight.value = 0.6;
+            // Reset to original lighting values
+            if (originalAmbientLight !== undefined) uniforms.ambientLight.value = originalAmbientLight;
+            if (originalDirectionalLight !== undefined) uniforms.directionalLight.value = originalDirectionalLight;
 
-            // Reset wave settings to phase two values (same as phase 1 for now)
-            uniforms.waveSpeed.value = 2.0;
-            uniforms.waveAmplitude.value = 3.0;
+            // Reset wave settings to original values
+            if (originalWaveSpeed !== undefined) uniforms.waveSpeed.value = originalWaveSpeed;
+            if (originalWaveAmplitude !== undefined) uniforms.waveAmplitude.value = originalWaveAmplitude;
 
             // Reset to phase two
             window.colorPhase = 2;
@@ -528,6 +538,37 @@ export function initShaderBackground() {
       },
     });
 
+    // Create ScrollTrigger to revert wave parameters when scrolling back up past #get-involved
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: "#get-involved",
+        start: "bottom bottom", // Start when the bottom of get-involved reaches the bottom of viewport
+        end: "top top", // End when the top of get-involved reaches the top of viewport
+        scrub: true, // Smooth scrubbing effect, tied to scroll position
+        markers: false, // Set to true for debugging
+        onUpdate: (self) => {
+          // Only revert parameters when scrolling up past get-involved (progress goes from 1 to 0)
+          const progress = self.progress;
+
+          // When we're past get-involved (progress = 0), revert to original parameters
+          if (progress <= 0.1 && originalWaveSpeed !== undefined) {
+            console.log("Reverting wave parameters to original values when scrolling up past #get-involved");
+
+            // Revert wave parameters to original values
+            if (uniforms.waveSpeed) uniforms.waveSpeed.value = originalWaveSpeed;
+            if (uniforms.waveAmplitude) uniforms.waveAmplitude.value = originalWaveAmplitude;
+            if (uniforms.ambientLight) uniforms.ambientLight.value = originalAmbientLight;
+            if (uniforms.directionalLight) uniforms.directionalLight.value = originalDirectionalLight;
+            if (uniforms.yOffset) uniforms.yOffset.value = originalYOffset;
+
+            // Update the GUI to reflect the original values
+            updateLightingGUI();
+            updateWaveGUI();
+          }
+        },
+      },
+    });
+
     // Helper function to update particle opacity in the GUI
     function updateParticleOpacityGUI(opacity) {
       if (typeof gui !== "undefined" && gui && gui.__folders && gui.__folders["Particle System"]) {
@@ -602,12 +643,15 @@ export function initShaderBackground() {
               // Use the phase 2 colors (red and purple)
               if (uniforms.color1) uniforms.color1.value.set("#ff4848");
               if (uniforms.color2) uniforms.color2.value.set("#3f00f5");
-              // Reset to phase two lighting values
-              if (uniforms.ambientLight) uniforms.ambientLight.value = 0.6;
-              if (uniforms.directionalLight) uniforms.directionalLight.value = 0.6;
-              // Reset to phase two wave settings
-              if (uniforms.waveSpeed) uniforms.waveSpeed.value = 2.0;
-              if (uniforms.waveAmplitude) uniforms.waveAmplitude.value = 3.0;
+              // Reset to original lighting values
+              if (originalAmbientLight !== undefined && uniforms.ambientLight)
+                uniforms.ambientLight.value = originalAmbientLight;
+              if (originalDirectionalLight !== undefined && uniforms.directionalLight)
+                uniforms.directionalLight.value = originalDirectionalLight;
+              // Reset to original wave settings
+              if (originalWaveSpeed !== undefined && uniforms.waveSpeed) uniforms.waveSpeed.value = originalWaveSpeed;
+              if (originalWaveAmplitude !== undefined && uniforms.waveAmplitude)
+                uniforms.waveAmplitude.value = originalWaveAmplitude;
               window.specialColorsActive = true;
 
               // Update the GUI to reflect the phase two colors
@@ -620,12 +664,15 @@ export function initShaderBackground() {
               // Use the actual default phase 1 colors
               if (uniforms.color1) uniforms.color1.value.set("#32c2d6");
               if (uniforms.color2) uniforms.color2.value.set("#004199");
-              // Reset to phase one lighting values
-              if (uniforms.ambientLight) uniforms.ambientLight.value = 0.6;
-              if (uniforms.directionalLight) uniforms.directionalLight.value = 0.6;
-              // Reset to phase one wave settings
-              if (uniforms.waveSpeed) uniforms.waveSpeed.value = 2.0;
-              if (uniforms.waveAmplitude) uniforms.waveAmplitude.value = 3.0;
+              // Reset to original lighting values
+              if (originalAmbientLight !== undefined && uniforms.ambientLight)
+                uniforms.ambientLight.value = originalAmbientLight;
+              if (originalDirectionalLight !== undefined && uniforms.directionalLight)
+                uniforms.directionalLight.value = originalDirectionalLight;
+              // Reset to original wave settings
+              if (originalWaveSpeed !== undefined && uniforms.waveSpeed) uniforms.waveSpeed.value = originalWaveSpeed;
+              if (originalWaveAmplitude !== undefined && uniforms.waveAmplitude)
+                uniforms.waveAmplitude.value = originalWaveAmplitude;
               window.specialColorsActive = true;
 
               // Update the GUI to reflect the phase one colors
@@ -1013,7 +1060,7 @@ export function initShaderBackground() {
   let globeModel;
 
   gltfLoader.load(
-    "models/globe-hd.glb",
+    new URL("../../public/models/globe-hd.glb", import.meta.url).href,
     (gltf) => {
       globeModel = gltf.scene;
 
