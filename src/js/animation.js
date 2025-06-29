@@ -2,6 +2,13 @@ import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import { MorphSVGPlugin } from "gsap/MorphSVGPlugin";
 import SplitType from "split-type";
+// Import audio files as assets
+import uiClickAudioUrl from "../../public/audio/ui-click.mp3?url";
+import backgroundAudioUrl from "../../public/audio/chemistry2.mp3?url";
+// Import event images as assets
+import pacifichemEventImage from "../../public/images/pacifichem-event1.jpg?url";
+import greenChemistryEventImage from "../../public/images/green-chemistry-event2.jpg?url";
+import acsSpringMeetingEventImage from "../../public/images/acs-spring-meeting-event3.jpg?url";
 
 // Register the plugins
 gsap.registerPlugin(ScrollTrigger);
@@ -508,7 +515,7 @@ export function initAnimations() {
   initGlobalResizeHandler();
 
   // Add menu button click handler
-  const menuButton = document.querySelector("button.menu");
+  const menuButton = document.querySelector("button.toggle-menu");
   if (menuButton) {
     menuButton.addEventListener("click", () => {
       const nav = document.querySelector("nav");
@@ -539,7 +546,7 @@ export function initAnimations() {
   });
 
   // Add close menu button click handler
-  const closeMenuButton = document.querySelector("button.close-menu");
+  const closeMenuButton = document.querySelector("button.close-toggle-menu");
   if (closeMenuButton) {
     closeMenuButton.addEventListener("click", () => {
       const nav = document.querySelector("nav");
@@ -804,33 +811,8 @@ export function initAnimations() {
     repeat: -1,
   });
 
-  // Get path for UI click sound - using same function that's now in preloadBackgroundAudio
-  const getAudioPath = (filename) => {
-    // Check for different environment types
-    const pathname = window.location.pathname;
-    const hostname = window.location.hostname;
-    const isDevServer = hostname === "localhost" || hostname.includes("127.0.0.1");
-
-    // Development server - direct path without prefix
-    if (isDevServer) {
-      return `/audio/${filename}`;
-    }
-    // GitHub Pages deployment (has /150-lab/ in the path)
-    else if (pathname.includes("/150-lab/")) {
-      return `/150-lab/assets/audio/${filename}`;
-    }
-    // ACS.org production deployment
-    else if (pathname.includes("/content/") || hostname.includes("acs.org")) {
-      return `/150-lab/assets/audio/${filename}`;
-    }
-    // Standard deployment (no /150-lab/ in the path)
-    else {
-      return `/assets/audio/${filename}`;
-    }
-  };
-
-  // Create and configure UI click sound
-  const uiClickSound = new Audio(getAudioPath("ui-click.mp3"));
+  // Create and configure UI click sound using imported asset
+  const uiClickSound = new Audio(uiClickAudioUrl);
   uiClickSound.volume = 0.38; // Set to 38% volume
 
   // Function to play UI click sound
@@ -1331,30 +1313,6 @@ export function initAnimations() {
 
 // Function to preload the background audio early
 function preloadBackgroundAudio() {
-  const getAudioPath = (filename) => {
-    // Check for different environment types
-    const pathname = window.location.pathname;
-    const hostname = window.location.hostname;
-    const isDevServer = hostname === "localhost" || hostname.includes("127.0.0.1");
-
-    // Development server - direct path without prefix
-    if (isDevServer) {
-      return `/audio/${filename}`;
-    }
-    // GitHub Pages deployment (has /150-lab/ in the path)
-    else if (pathname.includes("/150-lab/")) {
-      return `/150-lab/assets/audio/${filename}`;
-    }
-    // ACS.org production deployment
-    else if (pathname.includes("/content/") || hostname.includes("acs.org")) {
-      return `/150-lab/assets/audio/${filename}`;
-    }
-    // Standard deployment (no /150-lab/ in the path)
-    else {
-      return `/assets/audio/${filename}`;
-    }
-  };
-
   // Create audio instance early in the initialization process
   const backgroundAudio = new Audio();
 
@@ -1386,8 +1344,8 @@ function preloadBackgroundAudio() {
   backgroundAudio.volume = 0; // Start at 0 volume for fade in
   backgroundAudio.preload = "auto"; // Explicitly set preload attribute
 
-  // Set src - do this after setting up event listeners
-  backgroundAudio.src = getAudioPath("chemistry2.mp3");
+  // Set src using imported asset - do this after setting up event listeners
+  backgroundAudio.src = backgroundAudioUrl;
 
   // Force load
   try {
@@ -2787,32 +2745,8 @@ export function initEventListItemHover() {
     return;
   }
 
-  // Map event items to their corresponding images
-  const eventImageMap = ["pacifichem-event1.jpg", "green-chemistry-event2.jpg", "acs-spring-meeting-event3.jpg"];
-
-  // Function to get the correct image path based on environment
-  const getImagePath = (filename) => {
-    const pathname = window.location.pathname;
-    const hostname = window.location.hostname;
-    const isDevServer = hostname === "localhost" || hostname.includes("127.0.0.1");
-
-    // Development server - direct path without prefix
-    if (isDevServer) {
-      return `/images/${filename}`;
-    }
-    // GitHub Pages deployment (has /150-lab/ in the path)
-    else if (pathname.includes("/150-lab/")) {
-      return `/150-lab/assets/images/${filename}`;
-    }
-    // ACS.org production deployment
-    else if (pathname.includes("/content/") || hostname.includes("acs.org")) {
-      return `/150-lab/assets/images/${filename}`;
-    }
-    // Standard deployment (no /150-lab/ in the path)
-    else {
-      return `/assets/images/${filename}`;
-    }
-  };
+  // Map event items to their corresponding imported image URLs
+  const eventImageMap = [pacifichemEventImage, greenChemistryEventImage, acsSpringMeetingEventImage];
 
   // Detect if device supports touch
   const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
@@ -2858,17 +2792,17 @@ export function initEventListItemHover() {
 
   // Add hover interactions to each event list item
   eventListItems.forEach((item, index) => {
-    const imageName = eventImageMap[index];
+    const imageUrl = eventImageMap[index];
 
-    if (!imageName) {
+    if (!imageUrl) {
       console.warn(`No image mapped for event item ${index}`);
       return;
     }
 
     // Mouse enter - show image and add active class
     item.addEventListener("mouseenter", () => {
-      // Set the image source
-      mouseImage.src = getImagePath(imageName);
+      // Set the image source using imported asset URL
+      mouseImage.src = imageUrl;
 
       // Show the image
       mouseImage.style.opacity = "1";

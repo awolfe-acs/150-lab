@@ -52,7 +52,7 @@ header.anniversary {
         }
     }
 
-    button.menu {
+    button.toggle-menu {
         font-size: 12px;
         text-transform: uppercase;
         background: rgba(255, 255, 255, 0.01);
@@ -64,6 +64,7 @@ header.anniversary {
         padding-right: 24px;
         align-self: center;
         height: 24px;
+        box-shadow: none !important;
 
         span {
             font-weight: 400;

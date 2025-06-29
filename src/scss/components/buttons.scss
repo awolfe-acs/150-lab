@@ -22,7 +22,6 @@
     transition: all 0.7s cubic-bezier(0.2, 0.1, 0.2, 1),
         box-shadow 0.7s cubic-bezier(0.2, 0.1, 0.2, 1),
         border-color 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
-
     /* Add multi-chromatic glow effect with initial subtle glow */
     box-shadow: 0 0 15px rgba(251, 225, 57, 0.05),
         0 0 25px rgba(128, 0, 255, 0.03);
@@ -93,6 +92,7 @@
         border-color: transparent;
         box-shadow: 0 0 20px rgba(251, 225, 57, 0.2),
             0 0 30px rgba(128, 0, 255, 0.1);
+        color: #fff !important;
 
         &::before {
             opacity: 0.6;
@@ -194,6 +194,7 @@
     z-index: 1000;
     transition: all 0.3s cubic-bezier(0.2, 0.1, 0.2, 1);
     user-select: none;
+    color: #fff !important;
 
     @media (max-width:$mobile-viewport) {
         width: auto;

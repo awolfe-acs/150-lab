@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import * as dat from "dat.gui";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import globeModelUrl from "../../public/models/globe-hd.glb?url";
 
 export function initShaderBackground() {
   // Set up default values
@@ -1060,7 +1061,7 @@ export function initShaderBackground() {
   let globeModel;
 
   gltfLoader.load(
-    new URL("../../public/models/globe-hd.glb", import.meta.url).href,
+    globeModelUrl,
     (gltf) => {
       globeModel = gltf.scene;
 

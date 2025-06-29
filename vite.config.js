@@ -32,10 +32,19 @@ export default defineConfig(({ mode, command }) => {
               assetInfo.name.endsWith(".jpg") ||
               assetInfo.name.endsWith(".png") ||
               assetInfo.name.endsWith(".webp") ||
-              assetInfo.name.endsWith(".svg")
+              assetInfo.name.endsWith(".svg") ||
+              assetInfo.name.endsWith(".glb") ||
+              assetInfo.name.endsWith(".gltf")
             ) {
               const type = assetInfo.name.split(".").pop();
-              const subDir = type === "mp3" ? "audio" : type === "mp4" ? "video" : "images";
+              const subDir =
+                type === "mp3"
+                  ? "audio"
+                  : type === "mp4"
+                  ? "video"
+                  : type === "glb" || type === "gltf"
+                  ? "models"
+                  : "images";
               return `assets/${subDir}/[name][extname]`;
             }
             return "assets/[name]-[hash][extname]";

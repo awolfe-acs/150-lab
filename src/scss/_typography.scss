@@ -5,6 +5,7 @@ h1 {
     font-weight: 400;
     line-height: 1;
     letter-spacing: -0.05em;
+    margin: 24px 0 0 !important;
 }
 
 h2 {
@@ -26,16 +27,13 @@ h2 {
 }
 
 h3 {
-    font-size: 4vw;
+    //font-size: 4vw;
+    font-size: 64px;
     margin-bottom: 40px;
     font-weight: 900;
     line-height: 1;
     letter-spacing: -0.05em;
     text-shadow: $text-shadow;
-
-    @media (max-width:$desktop-viewport) {
-        font-size: 64px;
-    }
 
     @media (max-width:$mobile-viewport) {
         font-size: 36px;

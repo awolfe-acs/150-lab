@@ -31,6 +31,8 @@ function isMainPage() {
     currentUrl.includes("acs.org/150") ||
     currentUrl.includes("localhost:5173") ||
     currentUrl.includes("cmswwwdev.acs.org/150") ||
+    // AEM author and publish environments
+    (currentUrl.includes("adobeaemcloud.com") && pathname.includes("/150")) ||
     // GitHub Pages deployment - check for the specific pattern
     (currentUrl.includes("awolfe-acs.github.io/150-lab") &&
       (pathname === "/150-lab/" || pathname === "/150-lab/index.html")) ||

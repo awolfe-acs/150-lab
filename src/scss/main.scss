@@ -23,6 +23,32 @@ html, body {
   height: 100%;
   overscroll-behavior: none; // Prevent bouncing on some browsers
   overflow-y: scroll; // Force scrollbar visibility
+
+  #bd, #maincontent {
+    width: 100% !important;
+  }
+
+  span.mejs__offscreen {
+    display: none !important;
+  }
+
+  a {
+    text-decoration: none !important;
+    transition: outline-color 0s !important;
+    color: #fff;
+
+    &:hover {
+      color: #fff;
+    }
+
+    &:focus, &:hover, &:active {
+      outline: none !important;
+
+      &:not(:focus-visible) {
+        outline: none !important;
+      }
+    }
+  }
 }
 
 html.lenis {
