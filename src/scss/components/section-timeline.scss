@@ -1,14 +1,15 @@
 @use '../utilities' as *;
+
 .timeline-nav-wrapper {
     position: fixed;
     top: 50%;
     transform: translateY(-50%);
     left: calc(2vw - 9px);
-    z-index:400;
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-    align-items:center;
+    z-index: 400;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 
 .section-timeline {
@@ -20,12 +21,13 @@
     left: 2vw;
     top: 12vw;
     z-index: 400;
-    mix-blend-mode:luminosity;
+    mix-blend-mode: luminosity;
 
     @media (max-width:$desktop-viewport) {
-        pointer-events:none;
-        display:none;
+        pointer-events: none;
+        display: none;
     }
+
     .page-nav {
         display: flex;
         flex-direction: column;
@@ -34,7 +36,8 @@
         z-index: 3;
         padding: 10px 15px 10px 44px;
         pointer-events: auto;
-        
+        user-select: none;
+
         a {
             font-weight: 200;
             text-transform: uppercase;
@@ -52,22 +55,25 @@
             &.active {
                 color: #fff;
                 cursor: default;
+
                 &:after {
                     content: '';
                     position: absolute;
-                    height:1px;
-                    background:#fff;
+                    height: 1px;
+                    background: #fff;
                     bottom: 1px;
                     left: 0;
-                    right:4px;
-                    opacity:0.8;
+                    right: 4px;
+                    opacity: 0.8;
                 }
             }
+
             &:not(.active):hover {
                 color: rgba(255, 255, 255, 1);
             }
         }
     }
+
     .indicator-wrapper {
         z-index: 3;
         background: transparent;
@@ -76,12 +82,12 @@
         display: flex;
         justify-content: flex-start;
         align-items: center;
-        background:#2e76b2;
-        position:absolute;
-        top:50%;
-        left:0;
-        transform:translateY(-50%);
-        pointer-events:none;
+        background: #2e76b2;
+        position: absolute;
+        top: 50%;
+        left: 0;
+        transform: translateY(-50%);
+        pointer-events: none;
     }
 
     .indicator {
@@ -152,6 +158,7 @@
             align-items: center;
             justify-content: center;
             z-index: 3;
+            user-select: none;
 
             span {
                 font-size: 12px;

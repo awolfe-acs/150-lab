@@ -8,7 +8,11 @@ export function initShaderBackground() {
   window.colorPhase = 1; // Start in phase one (default colors)
   window.specialColorsActive = false;
   window.particlesFullyHidden = false;
-  window.particlesMovementPaused = false; // Initialize movement pause flag
+  window.particlesMovementPaused = false;
+
+  // Track time spent in phase 1 to prevent time accumulation issues
+  let phase1StartTime = Date.now();
+  const PHASE1_RESET_TIMEOUT = 40000; // 40 seconds in milliseconds // Initialize movement pause flag
 
   // Get the canvas element
   const canvas = document.getElementById("shaderBackground");
@@ -406,6 +410,8 @@ export function initShaderBackground() {
 
             // Mark that we're now in phase 2
             window.colorPhase = 2;
+            // Reset phase 1 timer since we've entered phase 2
+            phase1StartTime = Date.now();
             window.specialColorsActive = true;
 
             // Update the GUI to reflect the new colors
@@ -419,6 +425,8 @@ export function initShaderBackground() {
 
             // Reset to phase 1
             window.colorPhase = 1;
+            // Reset phase 1 timer since we're back in phase 1
+            phase1StartTime = Date.now();
             window.specialColorsActive = true;
 
             // Update the GUI to reflect the phase 1 colors
@@ -507,6 +515,8 @@ export function initShaderBackground() {
 
             // Reset to phase two
             window.colorPhase = 2;
+            // Reset phase 1 timer since we're back in phase 2
+            phase1StartTime = Date.now();
             window.specialColorsActive = true;
 
             // Update the GUI to reflect the phase two colors and lighting
@@ -3794,6 +3804,16 @@ export function initShaderBackground() {
 
     // Update shader uniforms with slower speed
     uniforms.time.value += 0.001; // Reduced from 0.01 to 0.001
+
+    // Check if we've been in phase 1 too long and reset time to prevent weird effects
+    if (window.colorPhase === 1) {
+      const timeInPhase1 = Date.now() - phase1StartTime;
+      if (timeInPhase1 > PHASE1_RESET_TIMEOUT) {
+        console.log("Phase 1 timeout reached (40s), resetting time uniform to prevent background weirdness");
+        uniforms.time.value = 0.0;
+        phase1StartTime = Date.now(); // Reset the timer
+      }
+    }
 
     // Update mouse particles
     animateMouseParticles();

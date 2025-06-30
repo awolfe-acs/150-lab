@@ -45,13 +45,43 @@ header.anniversary {
 
     div.logo {
         cursor: pointer;
+        position: relative;
 
         svg {
-            width: 200px;
+            width: 140px;
             height: 44px;
+            transition: opacity 0.24s ease, transform 0.32s ease;
+            will-change: transform;
 
             @media (max-width:$mobile-viewport) {
                 width: 132px;
+            }
+
+            &:not(.main-logo) {
+                opacity: 1;
+            }
+        }
+
+        &:hover {
+            svg:not(.main-logo) {
+                opacity: 0;
+            }
+
+            .main-logo {
+                transition-delay: opacity 0.24s;
+                opacity: 1;
+                transform: scale(1.025);
+            }
+        }
+
+        .main-logo {
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0;
+
+            &:active {
+                transform: scale(1);
             }
         }
     }
