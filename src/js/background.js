@@ -45,7 +45,12 @@ export function initShaderBackground() {
     let originalColor1, originalColor2;
 
     // Store original wave and lighting parameters for reverting later
-    let originalWaveSpeed, originalWaveAmplitude, originalAmbientLight, originalDirectionalLight, originalYOffset;
+    let originalWaveSpeed,
+      originalWaveAmplitude,
+      originalWaveFrequency,
+      originalAmbientLight,
+      originalDirectionalLight,
+      originalYOffset;
 
     // Find the video-travel-area element
     const videoTravelArea = document.querySelector("#video-travel-area");
@@ -63,6 +68,7 @@ export function initShaderBackground() {
       // Store original wave and lighting parameters
       originalWaveSpeed = uniforms.waveSpeed.value;
       originalWaveAmplitude = uniforms.waveAmplitude.value;
+      originalWaveFrequency = uniforms.waveFrequency.value;
       originalAmbientLight = uniforms.ambientLight.value;
       originalDirectionalLight = uniforms.directionalLight.value;
       originalYOffset = uniforms.yOffset.value;
@@ -362,6 +368,19 @@ export function initShaderBackground() {
             console.error("uniforms.waveAmplitude is not available!");
           }
 
+          // Interpolate waveFrequency from 2.2 to 1.0 based on progress
+          const initialWaveFrequency = 2.2;
+          const targetWaveFrequency = 1.0;
+          const currentWaveFrequency = initialWaveFrequency + (targetWaveFrequency - initialWaveFrequency) * progress;
+          console.log("Setting waveFrequency to:", currentWaveFrequency);
+
+          if (uniforms && uniforms.waveFrequency) {
+            uniforms.waveFrequency.value = currentWaveFrequency;
+            console.log("waveFrequency value after assignment:", uniforms.waveFrequency.value);
+          } else {
+            console.error("uniforms.waveFrequency is not available!");
+          }
+
           updateWaveGUI();
 
           if (progress > 0.1) {
@@ -440,11 +459,12 @@ export function initShaderBackground() {
             uniforms.ambientLight.value = 0.4;
             uniforms.directionalLight.value = 0.4;
 
-            // Reduce wave settings for phase three
+            // Set wave settings for phase three (keep frequency at default)
             console.log("PHASE 3: TEMPORARILY DISABLED waveSpeed override to test interpolation");
             // TEMPORARILY COMMENTED OUT FOR TESTING:
             // uniforms.waveSpeed.value = 0.9;
             uniforms.waveAmplitude.value = 1.2;
+            uniforms.waveFrequency.value = 2.2; // Keep phase 3 at default frequency
 
             // Mark that we're now in phase three
             window.colorPhase = 3;
@@ -458,6 +478,11 @@ export function initShaderBackground() {
           } else if (progress <= 0.1 && window.colorPhase === 3) {
             // When scrolling back up and events section exits viewport, restore phase two special colors
             console.log("Reverting to Phase 2 colors - events section exiting viewport");
+
+            // Reset time to 0 to ensure consistent wave behavior when transitioning back to phase 2
+            // This prevents the accumulated time from making the wave transitions appear too fast/dramatic
+            uniforms.time.value = 0.0;
+            console.log("Reset time to 0 for consistent phase 2 transition behavior");
 
             // Restore phase 2 colors (red and purple)
             uniforms.color1.value.set("#ff4848");
@@ -473,9 +498,12 @@ export function initShaderBackground() {
             if (originalDirectionalLight !== undefined) uniforms.directionalLight.value = originalDirectionalLight;
 
             // Reset wave settings to phase 2 values (not original values)
-            console.log("PHASE 3 REVERT: Setting waveSpeed back to phase 2 value (0.2) and waveAmplitude to 1.0");
+            console.log(
+              "PHASE 3 REVERT: Setting waveSpeed back to phase 2 value (0.2), waveAmplitude to 1.0, and waveFrequency to 1.0"
+            );
             uniforms.waveSpeed.value = 0.2; // Phase 2 endpoint value, not original 2.0
             uniforms.waveAmplitude.value = 1.0; // Phase 2 endpoint value, not original 3.0
+            uniforms.waveFrequency.value = 1.0; // Phase 2 endpoint value, not original 2.2
 
             // Reset to phase two
             window.colorPhase = 2;
@@ -598,6 +626,7 @@ export function initShaderBackground() {
             console.log("GET-INVOLVED REVERT: Setting waveSpeed back to originalWaveSpeed:", originalWaveSpeed);
             if (uniforms.waveSpeed) uniforms.waveSpeed.value = originalWaveSpeed;
             if (uniforms.waveAmplitude) uniforms.waveAmplitude.value = originalWaveAmplitude;
+            if (uniforms.waveFrequency) uniforms.waveFrequency.value = originalWaveFrequency;
             if (uniforms.ambientLight) uniforms.ambientLight.value = originalAmbientLight;
             if (uniforms.directionalLight) uniforms.directionalLight.value = originalDirectionalLight;
             if (uniforms.yOffset) uniforms.yOffset.value = originalYOffset;
@@ -714,6 +743,8 @@ export function initShaderBackground() {
               if (originalWaveSpeed !== undefined && uniforms.waveSpeed) uniforms.waveSpeed.value = originalWaveSpeed;
               if (originalWaveAmplitude !== undefined && uniforms.waveAmplitude)
                 uniforms.waveAmplitude.value = originalWaveAmplitude;
+              if (originalWaveFrequency !== undefined && uniforms.waveFrequency)
+                uniforms.waveFrequency.value = originalWaveFrequency;
               window.specialColorsActive = true;
 
               // Update the GUI to reflect the phase one colors
@@ -1251,7 +1282,7 @@ export function initShaderBackground() {
     colorDarkness: { value: 0.0 }, // Controls overall darkness of colors
     colorWaveInfluence: { value: 0.4 }, // Controls how much colors affect wave patterns
     colorFrequencyShift: { value: 0.3 }, // Controls how colors shift wave frequencies
-    colorAmplitudeEffect: { value: 0.5 }, // Controls how colors affect wave amplitude
+    colorAmplitudeEffect: { value: 0.0 }, // Controls how colors affect wave amplitude
     //Wave parameters
     waveAmplitude: { value: 3.0 }, // Controls wave height
     waveFrequency: { value: 2.2 }, // Controls wave frequency
@@ -1944,7 +1975,7 @@ export function initShaderBackground() {
 
   // Add controls for animation speed parameters
   speedFolder
-    .add(uniforms.mainSpeed, "value", 0, 0.1)
+    .add(uniforms.mainSpeed, "value", 0.0001, 0.1)
     .name("Main Speed")
     .step(0.0001)
     .onChange((value) => {
@@ -1952,22 +1983,25 @@ export function initShaderBackground() {
     });
 
   speedFolder
-    .add(uniforms.waveSpeed, "value", 0, 5)
+    .add(uniforms.waveSpeed, "value", 0.0001, 5)
     .name("Wave Speed")
+    .step(0.0001)
     .onChange((value) => {
       uniforms.waveSpeed.value = value;
     });
 
   speedFolder
-    .add(uniforms.noiseSpeed, "value", 0, 5)
+    .add(uniforms.noiseSpeed, "value", 0.0001, 5)
     .name("Noise Speed")
+    .step(0.0001)
     .onChange((value) => {
       uniforms.noiseSpeed.value = value;
     });
 
   speedFolder
-    .add(uniforms.colorCycleSpeed, "value", 0, 5)
+    .add(uniforms.colorCycleSpeed, "value", 0.0001, 5)
     .name("Color Cycle Speed")
+    .step(0.0001)
     .onChange((value) => {
       uniforms.colorCycleSpeed.value = value;
     });
@@ -2124,7 +2158,7 @@ export function initShaderBackground() {
     });
 
   filmNoiseFolder
-    .add(uniforms.filmNoiseSpeed, "value", 0.00001, 1.0)
+    .add(uniforms.filmNoiseSpeed, "value", 0.00001, 0.00005)
     .name("Noise Speed")
     .step(0.00001)
     .onChange((value) => {
@@ -2132,7 +2166,7 @@ export function initShaderBackground() {
     });
 
   filmNoiseFolder
-    .add(uniforms.filmGrainSize, "value", 0.5, 10.0)
+    .add(uniforms.filmGrainSize, "value", 0.5, 50.0)
     .name("Grain Size")
     .onChange((value) => {
       uniforms.filmGrainSize.value = value;
@@ -3267,6 +3301,374 @@ export function initShaderBackground() {
     scrollY = window.scrollY;
   });
 
+  // ===== MOUSE FOLLOW PARTICLES SYSTEM =====
+
+  // Mouse follow particle system setup
+  const maxMouseParticles = 30; // Maximum number of trailing particles
+  let mouseParticles = [];
+  let mousePosition = { x: 0, y: 0 };
+  let lastMousePosition = { x: 0, y: 0 };
+  let mouseParticleId = 0;
+
+  // Mouse follow particle parameters
+  const mouseParticleParams = {
+    enabled: true,
+    spawnRate: 0.455, // Chance to spawn particle on mouse move (0-1)
+    maxParticles: 120,
+    baseSize: 1.8, // Base particle size
+    fadeInSpeed: 0.75, // Maximum opacity/brightness (0-1) - controls peak intensity
+    fadeOutSpeed: 1.0, // Fade out intensity multiplier (0-1) - controls fade strength
+    trailLength: 0.0005, // How much particles lag behind mouse (0-1)
+    speedVariation: 0.2, // Random variation in trail following speed (0-1)
+    jitterAmount: 0.08, // Random jittery movement intensity (0-1)
+    spawnOffset: 0.22, // Random spawn position offset for organic spread (0-1)
+    minLifetime: 1.5, // Minimum particle lifetime in seconds
+    maxLifetime: 5.0, // Maximum particle lifetime in seconds
+  };
+
+  // Create mouse particle geometry and material (clone of main particles)
+  const mouseParticleGeometry = new THREE.BufferGeometry();
+
+  // Create material for mouse particles (clone and modify existing material)
+  const mouseParticleMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      baseSize: { value: mouseParticleParams.baseSize },
+      map: { value: sparkleTexture }, // Reuse the same texture
+      brightness: { value: 1.4 },
+      haloStrength: { value: 1.4 },
+      haloSize: { value: 1.3 },
+    },
+    vertexShader: `
+      attribute vec3 color;
+      attribute float size;
+      attribute float opacity;
+      uniform float baseSize;
+      uniform float haloSize;
+      
+      varying vec3 vColor;
+      varying float vOpacity;
+      varying float vSize;
+      
+      void main() {
+        vColor = color;
+        vOpacity = opacity;
+        vSize = size;
+        
+        // Convert mouse coordinates to world coordinates
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        gl_Position = projectionMatrix * mvPosition;
+        
+        // Apply size with opacity influence for fading effect
+        gl_PointSize = size * baseSize * haloSize;
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D map;
+      uniform float brightness;
+      uniform float haloStrength;
+      
+      varying vec3 vColor;
+      varying float vOpacity;
+      
+      void main() {
+        // Calculate distance from center of point (in 0-1 range)
+        vec2 centeredUV = gl_PointCoord - 0.5;
+        float dist = length(centeredUV) * 2.0;
+        
+        // Sample the texture
+        vec4 texColor = texture2D(map, gl_PointCoord);
+        
+        // Apply color and brightness
+        vec3 brightColor = vColor * brightness;
+        
+        // Create halo effect
+        float haloFactor = max(0.0, 1.0 - dist);
+        haloFactor = pow(haloFactor, 1.5);
+        
+        // Boost core brightness
+        float coreBrightness = 1.0 + haloFactor * haloStrength;
+        
+        // Blend toward white for halo
+        vec3 haloColor = mix(brightColor, vec3(1.0, 1.0, 1.0), haloFactor * 0.3);
+        
+        // Apply the halo effect
+        vec3 finalColor = haloColor * coreBrightness;
+        
+        // Apply opacity and texture alpha
+        float finalOpacity = texColor.a * vOpacity;
+        gl_FragColor = vec4(finalColor, finalOpacity);
+        
+        // Discard transparent pixels
+        if (gl_FragColor.a < 0.01) discard;
+      }
+    `,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    depthTest: false,
+  });
+
+  // Mouse particle system
+  const mouseParticleSystem = new THREE.Points(mouseParticleGeometry, mouseParticleMaterial);
+  particleScene.add(mouseParticleSystem); // Add to same particle scene
+
+  // Function to convert mouse coordinates to world coordinates
+  function mouseToWorldCoords(mouseX, mouseY) {
+    // Convert from screen coordinates to normalized device coordinates
+    const x = (mouseX / window.innerWidth) * 2 - 1;
+    const y = -(mouseY / window.innerHeight) * 2 + 1;
+
+    // Convert to world coordinates using camera projection
+    const worldX = (x * (camera.right - camera.left)) / 2 / camera.zoom;
+    const worldY = (y * (camera.top - camera.bottom)) / 2 / camera.zoom;
+
+    return { x: worldX, y: worldY };
+  }
+
+  // Function to create a new mouse particle
+  function createMouseParticle(worldX, worldY) {
+    const particle = {
+      id: mouseParticleId++,
+      position: { x: worldX, y: worldY, z: Math.random() * 100 - 50 },
+      targetPosition: { x: worldX, y: worldY },
+      velocity: { x: 0, y: 0 },
+      size: 0.8 + Math.random() * 0.4, // Slight size variation
+      opacity: 0.0, // Start with 0 opacity for proper fade in
+      targetOpacity: 1,
+      life: 0,
+      maxLife:
+        mouseParticleParams.minLifetime +
+        Math.random() * (mouseParticleParams.maxLifetime - mouseParticleParams.minLifetime),
+      color: { r: 0.145, g: 0.898, b: 1.0 }, // #25e5ff converted to 0-1 range
+      trailSpeed: 0.05 + Math.random() * 0.03, // Varying trail speeds for natural effect
+      fadePhase: "in", // 'in', 'hold', 'out'
+    };
+
+    return particle;
+  }
+
+  // Function to update mouse particle geometry
+  function updateMouseParticleGeometry() {
+    if (mouseParticles.length === 0) {
+      // Clear geometry if no particles
+      if (mouseParticleGeometry.attributes.position) {
+        mouseParticleGeometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(0), 3));
+        mouseParticleGeometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(0), 3));
+        mouseParticleGeometry.setAttribute("size", new THREE.BufferAttribute(new Float32Array(0), 1));
+        mouseParticleGeometry.setAttribute("opacity", new THREE.BufferAttribute(new Float32Array(0), 1));
+      }
+      return;
+    }
+
+    const positions = new Float32Array(mouseParticles.length * 3);
+    const colors = new Float32Array(mouseParticles.length * 3);
+    const sizes = new Float32Array(mouseParticles.length);
+    const opacities = new Float32Array(mouseParticles.length);
+
+    for (let i = 0; i < mouseParticles.length; i++) {
+      const particle = mouseParticles[i];
+      const i3 = i * 3;
+
+      // Position
+      positions[i3] = particle.position.x;
+      positions[i3 + 1] = particle.position.y;
+      positions[i3 + 2] = particle.position.z;
+
+      // Color (same cyan as main particles)
+      colors[i3] = particle.color.r;
+      colors[i3 + 1] = particle.color.g;
+      colors[i3 + 2] = particle.color.b;
+
+      // Size and opacity
+      sizes[i] = particle.size;
+      opacities[i] = particle.opacity;
+    }
+
+    // Update geometry attributes
+    mouseParticleGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    mouseParticleGeometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    mouseParticleGeometry.setAttribute("size", new THREE.BufferAttribute(sizes, 1));
+    mouseParticleGeometry.setAttribute("opacity", new THREE.BufferAttribute(opacities, 1));
+
+    // Mark attributes as needing update
+    mouseParticleGeometry.attributes.position.needsUpdate = true;
+    mouseParticleGeometry.attributes.color.needsUpdate = true;
+    mouseParticleGeometry.attributes.size.needsUpdate = true;
+    mouseParticleGeometry.attributes.opacity.needsUpdate = true;
+  }
+
+  // Mouse move event listener
+  window.addEventListener("mousemove", (event) => {
+    if (!mouseParticleParams.enabled) return;
+
+    lastMousePosition.x = mousePosition.x;
+    lastMousePosition.y = mousePosition.y;
+    mousePosition.x = event.clientX;
+    mousePosition.y = event.clientY;
+
+    // Calculate mouse movement distance
+    const deltaX = mousePosition.x - lastMousePosition.x;
+    const deltaY = mousePosition.y - lastMousePosition.y;
+    const movement = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+    // Only spawn particles if mouse is moving and we haven't hit the limit
+    if (movement > 1 && mouseParticles.length < mouseParticleParams.maxParticles) {
+      // Random chance to spawn particle based on spawn rate
+      if (Math.random() < mouseParticleParams.spawnRate) {
+        const worldCoords = mouseToWorldCoords(mousePosition.x, mousePosition.y);
+
+        // Apply spawn offset for organic positioning
+        const offsetRadius = mouseParticleParams.spawnOffset * 50; // Scale to world units
+        const offsetAngle = Math.random() * Math.PI * 2; // Random angle
+        const offsetX = Math.cos(offsetAngle) * offsetRadius * Math.random(); // Random distance within radius
+        const offsetY = Math.sin(offsetAngle) * offsetRadius * Math.random();
+
+        const newParticle = createMouseParticle(worldCoords.x + offsetX, worldCoords.y + offsetY);
+        mouseParticles.push(newParticle);
+      }
+    }
+  });
+
+  // Function to animate mouse particles
+  function animateMouseParticles() {
+    if (mouseParticles.length === 0) return; // Early exit if no particles
+
+    const worldCoords = mouseToWorldCoords(mousePosition.x, mousePosition.y);
+
+    // Update existing particles
+    for (let i = mouseParticles.length - 1; i >= 0; i--) {
+      const particle = mouseParticles[i];
+      particle.life += 0.016; // Assume 60fps
+
+      // Update target position to current mouse position
+      particle.targetPosition.x = worldCoords.x;
+      particle.targetPosition.y = worldCoords.y;
+
+      // Apply eased trailing movement
+      const trailSpeed = particle.trailSpeed * mouseParticleParams.trailLength;
+      particle.position.x += (particle.targetPosition.x - particle.position.x) * trailSpeed;
+      particle.position.y += (particle.targetPosition.y - particle.position.y) * trailSpeed;
+
+      // Add slight random jittery movement for organic feel
+      particle.position.x += (Math.random() - 0.5) * 2 * mouseParticleParams.jitterAmount;
+      particle.position.y += (Math.random() - 0.5) * 2 * mouseParticleParams.jitterAmount;
+
+      // Handle smooth fade phases with proper opacity transitions
+      const lifeRatio = particle.life / particle.maxLife;
+
+      if (lifeRatio < 0.15) {
+        // Fade in phase (first 15% of life) - smooth transition from 0 to 1
+        particle.fadePhase = "in";
+        const fadeInProgress = lifeRatio / 0.15; // 0 to 1 over the fade in period
+        const fadeInCurve = 1 - Math.pow(1 - fadeInProgress, 2); // Ease-out curve for smoother start
+        particle.opacity = fadeInCurve * mouseParticleParams.fadeInSpeed;
+      } else if (lifeRatio < 0.65) {
+        // Hold phase (middle 50% of life) - maintain full opacity
+        particle.fadePhase = "hold";
+        particle.opacity = mouseParticleParams.fadeInSpeed; // Use fadeInSpeed as max opacity
+      } else {
+        // Fade out phase (last 35% of life) - smooth transition from 1 to 0
+        particle.fadePhase = "out";
+        const fadeOutProgress = (lifeRatio - 0.65) / 0.35; // 0 to 1 over the fade out period
+        const fadeOutCurve = Math.pow(1 - fadeOutProgress, 2); // Ease-in curve for smoother end
+        particle.opacity = fadeOutCurve * mouseParticleParams.fadeInSpeed * mouseParticleParams.fadeOutSpeed;
+      }
+
+      // Remove particle when it's too old or fully faded
+      if (particle.life >= particle.maxLife || particle.opacity <= 0) {
+        mouseParticles.splice(i, 1);
+      }
+    }
+
+    // Update geometry
+    updateMouseParticleGeometry();
+  }
+
+  // Add GUI controls for mouse particles
+  const mouseParticleFolder = gui.addFolder("Mouse Follow Particles");
+
+  mouseParticleFolder
+    .add(mouseParticleParams, "enabled")
+    .name("Enable Mouse Particles")
+    .onChange((value) => {
+      if (!value) {
+        // Clear all particles when disabled
+        mouseParticles = [];
+        updateMouseParticleGeometry();
+      }
+    });
+
+  mouseParticleFolder
+    .add(mouseParticleParams, "spawnRate", 0.1, 1.0, 0.1)
+    .name("Spawn Rate")
+    .onChange((value) => {
+      mouseParticleParams.spawnRate = value;
+    });
+
+  mouseParticleFolder
+    .add(mouseParticleParams, "maxParticles", 10, 50, 1)
+    .name("Max Particles")
+    .onChange((value) => {
+      mouseParticleParams.maxParticles = value;
+      // Remove excess particles if we lowered the limit
+      while (mouseParticles.length > value) {
+        mouseParticles.pop();
+      }
+      updateMouseParticleGeometry();
+    });
+
+  mouseParticleFolder
+    .add(mouseParticleParams, "baseSize", 2.0, 10.0, 0.5)
+    .name("Particle Size")
+    .onChange((value) => {
+      mouseParticleMaterial.uniforms.baseSize.value = value;
+    });
+
+  mouseParticleFolder
+    .add(mouseParticleParams, "trailLength", 0.1, 1.0, 0.1)
+    .name("Trail Length")
+    .onChange((value) => {
+      mouseParticleParams.trailLength = value;
+    });
+
+  mouseParticleFolder
+    .add(mouseParticleParams, "speedVariation", 0.0, 1.0, 0.1)
+    .name("Speed Variation")
+    .onChange((value) => {
+      mouseParticleParams.speedVariation = value;
+    });
+
+  mouseParticleFolder
+    .add(mouseParticleParams, "jitterAmount", 0.0, 1.0, 0.05)
+    .name("Jitter Amount")
+    .onChange((value) => {
+      mouseParticleParams.jitterAmount = value;
+    });
+
+  mouseParticleFolder
+    .add(mouseParticleParams, "spawnOffset", 0.0, 1.0, 0.05)
+    .name("Spawn Offset")
+    .onChange((value) => {
+      mouseParticleParams.spawnOffset = value;
+    });
+
+  mouseParticleFolder
+    .add(mouseParticleParams, "fadeInSpeed", 0.1, 1.0, 0.01)
+    .name("Max Opacity")
+    .onChange((value) => {
+      mouseParticleParams.fadeInSpeed = value;
+    });
+
+  mouseParticleFolder
+    .add(mouseParticleParams, "fadeOutSpeed", 0.1, 1.0, 0.01)
+    .name("Fade Strength")
+    .onChange((value) => {
+      mouseParticleParams.fadeOutSpeed = value;
+    });
+
+  // Close the mouse particle folder by default
+  mouseParticleFolder.close();
+
   // Function to update particle positions with the new vertical offset
   function applyVerticalOffset() {
     const positions = particleGeometry.attributes.position.array;
@@ -3393,6 +3795,9 @@ export function initShaderBackground() {
     // Update shader uniforms with slower speed
     uniforms.time.value += 0.001; // Reduced from 0.01 to 0.001
 
+    // Update mouse particles
+    animateMouseParticles();
+
     // Gradually fade in particles if needed - but only if not fully hidden by scrolling
     if (!window.particlesFullyHidden && customParticleMaterial.uniforms.opacity.value < targetParticleOpacity) {
       customParticleMaterial.uniforms.opacity.value += 0.002; // Much slower fade in
@@ -3430,9 +3835,9 @@ export function initShaderBackground() {
     renderer.render(scene, camera); // Render scene with background shader
 
     // 2. Then render particles on top of background (only if visible)
-    if (!window.particlesFullyHidden) {
+    if (!window.particlesFullyHidden || (mouseParticles.length > 0 && mouseParticleParams.enabled)) {
       renderer.autoClear = false; // Don't clear after first render
-      renderer.render(particleScene, camera); // Render particles
+      renderer.render(particleScene, camera); // Render particles including mouse particles
     }
 
     // Note: The globe is part of the main scene, so it's already rendered appropriately
@@ -3998,7 +4403,9 @@ function updateWaveGUI() {
     "Updating wave GUI - waveSpeed:",
     uniforms.waveSpeed.value,
     "waveAmplitude:",
-    uniforms.waveAmplitude.value
+    uniforms.waveAmplitude.value,
+    "waveFrequency:",
+    uniforms.waveFrequency.value
   );
 
   // Debug: List all available folders
@@ -4049,7 +4456,11 @@ function updateWaveGUI() {
         i,
         ":",
         controller.property,
-        controller.object === uniforms.waveAmplitude ? "(MATCHES waveAmplitude)" : ""
+        controller.object === uniforms.waveAmplitude
+          ? "(MATCHES waveAmplitude)"
+          : controller.object === uniforms.waveFrequency
+          ? "(MATCHES waveFrequency)"
+          : ""
       );
 
       // Check for wave amplitude controller
@@ -4062,6 +4473,18 @@ function updateWaveGUI() {
           uniforms.waveAmplitude.value
         );
         controller.setValue(uniforms.waveAmplitude.value);
+      }
+
+      // Check for wave frequency controller
+      if (controller.property === "value" && controller.object === uniforms.waveFrequency) {
+        // Update the displayed value without triggering onChange
+        console.log(
+          "SUCCESS: Updating waveFrequency GUI from",
+          controller.getValue(),
+          "to",
+          uniforms.waveFrequency.value
+        );
+        controller.setValue(uniforms.waveFrequency.value);
       }
     }
   } else {

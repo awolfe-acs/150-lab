@@ -1023,10 +1023,26 @@ export function initAnimations() {
 
   // Add page navigation hover and click functionality
   const pageNav = document.querySelector(".section-timeline .page-nav");
+
+  // Add null check to prevent errors if element doesn't exist
+  if (!pageNav) {
+    console.warn("Page navigation element (.section-timeline .n) not found - skipping navigation setup");
+    return; // Exit early if the required elements don't exist
+  }
+
   const navLinks = pageNav.querySelectorAll("a");
   const activeTitle = document.querySelector(".section-timeline .indicator .active-title");
   const indicatorWrapper = document.querySelector(".section-timeline .indicator-wrapper");
   const timelineNavWrapper = document.querySelector(".timeline-nav-wrapper");
+
+  // Add additional null checks for critical elements
+  if (!activeTitle) {
+    console.warn("Active title element (.section-timeline .indicator .active-title) not found");
+  }
+
+  if (!indicatorWrapper && !timelineNavWrapper) {
+    console.warn("Neither indicator wrapper nor timeline nav wrapper found - navigation may not work properly");
+  }
 
   // Enhanced navigation state tracking
   let isNavActive = false;
@@ -1172,13 +1188,15 @@ export function initAnimations() {
         }
       });
 
-      element.addEventListener("mouseleave", () => {
+      element.addEventListener("mouseleave", (event) => {
+        // Capture mouse coordinates from the event before setTimeout
+        const mouseX = event.clientX || 0;
+        const mouseY = event.clientY || 0;
+
         // Use a small delay to allow for mouse movement between elements
         setTimeout(() => {
           // Only hide if mouse is truly outside all nav areas
           const rect = element.getBoundingClientRect();
-          const mouseX = event.clientX || 0;
-          const mouseY = event.clientY || 0;
 
           // Recheck all nav elements to see if mouse is still in any of them
           let stillInAnyNav = false;

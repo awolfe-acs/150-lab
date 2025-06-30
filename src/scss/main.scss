@@ -36,8 +36,12 @@ html, body {
 
   a {
     text-decoration: none !important;
-    transition: outline-color 0s;
+    transition: all 0.3s ease, outline-color 0s;
     color: #fff;
+
+    &:not(.secondary-btn, .fancy-btn, .page-nav-link) {
+      transition: all 0.3s ease, outline-color 0s !important;
+    }
 
     &:hover {
       color: #fff;
