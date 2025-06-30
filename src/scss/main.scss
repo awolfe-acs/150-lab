@@ -23,6 +23,8 @@ html, body {
   height: 100%;
   overscroll-behavior: none; // Prevent bouncing on some browsers
   overflow-y: scroll; // Force scrollbar visibility
+  margin: 0; // Ensure no margin creates gap with scrollbar
+  padding: 0; // Ensure no padding creates gap with scrollbar
 
   #bd, #maincontent {
     width: 100% !important;
@@ -34,7 +36,7 @@ html, body {
 
   a {
     text-decoration: none !important;
-    transition: outline-color 0s !important;
+    transition: outline-color 0s;
     color: #fff;
 
     &:hover {
@@ -56,6 +58,7 @@ html.lenis {
   // Ensure content doesn't cause overflow beyond intended
   overflow: auto; // Changed from 'hidden' to 'auto' to keep scrollbar
   scrollbar-width: thin; // For Firefox
+  scrollbar-gutter: stable; // Prevent layout shift when scrollbar appears/disappears
 
   // Ensure touch events work properly with Lenis
   &.lenis-smooth {
@@ -69,6 +72,24 @@ html {
   // Ensure touch scrolling works on mobile
   -webkit-overflow-scrolling: touch;
   touch-action: manipulation; // Allow all touch gestures
+
+  // Custom scrollbar styling for webkit browsers to match thin scrollbar
+  &::-webkit-scrollbar {
+    width: 8px; // Thin scrollbar width
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent; // Match background
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2); // Subtle white for dark theme
+    border-radius: 4px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
 
   ::selection {
     background: #0029cf7f;
@@ -86,6 +107,8 @@ html {
 
   body {
     width: 100vw;
+    min-width: calc(100vw + 5px);
+    max-width: 100%; // Prevent horizontal overflow
     background: #060E15;
     color: #fff;
     font-family: sans-serif;
@@ -94,6 +117,9 @@ html {
     align-items: center;
     isolation: isolate;
     overflow-x: hidden;
+    margin: 0; // Remove any default margin
+    padding: 0; // Remove any default padding
+    box-sizing: border-box; // Include padding and border in width calculation
     // Ensure touch scrolling works on mobile
     -webkit-overflow-scrolling: touch;
     touch-action: manipulation; // Allow all touch gestures for better touch response

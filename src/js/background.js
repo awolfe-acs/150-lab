@@ -329,6 +329,41 @@ export function initShaderBackground() {
           // Get the current progress from start to end (0 to 1)
           const progress = self.progress;
 
+          console.log("Hero travel area scroll trigger firing, progress:", progress);
+
+          // Debug uniforms object
+          console.log("uniforms object:", !!uniforms);
+          console.log("uniforms.waveSpeed:", !!uniforms.waveSpeed);
+          console.log("Current waveSpeed value before change:", uniforms.waveSpeed ? uniforms.waveSpeed.value : "N/A");
+
+          // Interpolate waveSpeed from 2.0 to 0.2 based on progress (simplified like colorDarkness)
+          const initialWaveSpeed = 2.0;
+          const targetWaveSpeed = 0.2;
+          const currentWaveSpeed = initialWaveSpeed + (targetWaveSpeed - initialWaveSpeed) * progress;
+          console.log("Setting waveSpeed to:", currentWaveSpeed);
+
+          if (uniforms && uniforms.waveSpeed) {
+            uniforms.waveSpeed.value = currentWaveSpeed;
+            console.log("waveSpeed value after assignment:", uniforms.waveSpeed.value);
+          } else {
+            console.error("uniforms.waveSpeed is not available!");
+          }
+
+          // Interpolate waveAmplitude from 3.0 to 1.0 based on progress
+          const initialWaveAmplitude = 3.0;
+          const targetWaveAmplitude = 1.0;
+          const currentWaveAmplitude = initialWaveAmplitude + (targetWaveAmplitude - initialWaveAmplitude) * progress;
+          console.log("Setting waveAmplitude to:", currentWaveAmplitude);
+
+          if (uniforms && uniforms.waveAmplitude) {
+            uniforms.waveAmplitude.value = currentWaveAmplitude;
+            console.log("waveAmplitude value after assignment:", uniforms.waveAmplitude.value);
+          } else {
+            console.error("uniforms.waveAmplitude is not available!");
+          }
+
+          updateWaveGUI();
+
           if (progress > 0.1) {
             // Transitioning to phase 2 colors
             console.log("Transitioning to Phase 2 colors - hero travel area", progress);
@@ -406,7 +441,9 @@ export function initShaderBackground() {
             uniforms.directionalLight.value = 0.4;
 
             // Reduce wave settings for phase three
-            uniforms.waveSpeed.value = 0.9;
+            console.log("PHASE 3: TEMPORARILY DISABLED waveSpeed override to test interpolation");
+            // TEMPORARILY COMMENTED OUT FOR TESTING:
+            // uniforms.waveSpeed.value = 0.9;
             uniforms.waveAmplitude.value = 1.2;
 
             // Mark that we're now in phase three
@@ -435,9 +472,10 @@ export function initShaderBackground() {
             if (originalAmbientLight !== undefined) uniforms.ambientLight.value = originalAmbientLight;
             if (originalDirectionalLight !== undefined) uniforms.directionalLight.value = originalDirectionalLight;
 
-            // Reset wave settings to original values
-            if (originalWaveSpeed !== undefined) uniforms.waveSpeed.value = originalWaveSpeed;
-            if (originalWaveAmplitude !== undefined) uniforms.waveAmplitude.value = originalWaveAmplitude;
+            // Reset wave settings to phase 2 values (not original values)
+            console.log("PHASE 3 REVERT: Setting waveSpeed back to phase 2 value (0.2) and waveAmplitude to 1.0");
+            uniforms.waveSpeed.value = 0.2; // Phase 2 endpoint value, not original 2.0
+            uniforms.waveAmplitude.value = 1.0; // Phase 2 endpoint value, not original 3.0
 
             // Reset to phase two
             window.colorPhase = 2;
@@ -552,10 +590,12 @@ export function initShaderBackground() {
           const progress = self.progress;
 
           // When we're past get-involved (progress = 0), revert to original parameters
-          if (progress <= 0.1 && originalWaveSpeed !== undefined) {
+          // BUT only if we're not in a phase transition that should control waveSpeed
+          if (progress <= 0.1 && originalWaveSpeed !== undefined && window.colorPhase === 1) {
             console.log("Reverting wave parameters to original values when scrolling up past #get-involved");
 
-            // Revert wave parameters to original values
+            // Revert wave parameters to original values only if we're in phase 1
+            console.log("GET-INVOLVED REVERT: Setting waveSpeed back to originalWaveSpeed:", originalWaveSpeed);
             if (uniforms.waveSpeed) uniforms.waveSpeed.value = originalWaveSpeed;
             if (uniforms.waveAmplitude) uniforms.waveAmplitude.value = originalWaveAmplitude;
             if (uniforms.ambientLight) uniforms.ambientLight.value = originalAmbientLight;
@@ -649,8 +689,8 @@ export function initShaderBackground() {
                 uniforms.ambientLight.value = originalAmbientLight;
               if (originalDirectionalLight !== undefined && uniforms.directionalLight)
                 uniforms.directionalLight.value = originalDirectionalLight;
-              // Reset to original wave settings
-              if (originalWaveSpeed !== undefined && uniforms.waveSpeed) uniforms.waveSpeed.value = originalWaveSpeed;
+              // For phase 2, don't reset waveSpeed as it should be controlled by the hero-travel-area scroll trigger
+              // Reset amplitude but preserve the waveSpeed interpolation
               if (originalWaveAmplitude !== undefined && uniforms.waveAmplitude)
                 uniforms.waveAmplitude.value = originalWaveAmplitude;
               window.specialColorsActive = true;
@@ -670,7 +710,7 @@ export function initShaderBackground() {
                 uniforms.ambientLight.value = originalAmbientLight;
               if (originalDirectionalLight !== undefined && uniforms.directionalLight)
                 uniforms.directionalLight.value = originalDirectionalLight;
-              // Reset to original wave settings
+              // Reset to original wave settings (phase 1 can reset waveSpeed)
               if (originalWaveSpeed !== undefined && uniforms.waveSpeed) uniforms.waveSpeed.value = originalWaveSpeed;
               if (originalWaveAmplitude !== undefined && uniforms.waveAmplitude)
                 uniforms.waveAmplitude.value = originalWaveAmplitude;
@@ -692,6 +732,8 @@ export function initShaderBackground() {
 
   // Helper function to update the GUI control for colorDarkness if it exists
   function updateColorDarknessGUI() {
+    const gui = window.gui;
+    const uniforms = window.uniforms;
     if (typeof gui !== "undefined" && gui && gui.__folders && gui.__folders["Color Controls"]) {
       const colorFolder = gui.__folders["Color Controls"];
       if (colorFolder && colorFolder.__controllers) {
@@ -707,6 +749,8 @@ export function initShaderBackground() {
 
   // Helper function to update color pickers in the GUI
   function updateColorGUI() {
+    const gui = window.gui;
+    const uniforms = window.uniforms;
     if (typeof gui !== "undefined" && gui && gui.__folders && gui.__folders["Color Controls"]) {
       const colorFolder = gui.__folders["Color Controls"];
       if (colorFolder && colorFolder.__controllers) {
@@ -1193,7 +1237,7 @@ export function initShaderBackground() {
   );
 
   // Define uniforms with tunable parameters - increased default values for larger displacement
-  const uniforms = {
+  window.uniforms = {
     time: { value: 0.0 },
     resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
     // Animation speed parameters
@@ -1211,7 +1255,7 @@ export function initShaderBackground() {
     //Wave parameters
     waveAmplitude: { value: 3.0 }, // Controls wave height
     waveFrequency: { value: 2.2 }, // Controls wave frequency
-    waveDepth: { value: 0.9 }, // Controls perceived depth of waves
+    waveDepth: { value: 0.6 }, // Controls perceived depth of waves
     flowDirection: { value: new THREE.Vector2(-0.7, 0.82) }, // Controls the direction of wave movement
     noiseScale: { value: 2.5 }, // Scale of noise pattern
     noiseInfluence: { value: 0.0 }, // How much noise affects the pattern
@@ -1252,6 +1296,7 @@ export function initShaderBackground() {
     displacementDepth: { value: 0.0 },
     xOffset: { value: -0.104 },
   };
+  const uniforms = window.uniforms; // Keep local reference for backwards compatibility
 
   // Enhanced vertex shader with larger displacement
   const vertexShader = `
@@ -1858,7 +1903,8 @@ export function initShaderBackground() {
   scene.add(mesh);
 
   // Create GUI controls
-  const gui = new dat.GUI({ width: 300, closed: true });
+  window.gui = new dat.GUI({ width: 300, closed: true });
+  const gui = window.gui; // Keep local reference for backwards compatibility
   gui.domElement.style.position = "absolute";
   gui.domElement.style.top = "10px";
   gui.domElement.style.right = "10px";
@@ -3914,6 +3960,8 @@ export function initShaderBackground() {
 
 // Add helper function to update lighting GUI
 function updateLightingGUI() {
+  const gui = window.gui;
+  const uniforms = window.uniforms;
   if (typeof gui === "undefined" || !gui || !gui.__folders || !gui.__folders["Lighting Controls"]) return;
 
   const lightingFolder = gui.__folders["Lighting Controls"];
@@ -3938,7 +3986,13 @@ function updateLightingGUI() {
 
 // Add helper function to update wave GUI
 function updateWaveGUI() {
-  if (typeof gui === "undefined" || !gui || !gui.__folders) return;
+  const gui = window.gui;
+  if (typeof gui === "undefined" || !gui || !gui.__folders) {
+    console.log("GUI not available for wave update");
+    return;
+  }
+
+  const uniforms = window.uniforms;
 
   console.log(
     "Updating wave GUI - waveSpeed:",
@@ -3947,34 +4001,70 @@ function updateWaveGUI() {
     uniforms.waveAmplitude.value
   );
 
-  // Check Speed Controls folder for waveSpeed
-  if (gui.__folders["Speed Controls"]) {
-    const speedFolder = gui.__folders["Speed Controls"];
+  // Debug: List all available folders
+  console.log("Available GUI folders:", Object.keys(gui.__folders));
+
+  // Check Animation Speed Controls folder for waveSpeed
+  if (gui.__folders["Animation Speed Controls"]) {
+    const speedFolder = gui.__folders["Animation Speed Controls"];
+    console.log("Speed Controls folder has", speedFolder.__controllers.length, "controllers");
+
+    let foundWaveSpeed = false;
     for (let i = 0; i < speedFolder.__controllers.length; i++) {
       const controller = speedFolder.__controllers[i];
+      console.log(
+        "Speed controller",
+        i,
+        ":",
+        controller.property,
+        controller.object === uniforms.waveSpeed ? "(MATCHES waveSpeed)" : ""
+      );
 
       // Check for wave speed controller in Speed Controls folder
       if (controller.property === "value" && controller.object === uniforms.waveSpeed) {
         // Update the displayed value without triggering onChange
-        console.log("Updating waveSpeed GUI from", controller.getValue(), "to", uniforms.waveSpeed.value);
+        console.log("SUCCESS: Updating waveSpeed GUI from", controller.getValue(), "to", uniforms.waveSpeed.value);
         controller.setValue(uniforms.waveSpeed.value);
+        foundWaveSpeed = true;
         break;
       }
     }
+
+    if (!foundWaveSpeed) {
+      console.log("WARNING: Could not find waveSpeed controller in Animation Speed Controls folder");
+    }
+  } else {
+    console.log("WARNING: Animation Speed Controls folder not found");
   }
 
   // Check Wave Controls folder for waveAmplitude and other wave properties
   if (gui.__folders["Wave Controls"]) {
     const waveFolder = gui.__folders["Wave Controls"];
+    console.log("Wave Controls folder has", waveFolder.__controllers.length, "controllers");
+
     for (let i = 0; i < waveFolder.__controllers.length; i++) {
       const controller = waveFolder.__controllers[i];
+      console.log(
+        "Wave controller",
+        i,
+        ":",
+        controller.property,
+        controller.object === uniforms.waveAmplitude ? "(MATCHES waveAmplitude)" : ""
+      );
 
       // Check for wave amplitude controller
       if (controller.property === "value" && controller.object === uniforms.waveAmplitude) {
         // Update the displayed value without triggering onChange
-        console.log("Updating waveAmplitude GUI from", controller.getValue(), "to", uniforms.waveAmplitude.value);
+        console.log(
+          "SUCCESS: Updating waveAmplitude GUI from",
+          controller.getValue(),
+          "to",
+          uniforms.waveAmplitude.value
+        );
         controller.setValue(uniforms.waveAmplitude.value);
       }
     }
+  } else {
+    console.log("WARNING: Wave Controls folder not found");
   }
 }

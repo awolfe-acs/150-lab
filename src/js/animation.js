@@ -1032,6 +1032,7 @@ export function initAnimations() {
   let isNavActive = false;
   let isMouseInNavArea = false;
   let navAnimationTimeout;
+  let forceNavHidden = false; // Flag to force nav hidden after click
 
   // Initially hide the page nav and ensure active title is visible
   gsap.set(navLinks, { opacity: 0, x: -20 });
@@ -1054,22 +1055,8 @@ export function initAnimations() {
   const enforceVisibilityState = () => {
     cancelAllPendingAnimations();
 
-    if (isMouseInNavArea) {
-      // Show navigation, hide active title
-      isNavActive = true;
-
-      // Immediately set active title to hidden
-      gsap.set(activeTitle, { opacity: 0 });
-
-      // Animate nav links in
-      gsap.to(navLinks, {
-        opacity: 1,
-        x: 0,
-        duration: 0.4,
-        stagger: 0.05,
-        ease: "power2.out",
-      });
-    } else {
+    // If nav is forced hidden (after click), always hide regardless of mouse position
+    if (forceNavHidden || !isMouseInNavArea) {
       // Hide navigation, show active title
       isNavActive = false;
 
@@ -1082,7 +1069,7 @@ export function initAnimations() {
         ease: "power2.in",
         onComplete: () => {
           // Ensure nav is still marked as inactive and show active title
-          if (!isNavActive && !isMouseInNavArea) {
+          if (!isNavActive && (!isMouseInNavArea || forceNavHidden)) {
             gsap.to(activeTitle, {
               opacity: 1,
               duration: 0.4,
@@ -1090,6 +1077,21 @@ export function initAnimations() {
             });
           }
         },
+      });
+    } else if (isMouseInNavArea && !forceNavHidden) {
+      // Show navigation, hide active title (only if not forced hidden)
+      isNavActive = true;
+
+      // Immediately set active title to hidden
+      gsap.set(activeTitle, { opacity: 0 });
+
+      // Animate nav links in
+      gsap.to(navLinks, {
+        opacity: 1,
+        x: 0,
+        duration: 0.4,
+        stagger: 0.05,
+        ease: "power2.out",
       });
     }
   };
@@ -1136,8 +1138,13 @@ export function initAnimations() {
     const wasInNavArea = isMouseInNavArea;
     isMouseInNavArea = checkMouseInNavArea(event);
 
-    // Only trigger state change if the state actually changed
-    if (wasInNavArea !== isMouseInNavArea) {
+    // Reset force hidden flag when mouse leaves nav area completely
+    if (!isMouseInNavArea && forceNavHidden) {
+      forceNavHidden = false;
+    }
+
+    // Only trigger state change if the state actually changed and nav is not forced hidden
+    if (wasInNavArea !== isMouseInNavArea && !forceNavHidden) {
       // Use a small timeout to debounce rapid state changes
       clearTimeout(navAnimationTimeout);
       navAnimationTimeout = setTimeout(() => {
@@ -1158,8 +1165,11 @@ export function initAnimations() {
   navElements.forEach((element) => {
     if (element) {
       element.addEventListener("mouseenter", () => {
-        isMouseInNavArea = true;
-        enforceVisibilityState();
+        // Only respond to mouse enter if nav is not forced hidden
+        if (!forceNavHidden) {
+          isMouseInNavArea = true;
+          enforceVisibilityState();
+        }
       });
 
       element.addEventListener("mouseleave", () => {
@@ -1188,6 +1198,10 @@ export function initAnimations() {
 
           if (!stillInAnyNav) {
             isMouseInNavArea = false;
+            // Reset force hidden flag when completely leaving nav area
+            if (forceNavHidden) {
+              forceNavHidden = false;
+            }
             enforceVisibilityState();
           }
         }, 50);
@@ -1218,7 +1232,8 @@ export function initAnimations() {
       // Update active title text
       activeTitle.textContent = link.textContent;
 
-      // Force mouse out of nav area to trigger hide
+      // Force nav to be hidden until mouse completely leaves and re-enters
+      forceNavHidden = true;
       isMouseInNavArea = false;
       isNavActive = false;
 
@@ -1230,14 +1245,12 @@ export function initAnimations() {
         stagger: 0.03,
         ease: "power2.in",
         onComplete: () => {
-          // Ensure nav is marked as inactive and show active title
-          if (!isMouseInNavArea) {
-            gsap.to(activeTitle, {
-              opacity: 1,
-              duration: 0.4,
-              ease: "power2.out",
-            });
-          }
+          // Show active title since nav is forced hidden
+          gsap.to(activeTitle, {
+            opacity: 1,
+            duration: 0.4,
+            ease: "power2.out",
+          });
         },
       });
     });

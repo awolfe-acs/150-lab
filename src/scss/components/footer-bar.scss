@@ -68,6 +68,8 @@
             }
 
             .social-wrapper {
+                display: none !important; //remove if we add social
+
                 @media (max-width:$mobile-viewport) {
                     width: 100%;
                     display: flex;

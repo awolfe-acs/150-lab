@@ -26,6 +26,7 @@
         background: #6b46ff;
         position: absolute;
         top: 0;
+        left: 0;
         border-top-left-radius: 64px;
         border-top-right-radius: 64px;
         z-index: 0;
@@ -38,10 +39,15 @@
     }
 
     .content-area {
-        width: 1366px;
+        //width: 1366px;
+        width: 1416px;
         max-width: 100%;
-        padding: 0 16px;
+        padding: 0 40px;
         margin: 0 auto;
+
+        @media (max-width:$mobile-viewport) {
+            padding: 0 16px;
+        }
 
         .title-row {
             display: flex;
@@ -132,6 +138,12 @@
                     opacity: 1;
                 }
             }
+        }
+    }
+
+    .mouse-following-image {
+        @media (max-width:$mobile-viewport) {
+            display: none !important;
         }
     }
 }

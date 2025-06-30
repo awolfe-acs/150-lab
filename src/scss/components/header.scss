@@ -15,6 +15,10 @@ header.anniversary {
     // Ensure header doesn't interfere with touch scrolling
     pointer-events: none;
 
+    @media (max-width:$mobile-viewport) {
+        padding: 4vw;
+    }
+
     // Re-enable pointer events for interactive elements
     div.logo, button {
         pointer-events: auto;
