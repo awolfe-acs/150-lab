@@ -12,7 +12,23 @@ export function initShaderBackground() {
 
   // Track time spent in phase 1 to prevent time accumulation issues
   let phase1StartTime = Date.now();
-  const PHASE1_RESET_TIMEOUT = 40000; // 40 seconds in milliseconds // Initialize movement pause flag
+  const PHASE1_RESET_TIMEOUT = 12000; // 12 seconds in milliseconds
+
+  // Helper function to check if we're above the Phase 3 trigger point
+  function isAbovePhase3Trigger() {
+    const eventsElement = document.querySelector("#events");
+    if (!eventsElement) return true; // If we can't find events element, assume we're above it
+
+    const rect = eventsElement.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+
+    // Phase 3 trigger starts when events top is at 120% (20% below viewport)
+    // So we're "above" the trigger when events top is > 120% from viewport top
+    const triggerPoint = viewportHeight * 1.2; // 120% of viewport height
+    const eventsTopPosition = rect.top;
+
+    return eventsTopPosition > triggerPoint;
+  }
 
   // Get the canvas element
   const canvas = document.getElementById("shaderBackground");
@@ -3805,11 +3821,14 @@ export function initShaderBackground() {
     // Update shader uniforms with slower speed
     uniforms.time.value += 0.001; // Reduced from 0.01 to 0.001
 
-    // Check if we've been in phase 1 too long and reset time to prevent weird effects
-    if (window.colorPhase === 1) {
+    // Check if we've been above Phase 3 trigger too long and reset time to prevent weird effects
+    // This applies when we're above the #events section trigger point (Phase 1 or Phase 2)
+    if (isAbovePhase3Trigger()) {
       const timeInPhase1 = Date.now() - phase1StartTime;
       if (timeInPhase1 > PHASE1_RESET_TIMEOUT) {
-        console.log("Phase 1 timeout reached (40s), resetting time uniform to prevent background weirdness");
+        console.log(
+          "Timeout reached while above Phase 3 trigger (12s), resetting time uniform to prevent background weirdness"
+        );
         uniforms.time.value = 0.0;
         phase1StartTime = Date.now(); // Reset the timer
       }

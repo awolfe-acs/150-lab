@@ -20,7 +20,7 @@ header.anniversary {
     }
 
     // Re-enable pointer events for interactive elements
-    div.logo, button {
+    .logo, button {
         pointer-events: auto;
         touch-action: manipulation;
     }
@@ -30,7 +30,7 @@ header.anniversary {
     }
 
     &.nav-active {
-        div.logo, button {
+        .logo, button {
             opacity: 0 !important;
             pointer-events: none !important;
             transition: opacity 0.24s ease;
@@ -43,7 +43,7 @@ header.anniversary {
         }
     }
 
-    div.logo {
+    .logo {
         cursor: pointer;
         position: relative;
 
@@ -111,10 +111,10 @@ header.anniversary {
             content: '';
             position: absolute;
             width: 16px;
-            height: 1px;
+            height: 0.5px;
             background-color: #fff;
             transition: all 0.3s ease;
-            transform: translateY(-50%);
+            transform: translateY(-50%) scaleY(1.01);
             right: 0;
         }
 
