@@ -3,7 +3,7 @@
 .footer-bar {
     height: 24px;
 
-    @media (max-width:$mobile-viewport) {
+    @media (max-width:$desktop-viewport) {
         height: auto;
         margin-bottom: 40px;
     }
@@ -18,14 +18,14 @@
         height: 24px;
         flex-wrap: wrap;
 
-        @media (max-width:$mobile-viewport) {
+        @media (max-width:$desktop-viewport) {
             height: auto;
             flex-direction: column;
             gap: 16px;
         }
 
         >svg {
-            @media (max-width:$mobile-viewport) {
+            @media (max-width:$desktop-viewport) {
                 width: 100%;
                 display: block;
             }
@@ -35,7 +35,7 @@
             margin-left: 24px;
             margin-right: auto;
 
-            @media (max-width:$mobile-viewport) {
+            @media (max-width:$desktop-viewport) {
                 font-size: 10px;
                 text-align: center;
                 display: block;
@@ -51,7 +51,7 @@
             margin-right: 0;
             margin-left: auto;
 
-            @media (max-width:$mobile-viewport) {
+            @media (max-width:$desktop-viewport) {
                 height: auto;
                 flex-direction: column;
                 gap: 16px;
@@ -59,7 +59,7 @@
             }
 
             .email {
-                @media (max-width:$mobile-viewport) {
+                @media (max-width:$desktop-viewport) {
                     width: 100%;
                     display: flex;
                     justify-content: center;
@@ -70,7 +70,7 @@
             .social-wrapper {
                 display: none !important; //remove if we add social
 
-                @media (max-width:$mobile-viewport) {
+                @media (max-width:$desktop-viewport) {
                     width: 100%;
                     display: flex;
                     justify-content: center;

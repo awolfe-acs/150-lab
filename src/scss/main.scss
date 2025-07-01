@@ -321,7 +321,6 @@ html {
 }
 
 #get-involved {
-  padding-top: 25vh;
 
   @media (max-width:$mobile-viewport) {
     padding-top: 4vh;
@@ -331,7 +330,8 @@ html {
     display: flex;
     flex-direction: column;
     gap: 40px;
-    transform: translateY(12lvh);
+    padding: 20vh 0;
+    //transform: translateY(12lvh);
 
     @media (max-width:$mobile-viewport) {
       transform: translateY(0);

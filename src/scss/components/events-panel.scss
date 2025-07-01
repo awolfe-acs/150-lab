@@ -79,6 +79,13 @@
             cursor: pointer;
             transition: all 0.3s ease;
             position: relative;
+            justify-content: flex-start;
+            align-items: center;
+
+            @media (max-width:$desktop-viewport) {
+                height: auto;
+                padding: 24px 0;
+            }
 
             @media (max-width:$mobile-viewport) {
                 height: auto;
@@ -87,10 +94,12 @@
 
             .event-title, .event-date {
                 font-size: 36px;
-                margin-left: 0;
-                margin-right: 48px;
                 transition: all 0.3s ease;
                 line-height: 125%;
+
+                @media (max-width:1280px) and (min-width:$mobile-viewport) {
+                    font-size: 18px;
+                }
 
                 @media (max-width:$mobile-viewport) {
                     font-size: 16px;
@@ -101,6 +110,8 @@
             .event-title {
                 font-weight: 700;
                 width: 55%;
+                margin-left: 0;
+                margin-right: 48px;
 
                 @media (max-width:$mobile-viewport) {
                     font-size: 16px;
@@ -117,8 +128,10 @@
 
             .event-date {
                 font-weight: 400;
+                margin-left: 0;
+                margin-right: auto;
 
-                @media (max-width:$mobile-viewport) {
+                @media (max-width:$desktop-viewport) {
                     flex: 1;
                     margin-right: 0;
                     margin-left: auto;

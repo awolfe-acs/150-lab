@@ -18,6 +18,10 @@
         margin-left: auto;
         margin-right: auto;
     }
+
+    @media (max-width:1280px) and (min-width:$mobile-viewport) {
+        margin-bottom: 12vw;
+    }
 }
 
 .sliding-card-row {
@@ -78,14 +82,14 @@
             &:nth-of-type(3),
             &:nth-of-type(5) {
                 left: -10vw;
-                width: calc(100% + 10vw); // Compensate for the left offset
+                width: calc(100% - 8vw); // Compensate for the left offset
             }
 
             &:nth-of-type(2),
             &:nth-of-type(4),
             &:nth-of-type(6) {
                 right: -10vw;
-                width: calc(100% + 10vw); // Compensate for the right offset
+                width: calc(100% - 8vw); // Compensate for the right offset
             }
         }
 

@@ -12,8 +12,14 @@
     height: 486px;
     overflow: hidden;
 
+    @media (max-width:$desktop-viewport) {
+        height: auto;
+        max-width: calc(100% - 64px);
+    }
+
     @media (max-width:$mobile-viewport) {
         width: calc(100% - 32px);
+        max-width: calc(100% - 32px);
         height: auto;
     }
 
@@ -22,6 +28,10 @@
         gap: 100px;
         height: 100%;
         width: 100%;
+
+        @media (max-width:$desktop-viewport) {
+            gap: 24px;
+        }
     }
 
     .text-column {
@@ -31,12 +41,25 @@
         padding: 48px 100px 48px 48px;
         max-width: 100%;
 
-        @media (max-width:$mobile-viewport) {
+        @media (max-width:$desktop-viewport) {
             padding: 32px;
+            width: calc(100% - 190px);
+        }
+
+        @media (max-width:$mobile-viewport) {
+            padding: 32px 4px 32px 32px;
+        }
+
+        @media (max-width:580px) {
+            width: 100%;
         }
 
         h3 {
             margin-left: 0 !important;
+
+            @media (max-width:$desktop-viewport) {
+                font-size: 6vw;
+            }
         }
 
         p {
@@ -65,11 +88,19 @@
             input[type="text"] {
                 width: 400px;
                 max-width: calc(100% - 8px);
+
+                @media (max-width:$desktop-viewport) {
+                    width: 100%;
+                }
             }
 
             select {
                 width: 240px;
                 max-width: calc(100% - 8px);
+
+                @media (max-width:$desktop-viewport) {
+                    width: 100%;
+                }
 
                 @media (max-width:$mobile-viewport) {
                     width: calc(100% - 8px);
@@ -85,6 +116,11 @@
                 gap: 24px;
                 margin-bottom: 24px;
                 transform: translateX(4px);
+
+                @media (max-width:$desktop-viewport) {
+                    flex-direction: column;
+                    gap: 16px;
+                }
 
                 @media (max-width:$mobile-viewport) {
                     flex-direction: column;
@@ -226,6 +262,15 @@
         min-width: 226px;
         overflow: hidden;
         position: relative;
+
+        @media (max-width:$desktop-viewport) {
+            width: 128px;
+            min-width: 128px;
+        }
+
+        @media (max-width:580px) {
+            display: none;
+        }
 
         .marquee-container {
             position: absolute;

@@ -15,10 +15,11 @@ h2 {
     letter-spacing: -0.05em;
 
     @media (max-width:$desktop-viewport) {
-        font-size: 10vw;
+        font-size: 6vw;
     }
 
     @media (max-width:$mobile-viewport) {
+        font-size: 10vw;
         font-size: 36px;
         max-width: 82vw;
         margin-left: auto;

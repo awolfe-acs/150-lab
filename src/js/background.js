@@ -12,7 +12,7 @@ export function initShaderBackground() {
 
   // Track time spent in phase 1 to prevent time accumulation issues
   let phase1StartTime = Date.now();
-  const PHASE1_RESET_TIMEOUT = 12000; // 12 seconds in milliseconds
+  const PHASE1_RESET_TIMEOUT = 25000; // 25 seconds in milliseconds
 
   // Helper function to check if we're above the Phase 3 trigger point
   function isAbovePhase3Trigger() {
@@ -355,57 +355,39 @@ export function initShaderBackground() {
           // Get the current progress from start to end (0 to 1)
           const progress = self.progress;
 
-          console.log("Hero travel area scroll trigger firing, progress:", progress);
-
-          // Debug uniforms object
-          console.log("uniforms object:", !!uniforms);
-          console.log("uniforms.waveSpeed:", !!uniforms.waveSpeed);
-          console.log("Current waveSpeed value before change:", uniforms.waveSpeed ? uniforms.waveSpeed.value : "N/A");
-
           // Interpolate waveSpeed from 2.0 to 0.2 based on progress (simplified like colorDarkness)
           const initialWaveSpeed = 2.0;
           const targetWaveSpeed = 0.2;
           const currentWaveSpeed = initialWaveSpeed + (targetWaveSpeed - initialWaveSpeed) * progress;
-          console.log("Setting waveSpeed to:", currentWaveSpeed);
 
           if (uniforms && uniforms.waveSpeed) {
             uniforms.waveSpeed.value = currentWaveSpeed;
-            console.log("waveSpeed value after assignment:", uniforms.waveSpeed.value);
           } else {
-            console.error("uniforms.waveSpeed is not available!");
           }
 
           // Interpolate waveAmplitude from 3.0 to 1.0 based on progress
           const initialWaveAmplitude = 3.0;
           const targetWaveAmplitude = 1.0;
           const currentWaveAmplitude = initialWaveAmplitude + (targetWaveAmplitude - initialWaveAmplitude) * progress;
-          console.log("Setting waveAmplitude to:", currentWaveAmplitude);
 
           if (uniforms && uniforms.waveAmplitude) {
             uniforms.waveAmplitude.value = currentWaveAmplitude;
-            console.log("waveAmplitude value after assignment:", uniforms.waveAmplitude.value);
           } else {
-            console.error("uniforms.waveAmplitude is not available!");
           }
 
           // Interpolate waveFrequency from 2.2 to 1.0 based on progress
           const initialWaveFrequency = 2.2;
           const targetWaveFrequency = 1.0;
           const currentWaveFrequency = initialWaveFrequency + (targetWaveFrequency - initialWaveFrequency) * progress;
-          console.log("Setting waveFrequency to:", currentWaveFrequency);
 
           if (uniforms && uniforms.waveFrequency) {
             uniforms.waveFrequency.value = currentWaveFrequency;
-            console.log("waveFrequency value after assignment:", uniforms.waveFrequency.value);
-          } else {
-            console.error("uniforms.waveFrequency is not available!");
           }
 
           updateWaveGUI();
 
           if (progress > 0.1) {
             // Transitioning to phase 2 colors
-            console.log("Transitioning to Phase 2 colors - hero travel area", progress);
 
             // Interpolate between phase 1 and phase 2 colors
             const phase1Color1 = new THREE.Color("#32c2d6");
@@ -434,8 +416,6 @@ export function initShaderBackground() {
             updateColorGUI();
           } else {
             // Back to phase 1 colors
-            console.log("Reverting to Phase 1 colors - hero travel area");
-
             uniforms.color1.value.set("#32c2d6");
             uniforms.color2.value.set("#004199");
 
@@ -469,7 +449,6 @@ export function initShaderBackground() {
 
           // When events section starts entering viewport, transition to phase three
           if (progress > 0.1) {
-            console.log("Transitioning to Phase 3 colors - events section entering viewport");
             // Set phase three colors
             uniforms.color1.value.set("#dcfff6");
             uniforms.color2.value.set("#5dff9d");
@@ -484,7 +463,6 @@ export function initShaderBackground() {
             uniforms.directionalLight.value = 0.4;
 
             // Set wave settings for phase three (keep frequency at default)
-            console.log("PHASE 3: TEMPORARILY DISABLED waveSpeed override to test interpolation");
             // TEMPORARILY COMMENTED OUT FOR TESTING:
             // uniforms.waveSpeed.value = 0.9;
             uniforms.waveAmplitude.value = 1.2;
@@ -501,12 +479,10 @@ export function initShaderBackground() {
             updateWaveGUI();
           } else if (progress <= 0.1 && window.colorPhase === 3) {
             // When scrolling back up and events section exits viewport, restore phase two special colors
-            console.log("Reverting to Phase 2 colors - events section exiting viewport");
 
             // Reset time to 0 to ensure consistent wave behavior when transitioning back to phase 2
             // This prevents the accumulated time from making the wave transitions appear too fast/dramatic
             uniforms.time.value = 0.0;
-            console.log("Reset time to 0 for consistent phase 2 transition behavior");
 
             // Restore phase 2 colors (red and purple)
             uniforms.color1.value.set("#ff4848");
@@ -522,9 +498,6 @@ export function initShaderBackground() {
             if (originalDirectionalLight !== undefined) uniforms.directionalLight.value = originalDirectionalLight;
 
             // Reset wave settings to phase 2 values (not original values)
-            console.log(
-              "PHASE 3 REVERT: Setting waveSpeed back to phase 2 value (0.2), waveAmplitude to 1.0, and waveFrequency to 1.0"
-            );
             uniforms.waveSpeed.value = 0.2; // Phase 2 endpoint value, not original 2.0
             uniforms.waveAmplitude.value = 1.0; // Phase 2 endpoint value, not original 3.0
             uniforms.waveFrequency.value = 1.0; // Phase 2 endpoint value, not original 2.2
@@ -646,10 +619,7 @@ export function initShaderBackground() {
           // When we're past get-involved (progress = 0), revert to original parameters
           // BUT only if we're not in a phase transition that should control waveSpeed
           if (progress <= 0.1 && originalWaveSpeed !== undefined && window.colorPhase === 1) {
-            console.log("Reverting wave parameters to original values when scrolling up past #get-involved");
-
             // Revert wave parameters to original values only if we're in phase 1
-            console.log("GET-INVOLVED REVERT: Setting waveSpeed back to originalWaveSpeed:", originalWaveSpeed);
             if (uniforms.waveSpeed) uniforms.waveSpeed.value = originalWaveSpeed;
             if (uniforms.waveAmplitude) uniforms.waveAmplitude.value = originalWaveAmplitude;
             if (uniforms.waveFrequency) uniforms.waveFrequency.value = originalWaveFrequency;
@@ -679,8 +649,6 @@ export function initShaderBackground() {
         }
       }
     }
-
-    console.log("Set up ScrollTrigger animations for shader, globe, overlay, and particles");
   }
 
   // Separate function to set up anniversary events animation
@@ -689,17 +657,12 @@ export function initShaderBackground() {
     const anniversaryEventsSection = document.querySelector("#events");
 
     if (!anniversaryEventsSection) {
-      console.warn("Could not find #events element for shader animation");
-      console.log("Waiting for DOM to be ready before trying again...");
-
       // Try again when DOM is fully loaded
       document.addEventListener("DOMContentLoaded", () => {
         setupAnniversaryEventsAnimation(gsap, ScrollTrigger, originalColor1, originalColor2);
       });
       return;
     }
-
-    console.log("Events section found, setting up animation");
 
     // Create a second ScrollTrigger to animate colorDarkness back to 0 when scrolling through #events
     gsap.timeline({
@@ -718,7 +681,6 @@ export function initShaderBackground() {
             // Maintain colors based on the current phase, but respect scroll direction
             if (window.colorPhase === 3) {
               // We're in phase three, maintain the phase three colors only if we're scrolling within the events section
-              console.log("Maintaining Phase 3 colors in events section");
               if (uniforms.color1) uniforms.color1.value.set("#dcfff6");
               if (uniforms.color2) uniforms.color2.value.set("#5dff9d");
               // Set phase three lighting values
@@ -735,7 +697,6 @@ export function initShaderBackground() {
               updateWaveGUI();
             } else if (window.colorPhase === 2) {
               // We're in phase two, maintain phase two special colors
-              console.log("Maintaining Phase 2 colors - reverting from events section");
               // Use the phase 2 colors (red and purple)
               if (uniforms.color1) uniforms.color1.value.set("#ff4848");
               if (uniforms.color2) uniforms.color2.value.set("#3f00f5");
@@ -756,7 +717,6 @@ export function initShaderBackground() {
               updateWaveGUI();
             } else {
               // We're in phase one, maintain phase one special colors
-              console.log("Maintaining Phase 1 colors - reverting from events section");
               // Use the actual default phase 1 colors
               if (uniforms.color1) uniforms.color1.value.set("#32c2d6");
               if (uniforms.color2) uniforms.color2.value.set("#004199");
@@ -1049,8 +1009,6 @@ export function initShaderBackground() {
 
     // Add to scene, not to camera
     scene.add(overlayMesh);
-
-    console.log("Created gradient overlay with fixed 66% viewport height");
   }
 
   // Function to update overlay position relative to camera
@@ -1101,8 +1059,6 @@ export function initShaderBackground() {
 
       // Update the position after resizing
       updateOverlayPosition();
-
-      console.log("Updated overlay to 66% viewport height");
     }
   }
 
@@ -1132,8 +1088,6 @@ export function initShaderBackground() {
 
       // Update the position after resizing
       updateOverlayPosition();
-
-      console.log("Updated overlay to 66% viewport height");
     }
   }
 
@@ -1280,17 +1234,11 @@ export function initShaderBackground() {
           }
         }
       });
-
-      console.log("Globe model loaded successfully");
     },
     // Progress callback
-    (xhr) => {
-      console.log(`Globe model ${(xhr.loaded / xhr.total) * 100}% loaded`);
-    },
+    (xhr) => {},
     // Error callback
-    (error) => {
-      console.error("Error loading globe model:", error);
-    }
+    (error) => {}
   );
 
   // Define uniforms with tunable parameters - increased default values for larger displacement
@@ -2537,12 +2485,32 @@ export function initShaderBackground() {
           controller.setValue(-10);
         }
       }
-
-      console.log(`Positioned globe for mobile viewport at Y: 192, Z: -10`);
       return;
     }
 
-    // For non-mobile viewports, use the existing positioning logic
+    // Check if we're in tablet viewport (between 640px and 1024px)
+    if (vw > 640 && vw <= 1024) {
+      // Set a more centered Y position for tablet viewports
+      // Position it higher than the mobile position to be more centered
+      const centeredYPosition = 192; // More centered than the mobile 192
+      globeModel.position.y = centeredYPosition;
+      globeModel.position.z = -10; // Keep Z position consistent
+
+      // Update the position values in the GUI
+      for (let i = 0; i < positionFolder.__controllers.length; i++) {
+        const controller = positionFolder.__controllers[i];
+        if (controller.property === "positionY") {
+          // Update without triggering onChange
+          controller.setValue(centeredYPosition);
+        } else if (controller.property === "positionZ") {
+          // Update without triggering onChange
+          controller.setValue(-10);
+        }
+      }
+      return;
+    }
+
+    // For desktop viewports (> 1024px), use the existing positioning logic
     // Get the wave parameters from the shader uniforms
     const waveEnabled = uniforms.bottomWaveEnabled.value;
     const waveDepth = uniforms.bottomWaveDepth.value;
@@ -2585,8 +2553,6 @@ export function initShaderBackground() {
           controller.setValue(worldZPosition);
         }
       }
-
-      console.log(`Positioned globe behind bottom wave at Y: ${worldYPosition.toFixed(2)}, Z: ${worldZPosition}`);
     }
   }
 
@@ -2644,12 +2610,6 @@ export function initShaderBackground() {
           break;
         }
       }
-
-      console.log(
-        `Updated globe size: ${targetWidth.toFixed(0)}px (90vw), Scale: ${newScale.toFixed(
-          2
-        )}, Original width: ${modelWidth.toFixed(2)}`
-      );
 
       // After sizing the globe, position it behind the bottom wave
       // This will now account for mobile viewport positioning
@@ -2852,16 +2812,11 @@ export function initShaderBackground() {
             overlayMaterial.uniforms.endOpacity.value = 1.0;
             overlayMaterial.uniforms.overlayColor.value.set("#FF00FF"); // Bright magenta
 
-            console.log("Debug mode activated - overlay set to fully opaque magenta");
-            console.log("Overlay position:", overlayMesh.position);
-            console.log("Camera position:", camera.position);
-
             // Reset after 2 seconds
             setTimeout(() => {
               overlayMaterial.uniforms.startOpacity.value = savedStart;
               overlayMaterial.uniforms.endOpacity.value = savedEnd;
               overlayMaterial.uniforms.overlayColor.value.set(overlayParams.color);
-              console.log("Debug mode deactivated - overlay restored to previous settings");
             }, 2000);
           }
         },
@@ -3336,6 +3291,11 @@ export function initShaderBackground() {
   let lastMousePosition = { x: 0, y: 0 };
   let mouseParticleId = 0;
 
+  // Track cumulative mouse movement for initial activation threshold
+  let cumulativeMovement = 0;
+  let isMouseParticleSystemActive = false;
+  let initialMovementThreshold = 150; // Pixels of cumulative movement needed to start particles
+
   // Mouse follow particle parameters
   const mouseParticleParams = {
     enabled: true,
@@ -3537,8 +3497,16 @@ export function initShaderBackground() {
     const deltaY = mousePosition.y - lastMousePosition.y;
     const movement = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-    // Only spawn particles if mouse is moving and we haven't hit the limit
-    if (movement > 1 && mouseParticles.length < mouseParticleParams.maxParticles) {
+    // Track cumulative movement to activate particle system
+    if (!isMouseParticleSystemActive) {
+      cumulativeMovement += movement;
+      if (cumulativeMovement >= initialMovementThreshold) {
+        isMouseParticleSystemActive = true;
+      }
+    }
+
+    // Only spawn particles if mouse particle system is active, mouse is moving, and we haven't hit the limit
+    if (isMouseParticleSystemActive && movement > 1 && mouseParticles.length < mouseParticleParams.maxParticles) {
       // Random chance to spawn particle based on spawn rate
       if (Math.random() < mouseParticleParams.spawnRate) {
         const worldCoords = mouseToWorldCoords(mousePosition.x, mousePosition.y);
@@ -3621,6 +3589,9 @@ export function initShaderBackground() {
         // Clear all particles when disabled
         mouseParticles = [];
         updateMouseParticleGeometry();
+        // Reset activation system
+        isMouseParticleSystemActive = false;
+        cumulativeMovement = 0;
       }
     });
 
@@ -3691,6 +3662,30 @@ export function initShaderBackground() {
     .onChange((value) => {
       mouseParticleParams.fadeOutSpeed = value;
     });
+
+  // Add control for initial movement threshold
+  mouseParticleFolder
+    .add({ movementThreshold: initialMovementThreshold }, "movementThreshold", 50, 300, 10)
+    .name("Initial Movement Needed")
+    .onChange((value) => {
+      // Update the threshold variable
+      initialMovementThreshold = value;
+    });
+
+  // Add button to reset the activation system
+  mouseParticleFolder
+    .add(
+      {
+        resetActivation: function () {
+          isMouseParticleSystemActive = false;
+          cumulativeMovement = 0;
+          mouseParticles = [];
+          updateMouseParticleGeometry();
+        },
+      },
+      "resetActivation"
+    )
+    .name("Reset Activation");
 
   // Close the mouse particle folder by default
   mouseParticleFolder.close();
@@ -3827,7 +3822,7 @@ export function initShaderBackground() {
       const timeInPhase1 = Date.now() - phase1StartTime;
       if (timeInPhase1 > PHASE1_RESET_TIMEOUT) {
         console.log(
-          "Timeout reached while above Phase 3 trigger (12s), resetting time uniform to prevent background weirdness"
+          "Timeout reached while above Phase 3 trigger (25s), resetting time uniform to prevent background weirdness"
         );
         uniforms.time.value = 0.0;
         phase1StartTime = Date.now(); // Reset the timer
@@ -4008,8 +4003,6 @@ export function initShaderBackground() {
 
       // Update position based on current y-offset
       updateOverlayPosition();
-
-      console.log("Updated overlay size to 66% viewport height");
     }
   }
 
@@ -4151,12 +4144,6 @@ export function initShaderBackground() {
 
         // Only force a resize if there's a significant change
         setTimeout(handleResize, 100);
-
-        console.log(
-          `Tab refocused with significant viewport change: Width ${widthChange.toFixed(
-            2
-          )}%, Height ${heightChange.toFixed(2)}%`
-        );
       } else {
         console.log("Tab refocused but no significant viewport change, skipping resize");
       }
@@ -4431,98 +4418,43 @@ function updateLightingGUI() {
 // Add helper function to update wave GUI
 function updateWaveGUI() {
   const gui = window.gui;
-  if (typeof gui === "undefined" || !gui || !gui.__folders) {
-    console.log("GUI not available for wave update");
-    return;
-  }
 
   const uniforms = window.uniforms;
-
-  console.log(
-    "Updating wave GUI - waveSpeed:",
-    uniforms.waveSpeed.value,
-    "waveAmplitude:",
-    uniforms.waveAmplitude.value,
-    "waveFrequency:",
-    uniforms.waveFrequency.value
-  );
-
-  // Debug: List all available folders
-  console.log("Available GUI folders:", Object.keys(gui.__folders));
 
   // Check Animation Speed Controls folder for waveSpeed
   if (gui.__folders["Animation Speed Controls"]) {
     const speedFolder = gui.__folders["Animation Speed Controls"];
-    console.log("Speed Controls folder has", speedFolder.__controllers.length, "controllers");
 
     let foundWaveSpeed = false;
     for (let i = 0; i < speedFolder.__controllers.length; i++) {
       const controller = speedFolder.__controllers[i];
-      console.log(
-        "Speed controller",
-        i,
-        ":",
-        controller.property,
-        controller.object === uniforms.waveSpeed ? "(MATCHES waveSpeed)" : ""
-      );
 
       // Check for wave speed controller in Speed Controls folder
       if (controller.property === "value" && controller.object === uniforms.waveSpeed) {
         // Update the displayed value without triggering onChange
-        console.log("SUCCESS: Updating waveSpeed GUI from", controller.getValue(), "to", uniforms.waveSpeed.value);
         controller.setValue(uniforms.waveSpeed.value);
         foundWaveSpeed = true;
         break;
       }
     }
-
-    if (!foundWaveSpeed) {
-      console.log("WARNING: Could not find waveSpeed controller in Animation Speed Controls folder");
-    }
-  } else {
-    console.log("WARNING: Animation Speed Controls folder not found");
   }
 
   // Check Wave Controls folder for waveAmplitude and other wave properties
   if (gui.__folders["Wave Controls"]) {
     const waveFolder = gui.__folders["Wave Controls"];
-    console.log("Wave Controls folder has", waveFolder.__controllers.length, "controllers");
 
     for (let i = 0; i < waveFolder.__controllers.length; i++) {
       const controller = waveFolder.__controllers[i];
-      console.log(
-        "Wave controller",
-        i,
-        ":",
-        controller.property,
-        controller.object === uniforms.waveAmplitude
-          ? "(MATCHES waveAmplitude)"
-          : controller.object === uniforms.waveFrequency
-          ? "(MATCHES waveFrequency)"
-          : ""
-      );
 
       // Check for wave amplitude controller
       if (controller.property === "value" && controller.object === uniforms.waveAmplitude) {
         // Update the displayed value without triggering onChange
-        console.log(
-          "SUCCESS: Updating waveAmplitude GUI from",
-          controller.getValue(),
-          "to",
-          uniforms.waveAmplitude.value
-        );
         controller.setValue(uniforms.waveAmplitude.value);
       }
 
       // Check for wave frequency controller
       if (controller.property === "value" && controller.object === uniforms.waveFrequency) {
         // Update the displayed value without triggering onChange
-        console.log(
-          "SUCCESS: Updating waveFrequency GUI from",
-          controller.getValue(),
-          "to",
-          uniforms.waveFrequency.value
-        );
         controller.setValue(uniforms.waveFrequency.value);
       }
     }
