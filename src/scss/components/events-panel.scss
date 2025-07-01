@@ -3,7 +3,6 @@
 .events-panel {
     border-top-left-radius: 64px;
     border-top-right-radius: 64px;
-    //background: #2B2FA8;
     padding-top: 92px;
     padding-bottom: 134px;
 
@@ -11,6 +10,7 @@
         border-top-left-radius: 24px;
         border-top-right-radius: 24px;
         padding-top: 48px;
+        padding-bottom: 0;
     }
 
     >div {
@@ -112,6 +112,7 @@
                 width: 55%;
                 margin-left: 0;
                 margin-right: 48px;
+                align-items: center;
 
                 @media (max-width:$mobile-viewport) {
                     font-size: 16px;
