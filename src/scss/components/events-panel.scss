@@ -113,6 +113,9 @@
                 margin-left: 0;
                 margin-right: 48px;
                 align-items: center;
+                display: flex;
+                flex-wrap: nowrap;
+                gap: 8px;
 
                 @media (max-width:$mobile-viewport) {
                     font-size: 16px;
@@ -124,6 +127,8 @@
                     transition: opacity 0.3s ease;
                     opacity: 0;
                     margin-left: 8px;
+                    display: flex;
+                    align-items: center;
                 }
             }
 

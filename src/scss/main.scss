@@ -310,12 +310,12 @@ html {
   }
 
   button.enter-experience {
-    bottom: 20dvh;
+    bottom: 20lvh;
     position: absolute;
     pointer-events: auto;
 
     @media (min-width:1600px) {
-      bottom: 14dvh;
+      bottom: 14lvh;
     }
   }
 }
@@ -330,8 +330,9 @@ html {
     display: flex;
     flex-direction: column;
     gap: 40px;
-    padding: 20vh 0;
-    //transform: translateY(12dvh);
+    padding: 20vh 0 0;
+    justify-content: center;
+    //transform: translateY(12lvh);
 
     @media (max-width:$mobile-viewport) {
       transform: translateY(0);
@@ -378,7 +379,7 @@ html {
 }
 
 #get-involved-earth {
-  gap: 3dvh;
+  gap: 3lvh;
 
   h2, p, span:not(.split-char) {
     text-align: center;

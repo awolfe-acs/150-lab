@@ -7,31 +7,31 @@
 
     section {
         width: 100%;
-        min-height: 100dvh;
+        min-height: 100lvh;
         position: relative;
 
         &.height-100vh {
-            height: 100dvh;
+            height: 100lvh;
         }
 
         &.height-200vh {
-            height: 200dvh;
+            height: 200lvh;
         }
 
         &.height-300vh {
-            height: 300dvh;
+            height: 300lvh;
         }
 
         &.height-400vh {
-            height: 400dvh;
+            height: 400lvh;
         }
 
         &.height-500vh {
-            height: 500dvh;
+            height: 500lvh;
         }
 
         &.height-600vh {
-            height: 600dvh;
+            height: 600lvh;
         }
     }
 }
