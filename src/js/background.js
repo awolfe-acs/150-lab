@@ -12,7 +12,7 @@ export function initShaderBackground() {
 
   // Track time spent in phase 1 to prevent time accumulation issues
   let phase1StartTime = Date.now();
-  const PHASE1_RESET_TIMEOUT = 25000; // 25 seconds in milliseconds
+  const PHASE1_RESET_TIMEOUT = 9999999999999945000; // 25 seconds in milliseconds
 
   // Helper function to check if we're above the Phase 3 trigger point
   function isAbovePhase3Trigger() {
@@ -480,9 +480,11 @@ export function initShaderBackground() {
           } else if (progress <= 0.1 && window.colorPhase === 3) {
             // When scrolling back up and events section exits viewport, restore phase two special colors
 
-            // Reset time to 0 to ensure consistent wave behavior when transitioning back to phase 2
-            // This prevents the accumulated time from making the wave transitions appear too fast/dramatic
-            uniforms.time.value = 0.0;
+            // Maintain perfect continuity when transitioning back to phase 2
+            // This prevents visual jumps while keeping transitions consistent
+            const currentEffectiveTime = uniforms.time.value + uniforms.colorCycleOffset.value;
+            uniforms.colorCycleOffset.value = currentEffectiveTime;
+            uniforms.time.value = 0.0; // Reset time but maintain perfect continuity through offset
 
             // Restore phase 2 colors (red and purple)
             uniforms.color1.value.set("#ff4848");
@@ -1246,10 +1248,11 @@ export function initShaderBackground() {
     time: { value: 0.0 },
     resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
     // Animation speed parameters
-    mainSpeed: { value: 0.012 }, // Overall animation speed multiplier
+    mainSpeed: { value: 0.00012 }, // Overall animation speed multiplier
     waveSpeed: { value: 2.0 }, // Controls how fast the waves animate
     noiseSpeed: { value: 0.45 }, // Speed of the noise animation
     colorCycleSpeed: { value: 2.0 }, // Speed of color cycling/transitions
+    colorCycleOffset: { value: 0.0 }, // New: offset to maintain color cycle continuity
     //Color parameters
     color1: { value: new THREE.Color(0x32c2d6) },
     color2: { value: new THREE.Color(0x004199) },
@@ -1368,6 +1371,7 @@ export function initShaderBackground() {
     uniform float specularStrength;
     uniform float shininess;
     uniform float colorCycleSpeed;
+    uniform float colorCycleOffset;
     uniform float noiseSpeed;
     uniform float waveSpeed;
     uniform float filmNoiseIntensity;
@@ -1469,6 +1473,7 @@ export function initShaderBackground() {
       colorModifiedFlow += vec2(cos(colorHue * 6.28), sin(colorHue * 6.28)) * colorWaveInfluence * 0.5;
       
       // Apply waveSpeed to the time component of the sine waves to control actual wave speed
+      // Use continuous time for perfectly smooth wave motion
       float timeComponent = time * waveSpeed;
       
       // Create a depth-dependent time component for better synergy between depth and color cycling
@@ -1494,9 +1499,8 @@ export function initShaderBackground() {
       // Use color intensity to modify wave phase
       float colorPhaseShift = colorIntensity * colorWaveInfluence * 3.0;
       
-      // Add color cycling effect integrated with the morphing
-      // Make color cycling directly respond to depth for better synergy
-      float colorCycleComponent = time * colorCycleSpeed * (1.0 - depth * 0.3);
+      // Color cycling is now handled separately in the main function
+      // Wave patterns use only regular time to prevent speed accumulation
       
       // Create pulsing amplitude effect over time for more organic movement
       // Make the pulse effect respond to depth for better synergy
@@ -1507,10 +1511,10 @@ export function initShaderBackground() {
       float depthFactor = 1.0 - depth * 0.5; // Higher value for foreground
       
       // Use depth to influence wave frequency and phase for better synergy
-      // Create a more direct relationship between wave height and color transitions
-      float wave1 = sin(morphUv.x * frequencyMod * (4.0 + depth) + colorCycleComponent * depthFactor + colorPhaseShift) * 0.5 + 0.5;
-      float wave2 = sin(morphUv.y * frequencyMod * (3.0 + depth * 0.5) + colorCycleComponent * 0.7 * depthFactor + colorPhaseShift * 0.8) * 0.5 + 0.5;
-      float wave3 = sin((morphUv.x + morphUv.y) * frequencyMod * (2.0 + depth * 0.3) + colorCycleComponent * 1.3 * depthFactor + colorPhaseShift * 0.6) * 0.5 + 0.5;
+      // Create wave patterns that are independent of color cycling to prevent speed accumulation
+      float wave1 = sin(morphUv.x * frequencyMod * (4.0 + depth) + depthTimeComponent * depthFactor + colorPhaseShift) * 0.5 + 0.5;
+      float wave2 = sin(morphUv.y * frequencyMod * (3.0 + depth * 0.5) + depthTimeComponent * 0.7 * depthFactor + colorPhaseShift * 0.8) * 0.5 + 0.5;
+      float wave3 = sin((morphUv.x + morphUv.y) * frequencyMod * (2.0 + depth * 0.3) + depthTimeComponent * 1.3 * depthFactor + colorPhaseShift * 0.6) * 0.5 + 0.5;
       
       // Apply depth offset to create parallax effect
       float depthOffset = depth * layerOffset;
@@ -1711,7 +1715,9 @@ export function initShaderBackground() {
       float waveDepthFactor = waveDepth * (1.0 + sin(time * 0.3) * 0.1);
       
       // Create a more dynamic color mix that's influenced by the wave depth
-      float colorCyclePhase = time * colorCycleSpeed;
+      // Use separate time for color cycling to prevent wave intensity accumulation
+      float colorCycleTime = time + colorCycleOffset;
+      float colorCyclePhase = colorCycleTime * colorCycleSpeed;
       float colorMixFactor = sin(colorCyclePhase * 0.1) * 0.1 + 0.5;
       
       // Create initial color blend
@@ -1732,16 +1738,20 @@ export function initShaderBackground() {
       float backgroundColorMix = mix(0.7, 0.3, backgroundWave);
       
       // Apply color cycling that's synchronized with the wave patterns
-      foregroundColorMix = mix(foregroundColorMix, sin(colorCyclePhase + foregroundWave * 3.14) * 0.5 + 0.5, waveDepthFactor * 0.5);
-      backgroundColorMix = mix(backgroundColorMix, sin(colorCyclePhase + backgroundWave * 3.14 + 1.57) * 0.5 + 0.5, waveDepthFactor * 0.5);
+      // Reduce the influence of colorCyclePhase to minimize optical motion during scrubbing
+      float reducedCycleInfluence = waveDepthFactor * 0.2; // Reduced from 0.5 to 0.2
+      foregroundColorMix = mix(foregroundColorMix, sin(colorCyclePhase + foregroundWave * 3.14) * 0.5 + 0.5, reducedCycleInfluence);
+      backgroundColorMix = mix(backgroundColorMix, sin(colorCyclePhase + backgroundWave * 3.14 + 1.57) * 0.5 + 0.5, reducedCycleInfluence);
       
       vec3 foregroundColor = mix(color1, color2, foregroundColorMix);
       vec3 backgroundColor = mix(color2, color1, backgroundColorMix);
       
       // Add subtle color variations that are synchronized with the wave patterns
+      // Reduce the intensity of color variations to minimize optical motion during scrubbing
+      // Use colorCycleTime for color variations to maintain continuity
       float waveSyncFactor = sin(time * waveSpeed * 0.2) * 0.5 + 0.5;
-      foregroundColor += vec3(sin(time * 0.5) * 0.03, cos(time * 0.6) * 0.03, sin(time * 0.7) * 0.03) * foregroundWave;
-      backgroundColor += vec3(cos(time * 0.4) * 0.03, sin(time * 0.5) * 0.03, cos(time * 0.6) * 0.03) * backgroundWave;
+      foregroundColor += vec3(sin(colorCycleTime * 0.5) * 0.015, cos(colorCycleTime * 0.6) * 0.015, sin(colorCycleTime * 0.7) * 0.015) * foregroundWave;
+      backgroundColor += vec3(cos(colorCycleTime * 0.4) * 0.015, sin(colorCycleTime * 0.5) * 0.015, cos(colorCycleTime * 0.6) * 0.015) * backgroundWave;
       
       // Create a more dynamic depth blend that's influenced by the wave depth parameter
       // This creates a stronger connection between the depth parameter and the visual effect
@@ -1767,8 +1777,9 @@ export function initShaderBackground() {
       baseColor = shiftedColor;
       
       // Apply darkness to the colors with slight time variation for "breathing" effect
-      // Synchronize the darkness variation with the wave pattern
-      float darknessVariation = colorDarkness * (1.0 + sin(time * 0.2) * 0.05 + middleWave * 0.1);
+      // Synchronize the darkness variation with the wave pattern, reduced intensity for less optical motion
+      // Keep using time for wave-related breathing effect
+      float darknessVariation = colorDarkness * (1.0 + sin(time * 0.2) * 0.025 + middleWave * 0.05);
       baseColor = mix(baseColor, vec3(0.0, 0.0, 0.0), darknessVariation);
       
       // Calculate lighting based on wave normal with consistent color influence
@@ -1790,10 +1801,10 @@ export function initShaderBackground() {
       vec3 lightDir = normalize(lightDirection);
       
       // Add subtle movement to the light direction for more dynamic lighting
-      // Synchronize light movement with wave patterns for better synergy
-      // Make the light direction respond directly to the wave pattern
-      lightDir.x += sin(time * 0.2) * 0.05 * middleWave;
-      lightDir.y += cos(time * 0.25) * 0.05 * middleWave;
+      // Synchronize light movement with wave patterns for better synergy, reduced intensity
+      // Make the light direction respond directly to the wave pattern (keep using time for wave-related motion)
+      lightDir.x += sin(time * 0.2) * 0.025 * middleWave;
+      lightDir.y += cos(time * 0.25) * 0.025 * middleWave;
       // Add a subtle rotation to the light direction based on the wave pattern
       float lightRotation = (foregroundWave - 0.5) * waveDepthFactor * 0.2;
       vec3 rotatedLightDir = vec3(
@@ -1804,9 +1815,9 @@ export function initShaderBackground() {
       lightDir = normalize(rotatedLightDir);
       
       // Ambient lighting with subtle color variation
-      // Make the ambient color variation respond to the wave pattern
-      // Create a more dynamic ambient color that's influenced by the wave pattern
-      vec3 ambientVariation = vec3(sin(time * 0.3) * 0.03, cos(time * 0.4) * 0.03, sin(time * 0.5) * 0.03) * middleWave;
+      // Make the ambient color variation respond to the wave pattern, reduced intensity
+      // Create a more dynamic ambient color that's influenced by the wave pattern (keep using time for wave-related motion)
+      vec3 ambientVariation = vec3(sin(time * 0.3) * 0.015, cos(time * 0.4) * 0.015, sin(time * 0.5) * 0.015) * middleWave;
       // Add color cycling to the ambient lighting
       ambientVariation += (foregroundColor - backgroundColor) * foregroundWave * 0.05 * waveDepthFactor;
       vec3 ambientColor = baseColor * (1.0 + ambientVariation);
@@ -1830,8 +1841,8 @@ export function initShaderBackground() {
       float specPower = shininess * (1.0 + foregroundWave * waveDepthFactor * 2.0);
       float spec = pow(max(dot(normal, halfwayDir), 0.0), specPower);
       // Add time-based variation to the specular highlights
-      // Synchronize specular highlights with wave patterns
-      float specularVariation = 1.0 + sin(time * 0.5) * 0.2 * foregroundWave;
+      // Synchronize specular highlights with wave patterns, reduced intensity (keep using time for wave-related motion)
+      float specularVariation = 1.0 + sin(time * 0.5) * 0.1 * foregroundWave;
       // Add color to the specular highlights based on the wave pattern
       vec3 specularColor = mix(vec3(1.0), foregroundColor * 1.5, foregroundWave * waveDepthFactor * 0.3);
       vec3 specular = specularStrength * specularVariation * spec * specularColor;
@@ -1840,8 +1851,8 @@ export function initShaderBackground() {
       vec3 color = ambient + diffuse + specular;
       
       // Add highlights based on wave height for extra depth with more variation
-      // Make highlights directly respond to the wave pattern for better synergy
-      float highlightIntensity = smoothInterpolation(0.4, 0.6, foregroundWave) * waveDepthFactor * (1.0 + sin(time * 0.4) * 0.2);
+      // Make highlights directly respond to the wave pattern for better synergy, reduced intensity (keep using time for wave-related motion)
+      float highlightIntensity = smoothInterpolation(0.4, 0.6, foregroundWave) * waveDepthFactor * (1.0 + sin(time * 0.4) * 0.1);
       // Add color tint to highlights based on the wave pattern
       // Create a more dynamic highlight color that's influenced by the wave pattern
       vec3 highlightColor = mix(vec3(0.1, 0.1, 0.15), mix(color1, color2, foregroundWave) * 0.5, waveDepthFactor * 0.5);
@@ -1880,7 +1891,7 @@ export function initShaderBackground() {
         alpha *= 1.0 - smoothInterpolation(1.0 - leftEdgeSoftness, 1.0, normalizedDist);
       }
       
-      // Add subtle noise to alpha for a more organic edge
+      // Add subtle noise to alpha for a more organic edge (keep using time for wave-related motion)
       float edgeNoise = fbm(uv * noiseScale * 2.0 + time * 0.05 * noiseSpeed);
       alpha *= 0.95 + edgeNoise * 0.05;
 
@@ -1973,11 +1984,19 @@ export function initShaderBackground() {
     });
 
   speedFolder
-    .add(uniforms.colorCycleSpeed, "value", 0.0001, 5)
+    .add(uniforms.colorCycleSpeed, "value", 0.000001, 5)
     .name("Color Cycle Speed")
-    .step(0.0001)
+    .step(0.000001)
     .onChange((value) => {
       uniforms.colorCycleSpeed.value = value;
+    });
+
+  speedFolder
+    .add(uniforms.colorCycleOffset, "value", 0.0, 6.28)
+    .name("Color Cycle Offset")
+    .step(0.01)
+    .onChange((value) => {
+      uniforms.colorCycleOffset.value = value;
     });
 
   // Open the speed folder by default
@@ -3300,7 +3319,7 @@ export function initShaderBackground() {
   const mouseParticleParams = {
     enabled: true,
     spawnRate: 0.455, // Chance to spawn particle on mouse move (0-1)
-    maxParticles: 120,
+    maxParticles: 120, //120
     baseSize: 1.8, // Base particle size
     fadeInSpeed: 0.75, // Maximum opacity/brightness (0-1) - controls peak intensity
     fadeOutSpeed: 1.0, // Fade out intensity multiplier (0-1) - controls fade strength
@@ -3816,15 +3835,17 @@ export function initShaderBackground() {
     // Update shader uniforms with slower speed
     uniforms.time.value += 0.001; // Reduced from 0.01 to 0.001
 
-    // Check if we've been above Phase 3 trigger too long and reset time to prevent weird effects
+    // Check if we've been above Phase 3 trigger too long and stabilize effects to prevent weird behavior
     // This applies when we're above the #events section trigger point (Phase 1 or Phase 2)
     if (isAbovePhase3Trigger()) {
       const timeInPhase1 = Date.now() - phase1StartTime;
       if (timeInPhase1 > PHASE1_RESET_TIMEOUT) {
-        console.log(
-          "Timeout reached while above Phase 3 trigger (25s), resetting time uniform to prevent background weirdness"
-        );
-        uniforms.time.value = 0.0;
+        console.log("Timeout reached while above Phase 3 trigger (25s), stabilizing background effects");
+        // Instead of resetting time, adjust the colorCycleOffset to maintain perfect continuity
+        // Calculate the current effective time (time + offset) and preserve it
+        const currentEffectiveTime = uniforms.time.value + uniforms.colorCycleOffset.value;
+        uniforms.colorCycleOffset.value = currentEffectiveTime;
+        uniforms.time.value = 0.0; // Reset time but maintain perfect continuity through offset
         phase1StartTime = Date.now(); // Reset the timer
       }
     }

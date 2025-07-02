@@ -27,7 +27,6 @@ function setupHeroHeadingFadeAnimation() {
   if (heroHeadingFadeScrollTrigger) {
     heroHeadingFadeScrollTrigger.kill();
     heroHeadingFadeScrollTrigger = null; // Ensure reference is cleared
-    console.log("Killed previous hero heading fade ScrollTrigger.");
   }
 
   const heroHeading = document.querySelector("#hero-area h1");
@@ -37,7 +36,6 @@ function setupHeroHeadingFadeAnimation() {
 
     // If characters don't exist yet (e.g., if initial split failed or was reverted)
     if (!splitTextChars || splitTextChars.length === 0) {
-      console.log("Hero heading characters not found, attempting re-split...");
       // Get original content if available, otherwise use current text
       const originalContent = heroHeading.getAttribute("data-original-content") || heroHeading.textContent;
 
@@ -61,7 +59,6 @@ function setupHeroHeadingFadeAnimation() {
           transformPerspective: 1000,
           transformOrigin: "center center",
         });
-        console.log("Hero heading re-split successfully.");
       } catch (error) {
         console.error("Error re-splitting hero heading:", error);
         return; // Exit if splitting fails
@@ -129,12 +126,8 @@ function setupHeroHeadingFadeAnimation() {
         // progress to match current scroll position based on *new* boundaries.
         const progress = self.progress;
         fadeOutTl.progress(progress); // Update the timeline's progress
-        console.log(`Hero fade ScrollTrigger refreshed. Progress set to: ${progress.toFixed(2)}`);
       },
     });
-
-    // Log that we've set up the animation
-    console.log("Hero heading fade animation set up.");
   } else {
     console.warn("#hero-area h1 not found for fade animation setup.");
   }
@@ -377,7 +370,6 @@ export function initHeroAnimation() {
           } else if (window.enterButtonClicked && window.heroAnimationComplete && !window.audioMuted) {
             // Try again if the audio hasn't started yet, but respect max retries
             if (window.audioRetryCount < window.maxAudioRetries) {
-              console.log("Retry audio playback attempt...");
               window.playBackgroundAudio(true);
             } else {
               // Stop trying after max retries
@@ -458,8 +450,6 @@ export function initHeroAnimation() {
 }
 
 export function initAnimations() {
-  console.log("Initializing animations");
-
   // Preload audio immediately - before anything else
   preloadBackgroundAudio();
 
@@ -468,7 +458,6 @@ export function initAnimations() {
   ScrollTrigger.clearMatchMedia();
 
   // Kill any existing ScrollTriggers to prevent duplicates before setup
-  console.log("Killing all existing ScrollTriggers...");
   ScrollTrigger.getAll().forEach((st) => st.kill());
   // Reset tween references as well
   heroNumberTween = null;
@@ -569,12 +558,8 @@ export function initAnimations() {
   // --- Hero Number Countdown Animation Setup ---
   const heroNumber = document.querySelector("#hero-number");
   if (heroNumber) {
-    console.log("Setting up hero number countdown animation.");
-    console.log(`Initial heroYearObj.year: ${heroYearObj.year}`);
-
     // Create the tween ONLY if it doesn't exist
     if (!heroNumberTween) {
-      console.log("Creating hero number tween...");
       heroNumberTween = gsap.to(heroYearObj, {
         // Assign to module-scope variable
         year: 1876,
@@ -589,7 +574,6 @@ export function initAnimations() {
           invalidateOnRefresh: true, // **CRITICAL**
           onUpdate: function (self) {
             // Log progress and year value before updating DOM
-            // console.log(`Hero Number ST Update -> Progress: ${self.progress.toFixed(3)}, Year: ${heroYearObj.year.toFixed(0)}`);
             const yearValue = Math.round(heroYearObj.year).toString();
             const currentDigits = heroNumber.querySelectorAll(".digit");
             const newDigits = yearValue.split("");
@@ -612,16 +596,10 @@ export function initAnimations() {
               });
             }
           },
-          onRefresh: (self) => {
-            // Log progress and year value on refresh
-            console.log(
-              `Hero Number ST Refreshed -> Progress: ${self.progress.toFixed(3)}, Year: ${heroYearObj.year.toFixed(0)}`
-            );
-          },
+          onRefresh: (self) => {},
         },
       });
     } else {
-      console.log("Hero number tween already exists, ensuring it is active.");
       // If the tween exists, ensure its ScrollTrigger is enabled (might be needed if killed previously)
       if (heroNumberTween.scrollTrigger) {
         heroNumberTween.scrollTrigger.enable();
@@ -987,7 +965,6 @@ export function initAnimations() {
               } else if (!window.audioMuted && window.enterButtonClicked) {
                 // Try again if the audio hasn't started yet
                 if (window.audioRetryCount < window.maxAudioRetries) {
-                  console.log("Retry audio playback attempt from toggle...");
                   window.playBackgroundAudio(true);
                 } else {
                   // Stop trying after max retries
@@ -1071,7 +1048,7 @@ export function initAnimations() {
   const enforceVisibilityState = () => {
     cancelAllPendingAnimations();
 
-    // If nav is forced hidden (after click), always hide regardless of mouse position
+    // If nav is forced hidden (after click) OR mouse is not in nav area, hide nav
     if (forceNavHidden || !isMouseInNavArea) {
       // Hide navigation, show active title
       isNavActive = false;
@@ -1084,18 +1061,16 @@ export function initAnimations() {
         stagger: 0.03,
         ease: "power2.in",
         onComplete: () => {
-          // Ensure nav is still marked as inactive and show active title
-          if (!isNavActive && (!isMouseInNavArea || forceNavHidden)) {
-            gsap.to(activeTitle, {
-              opacity: 1,
-              duration: 0.4,
-              ease: "power2.out",
-            });
-          }
+          // Always show active title when nav is hidden
+          gsap.to(activeTitle, {
+            opacity: 1,
+            duration: 0.4,
+            ease: "power2.out",
+          });
         },
       });
     } else if (isMouseInNavArea && !forceNavHidden) {
-      // Show navigation, hide active title (only if not forced hidden)
+      // Show navigation, hide active title (only if mouse is in area and not forced hidden)
       isNavActive = true;
 
       // Immediately set active title to hidden
@@ -1154,13 +1129,8 @@ export function initAnimations() {
     const wasInNavArea = isMouseInNavArea;
     isMouseInNavArea = checkMouseInNavArea(event);
 
-    // Reset force hidden flag when mouse leaves nav area completely
-    if (!isMouseInNavArea && forceNavHidden) {
-      forceNavHidden = false;
-    }
-
-    // Only trigger state change if the state actually changed and nav is not forced hidden
-    if (wasInNavArea !== isMouseInNavArea && !forceNavHidden) {
+    // Only trigger state change if the state actually changed
+    if (wasInNavArea !== isMouseInNavArea) {
       // Use a small timeout to debounce rapid state changes
       clearTimeout(navAnimationTimeout);
       navAnimationTimeout = setTimeout(() => {
@@ -1181,11 +1151,12 @@ export function initAnimations() {
   navElements.forEach((element) => {
     if (element) {
       element.addEventListener("mouseenter", () => {
-        // Only respond to mouse enter if nav is not forced hidden
-        if (!forceNavHidden) {
-          isMouseInNavArea = true;
-          enforceVisibilityState();
+        // Reset force hidden flag when entering nav area again
+        if (forceNavHidden) {
+          forceNavHidden = false;
         }
+        isMouseInNavArea = true;
+        enforceVisibilityState();
       });
 
       element.addEventListener("mouseleave", (event) => {
@@ -1195,9 +1166,6 @@ export function initAnimations() {
 
         // Use a small delay to allow for mouse movement between elements
         setTimeout(() => {
-          // Only hide if mouse is truly outside all nav areas
-          const rect = element.getBoundingClientRect();
-
           // Recheck all nav elements to see if mouse is still in any of them
           let stillInAnyNav = false;
           navElements.forEach((navEl) => {
@@ -1216,10 +1184,6 @@ export function initAnimations() {
 
           if (!stillInAnyNav) {
             isMouseInNavArea = false;
-            // Reset force hidden flag when completely leaving nav area
-            if (forceNavHidden) {
-              forceNavHidden = false;
-            }
             enforceVisibilityState();
           }
         }, 50);
@@ -1349,7 +1313,6 @@ function preloadBackgroundAudio() {
 
   // Set audio load event listeners before setting src to ensure they're captured
   backgroundAudio.addEventListener("canplaythrough", () => {
-    console.log("Background audio loaded and can play through without buffering");
     window.backgroundAudioLoaded = true;
 
     // If user has clicked the enter button but audio wasn't ready, play it now
@@ -1428,7 +1391,6 @@ function preloadBackgroundAudio() {
       playBackgroundAudioWhenReady(fromEnterButton);
     } else {
       // Audio not ready yet - it will play when ready via the canplaythrough event
-      console.log("Background audio not yet ready to play, will play when loaded");
 
       // If from enter button and the audio isn't loaded yet, force reload
       if (fromEnterButton) {
@@ -1473,7 +1435,6 @@ function preloadBackgroundAudio() {
       backgroundAudio
         .play()
         .then(() => {
-          console.log("Audio playback started at 8% volume");
           window.audioInitialized = true;
 
           // Update sound toggle if it exists
@@ -1523,14 +1484,12 @@ function preloadBackgroundAudio() {
     if (document.hidden) {
       // Tab is hidden/minimized - pause audio if it's playing
       if (window.backgroundAudio && !window.backgroundAudio.paused && window.audioInitialized) {
-        console.log("Tab hidden - pausing background audio");
         wasPlayingBeforeHidden = true;
         window.backgroundAudio.pause();
       }
     } else {
       // Tab is visible again - resume audio if it was playing before
       if (window.backgroundAudio && wasPlayingBeforeHidden && window.audioInitialized && !window.audioMuted) {
-        console.log("Tab visible - resuming background audio");
         wasPlayingBeforeHidden = false;
         window.backgroundAudio.play().catch((error) => {
           console.warn("Could not resume background audio:", error);
@@ -1552,7 +1511,6 @@ function preloadBackgroundAudio() {
   // Also listen for window focus/blur events as a fallback
   window.addEventListener("blur", () => {
     if (window.backgroundAudio && !window.backgroundAudio.paused && window.audioInitialized) {
-      console.log("Window blur - pausing background audio");
       wasPlayingBeforeHidden = true;
       window.backgroundAudio.pause();
     }
@@ -1560,7 +1518,6 @@ function preloadBackgroundAudio() {
 
   window.addEventListener("focus", () => {
     if (window.backgroundAudio && wasPlayingBeforeHidden && window.audioInitialized && !window.audioMuted) {
-      console.log("Window focus - resuming background audio");
       wasPlayingBeforeHidden = false;
       window.backgroundAudio.play().catch((error) => {
         console.warn("Could not resume background audio on focus:", error);
@@ -1574,8 +1531,6 @@ function preloadBackgroundAudio() {
       });
     }
   });
-
-  console.log("Background audio visibility change listeners initialized");
 }
 
 // Function to initialize fancy button effects
@@ -1736,8 +1691,6 @@ function animateGetInvolvedText() {
 
       // If we have splitText.lines, proceed with the animation
       if (splitText.lines && splitText.lines.length > 0) {
-        console.log("Number of lines detected:", splitText.lines.length);
-
         // Hide all lines initially and set their initial position
         gsap.set(splitText.lines, {
           opacity: 0,
@@ -2025,7 +1978,6 @@ function animateSlidingCards() {
 
         // Reset the position of the sliding card wrapper
         gsap.set(slidingCardWrapper, { x: 0 });
-        console.log("Sliding cards animation disabled for small viewport");
       }
 
       // If viewport is larger than 1024px and ScrollTrigger doesn't exist, create it
@@ -2048,8 +2000,6 @@ function animateSlidingCards() {
             },
           }
         ).scrollTrigger;
-
-        console.log("Sliding cards animation initialized for large viewport");
       }
     };
 
@@ -2082,8 +2032,6 @@ function animateSlidingCards() {
             gsap.set(heroTravelArea, { opacity: 1 });
           },
         });
-
-        console.log("Hero travel area fade animation initialized");
       }
     };
 
@@ -2302,7 +2250,6 @@ export function initSplitLinesAnimation(elementsToSplit = null) {
         splitInstances.splice(index, 1);
       }
     });
-    console.log("Split lines cleanup completed");
   };
 
   // Also add a refresh method to recalculate splits if needed (like after window resize)
@@ -2317,11 +2264,8 @@ export function initSplitLinesAnimation(elementsToSplit = null) {
       elements.forEach((element, index) => {
         processSplitElement(element, index);
       });
-      console.log("Split lines refreshed");
     }, 100);
   };
-
-  console.log(`Initialized split lines animations for ${splitLinesElements.length} elements`);
 }
 
 export function initSplitCharsAnimation(elementsToSplit = null) {
@@ -2523,7 +2467,6 @@ export function initSplitCharsAnimation(elementsToSplit = null) {
         splitCharsInstances.splice(index, 1);
       }
     });
-    console.log("Split chars cleanup completed");
   };
 
   // Also add a refresh method to recalculate splits if needed (like after window resize)
@@ -2538,11 +2481,8 @@ export function initSplitCharsAnimation(elementsToSplit = null) {
       elements.forEach((element, index) => {
         processSplitCharsElement(element, index);
       });
-      console.log("Split chars refreshed");
     }, 100);
   };
-
-  console.log(`Initialized split chars animations for ${splitCharsElements.length} elements`);
 }
 
 // Initialize simple scroll reveal animation without text splitting
@@ -2634,8 +2574,6 @@ export function initScrollRevealAnimation() {
       });
     }
   });
-
-  console.log(`Initialized scroll reveal animations for ${scrollRevealElements.length} elements`);
 }
 
 // Initialize fade-in animation for the get involved 150 logo (same threshold as split-chars)
@@ -2682,8 +2620,6 @@ export function initGetInvolvedLogoAnimation() {
       });
     },
   });
-
-  console.log("Initialized get involved logo fade animation");
 }
 
 // Initialize infinite marquee animation for form panel image
@@ -2721,11 +2657,6 @@ export function initInfiniteMarqueeAnimation() {
       const imageRect = originalImage.getBoundingClientRect();
       const actualHeight = imageRect.height;
 
-      console.log("Image dimensions:", {
-        natural: { width: originalImage.naturalWidth, height: originalImage.naturalHeight },
-        rendered: { width: imageRect.width, height: actualHeight },
-      });
-
       // Position the images - second image directly below the first
       gsap.set(originalImage, {
         top: 0,
@@ -2752,8 +2683,6 @@ export function initInfiniteMarqueeAnimation() {
       tl.set([originalImage, clonedImage], {
         y: 0,
       });
-
-      console.log("Initialized infinite marquee animation with height:", actualHeight);
     }, 100); // Small delay to ensure layout is complete
   };
 
@@ -2855,8 +2784,6 @@ export function initEventListItemHover() {
       item.classList.remove("active");
     });
   });
-
-  console.log(`Initialized hover interactions for ${eventListItems.length} event list items`);
 }
 
 // Simple debounce function to prevent too many resize calculations
@@ -2874,8 +2801,6 @@ function debounce(func, wait) {
 
 // Function to reinitialize all split-type elements
 export function reinitializeAllSplitElements() {
-  console.log("Reinitializing all split-type elements...");
-
   // First clean up all existing generic split instances (not the hero heading yet)
   if (typeof window.cleanupSplitLines === "function") {
     window.cleanupSplitLines(); // Assumes this cleans up non-hero elements
@@ -2892,7 +2817,6 @@ export function reinitializeAllSplitElements() {
     // Capture current progress and apply state BEFORE killing
     if (heroHeadingFadeScrollTrigger && heroHeadingFadeScrollTrigger.animation) {
       currentProgress = heroHeadingFadeScrollTrigger.progress;
-      console.log(`Capturing hero fade progress before kill: ${currentProgress.toFixed(3)}`);
 
       // Manually set opacity based on current progress to prevent flash
       const chars = heroHeading.querySelectorAll(".char");
@@ -2918,19 +2842,16 @@ export function reinitializeAllSplitElements() {
 
     // Kill the associated scroll trigger AFTER applying state
     if (heroHeadingFadeScrollTrigger) {
-      console.log("Killing existing hero heading fade ScrollTrigger during reinit...");
       heroHeadingFadeScrollTrigger.kill();
       heroHeadingFadeScrollTrigger = null; // Clear reference
     }
 
     // Check if chars already exist. If so, DON'T reset innerHTML.
     if (!heroHeading.querySelector(".char")) {
-      console.log("Hero heading not split, resetting content...");
       // Only reset innerHTML if it wasn't already split
       const originalContent = heroHeading.getAttribute("data-original-content") || heroHeading.textContent;
       heroHeading.innerHTML = originalContent;
     } else {
-      console.log("Hero heading already split, preserving characters to prevent flash.");
       // Ensure the manually set styles persist if we didn't reset innerHTML
       // (GSAP should handle this, but good to be mindful)
     }
@@ -2964,8 +2885,6 @@ export function reinitializeAllSplitElements() {
 
   // Reinitialize animations AFTER cleaning up and allowing DOM update
   setTimeout(() => {
-    console.log("Reinitializing animations after cleanup...");
-
     // Reinitialize generic split animations first
     if (splitLinesElements.length && typeof initSplitLinesAnimation === "function") {
       initSplitLinesAnimation(splitLinesElements); // Pass the non-hero elements
@@ -2981,9 +2900,6 @@ export function reinitializeAllSplitElements() {
 
     // Refresh ScrollTrigger *after* all animations are potentially re-created
     ScrollTrigger.refresh();
-    console.log("ScrollTrigger.refresh() called after reinitializations.");
-
-    console.log("All split-type elements and hero animation reinitialized.");
   }, 50); // Reduced delay slightly
 }
 
@@ -2996,7 +2912,6 @@ function initGlobalResizeHandler() {
 
   // Create a properly debounced global resize handler
   window.globalResizeHandler = debounce(() => {
-    console.log("Window resized, reinitializing animations...");
     // Reinitialize all split elements and animations
     reinitializeAllSplitElements();
 
@@ -3009,12 +2924,9 @@ function initGlobalResizeHandler() {
 
   // Also listen for orientation changes which may not trigger resize on some devices
   window.addEventListener("orientationchange", () => {
-    console.log("Orientation changed, reinitializing animations...");
     // Use a slightly longer delay for orientation changes
     // Reinitialize all split elements and animations
     reinitializeAllSplitElements();
     // Note: Using the same central reinitialization function
   });
-
-  console.log("Global resize handler initialized.");
 }

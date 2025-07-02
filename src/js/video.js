@@ -11,11 +11,9 @@ export function initVideo() {
   // Assets are now imported directly, no need for path logic
 
   // Use imported assets directly
-  console.log("Setting video source:", videoUrl);
   videoElement.src = videoUrl;
 
   // Set poster path using imported asset
-  console.log("Setting poster path:", posterUrl);
   videoElement.poster = posterUrl;
 
   // Add error event listener to check if the video file can be loaded
@@ -28,7 +26,6 @@ export function initVideo() {
 
   // Add loadeddata event to ensure video is ready
   videoElement.addEventListener("loadeddata", () => {
-    console.log("Video data loaded successfully");
     videoElement.style.opacity = "1";
     // Ensure video starts paused
     videoElement.pause();
@@ -36,8 +33,6 @@ export function initVideo() {
 
   // Add loadedmetadata event to ensure video is ready
   videoElement.addEventListener("loadedmetadata", () => {
-    console.log("Video metadata loaded successfully");
-    console.log("Current poster path:", videoElement.poster);
     // Force a layout recalculation
     videoElement.style.display = "none";
     videoElement.offsetHeight; // Force reflow

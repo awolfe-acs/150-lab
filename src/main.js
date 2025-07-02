@@ -21,7 +21,7 @@ function isMainPage() {
 
   // Check if editor.html or globe.html is in the URL - if so, return false
   if (currentUrl.includes("/editor.html/") || currentUrl.includes("globe.html")) {
-    console.log("Not on main page - editor or globe page detected");
+    console.log("Not on main page");
     return false;
   }
 
@@ -38,10 +38,6 @@ function isMainPage() {
       (pathname === "/150-lab/" || pathname === "/150-lab/index.html")) ||
     // General GitHub Pages pattern for other potential deployments
     (currentUrl.includes("github.io/150-lab") && (pathname === "/150-lab/" || pathname === "/150-lab/index.html"));
-
-  console.log("URL check:", currentUrl);
-  console.log("Pathname:", pathname);
-  console.log("Is main page:", isMainPagePattern);
 
   return isMainPagePattern;
 }
@@ -158,8 +154,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Only run animations and video on main pages
   if (isMainPage()) {
-    console.log("Initializing main page experience");
-
     // Initialize animations
     initAnimations();
 
