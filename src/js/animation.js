@@ -2598,7 +2598,7 @@ export function initInfiniteMarqueeAnimation() {
   }
 }
 
-// Initialize event list item hover interactions with mouse-following images
+// Initialize event list item hover interactions with pinned images
 export function initEventListItemHover() {
   const eventListItems = document.querySelectorAll(".event-list-item");
 
@@ -2610,6 +2610,8 @@ export function initEventListItemHover() {
   // Map event items to their corresponding imported image URLs
   const eventImageMap = [pacifichemEventImage, greenChemistryEventImage, acsSpringMeetingEventImage];
 
+  // DISABLED: Mouse-following image feature
+  /*
   // Detect if device supports touch
   const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
 
@@ -2651,8 +2653,9 @@ export function initEventListItemHover() {
 
   // Add global mouse move listener
   document.addEventListener("mousemove", updateMousePosition);
+  */
 
-  // Add hover interactions to each event list item
+  // Add hover interactions to each event list item with pinned images
   eventListItems.forEach((item, index) => {
     const imageUrl = eventImageMap[index];
 
@@ -2661,6 +2664,70 @@ export function initEventListItemHover() {
       return;
     }
 
+    // Create pinned hover image for this item
+    const pinnedImage = document.createElement("img");
+    pinnedImage.className = "pinned-hover-image";
+    pinnedImage.src = imageUrl;
+    pinnedImage.style.cssText = `
+      position: fixed;
+      width: 200px;
+      height: 145px;
+      object-fit: cover;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0;
+      border-radius: 8px;
+      transform: translateY(-50%) scale(0.9);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      filter: opacity(0.9);
+    `;
+
+    // Add the pinned image to the document body to avoid overflow issues
+    document.body.appendChild(pinnedImage);
+
+    // Function to update image position based on list item position
+    const updateImagePosition = () => {
+      const itemRect = item.getBoundingClientRect();
+      const rightOffset = -20; // Distance from right edge of item
+
+      pinnedImage.style.left = itemRect.right - 200 - rightOffset + "px";
+      pinnedImage.style.top = itemRect.top + itemRect.height / 2 + "px";
+    };
+
+    // Mouse enter - show pinned image and add active class
+    item.addEventListener("mouseenter", () => {
+      // Update image position
+      updateImagePosition();
+
+      // Show the pinned image
+      pinnedImage.style.opacity = "1";
+      pinnedImage.style.transform = "translateY(-50%) scale(1)";
+
+      // Add active class to event item
+      item.classList.add("active");
+    });
+
+    // Mouse leave - hide pinned image and remove active class
+    item.addEventListener("mouseleave", () => {
+      // Hide the pinned image
+      pinnedImage.style.opacity = "0";
+      pinnedImage.style.transform = "translateY(-50%) scale(0.9)";
+
+      // Remove active class from event item
+      item.classList.remove("active");
+    });
+
+    // Update position on scroll and resize to keep images aligned
+    const updateOnScroll = () => {
+      if (pinnedImage.style.opacity !== "0") {
+        updateImagePosition();
+      }
+    };
+
+    window.addEventListener("scroll", updateOnScroll);
+    window.addEventListener("resize", updateOnScroll);
+
+    /* ORIGINAL MOUSE-FOLLOWING CODE (DISABLED):
     // Mouse enter - show image and add active class
     item.addEventListener("mouseenter", () => {
       // Set the image source using imported asset URL
@@ -2685,6 +2752,7 @@ export function initEventListItemHover() {
       // Remove active class from event item
       item.classList.remove("active");
     });
+    */
   });
 }
 

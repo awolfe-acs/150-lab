@@ -109,7 +109,7 @@
 
             .event-title {
                 font-weight: 700;
-                width: 55%;
+                width: 53%;
                 margin-left: 0;
                 margin-right: 48px;
                 align-items: center;
@@ -151,6 +151,10 @@
                 .event-title, .event-date {
                     color: #ffffff;
                     transform: translateX(8px);
+                }
+
+                .event-date {
+                    transform: translateX(-16px);
                 }
 
                 .event-title .external-link-icon {
