@@ -1023,6 +1023,8 @@ export function initAnimations() {
 
   // Simplified navigation state tracking
   let isMouseInNavArea = false;
+  let navTimeout = null;
+  let currentState = "title-visible"; // 'title-visible' or 'nav-visible'
 
   // Initially hide the page nav and ensure active title is visible
   gsap.set(navLinks, { opacity: 0, x: -20 });
@@ -1030,6 +1032,17 @@ export function initAnimations() {
 
   // Function to show navigation and hide active title
   const showNavigation = () => {
+    // Clear any pending timeout
+    if (navTimeout) {
+      clearTimeout(navTimeout);
+      navTimeout = null;
+    }
+
+    // Only proceed if we're not already showing nav
+    if (currentState === "nav-visible") return;
+
+    currentState = "nav-visible";
+
     // Kill any existing animations
     gsap.killTweensOf([activeTitle, navLinks]);
 
@@ -1048,6 +1061,17 @@ export function initAnimations() {
 
   // Function to hide navigation and show active title
   const hideNavigation = () => {
+    // Clear any pending timeout
+    if (navTimeout) {
+      clearTimeout(navTimeout);
+      navTimeout = null;
+    }
+
+    // Only proceed if we're not already showing title
+    if (currentState === "title-visible") return;
+
+    currentState = "title-visible";
+
     // Kill any existing animations
     gsap.killTweensOf([activeTitle, navLinks]);
 
@@ -1069,16 +1093,32 @@ export function initAnimations() {
     });
   };
 
-  // Mouse enter handler for page nav
+  // Mouse enter handler for page nav with debouncing
   pageNav.addEventListener("mouseenter", () => {
     isMouseInNavArea = true;
+
+    // Clear any pending hide timeout
+    if (navTimeout) {
+      clearTimeout(navTimeout);
+      navTimeout = null;
+    }
+
+    // Show navigation immediately
     showNavigation();
   });
 
-  // Mouse leave handler for page nav
+  // Mouse leave handler for page nav with debouncing
   pageNav.addEventListener("mouseleave", () => {
     isMouseInNavArea = false;
-    hideNavigation();
+
+    // Use a small delay to prevent rapid flickering
+    navTimeout = setTimeout(() => {
+      // Double-check that mouse is still outside nav area
+      if (!isMouseInNavArea) {
+        hideNavigation();
+      }
+      navTimeout = null;
+    }, 100); // 100ms debounce delay
   });
 
   // Add click handler for nav links
