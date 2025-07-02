@@ -1021,189 +1021,70 @@ export function initAnimations() {
     console.warn("Neither indicator wrapper nor timeline nav wrapper found - navigation may not work properly");
   }
 
-  // Enhanced navigation state tracking
-  let isNavActive = false;
+  // Simplified navigation state tracking
   let isMouseInNavArea = false;
-  let navAnimationTimeout;
-  let forceNavHidden = false; // Flag to force nav hidden after click
 
   // Initially hide the page nav and ensure active title is visible
   gsap.set(navLinks, { opacity: 0, x: -20 });
   gsap.set(activeTitle, { opacity: 1 });
 
-  // Cancel all pending animations and timeouts
-  const cancelAllPendingAnimations = () => {
-    // Clear any pending timeouts
-    if (navAnimationTimeout) {
-      clearTimeout(navAnimationTimeout);
-      navAnimationTimeout = null;
-    }
+  // Function to show navigation and hide active title
+  const showNavigation = () => {
+    // Kill any existing animations
+    gsap.killTweensOf([activeTitle, navLinks]);
 
-    // Kill any ongoing GSAP animations for these elements
-    gsap.killTweensOf(activeTitle);
-    gsap.killTweensOf(navLinks);
+    // Hide active title immediately
+    gsap.set(activeTitle, { opacity: 0 });
+
+    // Show nav links
+    gsap.to(navLinks, {
+      opacity: 1,
+      x: 0,
+      duration: 0.4,
+      stagger: 0.05,
+      ease: "power2.out",
+    });
   };
 
-  // Function to enforce visibility state: only one element should be visible at a time
-  const enforceVisibilityState = () => {
-    cancelAllPendingAnimations();
+  // Function to hide navigation and show active title
+  const hideNavigation = () => {
+    // Kill any existing animations
+    gsap.killTweensOf([activeTitle, navLinks]);
 
-    // If nav is forced hidden (after click) OR mouse is not in nav area, hide nav
-    if (forceNavHidden || !isMouseInNavArea) {
-      // Hide navigation, show active title
-      isNavActive = false;
+    // Hide nav links
+    gsap.to(navLinks, {
+      opacity: 0,
+      x: -20,
+      duration: 0.3,
+      stagger: 0.03,
+      ease: "power2.in",
+    });
 
-      // Hide nav links with stagger
-      gsap.to(navLinks, {
-        opacity: 0,
-        x: -20,
-        duration: 0.3,
-        stagger: 0.03,
-        ease: "power2.in",
-        onComplete: () => {
-          // Always show active title when nav is hidden
-          gsap.to(activeTitle, {
-            opacity: 1,
-            duration: 0.4,
-            ease: "power2.out",
-          });
-        },
-      });
-    } else if (isMouseInNavArea && !forceNavHidden) {
-      // Show navigation, hide active title (only if mouse is in area and not forced hidden)
-      isNavActive = true;
-
-      // Immediately set active title to hidden
-      gsap.set(activeTitle, { opacity: 0 });
-
-      // Animate nav links in
-      gsap.to(navLinks, {
-        opacity: 1,
-        x: 0,
-        duration: 0.4,
-        stagger: 0.05,
-        ease: "power2.out",
-      });
-    }
+    // Show active title with delay to wait for nav links to finish fading out
+    gsap.to(activeTitle, {
+      opacity: 1,
+      duration: 0.4,
+      delay: 0.2, // Wait for nav links to mostly fade out
+      ease: "power2.out",
+    });
   };
 
-  // Function to check if mouse is within any navigation area
-  const checkMouseInNavArea = (event) => {
-    const primaryWrapper = timelineNavWrapper || indicatorWrapper;
-    const secondaryElement = timelineNavWrapper ? null : pageNav;
+  // Mouse enter handler for page nav
+  pageNav.addEventListener("mouseenter", () => {
+    isMouseInNavArea = true;
+    showNavigation();
+  });
 
-    if (!primaryWrapper) return false;
-
-    // Get bounding rectangles
-    const primaryRect = primaryWrapper.getBoundingClientRect();
-    let secondaryRect = null;
-    if (secondaryElement) {
-      secondaryRect = secondaryElement.getBoundingClientRect();
-    }
-
-    const mouseX = event.clientX;
-    const mouseY = event.clientY;
-
-    // Check if mouse is within primary wrapper
-    const inPrimary =
-      mouseX >= primaryRect.left &&
-      mouseX <= primaryRect.right &&
-      mouseY >= primaryRect.top &&
-      mouseY <= primaryRect.bottom;
-
-    // Check if mouse is within secondary element (if it exists)
-    let inSecondary = false;
-    if (secondaryRect) {
-      inSecondary =
-        mouseX >= secondaryRect.left &&
-        mouseX <= secondaryRect.right &&
-        mouseY >= secondaryRect.top &&
-        mouseY <= secondaryRect.bottom;
-    }
-
-    return inPrimary || inSecondary;
-  };
-
-  // Global mouse move handler to track mouse position
-  const handleGlobalMouseMove = (event) => {
-    const wasInNavArea = isMouseInNavArea;
-    isMouseInNavArea = checkMouseInNavArea(event);
-
-    // Only trigger state change if the state actually changed
-    if (wasInNavArea !== isMouseInNavArea) {
-      // Use a small timeout to debounce rapid state changes
-      clearTimeout(navAnimationTimeout);
-      navAnimationTimeout = setTimeout(() => {
-        enforceVisibilityState();
-      }, 16); // ~1 frame delay for smoothness
-    }
-  };
-
-  // Remove old event listeners if they exist
-  document.removeEventListener("mousemove", handleGlobalMouseMove);
-
-  // Add global mouse move listener
-  document.addEventListener("mousemove", handleGlobalMouseMove);
-
-  // Add specific enter/leave handlers as backup for immediate state changes
-  const navElements = [timelineNavWrapper, indicatorWrapper, pageNav].filter(Boolean);
-
-  navElements.forEach((element) => {
-    if (element) {
-      element.addEventListener("mouseenter", () => {
-        // Reset force hidden flag when entering nav area again
-        if (forceNavHidden) {
-          forceNavHidden = false;
-        }
-        isMouseInNavArea = true;
-        enforceVisibilityState();
-      });
-
-      element.addEventListener("mouseleave", (event) => {
-        // Capture mouse coordinates from the event before setTimeout
-        const mouseX = event.clientX || 0;
-        const mouseY = event.clientY || 0;
-
-        // Use a small delay to allow for mouse movement between elements
-        setTimeout(() => {
-          // Recheck all nav elements to see if mouse is still in any of them
-          let stillInAnyNav = false;
-          navElements.forEach((navEl) => {
-            if (navEl) {
-              const navRect = navEl.getBoundingClientRect();
-              if (
-                mouseX >= navRect.left &&
-                mouseX <= navRect.right &&
-                mouseY >= navRect.top &&
-                mouseY <= navRect.bottom
-              ) {
-                stillInAnyNav = true;
-              }
-            }
-          });
-
-          if (!stillInAnyNav) {
-            isMouseInNavArea = false;
-            enforceVisibilityState();
-          }
-        }, 50);
-      });
-    }
+  // Mouse leave handler for page nav
+  pageNav.addEventListener("mouseleave", () => {
+    isMouseInNavArea = false;
+    hideNavigation();
   });
 
   // Add click handler for nav links
   navLinks.forEach((link) => {
-    // Remove any existing click listeners to prevent duplicates
-    const oldClickListeners = link.onclick;
-    if (oldClickListeners) {
-      link.removeEventListener("click", oldClickListeners);
-    }
-
     link.addEventListener("click", (e) => {
       e.preventDefault();
-
-      // Cancel any pending animations
-      cancelAllPendingAnimations();
 
       // Remove active class from all links
       navLinks.forEach((l) => l.classList.remove("active"));
@@ -1214,27 +1095,8 @@ export function initAnimations() {
       // Update active title text
       activeTitle.textContent = link.textContent;
 
-      // Force nav to be hidden until mouse completely leaves and re-enters
-      forceNavHidden = true;
-      isMouseInNavArea = false;
-      isNavActive = false;
-
-      // Immediately hide nav links
-      gsap.to(navLinks, {
-        opacity: 0,
-        x: -20,
-        duration: 0.3,
-        stagger: 0.03,
-        ease: "power2.in",
-        onComplete: () => {
-          // Show active title since nav is forced hidden
-          gsap.to(activeTitle, {
-            opacity: 1,
-            duration: 0.4,
-            ease: "power2.out",
-          });
-        },
-      });
+      // Hide navigation after click (user will see updated active title)
+      hideNavigation();
     });
   });
 

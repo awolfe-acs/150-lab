@@ -12,7 +12,7 @@ export function initShaderBackground() {
 
   // Track time spent in phase 1 to prevent time accumulation issues
   let phase1StartTime = Date.now();
-  const PHASE1_RESET_TIMEOUT = 45000; // 45 seconds in milliseconds
+  const PHASE1_RESET_TIMEOUT = 90000; // 90 seconds in milliseconds
 
   // Helper function to check if we're above the Phase 3 trigger point
   function isAbovePhase3Trigger() {
@@ -3296,21 +3296,30 @@ export function initShaderBackground() {
   let isMouseParticleSystemActive = false;
   let initialMovementThreshold = 150; // Pixels of cumulative movement needed to start particles
 
+  // Track recent mouse movement for dynamic spawn offset
+  let recentMovements = [];
+  let maxRecentMovements = 10; // Number of recent movements to track
+  let currentSpawnOffset; // Will be initialized after mouseParticleParams is defined
+
   // Mouse follow particle parameters
   const mouseParticleParams = {
     enabled: true,
-    spawnRate: 0.455, // Chance to spawn particle on mouse move (0-1)
-    maxParticles: 120, //120
+    spawnRate: 0.65, // Chance to spawn particle on mouse move (0-1)
+    maxParticles: 150, //150
     baseSize: 1.8, // Base particle size
     fadeInSpeed: 0.75, // Maximum opacity/brightness (0-1) - controls peak intensity
     fadeOutSpeed: 1.0, // Fade out intensity multiplier (0-1) - controls fade strength
     trailLength: 0.0005, // How much particles lag behind mouse (0-1)
     speedVariation: 0.2, // Random variation in trail following speed (0-1)
     jitterAmount: 0.08, // Random jittery movement intensity (0-1)
-    spawnOffset: 0.22, // Random spawn position offset for organic spread (0-1)
+    spawnOffsetMin: 0.052, // Minimum random spawn position offset for organic spread (0-1)
+    spawnOffsetMax: 0.62, // Maximum random spawn position offset for organic spread (0-1)
     minLifetime: 1.5, // Minimum particle lifetime in seconds
-    maxLifetime: 5.0, // Maximum particle lifetime in seconds
+    maxLifetime: 4.0, // Maximum particle lifetime in seconds
   };
+
+  // Initialize currentSpawnOffset now that mouseParticleParams is defined
+  currentSpawnOffset = mouseParticleParams.spawnOffsetMin;
 
   // Create mouse particle geometry and material (clone of main particles)
   const mouseParticleGeometry = new THREE.BufferGeometry();
@@ -3505,14 +3514,32 @@ export function initShaderBackground() {
       }
     }
 
+    // Track recent movements for dynamic spawn offset calculation
+    recentMovements.push(movement);
+    if (recentMovements.length > maxRecentMovements) {
+      recentMovements.shift(); // Remove oldest movement
+    }
+
+    // Calculate average movement intensity over recent frames
+    if (recentMovements.length > 0) {
+      const avgMovement = recentMovements.reduce((sum, mov) => sum + mov, 0) / recentMovements.length;
+      const maxMovement = 20; // Maximum expected movement per frame for normalization
+      const movementIntensity = Math.min(avgMovement / maxMovement, 1.0); // Normalize to 0-1
+
+      // Interpolate between min and max spawn offset based on movement intensity
+      currentSpawnOffset =
+        mouseParticleParams.spawnOffsetMin +
+        (mouseParticleParams.spawnOffsetMax - mouseParticleParams.spawnOffsetMin) * movementIntensity;
+    }
+
     // Only spawn particles if mouse particle system is active, mouse is moving, and we haven't hit the limit
     if (isMouseParticleSystemActive && movement > 1 && mouseParticles.length < mouseParticleParams.maxParticles) {
       // Random chance to spawn particle based on spawn rate
       if (Math.random() < mouseParticleParams.spawnRate) {
         const worldCoords = mouseToWorldCoords(mousePosition.x, mousePosition.y);
 
-        // Apply spawn offset for organic positioning
-        const offsetRadius = mouseParticleParams.spawnOffset * 50; // Scale to world units
+        // Apply dynamic spawn offset for organic positioning
+        const offsetRadius = currentSpawnOffset * 50; // Scale to world units
         const offsetAngle = Math.random() * Math.PI * 2; // Random angle
         const offsetX = Math.cos(offsetAngle) * offsetRadius * Math.random(); // Random distance within radius
         const offsetY = Math.sin(offsetAngle) * offsetRadius * Math.random();
@@ -3576,6 +3603,9 @@ export function initShaderBackground() {
 
     // Update geometry
     updateMouseParticleGeometry();
+
+    // Update dynamic offset display in GUI
+    dynamicOffsetControl.currentOffset = currentSpawnOffset;
   }
 
   // Add GUI controls for mouse particles
@@ -3592,6 +3622,8 @@ export function initShaderBackground() {
         // Reset activation system
         isMouseParticleSystemActive = false;
         cumulativeMovement = 0;
+        recentMovements = [];
+        currentSpawnOffset = mouseParticleParams.spawnOffsetMin;
       }
     });
 
@@ -3643,11 +3675,24 @@ export function initShaderBackground() {
     });
 
   mouseParticleFolder
-    .add(mouseParticleParams, "spawnOffset", 0.0, 1.0, 0.05)
-    .name("Spawn Offset")
+    .add(mouseParticleParams, "spawnOffsetMin", 0.0, 1.0, 0.05)
+    .name("Spawn Offset Min")
     .onChange((value) => {
-      mouseParticleParams.spawnOffset = value;
+      mouseParticleParams.spawnOffsetMin = value;
     });
+
+  mouseParticleFolder
+    .add(mouseParticleParams, "spawnOffsetMax", 0.0, 1.0, 0.05)
+    .name("Spawn Offset Max")
+    .onChange((value) => {
+      mouseParticleParams.spawnOffsetMax = value;
+    });
+
+  // Add display for current dynamic spawn offset (read-only)
+  const dynamicOffsetControl = {
+    currentOffset: currentSpawnOffset,
+  };
+  mouseParticleFolder.add(dynamicOffsetControl, "currentOffset", 0.0, 1.0).name("Current Offset (Dynamic)").listen(); // Makes it update automatically
 
   mouseParticleFolder
     .add(mouseParticleParams, "fadeInSpeed", 0.1, 1.0, 0.01)
@@ -3679,6 +3724,8 @@ export function initShaderBackground() {
         resetActivation: function () {
           isMouseParticleSystemActive = false;
           cumulativeMovement = 0;
+          recentMovements = [];
+          currentSpawnOffset = mouseParticleParams.spawnOffsetMin;
           mouseParticles = [];
           updateMouseParticleGeometry();
         },
