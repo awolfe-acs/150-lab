@@ -3301,6 +3301,10 @@ export function initShaderBackground() {
   let maxRecentMovements = 10; // Number of recent movements to track
   let currentSpawnOffset; // Will be initialized after mouseParticleParams is defined
 
+  // Drawing mode tracking
+  let isDrawing = false;
+  let drawnParticles = []; // Separate array for drawn particles
+
   // Mouse follow particle parameters
   const mouseParticleParams = {
     enabled: true,
@@ -3316,6 +3320,7 @@ export function initShaderBackground() {
     spawnOffsetMax: 0.62, // Maximum random spawn position offset for organic spread (0-1)
     minLifetime: 1.5, // Minimum particle lifetime in seconds
     maxLifetime: 4.0, // Maximum particle lifetime in seconds
+    drawnLife: 12.0, // Lifetime for drawn particles in seconds (easter egg)
   };
 
   // Initialize currentSpawnOffset now that mouseParticleParams is defined
@@ -3442,9 +3447,39 @@ export function initShaderBackground() {
     return particle;
   }
 
+  // Function to create a new drawn particle (for drawing mode)
+  function createDrawnParticle(worldX, worldY) {
+    const particle = {
+      id: mouseParticleId++,
+      position: { x: worldX, y: worldY, z: Math.random() * 100 - 50 },
+      originalPosition: { x: worldX, y: worldY }, // Store original position for twinkling
+      targetPosition: { x: worldX, y: worldY }, // Drawn particles stay in place
+      velocity: { x: 0, y: 0 },
+      size: 0.8 + Math.random() * 0.4,
+      opacity: 0.0,
+      baseOpacity: 0.0, // Base opacity before twinkling
+      targetOpacity: 1,
+      life: 0,
+      maxLife: mouseParticleParams.drawnLife, // Use drawnLife parameter
+      color: { r: 1.0, g: 0.647, b: 0.0 }, // Orange color for drawn particles (#ff8500)
+      trailSpeed: 0, // No trailing for drawn particles - they stay put
+      fadePhase: "in",
+      isDrawn: true, // Flag to identify drawn particles
+      // Twinkling properties
+      twinklePhase: Math.random() * Math.PI * 2, // Random starting phase for oscillation
+      twinkleSpeed: 0.8 + Math.random() * 0.4, // Random twinkling speed (0.8-1.2)
+      twinkleRadius: 2 + Math.random() * 3, // Random movement radius (2-5 pixels)
+    };
+
+    return particle;
+  }
+
   // Function to update mouse particle geometry
   function updateMouseParticleGeometry() {
-    if (mouseParticles.length === 0) {
+    // Combine both regular and drawn particles
+    const allParticles = [...mouseParticles, ...drawnParticles];
+
+    if (allParticles.length === 0) {
       // Clear geometry if no particles
       if (mouseParticleGeometry.attributes.position) {
         mouseParticleGeometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(0), 3));
@@ -3455,13 +3490,13 @@ export function initShaderBackground() {
       return;
     }
 
-    const positions = new Float32Array(mouseParticles.length * 3);
-    const colors = new Float32Array(mouseParticles.length * 3);
-    const sizes = new Float32Array(mouseParticles.length);
-    const opacities = new Float32Array(mouseParticles.length);
+    const positions = new Float32Array(allParticles.length * 3);
+    const colors = new Float32Array(allParticles.length * 3);
+    const sizes = new Float32Array(allParticles.length);
+    const opacities = new Float32Array(allParticles.length);
 
-    for (let i = 0; i < mouseParticles.length; i++) {
-      const particle = mouseParticles[i];
+    for (let i = 0; i < allParticles.length; i++) {
+      const particle = allParticles[i];
       const i3 = i * 3;
 
       // Position
@@ -3469,7 +3504,7 @@ export function initShaderBackground() {
       positions[i3 + 1] = particle.position.y;
       positions[i3 + 2] = particle.position.z;
 
-      // Color (same cyan as main particles)
+      // Color
       colors[i3] = particle.color.r;
       colors[i3 + 1] = particle.color.g;
       colors[i3 + 2] = particle.color.b;
@@ -3548,31 +3583,68 @@ export function initShaderBackground() {
         mouseParticles.push(newParticle);
       }
     }
+
+    // Drawing mode: Create particles when left mouse button is held down
+    if (isDrawing && mouseParticles.length < mouseParticleParams.maxParticles) {
+      // More frequent spawning when drawing
+      if (Math.random() < 0.8) {
+        // Higher spawn rate for drawing
+        const worldCoords = mouseToWorldCoords(mousePosition.x, mousePosition.y);
+
+        // Less offset for drawing mode to create more precise lines
+        const offsetRadius = 10; // Fixed small offset for drawing
+        const offsetAngle = Math.random() * Math.PI * 2;
+        const offsetX = Math.cos(offsetAngle) * offsetRadius * Math.random();
+        const offsetY = Math.sin(offsetAngle) * offsetRadius * Math.random();
+
+        const drawnParticle = createDrawnParticle(worldCoords.x + offsetX, worldCoords.y + offsetY);
+        drawnParticles.push(drawnParticle);
+      }
+    }
+  });
+
+  // Mouse down event listener to start drawing
+  window.addEventListener("mousedown", (event) => {
+    if (!mouseParticleParams.enabled) return;
+    if (event.button === 0) {
+      // Left mouse button
+      isDrawing = true;
+    }
+  });
+
+  // Mouse up event listener to stop drawing
+  window.addEventListener("mouseup", (event) => {
+    if (event.button === 0) {
+      // Left mouse button
+      isDrawing = false;
+    }
   });
 
   // Function to animate mouse particles
   function animateMouseParticles() {
-    if (mouseParticles.length === 0) return; // Early exit if no particles
+    if (mouseParticles.length === 0 && drawnParticles.length === 0) return; // Early exit if no particles
 
     const worldCoords = mouseToWorldCoords(mousePosition.x, mousePosition.y);
 
-    // Update existing particles
+    // Update existing regular mouse particles
     for (let i = mouseParticles.length - 1; i >= 0; i--) {
       const particle = mouseParticles[i];
       particle.life += 0.016; // Assume 60fps
 
-      // Update target position to current mouse position
-      particle.targetPosition.x = worldCoords.x;
-      particle.targetPosition.y = worldCoords.y;
+      // Update target position to current mouse position (only for regular particles)
+      if (!particle.isDrawn) {
+        particle.targetPosition.x = worldCoords.x;
+        particle.targetPosition.y = worldCoords.y;
 
-      // Apply eased trailing movement
-      const trailSpeed = particle.trailSpeed * mouseParticleParams.trailLength;
-      particle.position.x += (particle.targetPosition.x - particle.position.x) * trailSpeed;
-      particle.position.y += (particle.targetPosition.y - particle.position.y) * trailSpeed;
+        // Apply eased trailing movement
+        const trailSpeed = particle.trailSpeed * mouseParticleParams.trailLength;
+        particle.position.x += (particle.targetPosition.x - particle.position.x) * trailSpeed;
+        particle.position.y += (particle.targetPosition.y - particle.position.y) * trailSpeed;
 
-      // Add slight random jittery movement for organic feel
-      particle.position.x += (Math.random() - 0.5) * 2 * mouseParticleParams.jitterAmount;
-      particle.position.y += (Math.random() - 0.5) * 2 * mouseParticleParams.jitterAmount;
+        // Add slight random jittery movement for organic feel
+        particle.position.x += (Math.random() - 0.5) * 2 * mouseParticleParams.jitterAmount;
+        particle.position.y += (Math.random() - 0.5) * 2 * mouseParticleParams.jitterAmount;
+      }
 
       // Handle smooth fade phases with proper opacity transitions
       const lifeRatio = particle.life / particle.maxLife;
@@ -3601,6 +3673,52 @@ export function initShaderBackground() {
       }
     }
 
+    // Update existing drawn particles (they twinkle in place)
+    for (let i = drawnParticles.length - 1; i >= 0; i--) {
+      const particle = drawnParticles[i];
+      particle.life += 0.016; // Assume 60fps
+
+      // Update twinkling phase
+      particle.twinklePhase += 0.016 * particle.twinkleSpeed;
+
+      // Apply gentle twinkling movement around original position
+      const twinkleX = Math.sin(particle.twinklePhase) * particle.twinkleRadius * 0.4;
+      const twinkleY = Math.cos(particle.twinklePhase * 1.05) * particle.twinkleRadius * 0.4; // Different frequency for Y
+
+      particle.position.x = particle.originalPosition.x + twinkleX;
+      particle.position.y = particle.originalPosition.y + twinkleY;
+
+      // Handle smooth fade phases with proper opacity transitions
+      const lifeRatio = particle.life / particle.maxLife;
+
+      if (lifeRatio < 0.15) {
+        // Fade in phase (first 15% of life) - smooth transition from 0 to 1
+        particle.fadePhase = "in";
+        const fadeInProgress = lifeRatio / 0.15;
+        const fadeInCurve = 1 - Math.pow(1 - fadeInProgress, 2);
+        particle.baseOpacity = fadeInCurve * mouseParticleParams.fadeInSpeed;
+      } else if (lifeRatio < 0.85) {
+        // Hold phase (longer for drawn particles) - maintain full opacity
+        particle.fadePhase = "hold";
+        particle.baseOpacity = mouseParticleParams.fadeInSpeed;
+      } else {
+        // Fade out phase (last 15% of life) - smooth transition from 1 to 0
+        particle.fadePhase = "out";
+        const fadeOutProgress = (lifeRatio - 0.85) / 0.15;
+        const fadeOutCurve = Math.pow(1 - fadeOutProgress, 2);
+        particle.baseOpacity = fadeOutCurve * mouseParticleParams.fadeInSpeed * mouseParticleParams.fadeOutSpeed;
+      }
+
+      // Apply twinkling opacity oscillation on top of base opacity
+      const twinkleOpacity = 0.7 + 0.3 * Math.sin(particle.twinklePhase * 2.0); // Oscillate between 0.7-1.0
+      particle.opacity = particle.baseOpacity * twinkleOpacity;
+
+      // Remove particle when it's too old or fully faded
+      if (particle.life >= particle.maxLife || particle.opacity <= 0) {
+        drawnParticles.splice(i, 1);
+      }
+    }
+
     // Update geometry
     updateMouseParticleGeometry();
 
@@ -3618,12 +3736,14 @@ export function initShaderBackground() {
       if (!value) {
         // Clear all particles when disabled
         mouseParticles = [];
+        drawnParticles = [];
         updateMouseParticleGeometry();
         // Reset activation system
         isMouseParticleSystemActive = false;
         cumulativeMovement = 0;
         recentMovements = [];
         currentSpawnOffset = mouseParticleParams.spawnOffsetMin;
+        isDrawing = false;
       }
     });
 
@@ -3708,6 +3828,13 @@ export function initShaderBackground() {
       mouseParticleParams.fadeOutSpeed = value;
     });
 
+  mouseParticleFolder
+    .add(mouseParticleParams, "drawnLife", 1.0, 10.0, 0.1)
+    .name("Drawn Particle Life")
+    .onChange((value) => {
+      mouseParticleParams.drawnLife = value;
+    });
+
   // Add control for initial movement threshold
   mouseParticleFolder
     .add({ movementThreshold: initialMovementThreshold }, "movementThreshold", 50, 300, 10)
@@ -3727,6 +3854,8 @@ export function initShaderBackground() {
           recentMovements = [];
           currentSpawnOffset = mouseParticleParams.spawnOffsetMin;
           mouseParticles = [];
+          drawnParticles = [];
+          isDrawing = false;
           updateMouseParticleGeometry();
         },
       },

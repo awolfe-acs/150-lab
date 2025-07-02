@@ -228,6 +228,7 @@ html {
     position: absolute;
     z-index: 5;
     perspective: 1000px; // Add perspective to parent for 3D effect
+    user-select: none;
 
     @media (max-width:$mobile-viewport) {
       width: 98vw;

@@ -85,6 +85,7 @@
         z-index: 2;
         transition: color 0.7s cubic-bezier(0.2, 0.1, 0.2, 1),
             text-shadow 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
+        user-select: none;
     }
 
     &:hover {
@@ -257,9 +258,9 @@
     &.icon-anim {
         width: auto;
         position: relative;
-        padding: 0px 52px 0 24px;
+        padding: 0px 52px 0 24px !important;
         background: transparent !important;
-        border: 1px solid transparent;
+        border: 1px solid transparent !important;
 
         span {
             z-index: 3;
@@ -280,7 +281,7 @@
         }
 
         &:hover {
-            border: 1px solid #fff;
+            border: 1px solid #fff !important;
 
             .color-overlay {
                 width: 32px;
@@ -306,7 +307,7 @@
         }
 
         &.submit-button-style {
-            border-radius: 32px;
+            border-radius: 32px !important;
             min-width: 200px;
 
             .color-overlay {
