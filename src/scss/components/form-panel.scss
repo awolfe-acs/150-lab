@@ -57,6 +57,10 @@
         h3 {
             margin-left: 0 !important;
 
+            @media (min-width:$desktop-viewport) {
+                transform: translateX(-6px);
+            }
+
             @media (max-width:$desktop-viewport) {
                 font-size: 6vw;
             }
@@ -92,6 +96,10 @@
                 @media (max-width:$desktop-viewport) {
                     width: 100%;
                 }
+
+                @media (max-width:580px) {
+                    max-width: calc(100% - 36px);
+                }
             }
 
             select {
@@ -102,8 +110,8 @@
                     width: 100%;
                 }
 
-                @media (max-width:$mobile-viewport) {
-                    width: calc(100% - 8px);
+                @media (max-width:580px) {
+                    max-width: calc(100% - 36px);
                 }
             }
 

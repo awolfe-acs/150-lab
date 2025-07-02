@@ -12,7 +12,7 @@ export function initShaderBackground() {
 
   // Track time spent in phase 1 to prevent time accumulation issues
   let phase1StartTime = Date.now();
-  const PHASE1_RESET_TIMEOUT = 9999999999999945000; // 25 seconds in milliseconds
+  const PHASE1_RESET_TIMEOUT = 45000; // 45 seconds in milliseconds
 
   // Helper function to check if we're above the Phase 3 trigger point
   function isAbovePhase3Trigger() {
@@ -625,8 +625,6 @@ export function initShaderBackground() {
             if (uniforms.waveSpeed) uniforms.waveSpeed.value = originalWaveSpeed;
             if (uniforms.waveAmplitude) uniforms.waveAmplitude.value = originalWaveAmplitude;
             if (uniforms.waveFrequency) uniforms.waveFrequency.value = originalWaveFrequency;
-            if (uniforms.ambientLight) uniforms.ambientLight.value = originalAmbientLight;
-            if (uniforms.directionalLight) uniforms.directionalLight.value = originalDirectionalLight;
             if (uniforms.yOffset) uniforms.yOffset.value = originalYOffset;
 
             // Update the GUI to reflect the original values
@@ -702,15 +700,8 @@ export function initShaderBackground() {
               // Use the phase 2 colors (red and purple)
               if (uniforms.color1) uniforms.color1.value.set("#ff4848");
               if (uniforms.color2) uniforms.color2.value.set("#3f00f5");
-              // Reset to original lighting values
-              if (originalAmbientLight !== undefined && uniforms.ambientLight)
-                uniforms.ambientLight.value = originalAmbientLight;
-              if (originalDirectionalLight !== undefined && uniforms.directionalLight)
-                uniforms.directionalLight.value = originalDirectionalLight;
-              // For phase 2, don't reset waveSpeed as it should be controlled by the hero-travel-area scroll trigger
-              // Reset amplitude but preserve the waveSpeed interpolation
-              if (originalWaveAmplitude !== undefined && uniforms.waveAmplitude)
-                uniforms.waveAmplitude.value = originalWaveAmplitude;
+              // Lighting values are now managed by the shader parameters directly
+              // Wave parameters are now managed by their respective scroll triggers
               window.specialColorsActive = true;
 
               // Update the GUI to reflect the phase two colors
@@ -722,17 +713,7 @@ export function initShaderBackground() {
               // Use the actual default phase 1 colors
               if (uniforms.color1) uniforms.color1.value.set("#32c2d6");
               if (uniforms.color2) uniforms.color2.value.set("#004199");
-              // Reset to original lighting values
-              if (originalAmbientLight !== undefined && uniforms.ambientLight)
-                uniforms.ambientLight.value = originalAmbientLight;
-              if (originalDirectionalLight !== undefined && uniforms.directionalLight)
-                uniforms.directionalLight.value = originalDirectionalLight;
-              // Reset to original wave settings (phase 1 can reset waveSpeed)
-              if (originalWaveSpeed !== undefined && uniforms.waveSpeed) uniforms.waveSpeed.value = originalWaveSpeed;
-              if (originalWaveAmplitude !== undefined && uniforms.waveAmplitude)
-                uniforms.waveAmplitude.value = originalWaveAmplitude;
-              if (originalWaveFrequency !== undefined && uniforms.waveFrequency)
-                uniforms.waveFrequency.value = originalWaveFrequency;
+              // Wave parameters are now managed by their respective scroll triggers
               window.specialColorsActive = true;
 
               // Update the GUI to reflect the phase one colors

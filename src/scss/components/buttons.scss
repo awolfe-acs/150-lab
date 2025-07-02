@@ -203,7 +203,7 @@
         padding: 0 16px;
     }
 
-    span {
+    &:not(.icon-anim) span {
         display: block;
         font-size: 14px !important;
         text-transform: uppercase;
@@ -252,5 +252,65 @@
 
     &.wide {
         width: 240px;
+    }
+
+    &.icon-anim {
+        width: auto;
+        position: relative;
+        padding: 0px 52px 0 24px;
+        background: transparent !important;
+        border: 1px solid transparent;
+
+        span {
+            z-index: 3;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        svg {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 3;
+
+            @media (max-width:$mobile-viewport) {
+                right: 12px;
+            }
+        }
+
+        &:hover {
+            border: 1px solid #fff;
+
+            .color-overlay {
+                width: 32px;
+                height: 32px;
+                right: 12px;
+                border-radius: 32px;
+
+                @media (max-width:$mobile-viewport) {
+                    right: 5px;
+                }
+            }
+        }
+
+        .color-overlay {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            border-radius: 32px;
+            position: absolute;
+            right: 0;
+            z-index: 2;
+            transition: all 0.3s ease;
+        }
+
+        &.submit-button-style {
+            border-radius: 32px;
+
+            .color-overlay {
+                background: #3E2BF4;
+            }
+        }
     }
 }

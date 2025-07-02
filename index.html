@@ -368,9 +368,12 @@
           <div class="content-area">
             <div class="title-row">
               <h2 style="margin:0;">Events</h2>
-              <a class="secondary-btn">More Events <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M23.0868 12.9159L24 12.0027L23.0868 11.0896L14.8362 2.83888L13.923 1.92572L12.1021 3.74667L13.0152 4.65983L19.0636 10.7135H1.28917H0V13.2919H1.28917H19.0636L13.0098 19.3402L12.0967 20.2534L13.9176 22.0743L14.8308 21.1612L23.0868 12.9159Z" fill="black"/>
-                </svg>
+              <a class="secondary-btn icon-anim"><span>More Events</span>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M23.0868 12.9159L24 12.0027L23.0868 11.0896L14.8362 2.83888L13.923 1.92572L12.1021 3.74667L13.0152 4.65983L19.0636 10.7135H1.28917H0V13.2919H1.28917H19.0636L13.0098 19.3402L12.0967 20.2534L13.9176 22.0743L14.8308 21.1612L23.0868 12.9159Z" fill="black"/>
+                  </svg>
+                <div class="color-overlay">
+                </div>
                 </a>
             </div>
             <div class="events-list">
@@ -411,7 +414,7 @@
 
             <div class="inner-wrapper">
               <div class="text-column">
-                <h3 style="font-weight:400; margin-bottom:16px; transform:translateX(-6px)">Become a 150th Insider</h3>
+                <h3 style="font-weight:400; margin-bottom:16px;">Become a 150th Insider</h3>
                 <p>Submit your email to receive the latest updates on the ACS 150th anniversary celebration.</p>
                 <div class="form-wrapper">
                   <form method="post" name="150InsiderSignUpForm" action="https://s341921710.t.eloqua.com/e/f2" onsubmit="return handleFormSubmit(this)" id="form1214" class="elq-form">
@@ -946,7 +949,15 @@
                       </div>
                       <div>
                         <div id="formElement2" class="elq-field-style form-element-layout row">
-                          <input type="Submit" class="submit-button-style " value="Submit" id="fe25317">
+                          <!--<input type="Submit" class="submit-button-style " value="Submit" id="fe25317">-->
+                          <button class="submit-button-style secondary-btn icon-anim" id="fe25317">
+                            <span>Subscribe</span>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M23.0868 12.9159L24 12.0027L23.0868 11.0896L14.8362 2.83888L13.923 1.92572L12.1021 3.74667L13.0152 4.65983L19.0636 10.7135H1.28917H0V13.2919H1.28917H19.0636L13.0098 19.3402L12.0967 20.2534L13.9176 22.0743L14.8308 21.1612L23.0868 12.9159Z" fill="black"/>
+                            </svg>
+                            <div class="color-overlay">
+                            </div>
+                          </button>
                         </div>
                       </div>
                       <input type="hidden" name="hiddenField" id="fe25316" value="">

@@ -2728,7 +2728,7 @@ export function initEventListItemHover() {
     transform: translate(-50%, -50%);
     transition: opacity 0.2s ease;
     mix-blend-mode: plus-lighter;
-    filter: opacity(0.4) brightness(0.9) contrast(1.2);
+    filter: opacity(0.28) brightness(0.9) contrast(1.2);
     ${isTouchDevice ? "display: none;" : ""}
   `;
   document.body.appendChild(mouseImage);
