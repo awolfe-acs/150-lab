@@ -1206,6 +1206,9 @@ export function initAnimations() {
 
   // Initialize event list item hover interactions
   initEventListItemHover();
+
+  // Initialize share button overlap detection
+  initShareButtonOverlapDetection();
 }
 
 // Function to preload the background audio early
@@ -1665,7 +1668,27 @@ function updatePageNavigation() {
     });
   };
 
-  // Click handlers with immediate title updates
+  // Helper function to get fresh scroll position for an element
+  const getElementScrollPosition = (element) => {
+    if (!element) return 0;
+
+    // Force layout recalculation by accessing offsetTop
+    element.offsetHeight;
+
+    // Use offsetTop for more reliable positioning, especially after layout changes
+    let offsetTop = 0;
+    let currentElement = element;
+
+    // Calculate cumulative offset from document top
+    while (currentElement) {
+      offsetTop += currentElement.offsetTop;
+      currentElement = currentElement.offsetParent;
+    }
+
+    return offsetTop;
+  };
+
+  // Click handlers with immediate title updates and fresh position calculations
   heroYearsLink.addEventListener("click", (e) => {
     e.preventDefault();
 
@@ -1674,6 +1697,7 @@ function updatePageNavigation() {
     heroYearsLink.classList.add("active");
     updateActiveTitle("150 Years of ACS");
 
+    // Always scroll to top for hero section
     window.scrollTo({
       top: 0,
       behavior: "smooth",
@@ -1688,20 +1712,25 @@ function updatePageNavigation() {
     getInvolvedLink.classList.add("active");
     updateActiveTitle("Get Involved");
 
-    // Scroll to the video-travel-area section
+    // Calculate fresh scroll position for video-travel-area
     if (videoTravelArea) {
-      const videoTravelAreaOffset = videoTravelArea.getBoundingClientRect().top + window.pageYOffset;
-      window.scrollTo({
-        top: videoTravelAreaOffset,
-        behavior: "smooth",
-      });
-    } else {
-      // Fallback to the original target if video-travel-area doesn't exist
-      const getInvolvedOffset = getInvolvedSection.getBoundingClientRect().top + window.pageYOffset;
-      window.scrollTo({
-        top: getInvolvedOffset,
-        behavior: "smooth",
-      });
+      // Add a small delay to ensure any ongoing animations have settled
+      setTimeout(() => {
+        const targetOffset = getElementScrollPosition(videoTravelArea);
+        window.scrollTo({
+          top: targetOffset,
+          behavior: "smooth",
+        });
+      }, 50);
+    } else if (getInvolvedSection) {
+      // Fallback to get-involved section
+      setTimeout(() => {
+        const targetOffset = getElementScrollPosition(getInvolvedSection);
+        window.scrollTo({
+          top: targetOffset,
+          behavior: "smooth",
+        });
+      }, 50);
     }
   });
 
@@ -1713,12 +1742,15 @@ function updatePageNavigation() {
     eventsLink.classList.add("active");
     updateActiveTitle("Events");
 
+    // Calculate fresh scroll position for events section
     if (eventsSection) {
-      const eventsOffset = eventsSection.getBoundingClientRect().top + window.pageYOffset;
-      window.scrollTo({
-        top: eventsOffset,
-        behavior: "smooth",
-      });
+      setTimeout(() => {
+        const targetOffset = getElementScrollPosition(eventsSection);
+        window.scrollTo({
+          top: targetOffset,
+          behavior: "smooth",
+        });
+      }, 50);
     }
   });
 
@@ -1762,32 +1794,30 @@ function updatePageNavigation() {
     },
   ];
 
-  // Calculate initial boundaries
+  // Calculate section boundaries using more reliable positioning
   function updateSectionBoundaries() {
     sections.forEach((section) => {
       if (section.element) {
-        const rect = section.element.getBoundingClientRect();
-        section.top = rect.top + window.pageYOffset;
-        section.bottom = rect.bottom + window.pageYOffset;
+        // Use offsetTop for more reliable positioning
+        section.top = getElementScrollPosition(section.element);
+        section.bottom = section.top + section.element.offsetHeight;
       }
     });
 
     // Special adjustment: Hero section ends at the start of video travel area
     if (sections[0].element && videoTravelArea) {
-      const videoRect = videoTravelArea.getBoundingClientRect();
-      sections[0].bottom = videoRect.top + window.pageYOffset;
+      sections[0].bottom = getElementScrollPosition(videoTravelArea);
     }
 
     // Make video-travel-area and get-involved one logical section
     if (videoTravelArea && eventsSection) {
       const videoSection = sections.find((s) => s.id === "getinvolved-video");
       const getInvolvedSection = sections.find((s) => s.id === "getinvolved");
-      const eventsRect = eventsSection.getBoundingClientRect();
 
       if (videoSection && getInvolvedSection) {
         // Get-involved section now spans from video-travel-area to events section
         getInvolvedSection.top = videoSection.top;
-        getInvolvedSection.bottom = eventsRect.top + window.pageYOffset;
+        getInvolvedSection.bottom = getElementScrollPosition(eventsSection);
       }
     }
   }
@@ -1846,17 +1876,58 @@ function updatePageNavigation() {
   window.removeEventListener("scroll", handleScroll);
   window.addEventListener("scroll", handleScroll);
 
-  // Update boundaries on resize
-  window.addEventListener(
-    "resize",
-    debounce(() => {
-      updateSectionBoundaries();
+  // Update boundaries on resize with more aggressive recalculation
+  const handleResize = debounce(() => {
+    // Force a layout recalculation
+    document.body.offsetHeight;
+
+    // Update boundaries multiple times to ensure they're correct
+    updateSectionBoundaries();
+
+    // Use requestAnimationFrame to ensure DOM has settled
+    requestAnimationFrame(() => {
+      updateSectionBoundaries(); // Update again after layout settles
       handleScroll(); // Check current position after resize
-    }, 100)
-  );
+    });
+  }, 150);
+
+  window.addEventListener("resize", handleResize);
+
+  // Also handle orientation changes which might not trigger resize on all devices
+  window.addEventListener("orientationchange", () => {
+    setTimeout(() => {
+      handleResize();
+    }, 300); // Give more time for orientation change to complete
+  });
+
+  // Ensure proper initialization with multiple attempts
+  const initializeNavigation = () => {
+    updateSectionBoundaries();
+    handleScroll();
+  };
 
   // Initial call to set correct state
-  handleScroll();
+  initializeNavigation();
+
+  // Also ensure proper initialization after a short delay to handle any late-loading content
+  setTimeout(initializeNavigation, 500);
+
+  // And after fonts are fully loaded (which can affect layout)
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(initializeNavigation);
+  }
+
+  // Add a one-time scroll event listener to recalculate on first scroll
+  // (in case initial calculations were off due to loading states)
+  let hasScrolled = false;
+  const oneTimeScrollHandler = () => {
+    if (!hasScrolled) {
+      hasScrolled = true;
+      updateSectionBoundaries();
+      window.removeEventListener("scroll", oneTimeScrollHandler);
+    }
+  };
+  window.addEventListener("scroll", oneTimeScrollHandler);
 }
 
 function animateSlidingCards() {
@@ -2524,7 +2595,7 @@ export function initGetInvolvedLogoAnimation() {
   });
 }
 
-// Initialize infinite marquee animation for form panel image
+// Initialize infinite marquee animation for form panel image with responsive support
 export function initInfiniteMarqueeAnimation() {
   const animationColumn = document.querySelector(".form-panel .animation-column");
   const originalImage = animationColumn?.querySelector("img");
@@ -2534,67 +2605,159 @@ export function initInfiniteMarqueeAnimation() {
     return;
   }
 
-  // Create marquee container
-  const marqueeContainer = document.createElement("div");
-  marqueeContainer.className = "marquee-container";
+  // Create marquee container only if it doesn't exist
+  let marqueeContainer = animationColumn.querySelector(".marquee-container");
+  if (!marqueeContainer) {
+    marqueeContainer = document.createElement("div");
+    marqueeContainer.className = "marquee-container";
 
-  // Clone the original image for seamless loop
-  const clonedImage = originalImage.cloneNode(true);
+    // Clone the original image for seamless loop
+    const clonedImage = originalImage.cloneNode(true);
+    clonedImage.className += " cloned-image"; // Add identifier for the clone
 
-  // Remove original image from its current position
-  originalImage.remove();
+    // Remove original image from its current position
+    originalImage.remove();
 
-  // Add both images to the marquee container
-  marqueeContainer.appendChild(originalImage);
-  marqueeContainer.appendChild(clonedImage);
+    // Add both images to the marquee container
+    marqueeContainer.appendChild(originalImage);
+    marqueeContainer.appendChild(clonedImage);
 
-  // Add marquee container to animation column
-  animationColumn.appendChild(marqueeContainer);
+    // Add marquee container to animation column
+    animationColumn.appendChild(marqueeContainer);
+  }
 
-  // Function to set up the animation after image loads
+  // Store references for resize handling
+  const images = [originalImage, marqueeContainer.querySelector(".cloned-image")];
+  let currentAnimation = null;
+
+  // Function to set up or reset the animation
   const setupAnimation = () => {
+    // Kill any existing animation
+    if (currentAnimation) {
+      currentAnimation.kill();
+      currentAnimation = null;
+    }
+
+    // Force layout recalculation
+    animationColumn.offsetHeight;
+    originalImage.offsetHeight;
+
     // Wait for layout to be calculated
     setTimeout(() => {
       // Get the actual rendered dimensions of the image
       const imageRect = originalImage.getBoundingClientRect();
       const actualHeight = imageRect.height;
 
+      // Ensure we have a valid height
+      if (actualHeight <= 0) {
+        console.warn("Image height is 0, retrying marquee setup...");
+        setTimeout(setupAnimation, 200);
+        return;
+      }
+
+      // Reset any existing transforms
+      gsap.set(images, { y: 0, top: "auto" });
+
       // Position the images - second image directly below the first
       gsap.set(originalImage, {
+        position: "absolute",
         top: 0,
         left: 0,
       });
-      gsap.set(clonedImage, {
+
+      gsap.set(images[1], {
+        position: "absolute",
         top: actualHeight + "px", // Position exactly one image height below
         left: 0,
       });
 
-      // Create the infinite animation
+      // Create the infinite animation timeline
       const tl = gsap.timeline({ repeat: -1, ease: "none" });
 
       // Calculate duration based on actual image height (adjust speed as needed)
-      const duration = actualHeight / 30; // 30 pixels per second for smoother motion
+      const duration = Math.max(actualHeight / 30, 2); // Minimum 2 seconds duration, 30 pixels per second
 
-      tl.to([originalImage, clonedImage], {
+      // Animate both images moving up by exactly one image height
+      tl.to(images, {
         y: -actualHeight,
         duration: duration,
         ease: "none",
       });
 
       // Reset positions when animation completes to create seamless loop
-      tl.set([originalImage, clonedImage], {
+      tl.set(images, {
         y: 0,
       });
+
+      // Store reference to current animation
+      currentAnimation = tl;
     }, 100); // Small delay to ensure layout is complete
   };
 
-  // Wait for image to load, then setup animation
-  if (originalImage.complete && originalImage.naturalHeight !== 0) {
+  // Function to handle resize events
+  const handleMarqueeResize = debounce(() => {
+    // Force layout recalculation before restarting animation
+    document.body.offsetHeight;
     setupAnimation();
-  } else {
-    originalImage.addEventListener("load", setupAnimation);
-    // Fallback in case load event doesn't fire
-    setTimeout(setupAnimation, 1000);
+  }, 250);
+
+  // Set up the initial animation
+  const initializeMarquee = () => {
+    if (originalImage.complete && originalImage.naturalHeight !== 0) {
+      setupAnimation();
+    } else {
+      originalImage.addEventListener("load", setupAnimation);
+      // Fallback in case load event doesn't fire
+      setTimeout(setupAnimation, 1000);
+    }
+  };
+
+  // Initialize the marquee
+  initializeMarquee();
+
+  // Add resize event listener to recalculate animation on viewport changes
+  window.addEventListener("resize", handleMarqueeResize);
+
+  // Also handle orientation changes
+  window.addEventListener("orientationchange", () => {
+    setTimeout(handleMarqueeResize, 300);
+  });
+
+  // Store cleanup function for potential use
+  window.cleanupInfiniteMarquee = () => {
+    if (currentAnimation) {
+      currentAnimation.kill();
+      currentAnimation = null;
+    }
+    window.removeEventListener("resize", handleMarqueeResize);
+  };
+
+  // Add a one-time scroll event to recalculate if needed
+  // (in case the image dimensions change due to lazy loading or other factors)
+  let hasScrolledMarquee = false;
+  const oneTimeMarqueeScrollHandler = () => {
+    if (!hasScrolledMarquee) {
+      hasScrolledMarquee = true;
+
+      // Check if the image dimensions have changed
+      const currentHeight = originalImage.getBoundingClientRect().height;
+      const expectedTop = parseFloat(images[1].style.top || "0");
+
+      if (Math.abs(currentHeight - expectedTop) > 5) {
+        // 5px tolerance
+        setupAnimation();
+      }
+
+      window.removeEventListener("scroll", oneTimeMarqueeScrollHandler);
+    }
+  };
+  window.addEventListener("scroll", oneTimeMarqueeScrollHandler);
+
+  // Also recalculate after fonts are loaded (which might affect image dimensions)
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => {
+      setTimeout(setupAnimation, 100);
+    });
   }
 }
 
@@ -2754,6 +2917,69 @@ export function initEventListItemHover() {
     });
     */
   });
+}
+
+// Initialize share button overlap detection with events panel
+export function initShareButtonOverlapDetection() {
+  const shareButton = document.querySelector(".share-button-pinned");
+  const eventsPanel = document.querySelector(".events-panel");
+
+  if (!shareButton || !eventsPanel) {
+    console.warn("Share button or events panel not found for overlap detection");
+    return;
+  }
+
+  // Function to check if elements overlap
+  const checkOverlap = () => {
+    const shareRect = shareButton.getBoundingClientRect();
+    const eventsRect = eventsPanel.getBoundingClientRect();
+
+    // Check if rectangles overlap
+    const isOverlapping = !(
+      shareRect.right < eventsRect.left ||
+      shareRect.left > eventsRect.right ||
+      shareRect.bottom < eventsRect.top ||
+      shareRect.top > eventsRect.bottom
+    );
+
+    // Update background color based on overlap
+    if (isOverlapping) {
+      shareButton.style.backgroundColor = "#14b500";
+    } else {
+      shareButton.style.backgroundColor = ""; // Reset to default
+    }
+  };
+
+  // Create a throttled version of checkOverlap for better performance
+  let ticking = false;
+  const throttledCheckOverlap = () => {
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        checkOverlap();
+        ticking = false;
+      });
+      ticking = true;
+    }
+  };
+
+  // Check overlap on scroll
+  window.addEventListener("scroll", throttledCheckOverlap);
+
+  // Check overlap on resize
+  window.addEventListener("resize", throttledCheckOverlap);
+
+  // Initial check
+  checkOverlap();
+
+  // Store cleanup function for potential use
+  window.cleanupShareButtonOverlap = () => {
+    window.removeEventListener("scroll", throttledCheckOverlap);
+    window.removeEventListener("resize", throttledCheckOverlap);
+    // Reset button background
+    if (shareButton) {
+      shareButton.style.backgroundColor = "";
+    }
+  };
 }
 
 // Simple debounce function to prevent too many resize calculations
