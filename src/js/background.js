@@ -340,7 +340,7 @@ export function initShaderBackground() {
       },
     });
 
-    // Create a ScrollTrigger to transition through phase 2 colors during #hero-travel-area
+    // Create a ScrollTrigger to transition from phase 1 to phase 2 colors during #hero-travel-area
     gsap.timeline({
       scrollTrigger: {
         trigger: "#hero-travel-area",
@@ -355,81 +355,71 @@ export function initShaderBackground() {
           // Get the current progress from start to end (0 to 1)
           const progress = self.progress;
 
-          // Interpolate waveSpeed from 2.0 to 0.2 based on progress (simplified like colorDarkness)
-          const initialWaveSpeed = 2.0;
-          const targetWaveSpeed = 0.2;
-          const currentWaveSpeed = initialWaveSpeed + (targetWaveSpeed - initialWaveSpeed) * progress;
+          // Phase 1 initial colors
+          const phase1Color1 = new THREE.Color("#32c2d6");
+          const phase1Color2 = new THREE.Color("#004199");
 
-          if (uniforms && uniforms.waveSpeed) {
-            uniforms.waveSpeed.value = currentWaveSpeed;
-          } else {
+          // Phase 2 target colors
+          const phase2Color1 = new THREE.Color("#DA281C");
+          const phase2Color2 = new THREE.Color("#3E2BF3");
+
+          // Interpolate between phase 1 and phase 2 colors
+          const currentColor1 = phase1Color1.clone().lerp(phase2Color1, progress);
+          const currentColor2 = phase1Color2.clone().lerp(phase2Color2, progress);
+
+          // Apply the interpolated colors to the shader
+          uniforms.color1.value.copy(currentColor1);
+          uniforms.color2.value.copy(currentColor2);
+
+          // Remove any hue-rotate filter since we're using direct color interpolation
+          const shaderBackground = document.getElementById("shaderBackground");
+          if (shaderBackground) {
+            shaderBackground.style.filter = "hue-rotate(0deg)";
           }
 
-          // Interpolate waveAmplitude from 3.0 to 1.0 based on progress
-          const initialWaveAmplitude = 3.0;
-          const targetWaveAmplitude = 1.0;
-          const currentWaveAmplitude = initialWaveAmplitude + (targetWaveAmplitude - initialWaveAmplitude) * progress;
-
-          if (uniforms && uniforms.waveAmplitude) {
-            uniforms.waveAmplitude.value = currentWaveAmplitude;
-          } else {
-          }
-
-          // Interpolate waveFrequency from 2.2 to 1.0 based on progress
-          const initialWaveFrequency = 2.2;
-          const targetWaveFrequency = 1.0;
-          const currentWaveFrequency = initialWaveFrequency + (targetWaveFrequency - initialWaveFrequency) * progress;
-
-          if (uniforms && uniforms.waveFrequency) {
-            uniforms.waveFrequency.value = currentWaveFrequency;
-          }
-
-          updateWaveGUI();
-
-          if (progress > 0.1) {
-            // Transitioning to phase 2 colors
-
-            // Interpolate between phase 1 and phase 2 colors
-            const phase1Color1 = new THREE.Color("#32c2d6");
-            const phase1Color2 = new THREE.Color("#004199");
-            //const phase2Color1 = new THREE.Color("#ff4848");
-            //const phase2Color2 = new THREE.Color("#3f00f5");
-            const phase2Color1 = new THREE.Color("#3E2BF3");
-            const phase2Color2 = new THREE.Color("#DA281C");
-
-            // Create smooth interpolation (ease the progress for smoother transition)
-            const easedProgress = Math.min(1, (progress - 0.1) / 0.9); // Map 0.1-1.0 to 0-1
-            const smoothProgress = easedProgress * easedProgress * (3.0 - 2.0 * easedProgress); // Smoothstep
-
-            // Interpolate colors
-            const currentColor1 = phase1Color1.clone().lerp(phase2Color1, smoothProgress);
-            const currentColor2 = phase1Color2.clone().lerp(phase2Color2, smoothProgress);
-
-            uniforms.color1.value.copy(currentColor1);
-            uniforms.color2.value.copy(currentColor2);
-
-            // Mark that we're now in phase 2
+          // Mark that we're transitioning between phases
+          if (progress > 0.9) {
             window.colorPhase = 2;
-            // Reset phase 1 timer since we've entered phase 2
-            phase1StartTime = Date.now();
-            window.specialColorsActive = true;
-
-            // Update the GUI to reflect the new colors
-            updateColorGUI();
-          } else {
-            // Back to phase 1 colors
-            uniforms.color1.value.set("#32c2d6");
-            uniforms.color2.value.set("#004199");
-
-            // Reset to phase 1
+          } else if (progress < 0.1) {
             window.colorPhase = 1;
-            // Reset phase 1 timer since we're back in phase 1
-            phase1StartTime = Date.now();
-            window.specialColorsActive = true;
+          } else {
+            window.colorPhase = 1.5; // Transitioning between phases
+          }
 
-            // Update the GUI to reflect the phase 1 colors
+          // Reset phase 1 timer since we've entered transition
+          phase1StartTime = Date.now();
+          window.specialColorsActive = true;
+
+          // Update the GUI to reflect the current interpolated colors
+          updateColorGUI();
+          updateWaveGUI();
+        },
+      },
+    });
+
+    // Create a ScrollTrigger to maintain phase 2 colors when #video-travel-area is in view
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: "#video-travel-area",
+        start: "top top", // Start when video-travel-area reaches the top of viewport
+        end: "bottom top", // Continue until video-travel-area exits viewport
+        scrub: false,
+        markers: false,
+        onEnter: () => {
+          console.log("Video travel area: Maintaining phase 2 colors");
+          // Ensure we're in phase 2 and maintain the final transition colors
+          if (uniforms && uniforms.color1 && uniforms.color2) {
+            uniforms.color1.value.set("#DA281C");
+            uniforms.color2.value.set("#3E2BF3");
+            window.colorPhase = 2;
+            window.specialColorsActive = true;
             updateColorGUI();
           }
+        },
+        onLeaveBack: () => {
+          console.log("Video travel area: Returning to phase 1->2 transition");
+          // When scrolling back up, the hero-travel-area ScrollTrigger will handle the transition
+          // No need to do anything here as the transition will be handled by the previous trigger
         },
       },
     });
@@ -480,7 +470,7 @@ export function initShaderBackground() {
             updateLightingGUI();
             updateWaveGUI();
           } else if (progress <= 0.1 && window.colorPhase === 3) {
-            // When scrolling back up and events section exits viewport, restore phase two special colors
+            // When scrolling back up and events section exits viewport, restore phase two colors
 
             // Maintain perfect continuity when transitioning back to phase 2
             // This prevents visual jumps while keeping transitions consistent
@@ -488,9 +478,9 @@ export function initShaderBackground() {
             uniforms.colorCycleOffset.value = currentEffectiveTime;
             uniforms.time.value = 0.0; // Reset time but maintain perfect continuity through offset
 
-            // Restore phase 2 colors (red and purple)
-            uniforms.color1.value.set("#3E2BF3");
-            uniforms.color2.value.set("#DA281C");
+            // Restore phase 2 colors (the end colors from the hero-travel-area transition)
+            uniforms.color1.value.set("#DA281C");
+            uniforms.color2.value.set("#3E2BF3");
 
             // Reset the yOffset to its original value
             if (uniforms.yOffset && originalYOffset !== undefined) {
@@ -501,10 +491,10 @@ export function initShaderBackground() {
             if (originalAmbientLight !== undefined) uniforms.ambientLight.value = originalAmbientLight;
             if (originalDirectionalLight !== undefined) uniforms.directionalLight.value = originalDirectionalLight;
 
-            // Reset wave settings to phase 2 values (not original values)
-            uniforms.waveSpeed.value = 0.2; // Phase 2 endpoint value, not original 2.0
-            uniforms.waveAmplitude.value = 1.0; // Phase 2 endpoint value, not original 3.0
-            uniforms.waveFrequency.value = 1.0; // Phase 2 endpoint value, not original 2.2
+            // Reset wave settings to phase 2 values
+            uniforms.waveSpeed.value = 2.0; // Phase 2 maintains original wave speed
+            if (originalWaveAmplitude !== undefined) uniforms.waveAmplitude.value = originalWaveAmplitude; // Back to original 3.0
+            if (originalWaveFrequency !== undefined) uniforms.waveFrequency.value = originalWaveFrequency; // Back to original 2.2
 
             // Reset to phase two
             window.colorPhase = 2;
@@ -1232,7 +1222,7 @@ export function initShaderBackground() {
     resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
     // Animation speed parameters
     mainSpeed: { value: 0.00012 }, // Overall animation speed multiplier
-    waveSpeed: { value: 2.0 }, // Controls how fast the waves animate
+    waveSpeed: { value: 0.9 }, // Controls how fast the waves animate
     noiseSpeed: { value: 0.45 }, // Speed of the noise animation
     colorCycleSpeed: { value: 2.0 }, // Speed of color cycling/transitions
     colorCycleOffset: { value: 0.0 }, // New: offset to maintain color cycle continuity
@@ -1240,12 +1230,12 @@ export function initShaderBackground() {
     color1: { value: new THREE.Color(0x32c2d6) },
     color2: { value: new THREE.Color(0x004199) },
     colorDarkness: { value: 0.0 }, // Controls overall darkness of colors
-    colorWaveInfluence: { value: 0.4 }, // Controls how much colors affect wave patterns
-    colorFrequencyShift: { value: 0.3 }, // Controls how colors shift wave frequencies
+    colorWaveInfluence: { value: 0.0 }, // Controls how much colors affect wave patterns
+    colorFrequencyShift: { value: 0.0 }, // Controls how colors shift wave frequencies
     colorAmplitudeEffect: { value: 0.0 }, // Controls how colors affect wave amplitude
     //Wave parameters
-    waveAmplitude: { value: 3.0 }, // Controls wave height
-    waveFrequency: { value: 2.2 }, // Controls wave frequency
+    waveAmplitude: { value: 0.8 }, // Controls wave height
+    waveFrequency: { value: 4.0 }, // Controls wave frequency
     waveDepth: { value: 0.6 }, // Controls perceived depth of waves
     flowDirection: { value: new THREE.Vector2(-0.7, 0.82) }, // Controls the direction of wave movement
     noiseScale: { value: 2.5 }, // Scale of noise pattern
@@ -3309,7 +3299,7 @@ export function initShaderBackground() {
 
   // Mouse follow particle parameters
   const mouseParticleParams = {
-    enabled: true,
+    enabled: false, // Start disabled, will be enabled when enter-experience button is clicked
     spawnRate: 0.52, // Chance to spawn particle on mouse move (0-1)
     maxParticles: 150, //150
     baseSize: 1.9, // Base particle size
@@ -3327,6 +3317,13 @@ export function initShaderBackground() {
 
   // Initialize currentSpawnOffset now that mouseParticleParams is defined
   currentSpawnOffset = mouseParticleParams.spawnOffsetMin;
+
+  // Global function to enable mouse particles (called from enter-experience button)
+  window.enableMouseParticles = function () {
+    mouseParticleParams.enabled = true;
+    console.log("Mouse following particles enabled - mouseParticleParams.enabled:", mouseParticleParams.enabled);
+    console.log("Mouse particle system setup complete");
+  };
 
   // Create mouse particle geometry and material (clone of main particles)
   const mouseParticleGeometry = new THREE.BufferGeometry();
@@ -3531,7 +3528,20 @@ export function initShaderBackground() {
 
   // Mouse move event listener
   window.addEventListener("mousemove", (event) => {
-    if (!mouseParticleParams.enabled) return;
+    if (!mouseParticleParams.enabled) {
+      // Debug: Log when mouse moves but particles are disabled
+      if (Math.random() < 0.001) {
+        // Only log occasionally to avoid spam
+        console.log("Mouse move detected but particles disabled");
+      }
+      return;
+    }
+
+    // Debug: Log when mouse particles are enabled and processing
+    if (Math.random() < 0.01) {
+      // Only log occasionally to avoid spam
+      console.log("Mouse move processing - particles enabled");
+    }
 
     lastMousePosition.x = mousePosition.x;
     lastMousePosition.y = mousePosition.y;
@@ -3583,6 +3593,7 @@ export function initShaderBackground() {
 
         const newParticle = createMouseParticle(worldCoords.x + offsetX, worldCoords.y + offsetY);
         mouseParticles.push(newParticle);
+        console.log("Created mouse particle:", newParticle.id, "Total particles:", mouseParticles.length);
       }
     }
 
