@@ -177,6 +177,15 @@ export function initHeroAnimation() {
     });
   }
 
+  // Hide the share button initially
+  const shareButton = document.querySelector(".share-button-pinned");
+  if (shareButton) {
+    gsap.set(shareButton, {
+      opacity: 0,
+      autoAlpha: 0,
+    });
+  }
+
   // Stop Lenis scrolling until animations complete or button is clicked
   if (window.lenis) {
     window.lenis.stop();
@@ -203,6 +212,9 @@ export function initHeroAnimation() {
     digitSpan.className = "digit";
     digitSpan.textContent = digit;
     digitSpan.setAttribute("data-digit", digit);
+    // Immediately hide the digit to prevent flickering
+    digitSpan.style.opacity = "0";
+    digitSpan.style.visibility = "hidden";
     heroNumber.appendChild(digitSpan);
   });
 
@@ -293,6 +305,7 @@ export function initHeroAnimation() {
     digits,
     {
       opacity: 0,
+      autoAlpha: 0, // Use autoAlpha to handle both opacity and visibility
       y: 10,
       z: -120, // Start further back in z-space
       transformPerspective: 1000, // Add perspective for 3D effect
@@ -300,6 +313,7 @@ export function initHeroAnimation() {
     },
     {
       opacity: 0.44, // Fade in to 0.44 opacity as requested
+      autoAlpha: 0.44, // Use autoAlpha to ensure visibility is also set
       y: 0,
       z: 0,
       duration: 2.5, // Much longer duration for slower fade-in
@@ -393,6 +407,17 @@ export function initHeroAnimation() {
         duration: 0.5,
         ease: "power2.in",
       });
+
+      // Reveal the share button
+      if (shareButton) {
+        gsap.to(shareButton, {
+          opacity: 1,
+          autoAlpha: 1,
+          duration: 0.8,
+          delay: 0.4, // Slight delay after other elements start fading in
+          ease: "power2.out",
+        });
+      }
     });
   }
 
@@ -426,8 +451,10 @@ export function initHeroAnimation() {
         const progress = self.progress;
         const opacity = 0.44 + progress * 0.56;
         const digits = heroNumber.querySelectorAll(".digit");
-        digits.forEach((digit) => {
-          digit.style.opacity = opacity;
+        // Use GSAP.set for more reliable style application
+        gsap.set(digits, {
+          opacity: opacity,
+          visibility: "visible", // Ensure visibility is always visible during this phase
         });
       },
     });
@@ -443,7 +470,8 @@ export function initHeroAnimation() {
       onUpdate: function (self) {
         const progress = self.progress;
         const opacity = 1 - progress;
-        heroNumber.style.opacity = opacity;
+        // Use GSAP.set for more reliable style application
+        gsap.set(heroNumber, { opacity: opacity });
       },
     });
   }
@@ -579,6 +607,10 @@ export function initAnimations() {
             const newDigits = yearValue.split("");
 
             if (currentDigits.length !== newDigits.length) {
+              // Store current opacity before clearing
+              const currentOpacity =
+                currentDigits.length > 0 ? window.getComputedStyle(currentDigits[0]).opacity : "0.44";
+
               heroNumber.innerHTML = "";
               newDigits.forEach((digit) => {
                 const digitSpan = document.createElement("span");
@@ -586,6 +618,13 @@ export function initAnimations() {
                 digitSpan.textContent = digit;
                 digitSpan.setAttribute("data-digit", digit);
                 heroNumber.appendChild(digitSpan);
+              });
+
+              // Use GSAP to set the proper initial state for new digits
+              const newDigitElements = heroNumber.querySelectorAll(".digit");
+              gsap.set(newDigitElements, {
+                opacity: currentOpacity,
+                visibility: "visible",
               });
             } else {
               currentDigits.forEach((digitSpan, index) => {
@@ -2650,6 +2689,11 @@ export function initInfiniteMarqueeAnimation() {
 
       // Ensure we have a valid height
       if (actualHeight <= 0) {
+        // Check if viewport is less than 580px - if so, don't retry since marquee is hidden
+        if (window.innerWidth < 580) {
+          console.log("Viewport width < 580px, skipping marquee setup (element is hidden)");
+          return;
+        }
         console.warn("Image height is 0, retrying marquee setup...");
         setTimeout(setupAnimation, 200);
         return;

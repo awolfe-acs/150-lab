@@ -392,8 +392,10 @@ export function initShaderBackground() {
             // Interpolate between phase 1 and phase 2 colors
             const phase1Color1 = new THREE.Color("#32c2d6");
             const phase1Color2 = new THREE.Color("#004199");
-            const phase2Color1 = new THREE.Color("#ff4848");
-            const phase2Color2 = new THREE.Color("#3f00f5");
+            //const phase2Color1 = new THREE.Color("#ff4848");
+            //const phase2Color2 = new THREE.Color("#3f00f5");
+            const phase2Color1 = new THREE.Color("#3E2BF3");
+            const phase2Color2 = new THREE.Color("#DA281C");
 
             // Create smooth interpolation (ease the progress for smoother transition)
             const easedProgress = Math.min(1, (progress - 0.1) / 0.9); // Map 0.1-1.0 to 0-1
@@ -487,8 +489,8 @@ export function initShaderBackground() {
             uniforms.time.value = 0.0; // Reset time but maintain perfect continuity through offset
 
             // Restore phase 2 colors (red and purple)
-            uniforms.color1.value.set("#ff4848");
-            uniforms.color2.value.set("#3f00f5");
+            uniforms.color1.value.set("#3E2BF3");
+            uniforms.color2.value.set("#DA281C");
 
             // Reset the yOffset to its original value
             if (uniforms.yOffset && originalYOffset !== undefined) {
@@ -698,8 +700,8 @@ export function initShaderBackground() {
             } else if (window.colorPhase === 2) {
               // We're in phase two, maintain phase two special colors
               // Use the phase 2 colors (red and purple)
-              if (uniforms.color1) uniforms.color1.value.set("#ff4848");
-              if (uniforms.color2) uniforms.color2.value.set("#3f00f5");
+              if (uniforms.color1) uniforms.color1.value.set("#3E2BF3");
+              if (uniforms.color2) uniforms.color2.value.set("#DA281C");
               // Lighting values are now managed by the shader parameters directly
               // Wave parameters are now managed by their respective scroll triggers
               window.specialColorsActive = true;
@@ -3294,7 +3296,7 @@ export function initShaderBackground() {
   // Track cumulative mouse movement for initial activation threshold
   let cumulativeMovement = 0;
   let isMouseParticleSystemActive = false;
-  let initialMovementThreshold = 150; // Pixels of cumulative movement needed to start particles
+  let initialMovementThreshold = 250; // Pixels of cumulative movement needed to start particles
 
   // Track recent mouse movement for dynamic spawn offset
   let recentMovements = [];
@@ -3308,18 +3310,18 @@ export function initShaderBackground() {
   // Mouse follow particle parameters
   const mouseParticleParams = {
     enabled: true,
-    spawnRate: 0.65, // Chance to spawn particle on mouse move (0-1)
+    spawnRate: 0.52, // Chance to spawn particle on mouse move (0-1)
     maxParticles: 150, //150
-    baseSize: 1.8, // Base particle size
-    fadeInSpeed: 0.75, // Maximum opacity/brightness (0-1) - controls peak intensity
-    fadeOutSpeed: 1.0, // Fade out intensity multiplier (0-1) - controls fade strength
+    baseSize: 1.9, // Base particle size
+    fadeInSpeed: 0.62, // Maximum opacity/brightness (0-1) - controls peak intensity
+    fadeOutSpeed: 0.88, // Fade out intensity multiplier (0-1) - controls fade strength
     trailLength: 0.0005, // How much particles lag behind mouse (0-1)
     speedVariation: 0.2, // Random variation in trail following speed (0-1)
     jitterAmount: 0.08, // Random jittery movement intensity (0-1)
-    spawnOffsetMin: 0.052, // Minimum random spawn position offset for organic spread (0-1)
-    spawnOffsetMax: 0.62, // Maximum random spawn position offset for organic spread (0-1)
+    spawnOffsetMin: 0.08, // Minimum random spawn position offset for organic spread (0-1)
+    spawnOffsetMax: 0.8, // Maximum random spawn position offset for organic spread (0-1)
     minLifetime: 1.5, // Minimum particle lifetime in seconds
-    maxLifetime: 4.0, // Maximum particle lifetime in seconds
+    maxLifetime: 3.5, // Maximum particle lifetime in seconds
     drawnLife: 12.0, // Lifetime for drawn particles in seconds (easter egg)
   };
 
@@ -3620,6 +3622,134 @@ export function initShaderBackground() {
     }
   });
 
+  // Touch event listeners for mobile support
+  let lastTouchPosition = { x: 0, y: 0 };
+  let touchPosition = { x: 0, y: 0 };
+  let isTouching = false;
+
+  // Touch start event listener
+  window.addEventListener(
+    "touchstart",
+    (event) => {
+      if (!mouseParticleParams.enabled) return;
+
+      // Prevent default to avoid scrolling issues
+      event.preventDefault();
+
+      // Get the first touch point
+      const touch = event.touches[0];
+      touchPosition.x = touch.clientX;
+      touchPosition.y = touch.clientY;
+      lastTouchPosition.x = touchPosition.x;
+      lastTouchPosition.y = touchPosition.y;
+
+      isTouching = true;
+      isDrawing = true; // Enable drawing mode for touch
+    },
+    { passive: false }
+  );
+
+  // Touch move event listener
+  window.addEventListener(
+    "touchmove",
+    (event) => {
+      if (!mouseParticleParams.enabled || !isTouching) return;
+
+      // Prevent default to avoid scrolling issues
+      event.preventDefault();
+
+      // Get the first touch point
+      const touch = event.touches[0];
+      lastTouchPosition.x = touchPosition.x;
+      lastTouchPosition.y = touchPosition.y;
+      touchPosition.x = touch.clientX;
+      touchPosition.y = touch.clientY;
+
+      // Update mouse position for particle system consistency
+      mousePosition.x = touchPosition.x;
+      mousePosition.y = touchPosition.y;
+
+      // Calculate touch movement distance
+      const deltaX = touchPosition.x - lastTouchPosition.x;
+      const deltaY = touchPosition.y - lastTouchPosition.y;
+      const movement = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+      // Track cumulative movement to activate particle system
+      if (!isMouseParticleSystemActive) {
+        cumulativeMovement += movement;
+        if (cumulativeMovement >= initialMovementThreshold) {
+          isMouseParticleSystemActive = true;
+        }
+      }
+
+      // Track recent movements for dynamic spawn offset calculation
+      recentMovements.push(movement);
+      if (recentMovements.length > maxRecentMovements) {
+        recentMovements.shift(); // Remove oldest movement
+      }
+
+      // Calculate average movement intensity over recent frames
+      if (recentMovements.length > 0) {
+        const avgMovement = recentMovements.reduce((sum, mov) => sum + mov, 0) / recentMovements.length;
+        const maxMovement = 20; // Maximum expected movement per frame for normalization
+        const movementIntensity = Math.min(avgMovement / maxMovement, 1.0); // Normalize to 0-1
+
+        // Interpolate between min and max spawn offset based on movement intensity
+        currentSpawnOffset =
+          mouseParticleParams.spawnOffsetMin +
+          (mouseParticleParams.spawnOffsetMax - mouseParticleParams.spawnOffsetMin) * movementIntensity;
+      }
+
+      // Only spawn particles if system is active, touch is moving, and we haven't hit the limit
+      if (isMouseParticleSystemActive && movement > 1 && mouseParticles.length < mouseParticleParams.maxParticles) {
+        // Random chance to spawn particle based on spawn rate
+        if (Math.random() < mouseParticleParams.spawnRate) {
+          const worldCoords = mouseToWorldCoords(touchPosition.x, touchPosition.y);
+
+          // Apply dynamic spawn offset for organic positioning
+          const offsetRadius = currentSpawnOffset * 50; // Scale to world units
+          const offsetAngle = Math.random() * Math.PI * 2; // Random angle
+          const offsetX = Math.cos(offsetAngle) * offsetRadius * Math.random(); // Random distance within radius
+          const offsetY = Math.sin(offsetAngle) * offsetRadius * Math.random();
+
+          const newParticle = createMouseParticle(worldCoords.x + offsetX, worldCoords.y + offsetY);
+          mouseParticles.push(newParticle);
+        }
+      }
+
+      // Touch drawing mode: Create particles when touching and moving
+      if (isDrawing && mouseParticles.length < mouseParticleParams.maxParticles) {
+        // More frequent spawning when drawing with touch
+        if (Math.random() < 0.8) {
+          // Higher spawn rate for drawing
+          const worldCoords = mouseToWorldCoords(touchPosition.x, touchPosition.y);
+
+          // Less offset for drawing mode to create more precise lines
+          const offsetRadius = 10; // Fixed small offset for drawing
+          const offsetAngle = Math.random() * Math.PI * 2;
+          const offsetX = Math.cos(offsetAngle) * offsetRadius * Math.random();
+          const offsetY = Math.sin(offsetAngle) * offsetRadius * Math.random();
+
+          const drawnParticle = createDrawnParticle(worldCoords.x + offsetX, worldCoords.y + offsetY);
+          drawnParticles.push(drawnParticle);
+        }
+      }
+    },
+    { passive: false }
+  );
+
+  // Touch end event listener
+  window.addEventListener("touchend", (event) => {
+    isTouching = false;
+    isDrawing = false;
+  });
+
+  // Touch cancel event listener (for when touch is interrupted)
+  window.addEventListener("touchcancel", (event) => {
+    isTouching = false;
+    isDrawing = false;
+  });
+
   // Function to animate mouse particles
   function animateMouseParticles() {
     if (mouseParticles.length === 0 && drawnParticles.length === 0) return; // Early exit if no particles
@@ -3837,7 +3967,7 @@ export function initShaderBackground() {
 
   // Add control for initial movement threshold
   mouseParticleFolder
-    .add({ movementThreshold: initialMovementThreshold }, "movementThreshold", 50, 300, 10)
+    .add({ movementThreshold: initialMovementThreshold }, "movementThreshold", 100, 400, 10)
     .name("Initial Movement Needed")
     .onChange((value) => {
       // Update the threshold variable
