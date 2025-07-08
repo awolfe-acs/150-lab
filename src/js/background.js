@@ -12,7 +12,7 @@ export function initShaderBackground() {
 
   // Track time spent in phase 1 to prevent time accumulation issues
   let phase1StartTime = Date.now();
-  const PHASE1_RESET_TIMEOUT = 90000; // 90 seconds in milliseconds
+  const PHASE1_RESET_TIMEOUT = 9999999999999999999999; // 90 seconds in milliseconds
 
   // Helper function to check if we're above the Phase 3 trigger point
   function isAbovePhase3Trigger() {
@@ -359,13 +359,32 @@ export function initShaderBackground() {
           const phase1Color1 = new THREE.Color("#32c2d6");
           const phase1Color2 = new THREE.Color("#004199");
 
+          // Phase 1.5 intermediate colors (to avoid muddy transition)
+          const phase1_5Color1 = new THREE.Color("#B225B1");
+          const phase1_5Color2 = new THREE.Color("#FCC72D");
+
           // Phase 2 target colors
           const phase2Color1 = new THREE.Color("#DA281C");
-          const phase2Color2 = new THREE.Color("#3E2BF3");
+          const phase2Color2 = new THREE.Color("#FCC72D");
 
-          // Interpolate between phase 1 and phase 2 colors
-          const currentColor1 = phase1Color1.clone().lerp(phase2Color1, progress);
-          const currentColor2 = phase1Color2.clone().lerp(phase2Color2, progress);
+          // Three-stage interpolation to avoid muddy colors
+          let currentColor1, currentColor2;
+
+          if (progress <= 0.4) {
+            // First 40%: interpolate from phase 1 to phase 1.5
+            const firstStageProgress = progress / 0.4; // Map 0-0.4 to 0-1
+            currentColor1 = phase1Color1.clone().lerp(phase1_5Color1, firstStageProgress);
+            currentColor2 = phase1Color2.clone().lerp(phase1_5Color2, firstStageProgress);
+          } else if (progress <= 0.75) {
+            // Middle 35% (0.4-0.75): stay at phase 1.5 colors
+            currentColor1 = phase1_5Color1.clone();
+            currentColor2 = phase1_5Color2.clone();
+          } else {
+            // Final 25% (0.75-1): quick transition from phase 1.5 to phase 2
+            const finalStageProgress = (progress - 0.75) / 0.25; // Map 0.75-1 to 0-1
+            currentColor1 = phase1_5Color1.clone().lerp(phase2Color1, finalStageProgress);
+            currentColor2 = phase1_5Color2.clone().lerp(phase2Color2, finalStageProgress);
+          }
 
           // Apply the interpolated colors to the shader
           uniforms.color1.value.copy(currentColor1);
@@ -410,7 +429,7 @@ export function initShaderBackground() {
           // Ensure we're in phase 2 and maintain the final transition colors
           if (uniforms && uniforms.color1 && uniforms.color2) {
             uniforms.color1.value.set("#DA281C");
-            uniforms.color2.value.set("#3E2BF3");
+            uniforms.color2.value.set("#FCC72D");
             window.colorPhase = 2;
             window.specialColorsActive = true;
             updateColorGUI();
@@ -480,7 +499,7 @@ export function initShaderBackground() {
 
             // Restore phase 2 colors (the end colors from the hero-travel-area transition)
             uniforms.color1.value.set("#DA281C");
-            uniforms.color2.value.set("#3E2BF3");
+            uniforms.color2.value.set("#FCC72D");
 
             // Reset the yOffset to its original value
             if (uniforms.yOffset && originalYOffset !== undefined) {
@@ -690,8 +709,8 @@ export function initShaderBackground() {
             } else if (window.colorPhase === 2) {
               // We're in phase two, maintain phase two special colors
               // Use the phase 2 colors (red and purple)
-              if (uniforms.color1) uniforms.color1.value.set("#3E2BF3");
-              if (uniforms.color2) uniforms.color2.value.set("#DA281C");
+              if (uniforms.color1) uniforms.color1.value.set("#da281c");
+              if (uniforms.color2) uniforms.color2.value.set("#FCC72D");
               // Lighting values are now managed by the shader parameters directly
               // Wave parameters are now managed by their respective scroll triggers
               window.specialColorsActive = true;
@@ -3321,8 +3340,6 @@ export function initShaderBackground() {
   // Global function to enable mouse particles (called from enter-experience button)
   window.enableMouseParticles = function () {
     mouseParticleParams.enabled = true;
-    console.log("Mouse following particles enabled - mouseParticleParams.enabled:", mouseParticleParams.enabled);
-    console.log("Mouse particle system setup complete");
   };
 
   // Create mouse particle geometry and material (clone of main particles)
@@ -3529,18 +3546,7 @@ export function initShaderBackground() {
   // Mouse move event listener
   window.addEventListener("mousemove", (event) => {
     if (!mouseParticleParams.enabled) {
-      // Debug: Log when mouse moves but particles are disabled
-      if (Math.random() < 0.001) {
-        // Only log occasionally to avoid spam
-        console.log("Mouse move detected but particles disabled");
-      }
       return;
-    }
-
-    // Debug: Log when mouse particles are enabled and processing
-    if (Math.random() < 0.01) {
-      // Only log occasionally to avoid spam
-      console.log("Mouse move processing - particles enabled");
     }
 
     lastMousePosition.x = mousePosition.x;
@@ -3593,7 +3599,6 @@ export function initShaderBackground() {
 
         const newParticle = createMouseParticle(worldCoords.x + offsetX, worldCoords.y + offsetY);
         mouseParticles.push(newParticle);
-        console.log("Created mouse particle:", newParticle.id, "Total particles:", mouseParticles.length);
       }
     }
 

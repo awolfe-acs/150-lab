@@ -3136,6 +3136,7 @@ function initSharePanel() {
         rgba(62, 43, 244, 0.05) 50%, 
         transparent 100%);
       pointer-events: none;
+      opacity:0.5;
     }
 
     .share-option {
@@ -3165,7 +3166,7 @@ function initSharePanel() {
       left: -100%;
       width: 100%;
       height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.04), transparent);
       transition: left 0.5s ease;
     }
 
