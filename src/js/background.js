@@ -98,7 +98,7 @@ export function initShaderBackground() {
     gsap.timeline({
       scrollTrigger: {
         trigger: "#video-travel-area",
-        start: "top bottom", // Starts when the top of video-travel-area reaches the bottom of viewport
+        start: "top 110%", // Starts 10% earlier - when the top of video-travel-area is 10% below the bottom of viewport
         end: "top 20%", // Ends when the top of video-travel-area reaches 20% from the top of viewport
         scrub: true, // Smooth scrubbing effect, tied to scroll position
         markers: false, // Set to true for debugging
