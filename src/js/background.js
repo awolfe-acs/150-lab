@@ -368,22 +368,36 @@ export function initShaderBackground() {
           const phase2Color2 = new THREE.Color("#FCC72D");
 
           // Three-stage interpolation to avoid muddy colors
+          // Color1 reaches phase 1.5 at 20% progress (50% earlier than color2)
+          // Color2 reaches phase 1.5 at 40% progress (original timing)
           let currentColor1, currentColor2;
 
-          if (progress <= 0.4) {
-            // First 40%: interpolate from phase 1 to phase 1.5
-            const firstStageProgress = progress / 0.4; // Map 0-0.4 to 0-1
-            currentColor1 = phase1Color1.clone().lerp(phase1_5Color1, firstStageProgress);
-            currentColor2 = phase1Color2.clone().lerp(phase1_5Color2, firstStageProgress);
+          // Handle Color1 timing (reaches phase 1.5 at 20% progress)
+          if (progress <= 0.28) {
+            // First 20% for color1: interpolate from phase 1 to phase 1.5
+            const color1FirstStageProgress = progress / 0.28; // Map 0-0.2 to 0-1
+            currentColor1 = phase1Color1.clone().lerp(phase1_5Color1, color1FirstStageProgress);
           } else if (progress <= 0.75) {
-            // Middle 35% (0.4-0.75): stay at phase 1.5 colors
+            // From 20% to 75%: stay at phase 1.5 color
             currentColor1 = phase1_5Color1.clone();
-            currentColor2 = phase1_5Color2.clone();
           } else {
             // Final 25% (0.75-1): quick transition from phase 1.5 to phase 2
-            const finalStageProgress = (progress - 0.75) / 0.25; // Map 0.75-1 to 0-1
-            currentColor1 = phase1_5Color1.clone().lerp(phase2Color1, finalStageProgress);
-            currentColor2 = phase1_5Color2.clone().lerp(phase2Color2, finalStageProgress);
+            const color1FinalStageProgress = (progress - 0.75) / 0.25; // Map 0.75-1 to 0-1
+            currentColor1 = phase1_5Color1.clone().lerp(phase2Color1, color1FinalStageProgress);
+          }
+
+          // Handle Color2 timing (persists in phase 1 for ~33% longer, starts transition at ~48%)
+          if (progress <= 0.48) {
+            // First 48% for color2: stay at phase 1 color (~33% longer persistence)
+            currentColor2 = phase1Color2.clone();
+          } else if (progress <= 0.75) {
+            // From 48% to 75%: interpolate from phase 1 to phase 1.5
+            const color2FirstStageProgress = (progress - 0.48) / (0.75 - 0.48); // Map 0.48-0.75 to 0-1
+            currentColor2 = phase1Color2.clone().lerp(phase1_5Color2, color2FirstStageProgress);
+          } else {
+            // Final 25% (0.75-1): quick transition from phase 1.5 to phase 2
+            const color2FinalStageProgress = (progress - 0.75) / 0.25; // Map 0.75-1 to 0-1
+            currentColor2 = phase1_5Color2.clone().lerp(phase2Color2, color2FinalStageProgress);
           }
 
           // Apply the interpolated colors to the shader
