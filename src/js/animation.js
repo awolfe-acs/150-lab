@@ -497,6 +497,7 @@ function createScrollDownIcon(referenceElement) {
   const scrollIcon = document.createElement("div");
   scrollIcon.className = "scroll-down-icon";
   scrollIcon.innerHTML = `
+    <div class="scroll-text">SCROLL</div>
     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
       <title>mouse-scroll-down</title>
       <g fill="#F7F7F7">
@@ -521,12 +522,30 @@ function createScrollDownIcon(referenceElement) {
     opacity: 0;
     cursor: pointer;
     width: 64px;
-    height: 64px;
+    height: 90px;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 8px;
     transition: all 0.3s ease;
   `;
+
+  // Add styles for the scroll text
+  const scrollText = scrollIcon.querySelector(".scroll-text");
+  if (scrollText) {
+    scrollText.style.cssText = `
+      color: #F7F7F7;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-align: center;
+      line-height: 1;
+      margin: 0;
+      padding: 0;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    `;
+  }
 
   // Add hover effect styles
   scrollIcon.addEventListener("mouseenter", () => {

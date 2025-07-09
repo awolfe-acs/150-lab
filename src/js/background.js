@@ -525,7 +525,7 @@ export function initShaderBackground() {
             if (originalDirectionalLight !== undefined) uniforms.directionalLight.value = originalDirectionalLight;
 
             // Reset wave settings to phase 2 values
-            uniforms.waveSpeed.value = 2.0; // Phase 2 maintains original wave speed
+            uniforms.waveSpeed.value = 1.4; // Phase 2 maintains original wave speed
             if (originalWaveAmplitude !== undefined) uniforms.waveAmplitude.value = originalWaveAmplitude; // Back to original 3.0
             if (originalWaveFrequency !== undefined) uniforms.waveFrequency.value = originalWaveFrequency; // Back to original 2.2
 
@@ -1255,7 +1255,7 @@ export function initShaderBackground() {
     resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
     // Animation speed parameters
     mainSpeed: { value: 0.00012 }, // Overall animation speed multiplier
-    waveSpeed: { value: 0.9 }, // Controls how fast the waves animate
+    waveSpeed: { value: 1.4 }, // Controls how fast the waves animate
     noiseSpeed: { value: 0.45 }, // Speed of the noise animation
     colorCycleSpeed: { value: 2.0 }, // Speed of color cycling/transitions
     colorCycleOffset: { value: 0.0 }, // New: offset to maintain color cycle continuity
