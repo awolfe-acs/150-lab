@@ -8,10 +8,12 @@
     width: 100%; //myaccount
     clear: both;
     font-size: 95%;
-    margin-top: 64px;
-    padding: 40px 0;
+    margin-top: 80px;
+    padding: 40px 0 20px;
 
     >.container {
+        display: flex;
+        flex-direction: column;
         width: 1366px;
         max-width: calc(100% - 48px);
         margin: 0 auto;

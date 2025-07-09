@@ -2,6 +2,7 @@
 
 .footer-bar {
     height: 24px;
+    margin-top: 64px;
 
     @media (max-width:$desktop-viewport) {
         height: auto;
@@ -91,7 +92,8 @@
                 }
 
                 svg {
-                    width: 100%;
+                    width: 100px;
+                    //width: 100%;
                     max-height: 100%;
                     display: block;
                     transition: all 0.18s ease;
@@ -108,5 +110,14 @@
                 }
             }
         }
+    }
+}
+
+#ft .footer-bar {
+    margin: 0;
+    margin-top: 16px;
+
+    .inner-wrapper {
+        max-width: 100%;
     }
 }

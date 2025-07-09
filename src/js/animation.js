@@ -1277,7 +1277,7 @@ export function initAnimations() {
   let navTimeout = null;
   let currentState = "title-visible"; // 'title-visible' or 'nav-visible'
 
-  // Initially hide the page nav and ensure active title is visible
+  // Initially hide ALL nav links and ensure active title is visible
   gsap.set(navLinks, { opacity: 0, x: -20 });
   gsap.set(activeTitle, { opacity: 1 });
 
@@ -1294,19 +1294,19 @@ export function initAnimations() {
 
     currentState = "nav-visible";
 
-    // Kill any existing animations
-    gsap.killTweensOf([activeTitle, navLinks]);
+    // Kill any existing animations on ALL elements
+    gsap.killTweensOf([activeTitle, ...navLinks]);
 
     // Hide active title immediately
     gsap.set(activeTitle, { opacity: 0 });
 
-    // Show nav links
+    // Show ALL nav links together (no stagger to ensure they all animate)
     gsap.to(navLinks, {
       opacity: 1,
       x: 0,
       duration: 0.4,
-      stagger: 0.05,
       ease: "power2.out",
+      overwrite: true, // Ensure we overwrite any existing animations
     });
   };
 
@@ -1323,16 +1323,16 @@ export function initAnimations() {
 
     currentState = "title-visible";
 
-    // Kill any existing animations
-    gsap.killTweensOf([activeTitle, navLinks]);
+    // Kill any existing animations on ALL elements
+    gsap.killTweensOf([activeTitle, ...navLinks]);
 
-    // Hide nav links
+    // Hide ALL nav links together (no stagger to ensure they all animate)
     gsap.to(navLinks, {
       opacity: 0,
       x: -20,
       duration: 0.3,
-      stagger: 0.03,
       ease: "power2.in",
+      overwrite: true, // Ensure we overwrite any existing animations
     });
 
     // Show active title with delay to wait for nav links to finish fading out
@@ -1341,6 +1341,7 @@ export function initAnimations() {
       duration: 0.4,
       delay: 0.2, // Wait for nav links to mostly fade out
       ease: "power2.out",
+      overwrite: true, // Ensure we overwrite any existing animations
     });
   };
 
