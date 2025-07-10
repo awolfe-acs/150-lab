@@ -30,6 +30,11 @@
     flex-direction: row;
     flex-wrap: nowrap;
 
+    @media (min-width:1281px) {
+        //box-shadow: 0px 0px 122px -16px rgba(147, 255, 178, 0.2);
+    }
+
+
     @media (max-width:1280px) {
         flex-direction: column;
         gap: 8vw;
@@ -43,6 +48,8 @@
         z-index: 2;
         transition: transform 0.3s ease;
         will-change: transform;
+        filter: brightness(1.2);
+        box-shadow: 0px 0px 122px -16px rgba(147, 255, 178, 0.2);
 
         // Fallback for browsers that don't support aspect-ratio
         // Calculate height to maintain 3/4 aspect ratio (height = width * 4/3)
@@ -172,11 +179,11 @@
             }
 
 
-            &:hover {
-                &:after {
-                    background-color: rgba(0, 0, 0, 0.16);
-                }
-            }
+            //&:hover {
+            //    &:after {
+            //        background-color: rgba(0, 0, 0, 0.16);
+            //    }
+            //}
         }
 
         &:nth-of-type(1) {

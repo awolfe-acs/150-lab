@@ -2,11 +2,48 @@ import Lenis from "lenis";
 import "./scss/main.scss";
 import "lenis/dist/lenis.css";
 import { initShaderBackground } from "./js/background.js";
-import { initAnimations } from "./js/animation.js";
 import { initVideo } from "./js/video.js";
 //import { initCountdown } from "./js/countdown.js";
 import { initDebug } from "./js/debug.js";
 import gsap from "gsap";
+import ScrollTrigger from "gsap/ScrollTrigger";
+import { MorphSVGPlugin } from "gsap/MorphSVGPlugin";
+import SplitType from "split-type";
+
+// Import modular animation functions directly
+import {
+  setupHeroHeadingFadeAnimation,
+  initHeroAnimation,
+  initHeroNumberCountdown,
+  initHeroPinning,
+} from "./js/animations/hero.js";
+import { animateVideoScale } from "./js/animations/videoAnimation.js";
+import {
+  animateGetInvolvedText,
+  initGetInvolvedLogoAnimation,
+  animateSlidingCards,
+} from "./js/animations/getInvolved.js";
+import { initInfiniteMarqueeAnimation } from "./js/animations/marquee.js";
+import { initScrollRevealAnimation } from "./js/animations/scrollReveal.js";
+
+// Import UI functions
+import { preloadBackgroundAudio, setupUIClickSounds, setupSoundToggle } from "./js/ui/audio.js";
+import { initFancyButtonEffects } from "./js/ui/fancyButtons.js";
+import { updatePageNavigation } from "./js/ui/pageNavigation.js";
+import { initShareButtonOverlapDetection, initSharePanel } from "./js/ui/share.js";
+import { initEventListItemHover } from "./js/ui/eventListHover.js";
+
+// Import utilities
+import { initSplitLinesAnimation, initSplitCharsAnimation } from "./js/utils/splitText.js";
+import { initGlobalResizeHandler } from "./js/utils/globalHandlers.js";
+
+// Import config
+import { resetAnimationState } from "./js/config/animationConfig.js";
+
+// Register GSAP plugins globally
+gsap.registerPlugin(ScrollTrigger);
+gsap.registerPlugin(MorphSVGPlugin);
+gsap.registerPlugin(SplitType);
 
 // At the top of the file, add the debugMode flag
 const debugMode = false;
@@ -40,6 +77,94 @@ function isMainPage() {
     (currentUrl.includes("github.io/150-lab") && (pathname === "/150-lab/" || pathname === "/150-lab/index.html"));
 
   return isMainPagePattern;
+}
+
+// Initialize all animations directly from modules
+function initAnimations() {
+  // Preload audio immediately - before anything else
+  preloadBackgroundAudio();
+
+  // Initial refresh and clear match media
+  ScrollTrigger.refresh();
+  ScrollTrigger.clearMatchMedia();
+
+  // Kill any existing ScrollTriggers to prevent duplicates before setup
+  ScrollTrigger.getAll().forEach((st) => st.kill());
+  // Reset animation state using centralized function
+  resetAnimationState();
+
+  // Initialize hero animations
+  initHeroAnimation();
+  initHeroNumberCountdown();
+  initHeroPinning();
+  setupHeroHeadingFadeAnimation();
+
+  // Initialize other animations
+  animateVideoScale();
+  animateGetInvolvedText();
+  animateSlidingCards();
+  initGetInvolvedLogoAnimation();
+  initInfiniteMarqueeAnimation();
+  initScrollRevealAnimation();
+
+  // Initialize UI components
+  updatePageNavigation();
+  initFancyButtonEffects();
+  setupUIClickSounds();
+  setupSoundToggle();
+  initShareButtonOverlapDetection();
+  initSharePanel();
+  initEventListItemHover();
+
+  // Initialize split text animations
+  initSplitLinesAnimation(null);
+  initSplitCharsAnimation(null);
+
+  // Initialize global resize handler
+  initGlobalResizeHandler();
+
+  // Add menu button click handler
+  const menuButton = document.querySelector("button.toggle-menu");
+  if (menuButton) {
+    menuButton.addEventListener("click", () => {
+      const nav = document.querySelector("nav");
+      const header = document.querySelector("header");
+
+      if (nav) nav.classList.toggle("active");
+      if (header) header.classList.toggle("nav-active");
+    });
+  }
+
+  // Add scroll direction detection and class toggling
+  let lastScrollTop = 0;
+  window.addEventListener("scroll", () => {
+    const currentScrollTop = window.scrollY;
+    const anniversaryHeader = document.querySelector("header.anniversary");
+
+    if (anniversaryHeader) {
+      if (currentScrollTop > lastScrollTop) {
+        // Scrolling down
+        anniversaryHeader.classList.remove("active");
+      } else {
+        // Scrolling up
+        anniversaryHeader.classList.add("active");
+      }
+    }
+
+    lastScrollTop = currentScrollTop;
+  });
+
+  // Add close menu button click handler
+  const closeMenuButton = document.querySelector("button.close-toggle-menu");
+  if (closeMenuButton) {
+    closeMenuButton.addEventListener("click", () => {
+      const nav = document.querySelector("nav");
+      const header = document.querySelector("header");
+
+      if (nav) nav.classList.remove("active");
+      if (header) header.classList.remove("nav-active");
+    });
+  }
 }
 
 // Prevent browser from restoring scroll position on refresh
@@ -154,14 +279,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Only run animations and video on main pages
   if (isMainPage()) {
-    // Initialize animations
+    // Initialize animations directly from modules
     initAnimations();
 
     // Initialize video
     initVideo();
 
     // On main pages, Lenis will be enabled when the enter-experience button is clicked
-    // (this happens in the animation.js or elsewhere)
+    // (this happens in the hero animation module)
   } else {
     console.log("Running in lightweight mode - animations and video disabled");
 

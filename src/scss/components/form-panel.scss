@@ -144,6 +144,10 @@
         height: 100%;
         width: 100%;
 
+        @media (min-width:$desktop-viewport) and (max-width:1280px) {
+            gap: 0;
+        }
+
         @media (max-width:$desktop-viewport) {
             gap: 24px;
         }
@@ -184,6 +188,7 @@
         p {
             margin-bottom: 24px;
             font-size: 18px;
+            text-shadow: $text-shadow;
 
             @media (max-width:$mobile-viewport) {
                 font-size: 14px;
@@ -191,6 +196,11 @@
         }
 
         form {
+
+            label {
+                text-shadow: $text-shadow;
+            }
+
             input[type="text"], select {
                 height: 56px;
                 border-radius: 8px;
@@ -386,7 +396,7 @@
         overflow: hidden;
         position: relative;
 
-        @media (max-width:$desktop-viewport) {
+        @media (max-width:1200px) {
             width: 128px;
             min-width: 128px;
         }

@@ -51,6 +51,7 @@
             transition: color 0.3s ease;
             text-decoration: none;
             padding: 3px 0;
+            position: relative;
 
             &.active {
                 color: #fff;
