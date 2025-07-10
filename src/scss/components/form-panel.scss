@@ -72,24 +72,29 @@
                 radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.05) 0%, transparent 40%),
                 radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.05) 0%, transparent 40%),
 
-                /* Bold directional color gradients */
-                /* Bold directional color gradients */
                 radial-gradient(ellipse at -25% 100%, rgba(228, 9, 31, 0.9) 0%, rgba(228, 9, 31, 0) 60%),
-                /* #FD3F25 from top left */
                 radial-gradient(ellipse at -22% 0%, rgba(253, 63, 37, 0.9) 0%, rgba(253, 63, 37, 0) 55%),
-                /* #B2E000 from bottom center right */
                 radial-gradient(ellipse at 33% 100%, rgba(178, 224, 0, 0.9) 0%, rgba(178, 224, 0, 0) 50%),
-                /* #027AFD from top right */
                 radial-gradient(ellipse at 100% 0%, rgba(2, 122, 253, 0.9) 0%, rgba(2, 122, 253, 0) 58%),
-                /* #19BFBD from bottom right */
                 radial-gradient(ellipse at 100% 100%, rgba(25, 191, 189, 0.9) 0%, rgba(25, 191, 189, 0) 52%),
-
-                /* Enhanced base layer with richer dark gradient */
                 linear-gradient(145deg, rgba(10, 10, 10, 0.2) 0%, rgba(21, 21, 21, 0.2) 25%, rgba(26, 26, 26, 0.2) 50%, rgba(17, 17, 17, 0.2) 75%, rgba(13, 13, 13, 0.2) 100%),
 
+                radial-gradient(ellipse at -25% 100%, rgba(228, 9, 31, 0.95) 0%, rgba(228, 9, 31, 0) 60%),
+                radial-gradient(ellipse at -22% 0%, rgba(253, 63, 37, 0.95) 0%, rgba(253, 63, 37, 0) 55%),
+                radial-gradient(ellipse at 33% 100%, rgba(178, 224, 0, 0.95) 0%, rgba(178, 224, 0, 0) 50%),
+                radial-gradient(ellipse at 100% 0%, rgba(2, 122, 253, 0.95) 0%, rgba(2, 122, 253, 0) 58%),
+                radial-gradient(ellipse at 100% 100%, rgba(25, 191, 189, 0.95) 0%, rgba(25, 191, 189, 0) 52%),
+                linear-gradient(145deg, rgba(10, 10, 10, 0.2) 0%, rgba(21, 21, 21, 0.2) 25%, rgba(26, 26, 26, 0.2) 50%, rgba(17, 17, 17, 0.2) 75%, rgba(13, 13, 13, 0.2) 100%),
+
+                radial-gradient(ellipse at -25% 100%, rgba(228, 9, 31, 0.99) 0%, rgba(228, 9, 31, 0) 60%),
+                radial-gradient(ellipse at -22% 0%, rgba(253, 63, 37, 0.99) 0%, rgba(253, 63, 37, 0) 55%),
+                radial-gradient(ellipse at 33% 100%, rgba(178, 224, 0, 0.99) 0%, rgba(178, 224, 0, 0) 50%),
+                radial-gradient(ellipse at 100% 0%, rgba(2, 122, 253, 0.99) 0%, rgba(2, 122, 253, 0) 58%),
+                radial-gradient(ellipse at 100% 100%, rgba(25, 191, 189, 0.99) 0%, rgba(25, 191, 189, 0) 52%),
+                linear-gradient(145deg, rgba(10, 10, 10, 0.2) 0%, rgba(21, 21, 21, 0.2) 25%, rgba(26, 26, 26, 0.2) 50%, rgba(17, 17, 17, 0.2) 75%, rgba(13, 13, 13, 0.2) 100%),
                 /* Fallback solid color */
                 rgba(2, 2, 2, 0.25);
-            filter: blur(0px) opacity(0.92) saturate(1.2);
+            filter: blur(0px) opacity(0.98) saturate(1.2);
         }
     }
 
@@ -422,6 +427,7 @@
             top: 0;
             object-fit: contain; // Preserve aspect ratio
             max-height: none; // Don't limit height
+            user-select: none;
         }
     }
 }

@@ -101,6 +101,9 @@ function playBackgroundAudioWhenReady(fromEnterButton = false) {
   if (audioInitialized || audioMuted) return;
 
   audioRetryCount++;
+  // Also set window properties for backward compatibility
+  window.audioRetryCount = audioRetryCount;
+  window.maxAudioRetries = maxAudioRetries;
 
   // Stop retrying after max attempts
   if (audioRetryCount >= maxAudioRetries) {
@@ -128,6 +131,8 @@ function playBackgroundAudioWhenReady(fromEnterButton = false) {
       .play()
       .then(() => {
         audioInitialized = true;
+        // Also set window properties for backward compatibility
+        window.audioInitialized = true;
 
         // Update sound toggle if it exists
         const soundToggle = document.querySelector(".sound-toggle");
@@ -137,6 +142,7 @@ function playBackgroundAudioWhenReady(fromEnterButton = false) {
 
         // Reset retry count on success
         audioRetryCount = 0;
+        window.audioRetryCount = 0;
       })
       .catch((error) => {
         console.error("Audio play was prevented:", error);
@@ -232,11 +238,27 @@ export const playBackgroundAudio = (fromEnterButton = false) => {
   // Track if this was triggered from the enter button for more aggressive retries
   if (fromEnterButton) {
     enterButtonClicked = true;
+    // Also set window properties for backward compatibility with retry logic
+    window.enterButtonClicked = true;
   }
 
   // IMPORTANT: Only proceed if enterButtonClicked is true
   // This ensures only the enter button can start the audio
-  if (!enterButtonClicked || !heroAnimationComplete) return;
+  if (!enterButtonClicked) {
+    console.log("Audio play blocked: Enter button not clicked yet");
+    return;
+  }
+
+  // Allow audio to play even if hero animation isn't complete yet
+  // The retry logic will handle the timing
+  console.log("Audio play attempt:", {
+    enterButtonClicked,
+    heroAnimationComplete,
+    audioInitialized,
+    audioMuted,
+    backgroundAudioLoaded,
+    readyState: backgroundAudioInstance?.readyState,
+  });
 
   // Don't try to play if already initialized
   if (audioInitialized) return;
@@ -253,9 +275,11 @@ export const playBackgroundAudio = (fromEnterButton = false) => {
   }
 
   // Check if audio is ready to play
-  if (backgroundAudioLoaded || backgroundAudioInstance.readyState >= 3) {
+  if (backgroundAudioLoaded || (backgroundAudioInstance && backgroundAudioInstance.readyState >= 3)) {
     playBackgroundAudioWhenReady(fromEnterButton);
   } else {
+    console.log("Audio not ready yet, readyState:", backgroundAudioInstance?.readyState);
+
     // Audio not ready yet - it will play when ready via the canplaythrough event
 
     // If from enter button and the audio isn't loaded yet, force reload
@@ -278,10 +302,12 @@ export function preloadBackgroundAudio() {
   // Set audio load event listeners before setting src to ensure they're captured
   backgroundAudio.addEventListener("canplaythrough", () => {
     backgroundAudioLoaded = true;
+    console.log("Background audio loaded and ready to play");
 
     // If user has clicked the enter button but audio wasn't ready, play it now
     // IMPORTANT: Only attempt playback if enterButtonClicked is true
-    if (enterButtonClicked && heroAnimationComplete && !audioInitialized && !audioMuted) {
+    if (enterButtonClicked && !audioInitialized && !audioMuted) {
+      console.log("Enter button was clicked, attempting to play audio now");
       playBackgroundAudioWhenReady(true);
     }
   });
@@ -314,6 +340,9 @@ export function preloadBackgroundAudio() {
 
   // Store reference for later use
   backgroundAudioInstance = backgroundAudio;
+  // Also expose to window for backward compatibility
+  window.backgroundAudioInstance = backgroundAudio;
+  window.backgroundAudio = backgroundAudio;
   audioInitialized = false;
   audioMuted = false;
   userInteracted = false;
@@ -321,6 +350,16 @@ export function preloadBackgroundAudio() {
   backgroundAudioLoaded = false;
   enterButtonClicked = false;
   audioRetryCount = 0;
+
+  // Also set window properties for backward compatibility with retry logic
+  window.audioInitialized = false;
+  window.audioMuted = false;
+  window.userInteracted = false;
+  window.heroAnimationComplete = false;
+  window.enterButtonClicked = false;
+  window.audioRetryCount = 0;
+  window.maxAudioRetries = maxAudioRetries;
+  window.audioRetryTimer = null;
 
   // Setup visibility listeners
   setupVisibilityListeners();
@@ -454,14 +493,37 @@ export function setupSoundToggle() {
       });
     }
     soundToggle.addEventListener("click", () => {
-      // Always play UI click sound first, regardless of mute state
-      playUIClickSound();
+      // Store the current mute state before toggling
+      const wasAudioMuted = audioMuted;
 
       // Toggle the muted class
       soundToggle.classList.toggle("muted");
 
       // Update global mute state
       audioMuted = soundToggle.classList.contains("muted");
+      // Also set window properties for backward compatibility
+      window.audioMuted = audioMuted;
+
+      // Play UI click sound - force it to play even if we were muted
+      // This ensures we hear the click when re-enabling sound
+      if (wasAudioMuted) {
+        // If we were muted and now unmuting, force play the click sound
+        try {
+          if (!uiClickSound) {
+            initializeUIClickSound();
+          }
+          const clickSound = uiClickSound.cloneNode();
+          clickSound.volume = 0.38;
+          clickSound.play().catch((error) => {
+            console.warn("UI click sound play was prevented:", error);
+          });
+        } catch (error) {
+          console.error("Error playing UI click sound:", error);
+        }
+      } else {
+        // If we weren't muted, use the normal click sound function
+        playUIClickSound();
+      }
 
       // Get wave animation from window (assuming it's set up elsewhere)
       const waveAnimation = window.waveAnimation;
@@ -546,14 +608,20 @@ export const getAudioState = () => ({
 // Functions to update internal state (called by other modules)
 export function setHeroAnimationComplete(value) {
   heroAnimationComplete = value;
+  // Also set window properties for backward compatibility
+  window.heroAnimationComplete = value;
 }
 
 export function setEnterButtonClicked(value) {
   enterButtonClicked = value;
+  // Also set window properties for backward compatibility
+  window.enterButtonClicked = value;
 }
 
 export function setUserInteracted(value) {
   userInteracted = value;
+  // Also set window properties for backward compatibility
+  window.userInteracted = value;
 }
 
 export function toggleMute() {

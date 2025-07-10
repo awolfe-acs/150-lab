@@ -374,9 +374,10 @@ export function initHeroAnimation() {
             // Audio started successfully, clear the retry timer
             clearInterval(window.audioRetryTimer);
             window.audioRetryTimer = null;
-          } else if (window.enterButtonClicked && window.heroAnimationComplete && !window.audioMuted) {
+          } else if (window.enterButtonClicked && !window.audioMuted) {
             // Try again if the audio hasn't started yet, but respect max retries
             if (window.audioRetryCount < window.maxAudioRetries) {
+              console.log("Retrying audio playback...");
               playBackgroundAudio(true);
             } else {
               // Stop trying after max retries
