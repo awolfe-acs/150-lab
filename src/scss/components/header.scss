@@ -63,9 +63,9 @@ header.anniversary {
         }
 
         &:hover {
-            svg:not(.main-logo) {
-                opacity: 0;
-            }
+            //svg:not(.main-logo) {
+            //    opacity: 0;
+            //}
 
             .main-logo {
                 transition-delay: opacity 0.24s;
@@ -78,7 +78,8 @@ header.anniversary {
             position: absolute;
             top: 0;
             left: 0;
-            opacity: 0;
+            //opacity: 0;
+            opacity: 1;
 
             &:active {
                 transform: scale(1);
