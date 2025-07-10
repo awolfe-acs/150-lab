@@ -419,6 +419,12 @@
 
 //Eloqua Form
 
+.form-success-message {
+    svg {
+        transform: translateY(8px);
+    }
+}
+
 .elq-form .elq-required {
     color: red !important;
     display: inline;
