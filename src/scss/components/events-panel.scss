@@ -1,11 +1,33 @@
 @use '../utilities' as *;
 
+#events.original {
+    min-height: 100lvh !important;
+}
+
+#events {
+    min-height: 0 !important;
+    margin-bottom: 0 !important;
+}
+
 .events-panel {
     border-top-left-radius: 64px;
     border-top-right-radius: 64px;
-    padding-top: 92px;
+    padding-top: 12vh;
+
     //padding-bottom: 134px;
-    padding-bottom: 71px;
+    //padding-bottom: 71px;
+    &.original {
+        padding-top: 92px;
+
+
+        .events-list {
+            margin-bottom: 92px;
+
+            @media (max-width:$mobile-viewport) {
+                margin-bottom: 48px;
+            }
+        }
+    }
 
     @media (max-width:$mobile-viewport) {
         border-top-left-radius: 24px;
@@ -64,10 +86,10 @@
 
 
         .events-list {
-            margin-bottom: 92px;
+            margin-bottom: 12vh;
 
             @media (max-width:$mobile-viewport) {
-                margin-bottom: 48px;
+                margin-bottom: 6vh;
             }
         }
 
@@ -82,6 +104,10 @@
             position: relative;
             justify-content: flex-start;
             align-items: center;
+
+            &.disabled {
+                pointer-events: none;
+            }
 
             @media (max-width:$desktop-viewport) {
                 height: auto;

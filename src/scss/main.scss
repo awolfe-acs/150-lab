@@ -331,7 +331,8 @@ html {
   }
 
   .get-involved-message {
-    padding-top: 20vh;
+    padding-top: 6vh;
+    padding-bottom: 64px;
   }
 
   .get-involved-header {
@@ -422,11 +423,13 @@ html {
 
 
 
-#events {
+#events.original {
   margin-bottom: -6vh;
+  margin-bottom: -16.25vh;
+  min-height: 100lvh !important;
 
   @media (max-width:$mobile-viewport) {
-    margin-bottom: 0;
+    margin-bottom: -12vh;
   }
 }
 

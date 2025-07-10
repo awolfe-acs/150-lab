@@ -5,12 +5,127 @@
     flex-direction: column;
     gap: 24px;
     border-radius: 32px;
-    background: #111;
     width: 1336px;
     max-width: calc(100% - 80px);
     margin: 0 auto;
     height: 486px;
-    overflow: hidden;
+    position: relative;
+    backdrop-filter: blur(20px);
+
+    &.colored-glass {
+        .effect-wrapper {
+            &:before {
+                background: linear-gradient(to right, #DC8100 0%, #FBC42C 100%);
+                filter: saturate(25) hue-rotate(260deg);
+                opacity: 0.16;
+            }
+        }
+    }
+
+    .effect-wrapper::before, .effect-wrapper::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-radius: 32px;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    .effect-wrapper::after {
+        z-index: -1;
+    }
+
+    &.rainbow {
+
+        /* Add bold animated gradient overlay */
+        .effect-wrapper::before {
+            background:
+                /* Top layer - subtle texture overlay */
+                radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.05) 0%, transparent 40%),
+
+                /* Bold directional color gradients */
+                radial-gradient(ellipse at -25% 100%, rgba(228, 9, 31, 0.9) 0%, rgba(228, 9, 31, 0) 60%),
+                /* #FD3F25 from top left */
+                radial-gradient(ellipse at -22% 0%, rgba(253, 63, 37, 0.9) 0%, rgba(253, 63, 37, 0) 55%),
+                /* #B2E000 from bottom center right */
+                radial-gradient(ellipse at 33% 100%, rgba(178, 224, 0, 0.9) 0%, rgba(178, 224, 0, 0) 50%),
+                /* #027AFD from top right */
+                radial-gradient(ellipse at 100% 0%, rgba(2, 122, 253, 0.9) 0%, rgba(2, 122, 253, 0) 58%),
+                /* #19BFBD from bottom right */
+                radial-gradient(ellipse at 100% 100%, rgba(25, 191, 189, 0.9) 0%, rgba(25, 191, 189, 0) 52%),
+
+                /* Enhanced base layer with richer dark gradient */
+                linear-gradient(145deg, rgba(10, 10, 10, 0.2) 0%, rgba(21, 21, 21, 0.2) 25%, rgba(26, 26, 26, 0.2) 50%, rgba(17, 17, 17, 0.2) 75%, rgba(13, 13, 13, 0.2) 100%),
+
+                /* Fallback solid color */
+                rgba(2, 2, 2, 0.25);
+            filter: blur(120px) opacity(0.99) saturate(1.2);
+        }
+
+        &::after {
+            background:
+                /* Top layer - subtle texture overlay */
+                radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.05) 0%, transparent 40%),
+
+                /* Bold directional color gradients */
+                /* Bold directional color gradients */
+                radial-gradient(ellipse at -25% 100%, rgba(228, 9, 31, 0.9) 0%, rgba(228, 9, 31, 0) 60%),
+                /* #FD3F25 from top left */
+                radial-gradient(ellipse at -22% 0%, rgba(253, 63, 37, 0.9) 0%, rgba(253, 63, 37, 0) 55%),
+                /* #B2E000 from bottom center right */
+                radial-gradient(ellipse at 33% 100%, rgba(178, 224, 0, 0.9) 0%, rgba(178, 224, 0, 0) 50%),
+                /* #027AFD from top right */
+                radial-gradient(ellipse at 100% 0%, rgba(2, 122, 253, 0.9) 0%, rgba(2, 122, 253, 0) 58%),
+                /* #19BFBD from bottom right */
+                radial-gradient(ellipse at 100% 100%, rgba(25, 191, 189, 0.9) 0%, rgba(25, 191, 189, 0) 52%),
+
+                /* Enhanced base layer with richer dark gradient */
+                linear-gradient(145deg, rgba(10, 10, 10, 0.2) 0%, rgba(21, 21, 21, 0.2) 25%, rgba(26, 26, 26, 0.2) 50%, rgba(17, 17, 17, 0.2) 75%, rgba(13, 13, 13, 0.2) 100%),
+
+                /* Fallback solid color */
+                rgba(2, 2, 2, 0.25);
+            filter: blur(0px) opacity(0.92) saturate(1.2);
+        }
+    }
+
+    &.black {
+        background: #000;
+        backdrop-filter: blur(0px);
+
+        &::before, &::after {
+            display: none;
+        }
+    }
+
+    .inner-wrapper {
+        position: relative;
+        z-index: 1;
+    }
+
+    .effect-wrapper {
+        overflow: hidden;
+        position: relative;
+        z-index: 0;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-radius: 32px;
+    }
+
+
+    /* Ensure content is above the overlay */
+    >* {
+        position: relative;
+        z-index: 1;
+    }
+
 
     @media (max-width:$desktop-viewport) {
         height: auto;
@@ -1555,5 +1670,101 @@
 
     100% {
         background-position: 0% 0%;
+    }
+}
+
+/* Keyframe animations for form panel background gradient effects */
+@keyframes boldGradientFloat {
+    0% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+        opacity: 0.6;
+    }
+
+    20% {
+        transform: translate(-8px, -12px) scale(1.03) rotate(0.5deg);
+        opacity: 0.8;
+    }
+
+    40% {
+        transform: translate(12px, -8px) scale(0.97) rotate(-0.3deg);
+        opacity: 0.7;
+    }
+
+    60% {
+        transform: translate(-10px, 10px) scale(1.02) rotate(0.4deg);
+        opacity: 0.9;
+    }
+
+    80% {
+        transform: translate(6px, -6px) scale(0.98) rotate(-0.2deg);
+        opacity: 0.75;
+    }
+
+    100% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+        opacity: 0.6;
+    }
+}
+
+/* Bold border gradient animation */
+@keyframes boldBorderGradientShift {
+    0% {
+        background: linear-gradient(135deg,
+                rgba(228, 9, 31, 0.15) 0%,
+                rgba(253, 63, 37, 0.12) 20%,
+                rgba(2, 122, 253, 0.15) 40%,
+                rgba(25, 191, 189, 0.12) 60%,
+                rgba(178, 224, 0, 0.12) 80%,
+                rgba(228, 9, 31, 0.10) 100%);
+    }
+
+    20% {
+        background: linear-gradient(135deg,
+                rgba(253, 63, 37, 0.16) 0%,
+                rgba(2, 122, 253, 0.13) 20%,
+                rgba(25, 191, 189, 0.14) 40%,
+                rgba(178, 224, 0, 0.13) 60%,
+                rgba(228, 9, 31, 0.12) 80%,
+                rgba(253, 63, 37, 0.11) 100%);
+    }
+
+    40% {
+        background: linear-gradient(135deg,
+                rgba(2, 122, 253, 0.17) 0%,
+                rgba(25, 191, 189, 0.14) 20%,
+                rgba(178, 224, 0, 0.15) 40%,
+                rgba(228, 9, 31, 0.14) 60%,
+                rgba(253, 63, 37, 0.13) 80%,
+                rgba(2, 122, 253, 0.12) 100%);
+    }
+
+    60% {
+        background: linear-gradient(135deg,
+                rgba(25, 191, 189, 0.16) 0%,
+                rgba(178, 224, 0, 0.14) 20%,
+                rgba(228, 9, 31, 0.16) 40%,
+                rgba(253, 63, 37, 0.15) 60%,
+                rgba(2, 122, 253, 0.14) 80%,
+                rgba(25, 191, 189, 0.11) 100%);
+    }
+
+    80% {
+        background: linear-gradient(135deg,
+                rgba(178, 224, 0, 0.15) 0%,
+                rgba(228, 9, 31, 0.13) 20%,
+                rgba(253, 63, 37, 0.17) 40%,
+                rgba(2, 122, 253, 0.16) 60%,
+                rgba(25, 191, 189, 0.13) 80%,
+                rgba(178, 224, 0, 0.12) 100%);
+    }
+
+    100% {
+        background: linear-gradient(135deg,
+                rgba(228, 9, 31, 0.15) 0%,
+                rgba(253, 63, 37, 0.12) 20%,
+                rgba(2, 122, 253, 0.15) 40%,
+                rgba(25, 191, 189, 0.12) 60%,
+                rgba(178, 224, 0, 0.12) 80%,
+                rgba(228, 9, 31, 0.10) 100%);
     }
 }
