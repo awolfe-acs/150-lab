@@ -36,6 +36,10 @@ h3 {
     letter-spacing: -0.05em;
     text-shadow: $text-shadow;
 
+    @media (min-width:$desktop-viewport) and (max-width:1440px) {
+        font-size: 48px;
+    }
+
     @media (max-width:$mobile-viewport) {
         font-size: 36px;
         max-width: 82vw;

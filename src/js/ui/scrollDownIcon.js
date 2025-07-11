@@ -2,6 +2,7 @@
 // Logic for the scroll-down icon
 
 import gsap from "gsap";
+import ScrollTrigger from "gsap/ScrollTrigger";
 
 // Function to create and manage the scroll down icon
 export function createScrollDownIcon(referenceElement) {
@@ -28,16 +29,14 @@ export function createScrollDownIcon(referenceElement) {
     </svg>
   `;
 
-  // Position the icon to be perfectly centered horizontally in the viewport
-  const buttonStyles = window.getComputedStyle(referenceElement);
+  // Position the icon to be perfectly centered horizontally and at exactly 12vh from bottom
   scrollIcon.style.cssText = `
     position: fixed;
-    top: ${buttonStyles.top};
+    bottom: calc(12vh - 16px);
     left: 50%;
     transform: translateX(-50%);
-    z-index: 10;
+    z-index: 1000;
     opacity: 0;
-    cursor: pointer;
     width: 64px;
     height: 90px;
     display: flex;
@@ -63,15 +62,6 @@ export function createScrollDownIcon(referenceElement) {
       text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
     `;
   }
-
-  // Add hover effect styles
-  scrollIcon.addEventListener("mouseenter", () => {
-    scrollIcon.style.transform = "translateX(-50%) scale(1.1)";
-  });
-
-  scrollIcon.addEventListener("mouseleave", () => {
-    scrollIcon.style.transform = "translateX(-50%) scale(1)";
-  });
 
   // Get the parent container of the reference button to position the icon in the same location
   const parentContainer = referenceElement.parentElement;
@@ -109,95 +99,41 @@ export function createScrollDownIcon(referenceElement) {
     yoyo: true,
   });
 
-  // Track scroll state and current animation
-  let isVisible = true;
-  let currentAnimation = null;
-  let animationPending = false;
-
-  // Enhanced scroll detection with fade in/out based on scroll position
-  const scrollHandler = () => {
-    // Prevent multiple rapid animations
-    if (animationPending) return;
-
-    const scrollPosition = window.pageYOffset;
-    const shouldShow = scrollPosition <= 5; // Show when at very top (5px threshold)
-
-    // Only animate if state actually needs to change
-    if (shouldShow === isVisible) return;
-
-    animationPending = true;
-
-    // Kill any existing animation immediately
-    if (currentAnimation) {
-      currentAnimation.kill();
-      currentAnimation = null;
-    }
-
-    if (shouldShow && !isVisible) {
-      // Fade in when returning to top
-      isVisible = true;
-
-      currentAnimation = gsap.to(scrollIcon, {
-        opacity: 1,
-        y: 0,
-        duration: 0.4,
-        ease: "power2.out",
-        overwrite: "auto",
-        onComplete: () => {
-          animationPending = false;
-          currentAnimation = null;
-        },
-      });
-    } else if (!shouldShow && isVisible) {
-      // Fade out when scrolling down
-      isVisible = false;
-
-      currentAnimation = gsap.to(scrollIcon, {
-        opacity: 0,
-        y: -15,
-        duration: 0.4,
-        ease: "power2.out",
-        overwrite: "auto",
-        onComplete: () => {
-          animationPending = false;
-          currentAnimation = null;
-        },
-      });
-    } else {
-      animationPending = false;
-    }
-  };
-
-  // Add throttled scroll event listener for better performance
-  let scrollTicking = false;
-  const throttledScrollHandler = () => {
-    if (!scrollTicking) {
-      requestAnimationFrame(() => {
-        scrollHandler();
-        scrollTicking = false;
-      });
-      scrollTicking = true;
-    }
-  };
-
-  window.addEventListener("scroll", throttledScrollHandler);
-
-  // Click handler to scroll down to the next section
-  scrollIcon.addEventListener("click", () => {
-    const heroTravelArea = document.querySelector("#hero-travel-area");
-    if (heroTravelArea) {
-      heroTravelArea.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }
+  // Use ScrollTrigger to match cover area SVG fade timing (but faster)
+  ScrollTrigger.create({
+    trigger: "#cover-travel-area",
+    start: "top top", // Start when cover-travel-area reaches top
+    end: "bottom 70%", // End earlier than cover SVG (70% vs center) for faster fade-out
+    scrub: 0.5, // Faster scrub than cover SVG (0.5 vs 1) for quicker response
+    markers: false,
+    onUpdate: (self) => {
+      // Fade out based on scroll progress - same as cover SVG but faster
+      const opacity = 1 - self.progress;
+      gsap.set(scrollIcon, { opacity: opacity, overwrite: true });
+    },
+    onLeave: () => {
+      // Ensure icon is hidden when leaving the trigger area
+      gsap.set(scrollIcon, { opacity: 0 });
+    },
+    onEnterBack: () => {
+      // When entering back, start with icon hidden and let scroll control it
+      gsap.set(scrollIcon, { opacity: 0 });
+    },
   });
 
   // Store reference and cleanup function
   window.scrollDownIcon = scrollIcon;
   window.scrollDownIconCleanup = () => {
-    window.removeEventListener("scroll", throttledScrollHandler);
-    if (currentAnimation) currentAnimation.kill();
+    // Kill any ScrollTriggers associated with this icon
+    ScrollTrigger.getAll().forEach((trigger) => {
+      if (trigger.trigger === scrollIcon || trigger.vars?.trigger === "#cover-travel-area") {
+        // Only kill triggers that were created for this scroll icon
+        const triggerElement = trigger.trigger;
+        if (triggerElement === scrollIcon || (trigger.animation && trigger.animation.targets().includes(scrollIcon))) {
+          trigger.kill();
+        }
+      }
+    });
     if (scrollIcon && scrollIcon.parentNode) {
       scrollIcon.remove();
     }

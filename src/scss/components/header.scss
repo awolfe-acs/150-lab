@@ -3,7 +3,7 @@
 
 header.anniversary {
     //position: absolute;
-    z-index: 500;
+    z-index: 2500;
     width: 100%;
     padding: 2vw 4vw;
     position: fixed;
@@ -16,7 +16,7 @@ header.anniversary {
     pointer-events: none;
 
     @media (max-width:$mobile-viewport) {
-        padding: 4vw;
+        padding: 4vw 24px 4vw 16px;
     }
 
     // Re-enable pointer events for interactive elements
@@ -46,6 +46,7 @@ header.anniversary {
     .logo {
         cursor: pointer;
         position: relative;
+        height: 44px;
 
         svg {
             width: 140px;
@@ -75,7 +76,8 @@ header.anniversary {
         }
 
         .main-logo {
-            position: absolute;
+            //position: absolute;
+            position: relative;
             top: 0;
             left: 0;
             //opacity: 0;

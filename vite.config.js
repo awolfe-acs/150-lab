@@ -19,6 +19,9 @@ export default defineConfig(({ mode, command }) => {
 
   return {
     base: basePath,
+    server: {
+      host: true, // or use host: '0.0.0.0'
+    },
     build: {
       outDir,
       cssCodeSplit: false,

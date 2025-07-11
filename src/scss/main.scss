@@ -17,18 +17,30 @@
 @use './typography' as *;
 
 
+:root {
+  --digit-opacity: 0;
+}
 
 // Fix for Lenis scrolling past the bottom
 html, body {
   min-height: 100%;
   height: 100%;
-  overscroll-behavior: none; // Prevent bouncing on some browsers
+  //overscroll-behavior: none; // Prevent bouncing on some browsers
   overflow-y: scroll; // Force scrollbar visibility
   margin: 0; // Ensure no margin creates gap with scrollbar
   padding: 0; // Ensure no padding creates gap with scrollbar
 
   #bd, #maincontent {
     width: 100% !important;
+  }
+
+  .error-message {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999999;
   }
 
   span.mejs__offscreen {
@@ -112,7 +124,8 @@ html {
 
   body {
     width: 100vw;
-    min-width: calc(100vw + 5px);
+    //min-width: calc(100vw + 5px); solves events panel but reduces right padding everywhere else
+    min-width: 100vw;
     max-width: 100%; // Prevent horizontal overflow
     background: #060E15;
     color: #fff;
@@ -128,6 +141,11 @@ html {
     // Ensure touch scrolling works on mobile
     -webkit-overflow-scrolling: touch;
     touch-action: manipulation; // Allow all touch gestures for better touch response
+
+
+    @media (min-width:$desktop-viewport) {
+      min-width: calc(100vw + 5px);
+    }
 
     button, a {
       @include keyboard-focus;
@@ -158,9 +176,9 @@ html {
     touch-action: manipulation;
   }
 
-  // Ensure fixed elements don't interfere with touch
-  *[style*="position: fixed"],
-  .fixed {
+  // Ensure fixed elements don't interfere with touch - but allow header interactions
+  *[style*="position: fixed"]:not(header),
+  .fixed:not(header) {
     touch-action: none;
     pointer-events: none;
 
@@ -175,47 +193,90 @@ html {
       touch-action: manipulation;
     }
   }
-}
 
-// Mobile-specific touch optimizations
-@media (max-width: 768px) {
-  html, body {
-    // Optimize for mobile touch scrolling
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: none;
-
-    // Ensure touch events work properly
+  // Ensure header and its children can be touched
+  header {
+    pointer-events: auto;
     touch-action: manipulation;
-  }
 
-  // Ensure all sections allow touch scrolling
-  section {
-    touch-action: manipulation;
-  }
-
-  // Ensure fixed elements don't interfere with touch
-  *[style*="position: fixed"],
-  .fixed {
-    touch-action: none;
-    pointer-events: none;
-
-    // Re-enable pointer events for interactive elements
-    &.interactive,
-    button,
-    a,
-    input,
-    select,
-    textarea {
+    * {
       pointer-events: auto;
       touch-action: manipulation;
     }
   }
 }
 
+
+#cover-travel-area {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 500;
+}
+
+#cover-area-overlay {
+  mix-blend-mode: color;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 1;
+  /* Start with full opacity for Phase 0 */
+  filter: saturate(1);
+  /* Start with normal saturation for Phase 0 */
+
+  svg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    height: auto;
+    min-height: 100vh;
+    width: auto;
+    min-width: 100vw;
+    z-index: 500;
+  }
+}
+
+#cover-area {
+  //border: 4px solid teal;
+
+  .cover-logo {
+    max-width: calc(100vw - 48px);
+    height: auto;
+  }
+
+  button.enter-experience {
+    bottom: 12vh;
+    /* Exactly 12vh from bottom of viewport */
+    position: fixed;
+    /* Fixed positioning */
+    pointer-events: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    /* Center horizontally */
+    z-index: 1000;
+    /* Ensure it stays above other content */
+
+    @media (min-width:1600px) {
+      bottom: 12vh;
+      /* Keep consistent positioning on larger screens */
+    }
+  }
+}
 
 //Hero Area
 #hero-area {
   pointer-events: none;
+  z-index: 450;
+
+  //border: 4px solid yellow;
 
   h1, span {
     cursor: default;
@@ -226,7 +287,11 @@ html {
     text-align: center;
     font-weight: 200;
     width: 60vw;
+    max-width: 1400px;
     position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     z-index: 5;
     perspective: 1000px; // Add perspective to parent for 3D effect
     user-select: none;
@@ -269,6 +334,7 @@ html {
     position: relative;
     display: flex;
     justify-content: center;
+    //transition: opacity 0.24s ease;
 
     @media (max-width:$mobile-viewport) {
       font-size: 34vw;
@@ -288,9 +354,9 @@ html {
       transition: color 0.1s ease;
       line-height: 1.52;
       user-select: none;
-      //opacity: 0.44;
-      opacity: 0;
-      visibility: hidden; // Ensure digits are hidden by default to prevent flickering
+      // Use CSS custom property for opacity - this ensures all digits have synchronized opacity
+      opacity: var(--digit-opacity, 0);
+      visibility: visible; // Changed to visible since we control opacity via custom property
       filter: drop-shadow(0px 0px 4px rgba(251, 225, 57, 0.9)) drop-shadow(0px 0px 8px rgba(251, 225, 57, 0.4));
 
       @media (max-width:$desktop-viewport) {
@@ -312,26 +378,16 @@ html {
       transition: color 0.1s ease;
     }
   }
-
-  button.enter-experience {
-    bottom: 20lvh;
-    position: absolute;
-    pointer-events: auto;
-
-    @media (min-width:1600px) {
-      bottom: 14lvh;
-    }
-  }
 }
 
 #get-involved {
 
   @media (max-width:$mobile-viewport) {
-    padding-top: 4vh;
+    padding-top: 4svh;
   }
 
   .get-involved-message {
-    padding-top: 6vh;
+    padding-top: 6svh;
     padding-bottom: 64px;
   }
 
@@ -339,9 +395,9 @@ html {
     display: flex;
     flex-direction: column;
     gap: 40px;
-    padding: 20vh 0 0;
+    padding: 20svh 0 0;
     justify-content: center;
-    //transform: translateY(12lvh);
+    //transform: translateY(12svh);
 
     @media (max-width:$mobile-viewport) {
       transform: translateY(0);
@@ -380,7 +436,7 @@ html {
 
 #get-involved-cards {
   @media (max-width:$mobile-viewport) {
-    padding: 8vh 0;
+    padding: 8svh 0;
   }
 }
 
@@ -391,7 +447,7 @@ html {
 }
 
 #get-involved-earth {
-  gap: 3lvh;
+  gap: 3svh;
 
   h2, p, span:not(.split-char) {
     text-align: center;
@@ -424,12 +480,12 @@ html {
 
 
 #events.original {
-  margin-bottom: -6vh;
-  margin-bottom: -16.25vh;
-  min-height: 100lvh !important;
+  margin-bottom: -6svh;
+  margin-bottom: -16.25svh;
+  min-height: 100svh !important;
 
   @media (max-width:$mobile-viewport) {
-    margin-bottom: -12vh;
+    margin-bottom: -12svh;
   }
 }
 
@@ -595,4 +651,16 @@ html {
       //background-color: rgba(37, 229, 255, 0.2);
     }
   }
+}
+
+.dg.main.a {
+  @media (max-width:$mobile-viewport) {
+    top: 164px !important;
+    display: none;
+  }
+}
+
+.scroll-down-icon {
+  user-select: none;
+  pointer-events: none;
 }

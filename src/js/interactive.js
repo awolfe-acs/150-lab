@@ -2,7 +2,7 @@ import Globe from "globe.gl";
 import { createClient } from "@supabase/supabase-js";
 
 // Supabase configuration
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://uttarkvvcuvhawpgvvrc.supabase.co";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://uttarkvvcusvhawpgvvrc.supabase.co";
 const SUPABASE_KEY =
   import.meta.env.VITE_SUPABASE_ANON_KEY ||
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0dGFya3Z2Y3V2aGF3cGd2dnJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk3NDg0NTgsImV4cCI6MjA2NTMyNDQ1OH0.K-9TAZ4vsmzxS_hq9dNxM_NPOfffNY34cLus18I_edM";
@@ -355,7 +355,7 @@ function initGlobe() {
   container.style.display = "block";
   container.style.position = "relative";
   container.style.width = "100vw";
-  container.style.height = "100vh";
+  container.style.height = "100svh";
 
   // Check for container dimensions
   if (container.clientWidth === 0 || container.clientHeight === 0) {

@@ -1,9 +1,5 @@
 @use '../utilities' as *;
 
-#events.original {
-    min-height: 100lvh !important;
-}
-
 #events {
     min-height: 0 !important;
     margin-bottom: 0 !important;
@@ -12,7 +8,7 @@
 .events-panel {
     border-top-left-radius: 64px;
     border-top-right-radius: 64px;
-    padding-top: 12vh;
+    padding-top: 12svh;
 
     //padding-bottom: 134px;
     //padding-bottom: 71px;
@@ -86,10 +82,10 @@
 
 
         .events-list {
-            margin-bottom: 12vh;
+            margin-bottom: 12svh;
 
             @media (max-width:$mobile-viewport) {
-                margin-bottom: 6vh;
+                margin-bottom: 6svh;
             }
         }
 

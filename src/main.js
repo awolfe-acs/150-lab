@@ -13,6 +13,7 @@ import SplitType from "split-type";
 // Import modular animation functions directly
 import {
   setupHeroHeadingFadeAnimation,
+  initCoverArea,
   initHeroAnimation,
   initHeroNumberCountdown,
   initHeroPinning,
@@ -67,6 +68,7 @@ function isMainPage() {
     currentUrl.includes("index.html") ||
     currentUrl.includes("acs.org/150") ||
     currentUrl.includes("localhost:5173") ||
+    currentUrl.includes("192.168") ||
     currentUrl.includes("cmswwwdev.acs.org/150") ||
     // AEM author and publish environments
     (currentUrl.includes("adobeaemcloud.com") && pathname.includes("/150")) ||
@@ -279,6 +281,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Only run animations and video on main pages
   if (isMainPage()) {
+    // Initialize cover area first
+    initCoverArea();
+
     // Initialize animations directly from modules
     initAnimations();
 
@@ -286,7 +291,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initVideo();
 
     // On main pages, Lenis will be enabled when the enter-experience button is clicked
-    // (this happens in the hero animation module)
+    // (this happens in the cover area module)
   } else {
     console.log("Running in lightweight mode - animations and video disabled");
 

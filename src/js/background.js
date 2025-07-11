@@ -36,8 +36,8 @@ export function initShaderBackground() {
 
   // Global state to track special colors activation
   window.specialColorsActive = false;
-  // Track which color phase we're in (1 = original, 2 = hero-travel-area, 3 = events section)
-  window.colorPhase = 1;
+  // Track which color phase we're in (0 = cover area, 1 = original, 2 = hero-travel-area, 3 = events section)
+  window.colorPhase = 0;
 
   // Import GSAP and ScrollTrigger
   let gsap, ScrollTrigger;
@@ -98,7 +98,7 @@ export function initShaderBackground() {
     gsap.timeline({
       scrollTrigger: {
         trigger: "#video-travel-area",
-        start: "top 110%", // Starts 10% earlier - when the top of video-travel-area is 10% below the bottom of viewport
+        start: "top 120%", // Starts 10% earlier - when the top of video-travel-area is 20% below the bottom of viewport
         end: "top 20%", // Ends when the top of video-travel-area reaches 20% from the top of viewport
         scrub: true, // Smooth scrubbing effect, tied to scroll position
         markers: false, // Set to true for debugging
@@ -117,12 +117,22 @@ export function initShaderBackground() {
                 if (uniforms.color1) uniforms.color1.value.set(originalColor1);
                 if (uniforms.color2) uniforms.color2.value.set(originalColor2);
                 window.specialColorsActive = true;
+              } else if (window.colorPhase === 0) {
+                // Phase zero special colors
+                if (uniforms.color1) uniforms.color1.value.set("#e2e2e2");
+                if (uniforms.color2) uniforms.color2.value.set("#515151");
+                window.specialColorsActive = true;
               }
             } else if (originalColor1 && originalColor2) {
-              // Revert to original colors when not fully dark and we're in phase one
+              // Revert to original colors when not fully dark
               if (window.colorPhase === 1) {
                 if (uniforms.color1) uniforms.color1.value.copy(originalColor1);
                 if (uniforms.color2) uniforms.color2.value.copy(originalColor2);
+                window.specialColorsActive = false;
+              } else if (window.colorPhase === 0) {
+                // Revert to phase zero colors
+                if (uniforms.color1) uniforms.color1.value.set("#e2e2e2");
+                if (uniforms.color2) uniforms.color2.value.set("#515151");
                 window.specialColorsActive = false;
               }
             }
@@ -340,6 +350,68 @@ export function initShaderBackground() {
       },
     });
 
+    // Create a ScrollTrigger to transition from phase 0 to phase 1 colors when entering #hero-travel-area
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: "#hero-travel-area",
+        start: "top bottom", // Start when hero-travel-area enters the bottom of viewport
+        end: "top top", // End when hero-travel-area reaches the top of viewport
+        scrub: true, // Bidirectional scrubbing effect, tied to scroll position
+        markers: false, // Set to true for debugging
+        onUpdate: (self) => {
+          // Only proceed if we have uniforms
+          if (!uniforms || !uniforms.color1 || !uniforms.color2) return;
+
+          // Get the current progress from start to end (0 to 1)
+          const progress = self.progress;
+
+          // Phase 0 initial colors (cover area)
+          const phase0Color1 = new THREE.Color("#e2e2e2");
+          const phase0Color2 = new THREE.Color("#515151");
+
+          // Phase 1 target colors (original)
+          const phase1Color1 = new THREE.Color("#32c2d6");
+          const phase1Color2 = new THREE.Color("#004199");
+
+          // Interpolate between phase 0 and phase 1 colors
+          const currentColor1 = phase0Color1.clone().lerp(phase1Color1, progress);
+          const currentColor2 = phase0Color2.clone().lerp(phase1Color2, progress);
+
+          // Apply the interpolated colors to the shader
+          uniforms.color1.value.copy(currentColor1);
+          uniforms.color2.value.copy(currentColor2);
+
+          // Update color phase based on progress
+          if (progress > 0.9) {
+            window.colorPhase = 1;
+          } else if (progress < 0.1) {
+            window.colorPhase = 0;
+          } else {
+            window.colorPhase = 0.5; // Transitioning between phases
+          }
+
+          // Mark that we're in special colors mode during transition
+          window.specialColorsActive = true;
+
+          // Update the GUI to reflect the current interpolated colors
+          updateColorGUI();
+          updateWaveGUI();
+
+          // Simultaneously fade out the cover area overlay and increase saturation
+          const coverAreaOverlay = document.querySelector("#cover-area-overlay");
+          if (coverAreaOverlay) {
+            // Fade from opacity 1 to 0 as we progress
+            const overlayOpacity = 1 - progress;
+            // Increase saturation from 1 to 2.2 as we progress
+            const saturation = 1 + progress * 1.2; // 1 + (1 * 1.2) = 2.2
+
+            coverAreaOverlay.style.opacity = overlayOpacity;
+            coverAreaOverlay.style.filter = `saturate(${saturation})`;
+          }
+        },
+      },
+    });
+
     // Create a ScrollTrigger to transition from phase 1 to phase 2 colors during #hero-travel-area
     gsap.timeline({
       scrollTrigger: {
@@ -355,7 +427,7 @@ export function initShaderBackground() {
           // Get the current progress from start to end (0 to 1)
           const progress = self.progress;
 
-          // Phase 1 initial colors
+          // Phase 1 initial colors (now coming from phase 0->1 transition)
           const phase1Color1 = new THREE.Color("#32c2d6");
           const phase1Color2 = new THREE.Color("#004199");
 
@@ -525,7 +597,7 @@ export function initShaderBackground() {
             if (originalDirectionalLight !== undefined) uniforms.directionalLight.value = originalDirectionalLight;
 
             // Reset wave settings to phase 2 values
-            uniforms.waveSpeed.value = 1.4; // Phase 2 maintains original wave speed
+            uniforms.waveSpeed.value = 1.0; // Phase 2 maintains original wave speed
             if (originalWaveAmplitude !== undefined) uniforms.waveAmplitude.value = originalWaveAmplitude; // Back to original 3.0
             if (originalWaveFrequency !== undefined) uniforms.waveFrequency.value = originalWaveFrequency; // Back to original 2.2
 
@@ -733,7 +805,7 @@ export function initShaderBackground() {
               updateColorGUI();
               updateLightingGUI();
               updateWaveGUI();
-            } else {
+            } else if (window.colorPhase === 1) {
               // We're in phase one, maintain phase one special colors
               // Use the actual default phase 1 colors
               if (uniforms.color1) uniforms.color1.value.set("#32c2d6");
@@ -742,6 +814,18 @@ export function initShaderBackground() {
               window.specialColorsActive = true;
 
               // Update the GUI to reflect the phase one colors
+              updateColorGUI();
+              updateLightingGUI();
+              updateWaveGUI();
+            } else {
+              // We're in phase zero, maintain phase zero colors
+              // Use the actual default phase 0 colors
+              if (uniforms.color1) uniforms.color1.value.set("#e2e2e2");
+              if (uniforms.color2) uniforms.color2.value.set("#515151");
+              // Wave parameters are now managed by their respective scroll triggers
+              window.specialColorsActive = true;
+
+              // Update the GUI to reflect the phase zero colors
               updateColorGUI();
               updateLightingGUI();
               updateWaveGUI();
@@ -878,7 +962,7 @@ export function initShaderBackground() {
   canvas.style.top = "0";
   canvas.style.left = "0";
   canvas.style.width = "100vw";
-  canvas.style.height = "100dvh";
+  canvas.style.height = "100svh";
   canvas.style.zIndex = "-1"; // Place behind other content
 
   // Force hardware acceleration to prevent address bar issues
@@ -1255,13 +1339,13 @@ export function initShaderBackground() {
     resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
     // Animation speed parameters
     mainSpeed: { value: 0.00012 }, // Overall animation speed multiplier
-    waveSpeed: { value: 1.4 }, // Controls how fast the waves animate
+    waveSpeed: { value: 1.0 }, // Controls how fast the waves animate
     noiseSpeed: { value: 0.45 }, // Speed of the noise animation
     colorCycleSpeed: { value: 2.0 }, // Speed of color cycling/transitions
     colorCycleOffset: { value: 0.0 }, // New: offset to maintain color cycle continuity
-    //Color parameters
-    color1: { value: new THREE.Color(0x32c2d6) },
-    color2: { value: new THREE.Color(0x004199) },
+    //Color parameters - Phase 0 initial colors
+    color1: { value: new THREE.Color("#e2e2e2") },
+    color2: { value: new THREE.Color("#515151") },
     colorDarkness: { value: 0.0 }, // Controls overall darkness of colors
     colorWaveInfluence: { value: 0.0 }, // Controls how much colors affect wave patterns
     colorFrequencyShift: { value: 0.0 }, // Controls how colors shift wave frequencies
@@ -1275,17 +1359,17 @@ export function initShaderBackground() {
     noiseInfluence: { value: 0.0 }, // How much noise affects the pattern
     layerOffset: { value: 0.4 }, // Offset between color layers for depth
     //Appearance parameters
-    yOffset: { value: 0.306 },
+    yOffset: { value: 0.29 },
     topEdgeSoftness: { value: 1.0 }, // Controls the softness of the top edge fade
     bottomEdgeSoftness: { value: 1.0 }, // Controls the softness of the bottom edge fade
     leftEdgeSoftness: { value: 0.2 }, // Controls the softness of the left edge fade
-    rightEdgeSoftness: { value: 1.0 }, // Controls the softness of the right edge fade
+    rightEdgeSoftness: { value: 0.78 }, // Controls the softness of the right edge fade
     fadeWidth: { value: 1.0 }, // Controls the width of the fade area
     leftCornerRoundness: { value: 0.8 }, // Controls how much the fade rounds into left corners
     rightCornerRoundness: { value: 1.0 }, // Controls how much the fade rounds into right corners
     edgeNoiseAmount: { value: 0.12 }, // Controls the amount of noise on the edges
     edgeNoiseScale: { value: 3.0 }, // Controls the scale of noise on the edges
-    edgeDepth: { value: 0.86 }, // Controls how far the burn-in effect extends into the canvas
+    edgeDepth: { value: 0.9 }, // Controls how far the burn-in effect extends into the canvas
     edgeContrast: { value: 2.0 }, // Controls the contrast/sharpness of the edge transition
     // Bottom wave edge parameters
     bottomWaveEnabled: { value: true }, // Enable/disable the bottom wave edge
@@ -2491,7 +2575,7 @@ export function initShaderBackground() {
 
     // Get the current viewport dimensions
     const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    const svh = window.innerHeight;
 
     // Check if we're in mobile viewport (640px or less)
     if (vw <= 640) {
@@ -2549,16 +2633,16 @@ export function initShaderBackground() {
     if (waveEnabled) {
       // Calculate an approximation of how much the wave extends into the screen
       // This is based on the shader's wave depth and edge depth calculations
-      const waveExtension = vh * waveDepth * edgeDepth * 0.5;
+      const waveExtension = svh * waveDepth * edgeDepth * 0.5;
 
       // Set the Y position of the globe to place it partially behind the wave
       // The position needs to be in THREE.js world units
       const cameraViewHeight = (camera.top - camera.bottom) / camera.zoom;
-      const pixelsToWorldRatio = cameraViewHeight / vh;
+      const pixelsToWorldRatio = cameraViewHeight / svh;
 
       // Calculate the world space position - move it down beyond the wave
       // We add a little extra (-10% of viewport) to ensure it goes behind the wave
-      const worldYPosition = -waveExtension * pixelsToWorldRatio - vh * 0.1 * pixelsToWorldRatio;
+      const worldYPosition = -waveExtension * pixelsToWorldRatio - svh * 0.1 * pixelsToWorldRatio;
 
       // Set Z position to ensure the globe is behind the shader layer
       const worldZPosition = -10; // Negative value to move "behind" the camera
@@ -3330,9 +3414,16 @@ export function initShaderBackground() {
   let isDrawing = false;
   let drawnParticles = []; // Separate array for drawn particles
 
+  // Detect mobile devices for performance optimization
+  const isMobileDevice =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    window.innerWidth <= 768 ||
+    "ontouchstart" in window;
+
   // Mouse follow particle parameters
   const mouseParticleParams = {
     enabled: false, // Start disabled, will be enabled when enter-experience button is clicked
+    mobileDisabled: isMobileDevice, // Disable on mobile for performance
     spawnRate: 0.52, // Chance to spawn particle on mouse move (0-1)
     maxParticles: 150, //150
     baseSize: 1.9, // Base particle size
@@ -3353,7 +3444,10 @@ export function initShaderBackground() {
 
   // Global function to enable mouse particles (called from enter-experience button)
   window.enableMouseParticles = function () {
-    mouseParticleParams.enabled = true;
+    // Only enable if not on mobile device
+    if (!mouseParticleParams.mobileDisabled) {
+      mouseParticleParams.enabled = true;
+    }
   };
 
   // Create mouse particle geometry and material (clone of main particles)
@@ -3559,7 +3653,7 @@ export function initShaderBackground() {
 
   // Mouse move event listener
   window.addEventListener("mousemove", (event) => {
-    if (!mouseParticleParams.enabled) {
+    if (!mouseParticleParams.enabled || mouseParticleParams.mobileDisabled) {
       return;
     }
 
@@ -3637,7 +3731,7 @@ export function initShaderBackground() {
 
   // Mouse down event listener to start drawing
   window.addEventListener("mousedown", (event) => {
-    if (!mouseParticleParams.enabled) return;
+    if (!mouseParticleParams.enabled || mouseParticleParams.mobileDisabled) return;
     if (event.button === 0) {
       // Left mouse button
       isDrawing = true;
@@ -3661,10 +3755,22 @@ export function initShaderBackground() {
   window.addEventListener(
     "touchstart",
     (event) => {
-      if (!mouseParticleParams.enabled) return;
+      if (!mouseParticleParams.enabled || mouseParticleParams.mobileDisabled) return;
 
-      // Prevent default to avoid scrolling issues
-      event.preventDefault();
+      // Only prevent default if the touch is on the canvas background, not on UI elements
+      const target = event.target;
+      const isUIElement =
+        target.tagName === "BUTTON" ||
+        target.tagName === "A" ||
+        target.closest("button") ||
+        target.closest("a") ||
+        target.closest("header") ||
+        target.closest("nav");
+
+      if (!isUIElement) {
+        // Prevent default to avoid scrolling issues only when not touching UI elements
+        event.preventDefault();
+      }
 
       // Get the first touch point
       const touch = event.touches[0];
@@ -3683,10 +3789,22 @@ export function initShaderBackground() {
   window.addEventListener(
     "touchmove",
     (event) => {
-      if (!mouseParticleParams.enabled || !isTouching) return;
+      if (!mouseParticleParams.enabled || mouseParticleParams.mobileDisabled || !isTouching) return;
 
-      // Prevent default to avoid scrolling issues
-      event.preventDefault();
+      // Only prevent default if the touch is on the canvas background, not on UI elements
+      const target = event.target;
+      const isUIElement =
+        target.tagName === "BUTTON" ||
+        target.tagName === "A" ||
+        target.closest("button") ||
+        target.closest("a") ||
+        target.closest("header") ||
+        target.closest("nav");
+
+      if (!isUIElement) {
+        // Prevent default to avoid scrolling issues only when not touching UI elements
+        event.preventDefault();
+      }
 
       // Get the first touch point
       const touch = event.touches[0];
@@ -3783,6 +3901,7 @@ export function initShaderBackground() {
   // Function to animate mouse particles
   function animateMouseParticles() {
     if (mouseParticles.length === 0 && drawnParticles.length === 0) return; // Early exit if no particles
+    if (mouseParticleParams.mobileDisabled) return; // Skip animation on mobile
 
     const worldCoords = mouseToWorldCoords(mousePosition.x, mousePosition.y);
 
@@ -3888,6 +4007,12 @@ export function initShaderBackground() {
 
   // Add GUI controls for mouse particles
   const mouseParticleFolder = gui.addFolder("Mouse Follow Particles");
+
+  // Add mobile status display
+  mouseParticleFolder
+    .add({ mobileDetected: mouseParticleParams.mobileDisabled }, "mobileDetected")
+    .name("Mobile Detected (Disabled)")
+    .listen(); // Make it read-only
 
   mouseParticleFolder
     .add(mouseParticleParams, "enabled")
