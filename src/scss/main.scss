@@ -248,8 +248,15 @@ html {
   //border: 4px solid teal;
 
   .cover-logo {
+    width: 715px;
     max-width: calc(100vw - 48px);
     height: auto;
+    position: relative;
+
+    svg {
+      width: 100%;
+      height: auto;
+    }
   }
 
   button.enter-experience {

@@ -6,6 +6,16 @@
     align-self: flex-end;
     position: relative;
 
+    .video-progress-bar {
+        .progress-bar-fill {
+            transition: width 0.4s ease;
+        }
+
+        .progress-bar-thumb {
+            transition: opacity 0.2s, left 0.4s ease;
+        }
+    }
+
     .video-wrapper {
         position: relative;
         border-radius: 16px;

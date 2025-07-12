@@ -25,7 +25,7 @@ let uiClickSound = null;
 function initializeUIClickSound() {
   if (!uiClickSound) {
     uiClickSound = new Audio(uiClickAudioUrl);
-    uiClickSound.volume = 0.38;
+    uiClickSound.volume = 0.35;
     uiClickSound.preload = "auto";
   }
 }
@@ -42,7 +42,7 @@ const playUIClickSound = () => {
 
     // Clone the audio to allow multiple overlapping sounds
     const clickSound = uiClickSound.cloneNode();
-    clickSound.volume = 0.38;
+    clickSound.volume = 0.35;
     clickSound.play().catch((error) => {
       console.warn("UI click sound play was prevented:", error);
     });
@@ -112,8 +112,8 @@ function playBackgroundAudioWhenReady(fromEnterButton = false) {
   }
 
   try {
-    // Play the audio at 8% volume
-    backgroundAudioInstance.volume = 0.08;
+    // Play the audio at 14% volume
+    backgroundAudioInstance.volume = 0.14;
 
     // Create a user gesture for Safari if needed
     if (fromEnterButton) {
@@ -274,7 +274,30 @@ export const playBackgroundAudio = (fromEnterButton = false) => {
     return;
   }
 
-  // Check if audio is ready to play
+  // Add 2-second delay when called from enter button
+  if (fromEnterButton) {
+    console.log("Adding 2-second delay before starting background audio");
+    setTimeout(() => {
+      if (audioMuted) return; // Check if audio was muted during the delay
+
+      // Check if audio is ready to play after delay
+      if (backgroundAudioLoaded || (backgroundAudioInstance && backgroundAudioInstance.readyState >= 3)) {
+        playBackgroundAudioWhenReady(true);
+      } else {
+        console.log("Audio not ready yet after delay, readyState:", backgroundAudioInstance?.readyState);
+        // Audio not ready yet - it will play when ready via the canplaythrough event
+        try {
+          // Try to force load again
+          backgroundAudioInstance.load();
+        } catch (e) {
+          console.warn("Error reloading background audio:", e);
+        }
+      }
+    }, 2000); // 2-second delay
+    return;
+  }
+
+  // Check if audio is ready to play (for non-enter button calls)
   if (backgroundAudioLoaded || (backgroundAudioInstance && backgroundAudioInstance.readyState >= 3)) {
     playBackgroundAudioWhenReady(fromEnterButton);
   } else {

@@ -98,7 +98,7 @@ export function initShaderBackground() {
     gsap.timeline({
       scrollTrigger: {
         trigger: "#video-travel-area",
-        start: "top 120%", // Starts 10% earlier - when the top of video-travel-area is 20% below the bottom of viewport
+        start: "top 135%", // Starts 35% earlier - when the top of video-travel-area is 35% below the bottom of viewport
         end: "top 20%", // Ends when the top of video-travel-area reaches 20% from the top of viewport
         scrub: true, // Smooth scrubbing effect, tied to scroll position
         markers: false, // Set to true for debugging
@@ -1363,7 +1363,7 @@ export function initShaderBackground() {
     topEdgeSoftness: { value: 1.0 }, // Controls the softness of the top edge fade
     bottomEdgeSoftness: { value: 1.0 }, // Controls the softness of the bottom edge fade
     leftEdgeSoftness: { value: 0.2 }, // Controls the softness of the left edge fade
-    rightEdgeSoftness: { value: 0.78 }, // Controls the softness of the right edge fade
+    rightEdgeSoftness: { value: 0.5 }, // Controls the softness of the right edge fade
     fadeWidth: { value: 1.0 }, // Controls the width of the fade area
     leftCornerRoundness: { value: 0.8 }, // Controls how much the fade rounds into left corners
     rightCornerRoundness: { value: 1.0 }, // Controls how much the fade rounds into right corners

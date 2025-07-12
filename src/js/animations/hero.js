@@ -324,26 +324,22 @@ function initCoverLogoScrollTrigger(coverLogo) {
       lastScrollDirection = self.direction;
       logoShouldBeVisible = expectedOpacity > 0.1;
 
-      // Always apply scroll-based opacity unless we're in active delayed fade-in
+      // Simple logic: only apply scroll-based opacity when not in delayed fade-in mode
       if (!isDelayedFadeInActive) {
         gsap.set(coverLogo, { opacity: expectedOpacity, overwrite: true });
       }
-      // Force fade-out if scrolling down significantly, even during delayed fade-in
-      else if (self.direction === 1 && self.progress > 0.3) {
-        gsap.set(coverLogo, { opacity: expectedOpacity, overwrite: true });
-        // Cancel delayed fade-in if we're scrolling down too far
+      // If user scrolls down significantly during delayed fade-in, cancel it and take over
+      else if (self.direction === 1 && self.progress > 0.25) {
+        // Cancel delayed fade-in if scrolling down too far
         if (delayedFadeInTween) {
           delayedFadeInTween.kill();
           delayedFadeInTween = null;
         }
         isDelayedFadeInActive = false;
+        // Apply scroll-based opacity immediately
+        gsap.set(coverLogo, { opacity: expectedOpacity, overwrite: true });
       }
-      // Special case: if we're in delayed fade-in mode but near the top and scrolling up,
-      // let the delayed fade-in continue without interference
-      else if (isDelayedFadeInActive && self.direction === -1 && self.progress < 0.1) {
-        // Don't interfere with delayed fade-in when near the top and scrolling up
-        // The delayed fade-in animation will handle the opacity
-      }
+      // Otherwise, let the delayed fade-in animation handle the opacity
     },
     onLeave: () => {
       // Clean up and hide logo when leaving trigger area
@@ -375,32 +371,17 @@ function initCoverLogoScrollTrigger(coverLogo) {
         ease: "power2.out",
         overwrite: true,
         onComplete: () => {
-          // Ensure we're at full opacity first
-          gsap.set(coverLogo, { opacity: 1, overwrite: true });
+          // Smoothly hand control back to scroll-based system
+          // No abrupt opacity changes - just disable the delayed fade-in flag
+          // so onUpdate can take over smoothly
+          isDelayedFadeInActive = false;
+          delayedFadeInTween = null;
 
-          // Keep the logo at full opacity for a moment before handing control back
-          setTimeout(() => {
-            // Only hand control back to scroll-based system if we're still near the top
-            // and the user hasn't scrolled significantly down
-            if (coverLogoScrollTrigger.progress < 0.2) {
-              // We're still near the top - maintain full opacity
-              gsap.set(coverLogo, { opacity: 1, overwrite: true });
-            } else {
-              // User has scrolled down - apply appropriate opacity
-              const currentOpacity = 1 - coverLogoScrollTrigger.progress;
-              gsap.set(coverLogo, { opacity: currentOpacity, overwrite: true });
-            }
-
-            // Now hand control back to scroll-based system
-            isDelayedFadeInActive = false;
-            delayedFadeInTween = null;
-          }, 200); // Small delay to ensure full opacity is maintained
+          // Let the next onUpdate call handle the opacity based on current scroll position
+          // This ensures smooth transition without abrupt changes
         },
         onInterrupt: () => {
-          // Handle interruption - still try to maintain full opacity if near top
-          if (coverLogoScrollTrigger.progress < 0.2) {
-            gsap.set(coverLogo, { opacity: 1, overwrite: true });
-          }
+          // Handle interruption gracefully
           isDelayedFadeInActive = false;
           delayedFadeInTween = null;
         },
@@ -625,7 +606,10 @@ export function initHeroAnimation() {
         const progress = self.progress;
         const opacity = 1 - progress;
         // Use CSS custom property to fade digits, not the wrapper
-        heroNumber.style.setProperty("--digit-opacity", opacity);
+        // Use requestAnimationFrame to ensure smooth updates
+        requestAnimationFrame(() => {
+          heroNumber.style.setProperty("--digit-opacity", opacity);
+        });
       },
     });
   }
@@ -648,6 +632,7 @@ export function initHeroNumberCountdown() {
           scrub: 1.5, // Slightly slower scrubbing for more gradual countdown
           markers: false,
           invalidateOnRefresh: true, // **CRITICAL**
+          id: "hero-countdown", // Add ID for debugging
           onUpdate: function (self) {
             // Calculate the year value based on scroll progress
             // Progress 0 = 2026, Progress 1 = 1876
@@ -656,6 +641,16 @@ export function initHeroNumberCountdown() {
 
             // Calculate opacity based on progress: 0.44 at start (2026) to 1.0 at end (1876)
             const opacity = 0.44 + self.progress * 0.56; // 0.44 + (progress * 0.56) = 0.44 to 1.0
+
+            // Debug logging to track opacity changes
+            if (Math.abs(opacity - 0.44) > 0.01) {
+              // Only log when opacity changes significantly from initial
+              console.log(
+                `Hero countdown: progress=${self.progress.toFixed(3)}, opacity=${opacity.toFixed(
+                  3
+                )}, year=${currentYear}`
+              );
+            }
 
             const yearValue = currentYear.toString();
             const currentDigits = heroNumber.querySelectorAll(".digit");
@@ -683,7 +678,10 @@ export function initHeroNumberCountdown() {
 
             // Apply opacity via CSS custom property on the parent element
             // This ensures ALL .digit elements get the same opacity simultaneously
-            heroNumber.style.setProperty("--digit-opacity", opacity);
+            // Use requestAnimationFrame to ensure smooth updates
+            requestAnimationFrame(() => {
+              heroNumber.style.setProperty("--digit-opacity", opacity);
+            });
 
             // No need to set visibility on parent - wrapper opacity handles overall visibility
           },
@@ -704,7 +702,10 @@ export function initHeroNumberCountdown() {
               });
 
               // Set full opacity via CSS custom property for perfect synchronization
-              heroNumber.style.setProperty("--digit-opacity", "1.0");
+              console.log("Hero countdown: Complete at 1876, opacity 1.0");
+              requestAnimationFrame(() => {
+                heroNumber.style.setProperty("--digit-opacity", "1.0");
+              });
               // No need to set visibility on parent - wrapper opacity handles overall visibility
             }
           },
@@ -725,19 +726,35 @@ export function initHeroNumberCountdown() {
               });
 
               // Set initial opacity via CSS custom property for perfect synchronization
-              heroNumber.style.setProperty("--digit-opacity", "0.44");
+              console.log("Hero countdown: Reset to 2026, opacity 0.44");
+              requestAnimationFrame(() => {
+                heroNumber.style.setProperty("--digit-opacity", "0.44");
+              });
               // No need to set visibility on parent - wrapper opacity handles overall visibility
             }
           },
           onRefresh: (self) => {},
         },
       });
+
+      // Debug: Check if ScrollTrigger was created successfully
+      if (animationState.heroNumberTween.scrollTrigger) {
+        console.log("Hero countdown: ScrollTrigger created successfully", {
+          start: animationState.heroNumberTween.scrollTrigger.start,
+          end: animationState.heroNumberTween.scrollTrigger.end,
+          trigger: animationState.heroNumberTween.scrollTrigger.trigger,
+        });
+      } else {
+        console.error("Hero countdown: ScrollTrigger creation failed!");
+      }
     } else {
       // If the tween exists, ensure its ScrollTrigger is enabled (might be needed if killed previously)
       if (animationState.heroNumberTween.scrollTrigger) {
         animationState.heroNumberTween.scrollTrigger.enable();
+        console.log("Hero countdown: Re-enabled existing ScrollTrigger");
       }
       animationState.heroNumberTween.resume(); // Ensure tween is not paused
+      console.log("Hero countdown: Resumed existing tween");
     }
   } else {
     console.warn("#hero-number element not found for countdown animation.");
