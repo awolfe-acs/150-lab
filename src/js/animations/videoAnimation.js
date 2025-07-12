@@ -9,11 +9,16 @@ export function animateVideoScale() {
   const videoTravelArea = document.querySelector("#video-travel-area");
 
   if (videoWrapper && videoSection && videoTravelArea) {
-    // Set initial scale
+    // Set initial scale and disable pointer events
     gsap.set(videoWrapper, {
       scale: 0.4,
       opacity: 0,
       transformOrigin: "center center",
+    });
+
+    // Initially disable pointer events on video section
+    gsap.set(videoSection, {
+      pointerEvents: "none",
     });
 
     // Create a timeline for the video animations - start when entering video-travel-area
@@ -40,6 +45,26 @@ export function animateVideoScale() {
       scale: 1.0,
       opacity: 1,
       ease: "power2.out", // Slightly more pronounced easing
+    });
+
+    // Separate ScrollTrigger for pointer events control at 33% viewport penetration
+    ScrollTrigger.create({
+      trigger: "#video-travel-area",
+      start: "top 67%", // 33% into viewport (100% - 33% = 67%)
+      end: "bottom top",
+      markers: false,
+      onEnter: () => {
+        // Enable pointer events when video-travel-area is 33% into viewport
+        gsap.set(videoSection, {
+          pointerEvents: "auto",
+        });
+      },
+      onLeaveBack: () => {
+        // Disable pointer events when scrolling back up past 33% point
+        gsap.set(videoSection, {
+          pointerEvents: "none",
+        });
+      },
     });
 
     // Create a pin animation that pins the video when it reaches the top of the viewport

@@ -68,8 +68,8 @@ export function initInfiniteMarqueeAnimation() {
         return;
       }
 
-      // Reset any existing transforms
-      gsap.set(images, { y: 0, top: "auto" });
+      // Reset any existing transforms and set opacity to 1
+      gsap.set(images, { y: 0, top: "auto", opacity: 1 });
 
       // Position the images - second image directly below the first
       gsap.set(originalImage, {

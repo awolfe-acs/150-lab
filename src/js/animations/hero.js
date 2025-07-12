@@ -534,7 +534,7 @@ export function initHeroAnimation() {
     },
   });
 
-  // After all characters are revealed, show the number
+  // After all characters are revealed, show the number wrapper (keep at full opacity)
   heroAnimationTl.to(heroNumber, {
     opacity: 1,
     autoAlpha: 1, // Uses visibility and opacity together
@@ -542,29 +542,40 @@ export function initHeroAnimation() {
     ease: "power1.inOut",
   });
 
-  // Modified digit reveal animation - slower fade-in with z-axis movement
+  // Modified digit reveal animation - fade-in using CSS custom property for perfect synchronization
   const digits = heroNumber.querySelectorAll(".digit");
-  heroAnimationTl.fromTo(
+
+  // Set initial 3D positioning for digits
+  gsap.set(digits, {
+    y: 10,
+    z: -120, // Start further back in z-space
+    transformPerspective: 1000, // Add perspective for 3D effect
+    transformOrigin: "center center",
+  });
+
+  // Animate digits' 3D positioning
+  heroAnimationTl.to(
     digits,
     {
-      opacity: 0,
-      autoAlpha: 0, // Use autoAlpha to handle both opacity and visibility
-      y: 10,
-      z: -120, // Start further back in z-space
-      transformPerspective: 1000, // Add perspective for 3D effect
-      transformOrigin: "center center",
-    },
-    {
-      opacity: 0.44, // Fade in to 0.44 opacity as requested
-      autoAlpha: 0.44, // Use autoAlpha to ensure visibility is also set
       y: 0,
       z: 0,
       duration: 2.5, // Much longer duration for slower fade-in
       stagger: 0.1, // Slightly longer stagger
       ease: "power3.out",
     },
-    "-=0.6" // Slight overlap
-  );
+    "-=0.6"
+  ); // Slight overlap
+
+  // Animate digit opacity using CSS custom property - this ensures perfect synchronization
+  heroAnimationTl.to(
+    heroNumber,
+    {
+      "--digit-opacity": 0.44,
+      duration: 2.5, // Same duration as 3D animation
+      ease: "power3.out",
+    },
+    "-=2.5"
+  ); // Start at the same time as 3D animation
 
   // Create ScrollTrigger for hero animation
   ScrollTrigger.create({
@@ -602,19 +613,19 @@ export function initHeroAnimation() {
 
     // Remove the separate opacity animation - we'll handle it in the countdown animation
 
-    // Fade-out animation (approaching video area)
+    // Fade-out animation (approaching video area) - use CSS custom property for digits
     ScrollTrigger.create({
       trigger: "#video-travel-area",
-      start: "top bottom",
-      end: "top 90%",
+      start: "top 110%",
+      end: "top 100%",
       scrub: true,
       markers: false,
       invalidateOnRefresh: true, // Ensure this recalculates
       onUpdate: function (self) {
         const progress = self.progress;
         const opacity = 1 - progress;
-        // Use GSAP.set for more reliable style application
-        gsap.set(heroNumber, { opacity: opacity });
+        // Use CSS custom property to fade digits, not the wrapper
+        heroNumber.style.setProperty("--digit-opacity", opacity);
       },
     });
   }
@@ -657,8 +668,7 @@ export function initHeroNumberCountdown() {
                 digitSpan.className = "digit";
                 digitSpan.textContent = digit;
                 digitSpan.setAttribute("data-digit", digit);
-                // No need to set individual opacity - CSS will handle it via custom property
-                digitSpan.style.visibility = "visible";
+                // No need to set individual opacity or visibility - CSS custom property handles it
                 heroNumber.appendChild(digitSpan);
               });
             } else {
@@ -675,8 +685,7 @@ export function initHeroNumberCountdown() {
             // This ensures ALL .digit elements get the same opacity simultaneously
             heroNumber.style.setProperty("--digit-opacity", opacity);
 
-            // Also set visibility on parent to ensure all digits are visible
-            heroNumber.style.visibility = "visible";
+            // No need to set visibility on parent - wrapper opacity handles overall visibility
           },
           onComplete: function () {
             // Ensure the number stays at 1876 after countdown completes
@@ -691,13 +700,12 @@ export function initHeroNumberCountdown() {
                   digitSpan.textContent = newDigits[index];
                   digitSpan.setAttribute("data-digit", newDigits[index]);
                 }
-                // No need to set individual opacity - CSS custom property handles it
-                digitSpan.style.visibility = "visible";
+                // No need to set individual opacity or visibility - CSS custom property handles it
               });
 
               // Set full opacity via CSS custom property for perfect synchronization
               heroNumber.style.setProperty("--digit-opacity", "1.0");
-              heroNumber.style.visibility = "visible";
+              // No need to set visibility on parent - wrapper opacity handles overall visibility
             }
           },
           onLeaveBack: function (self) {
@@ -713,13 +721,12 @@ export function initHeroNumberCountdown() {
                   digitSpan.textContent = newDigits[index];
                   digitSpan.setAttribute("data-digit", newDigits[index]);
                 }
-                // No need to set individual opacity - CSS custom property handles it
-                digitSpan.style.visibility = "visible";
+                // No need to set individual opacity or visibility - CSS custom property handles it
               });
 
               // Set initial opacity via CSS custom property for perfect synchronization
               heroNumber.style.setProperty("--digit-opacity", "0.44");
-              heroNumber.style.visibility = "visible";
+              // No need to set visibility on parent - wrapper opacity handles overall visibility
             }
           },
           onRefresh: (self) => {},
@@ -763,7 +770,7 @@ export function initHeroPinning() {
         trigger: el, // Use the hero-area element itself as the trigger
         endTrigger: "#hero-travel-area", // Use hero-travel-area as the end trigger
         start: "top top", // Pin immediately when hero-area reaches top of viewport
-        end: "bottom bottom", // End when the bottom of the wrapper reaches the bottom of viewport
+        end: "bottom 80%", // End when the bottom of the wrapper reaches the bottom of viewport
         pin: el,
         pinSpacing: false,
         anticipatePin: 1, // Help prevent flickering during pin
