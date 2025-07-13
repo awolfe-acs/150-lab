@@ -171,7 +171,7 @@ export function initVideo() {
     height: 100%;
     background: rgba(251, 225, 57, 0.9);
     width: 0%;
-    transition: none;
+    transition: width 0.1s linear;
     pointer-events: none;
   `;
 
@@ -266,11 +266,10 @@ export function initVideo() {
   const updateProgressBar = () => {
     if (videoElement.duration && !isProgressDragging) {
       const progress = (videoElement.currentTime / videoElement.duration) * 100;
-      // Use requestAnimationFrame for smoother updates
-      requestAnimationFrame(() => {
-        progressFill.style.width = progress + "%";
-        progressThumb.style.left = progress + "%";
-      });
+      // Immediate update without transition for instant response
+      progressFill.style.transition = "none";
+      progressFill.style.width = progress + "%";
+      progressThumb.style.left = progress + "%";
     }
   };
 
@@ -280,6 +279,10 @@ export function initVideo() {
     const newTime = (percentage / 100) * videoElement.duration;
     videoElement.currentTime = newTime;
     updateProgressBar();
+    // Restart smooth updates if video is playing
+    if (!videoElement.paused) {
+      startSmoothUpdates();
+    }
   };
 
   const disableProgressTransitions = () => {
@@ -288,8 +291,8 @@ export function initVideo() {
   };
 
   const enableProgressTransitions = () => {
-    progressFill.style.transition = "";
-    progressThumb.style.transition = "";
+    progressFill.style.transition = "width 0.1s linear";
+    progressThumb.style.transition = "opacity 0.2s";
   };
 
   // Mouse events for progress bar
@@ -341,7 +344,45 @@ export function initVideo() {
     progressBar.style.background = "rgba(0, 0, 0, 0)";
   });
 
-  // Update progress bar during video playback
+  // Create a more frequent update mechanism for fluid progress bar
+  let animationFrameId = null;
+  let lastUpdateTime = 0;
+
+  const updateProgressBarSmooth = () => {
+    if (videoElement.duration && !isProgressDragging && !videoElement.paused) {
+      const currentTime = performance.now();
+      // Update 60 times per second (every ~16.67ms) for fluid movement
+      if (currentTime - lastUpdateTime >= 16.67) {
+        const progress = (videoElement.currentTime / videoElement.duration) * 100;
+        progressFill.style.width = progress + "%";
+        progressThumb.style.left = progress + "%";
+        lastUpdateTime = currentTime;
+      }
+      animationFrameId = requestAnimationFrame(updateProgressBarSmooth);
+    }
+  };
+
+  // Start smooth updates when video plays
+  const startSmoothUpdates = () => {
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+    }
+    lastUpdateTime = performance.now();
+    animationFrameId = requestAnimationFrame(updateProgressBarSmooth);
+  };
+
+  // Stop smooth updates when video pauses
+  const stopSmoothUpdates = () => {
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
+    }
+  };
+
+  videoElement.addEventListener("play", startSmoothUpdates);
+  videoElement.addEventListener("pause", stopSmoothUpdates);
+
+  // Update progress bar during video playback (for immediate updates on seek)
   videoElement.addEventListener("timeupdate", updateProgressBar);
 
   // Initialize progress bar
@@ -370,9 +411,44 @@ export function initVideo() {
     requestAnimationFrame(fade);
   };
 
-  // Function to pause video and show overlay
+  // Track original video volume for restoration
+  let originalVideoVolume = DEFAULT_VOLUME;
+  let scrollAwayFadeTimeout = null;
+
+  // Function to fade out video audio and then pause
+  const fadeOutAndPauseVideo = () => {
+    if (!videoElement.paused) {
+      // Store current volume for restoration
+      originalVideoVolume = videoElement.volume;
+
+      // Fade out video audio over 600ms
+      fadeAudio(videoElement, 0, 600);
+
+      // Set timeout to pause after fade completes
+      scrollAwayFadeTimeout = setTimeout(() => {
+        videoElement.pause();
+        overlay.classList.remove("hidden");
+        // Hide audio slider when video is paused
+        audioSlider.style.opacity = "0";
+        audioSlider.style.pointerEvents = "none";
+        // Fade in background music
+        if (window.backgroundAudio) {
+          fadeAudio(window.backgroundAudio, 0.08);
+        }
+        scrollAwayFadeTimeout = null;
+      }, 600);
+    }
+  };
+
+  // Function to pause video and show overlay (for immediate pause)
   const pauseVideoAndShowOverlay = () => {
     if (!videoElement.paused) {
+      // Clear any existing fade timeout
+      if (scrollAwayFadeTimeout) {
+        clearTimeout(scrollAwayFadeTimeout);
+        scrollAwayFadeTimeout = null;
+      }
+
       videoElement.pause();
       overlay.classList.remove("hidden");
       // Hide audio slider when video is paused
@@ -388,16 +464,29 @@ export function initVideo() {
   // Handle play/pause
   const handlePlayPause = () => {
     if (videoElement.paused) {
+      // Clear any existing fade timeout
+      if (scrollAwayFadeTimeout) {
+        clearTimeout(scrollAwayFadeTimeout);
+        scrollAwayFadeTimeout = null;
+      }
+
       videoElement.play();
       overlay.classList.add("hidden");
       // Fade out background music and ensure video audio is playing
       if (window.backgroundAudio) {
         fadeAudio(window.backgroundAudio, 0);
       }
-      // Set video volume based on global audio state - use DEFAULT_VOLUME when not muted
-      videoElement.volume = window.audioMuted ? 0 : DEFAULT_VOLUME;
+      // Restore original volume or set based on global audio state
+      if (window.audioMuted) {
+        videoElement.volume = 0;
+      } else {
+        // Restore the original volume that was set before scroll-away fade
+        videoElement.volume = originalVideoVolume;
+      }
       // Update slider after setting volume
       updateSlider();
+      // Ensure smooth updates are started
+      startSmoothUpdates();
     } else {
       pauseVideoAndShowOverlay();
     }
@@ -436,8 +525,8 @@ export function initVideo() {
     (entries) => {
       entries.forEach((entry) => {
         if (!entry.isIntersecting) {
-          // Video is out of view, pause it and show overlay
-          pauseVideoAndShowOverlay();
+          // Video is out of view, fade out audio and then pause
+          fadeOutAndPauseVideo();
         }
       });
     },
@@ -451,9 +540,14 @@ export function initVideo() {
 
   // Listen for sound toggle state changes
   const updateVideoAudioState = () => {
-    // Update video volume based on global audio state - use DEFAULT_VOLUME when not muted
+    // Update video volume based on global audio state
     if (!videoElement.paused) {
-      videoElement.volume = window.audioMuted ? 0 : DEFAULT_VOLUME;
+      if (window.audioMuted) {
+        videoElement.volume = 0;
+      } else {
+        // Use original volume or default
+        videoElement.volume = originalVideoVolume;
+      }
       // Update slider after volume change
       updateSlider();
     }
