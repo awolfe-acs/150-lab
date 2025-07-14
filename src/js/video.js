@@ -433,7 +433,7 @@ export function initVideo() {
         audioSlider.style.pointerEvents = "none";
         // Fade in background music
         if (window.backgroundAudio) {
-          fadeAudio(window.backgroundAudio, 0.08);
+          fadeAudio(window.backgroundAudio, 0.25);
         }
         scrollAwayFadeTimeout = null;
       }, 600);
@@ -456,7 +456,7 @@ export function initVideo() {
       audioSlider.style.pointerEvents = "none";
       // Fade in background music
       if (window.backgroundAudio) {
-        fadeAudio(window.backgroundAudio, 0.08);
+        fadeAudio(window.backgroundAudio, 0.25);
       }
     }
   };
@@ -504,7 +504,7 @@ export function initVideo() {
     audioSlider.style.pointerEvents = "none";
     // Fade in background music when video ends
     if (window.backgroundAudio) {
-      fadeAudio(window.backgroundAudio, 0.08);
+      fadeAudio(window.backgroundAudio, 0.25);
     }
   });
 
@@ -516,7 +516,7 @@ export function initVideo() {
     audioSlider.style.pointerEvents = "none";
     // Fade in background music
     if (window.backgroundAudio) {
-      fadeAudio(window.backgroundAudio, 0.08);
+      fadeAudio(window.backgroundAudio, 0.25);
     }
   });
 

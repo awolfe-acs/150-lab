@@ -2,7 +2,7 @@
 // All audio loading, playback, and toggle logic
 
 import uiClickAudioUrl from "../../../public/audio/ui-click.mp3?url";
-import backgroundAudioUrl from "../../../public/audio/chemistry-new-clearer.mp3?url";
+import backgroundAudioUrl from "../../../public/audio/chemistry-3-final.mp3?url";
 import gsap from "gsap";
 
 // Internal module state
@@ -14,7 +14,7 @@ let heroAnimationComplete = false;
 let backgroundAudioLoaded = false;
 let enterButtonClicked = false;
 let audioRetryCount = 0;
-const maxAudioRetries = 10;
+const maxAudioRetries = 18;
 let audioRetryTimer = null;
 let wasPlayingBeforeHidden = false;
 
@@ -112,8 +112,8 @@ function playBackgroundAudioWhenReady(fromEnterButton = false) {
   }
 
   try {
-    // Play the audio at 18% volume
-    backgroundAudioInstance.volume = 0.18;
+    // Play the audio at 25% volume
+    backgroundAudioInstance.volume = 0.25;
 
     // Create a user gesture for Safari if needed
     if (fromEnterButton) {
@@ -595,7 +595,7 @@ export function setupSoundToggle() {
           }
         } else if (audioInitialized && backgroundAudioInstance) {
           // Unmute the audio only if it was previously initialized
-          backgroundAudioInstance.volume = 0.08;
+          backgroundAudioInstance.volume = 0.25;
 
           // If audio was paused, restart it
           if (backgroundAudioInstance.paused) {
@@ -660,6 +660,6 @@ export function toggleMute() {
 
   // Update audio volume
   if (backgroundAudioInstance) {
-    backgroundAudioInstance.volume = audioMuted ? 0 : 0.08;
+    backgroundAudioInstance.volume = audioMuted ? 0 : 0.25;
   }
 }

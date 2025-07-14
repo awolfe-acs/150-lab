@@ -105,7 +105,7 @@ const processSplitElement = (element, index) => {
       });
 
       // Validate the splitting result
-      const isGoodSplit = splitText.lines && splitText.lines.length > 0 && splitText.lines.length > 1; // Ensure more than 1 line was created
+      const isGoodSplit = splitText.lines && splitText.lines.length > 0; // Ensure at least 1 line was created
 
       if (isGoodSplit) {
         // Store the instance for potential cleanup

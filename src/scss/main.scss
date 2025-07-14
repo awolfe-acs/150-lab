@@ -246,6 +246,7 @@ html {
 
 #cover-area {
   //border: 4px solid teal;
+  pointer-events: none;
 
   .cover-logo {
     width: 715px;
@@ -271,6 +272,7 @@ html {
     /* Center horizontally */
     z-index: 1000;
     /* Ensure it stays above other content */
+    pointer-events: auto;
 
     @media (min-width:1600px) {
       bottom: 12vh;
