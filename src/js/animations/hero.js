@@ -83,6 +83,7 @@ export function setupHeroHeadingFadeAnimation() {
       {
         opacity: 0,
         z: -50,
+        filter: "blur(16px)", // Add blur effect to match entry animation
         stagger: 0.02,
         ease: "power1.in",
       },
@@ -306,100 +307,88 @@ export function initCoverArea() {
 // Separate function to handle cover logo ScrollTrigger - moved outside click handler for better state management
 function initCoverLogoScrollTrigger(coverLogo) {
   // State variables for the cover logo animation
-  let isDelayedFadeInActive = false;
-  let delayedFadeInTween = null;
-  let lastScrollDirection = 0; // Track scroll direction: 1 = down, -1 = up
-  let logoShouldBeVisible = false; // Track if logo should be visible based on scroll position
+  let isEnterBackMode = false; // Track if we're in enter-back mode
+  let enterBackStartTime = null; // Track when enter-back mode started
+  let coverLogoScrollTrigger = null; // Reference to the ScrollTrigger
 
-  // Create the main ScrollTrigger for cover logo fade
-  const coverLogoScrollTrigger = ScrollTrigger.create({
-    trigger: "#cover-travel-area",
-    start: "top top",
-    end: "bottom center",
-    scrub: 1,
-    markers: false,
-    id: "cover-logo-fade",
-    onUpdate: (self) => {
-      const expectedOpacity = 1 - self.progress;
-      lastScrollDirection = self.direction;
-      logoShouldBeVisible = expectedOpacity > 0.1;
+  // Function to create the ScrollTrigger
+  function createScrollTrigger() {
+    if (coverLogoScrollTrigger) {
+      coverLogoScrollTrigger.kill();
+    }
 
-      // Simple logic: only apply scroll-based opacity when not in delayed fade-in mode
-      if (!isDelayedFadeInActive) {
-        gsap.set(coverLogo, { opacity: expectedOpacity, overwrite: true });
-      }
-      // If user scrolls down significantly during delayed fade-in, cancel it and take over
-      else if (self.direction === 1 && self.progress > 0.25) {
-        // Cancel delayed fade-in if scrolling down too far
-        if (delayedFadeInTween) {
-          delayedFadeInTween.kill();
-          delayedFadeInTween = null;
+    coverLogoScrollTrigger = ScrollTrigger.create({
+      trigger: "#cover-travel-area",
+      start: "top top",
+      end: "67% center",
+      scrub: 1,
+      markers: false,
+      id: "cover-logo-fade",
+      onUpdate: (self) => {
+        const expectedOpacity = 1 - self.progress;
+
+        // Handle enter-back mode with scrub-based reveal
+        if (isEnterBackMode) {
+          // Calculate time-based delay factor (0 to 1 over 0.8 seconds)
+          const timeElapsed = (Date.now() - enterBackStartTime) / 800; // 0.8 second delay
+          const delayFactor = Math.min(timeElapsed, 1); // Clamp to 1
+
+          // Calculate opacity based on both scroll position and time delay
+          // The logo should fade in based on scroll position, but only after the delay
+          let targetOpacity;
+
+          if (delayFactor < 1) {
+            // Still in delay period - interpolate between 0 and scroll-based opacity
+            targetOpacity = delayFactor * expectedOpacity;
+          } else {
+            // Delay period over - use full scroll-based opacity
+            targetOpacity = expectedOpacity;
+          }
+
+          gsap.set(coverLogo, { opacity: targetOpacity, overwrite: true });
+
+          // Exit enter-back mode if we scroll down significantly or if fully revealed
+          if (self.direction === 1 && self.progress > 0.15) {
+            console.log("Cover logo: Exiting enter-back mode due to scroll down");
+            isEnterBackMode = false;
+            enterBackStartTime = null;
+          } else if (delayFactor >= 1 && expectedOpacity >= 0.95) {
+            console.log("Cover logo: Exiting enter-back mode - fully revealed");
+            isEnterBackMode = false;
+            enterBackStartTime = null;
+          }
+        } else {
+          // Normal scrub-based fade out/in
+          gsap.set(coverLogo, { opacity: expectedOpacity, overwrite: true });
         }
-        isDelayedFadeInActive = false;
-        // Apply scroll-based opacity immediately
-        gsap.set(coverLogo, { opacity: expectedOpacity, overwrite: true });
-      }
-      // Otherwise, let the delayed fade-in animation handle the opacity
-    },
-    onLeave: () => {
-      // Clean up and hide logo when leaving trigger area
-      if (delayedFadeInTween) {
-        delayedFadeInTween.kill();
-        delayedFadeInTween = null;
-      }
-      isDelayedFadeInActive = false;
-      logoShouldBeVisible = false;
-      gsap.set(coverLogo, { opacity: 0, overwrite: true });
-    },
-    onEnterBack: () => {
-      // Clean up any existing delayed fade-in first
-      if (delayedFadeInTween) {
-        delayedFadeInTween.kill();
-        delayedFadeInTween = null;
-      }
+      },
+      onLeave: () => {
+        // Clean up and hide logo when leaving trigger area
+        isEnterBackMode = false;
+        enterBackStartTime = null;
+        gsap.set(coverLogo, { opacity: 0, overwrite: true });
+      },
+      onEnterBack: () => {
+        // Enter scrub-based reveal mode with initial delay
+        isEnterBackMode = true;
+        enterBackStartTime = Date.now();
+        console.log("Cover logo: Starting scrub-based enter-back reveal");
 
-      // Start logo hidden and begin delayed fade-in
-      isDelayedFadeInActive = true;
-      logoShouldBeVisible = true;
-      gsap.set(coverLogo, { opacity: 0, overwrite: true });
+        // Set initial opacity to 0 - the onUpdate will handle the reveal
+        gsap.set(coverLogo, { opacity: 0, overwrite: true });
+      },
+      onLeaveBack: () => {
+        // Clean up when scrolling back up past trigger
+        isEnterBackMode = false;
+        enterBackStartTime = null;
+      },
+    });
 
-      // Create delayed fade-in animation
-      delayedFadeInTween = gsap.to(coverLogo, {
-        opacity: 1,
-        duration: 1.2,
-        delay: 0.8,
-        ease: "power2.out",
-        overwrite: true,
-        onComplete: () => {
-          // Smoothly hand control back to scroll-based system
-          // No abrupt opacity changes - just disable the delayed fade-in flag
-          // so onUpdate can take over smoothly
-          isDelayedFadeInActive = false;
-          delayedFadeInTween = null;
+    return coverLogoScrollTrigger;
+  }
 
-          // Let the next onUpdate call handle the opacity based on current scroll position
-          // This ensures smooth transition without abrupt changes
-        },
-        onInterrupt: () => {
-          // Handle interruption gracefully
-          isDelayedFadeInActive = false;
-          delayedFadeInTween = null;
-        },
-      });
-    },
-    onLeaveBack: () => {
-      // Clean up when scrolling back up past trigger
-      if (delayedFadeInTween) {
-        delayedFadeInTween.kill();
-        delayedFadeInTween = null;
-      }
-      isDelayedFadeInActive = false;
-      logoShouldBeVisible = false;
-    },
-  });
-
-  // Return the ScrollTrigger instance for external reference if needed
-  return coverLogoScrollTrigger;
+  // Create the initial ScrollTrigger
+  return createScrollTrigger();
 }
 
 export function initHeroAnimation() {
@@ -604,11 +593,32 @@ export function initHeroAnimation() {
       invalidateOnRefresh: true, // Ensure this recalculates
       onUpdate: function (self) {
         const progress = self.progress;
-        const opacity = 1 - progress;
-        // Use CSS custom property to fade digits, not the wrapper
+
+        // Get the current countdown opacity (0.44 to 1.0 range)
+        // We need to check if the countdown ScrollTrigger exists and get its progress
+        let baseOpacity = 0.44; // Default minimum opacity
+
+        if (animationState.heroNumberTween && animationState.heroNumberTween.scrollTrigger) {
+          const countdownProgress = animationState.heroNumberTween.scrollTrigger.progress;
+          baseOpacity = 0.44 + countdownProgress * 0.56; // Same calculation as countdown
+
+          // Only apply fade-out if countdown is near completion (progress > 0.8)
+          // This prevents interference with the 0.44 to 1.0 opacity transition
+          if (countdownProgress < 0.8) {
+            return; // Don't fade out yet, let countdown handle opacity
+          }
+        }
+
+        // Fade from current countdown opacity to 0
+        const opacity = baseOpacity * (1 - progress);
+
+        // Calculate blur based on fade progress - blur increases as opacity decreases
+        const blurAmount = progress * 16; // 0px to 16px blur, matching the entry animation
+
         // Use requestAnimationFrame to ensure smooth updates
         requestAnimationFrame(() => {
           heroNumber.style.setProperty("--digit-opacity", opacity);
+          heroNumber.style.filter = `blur(${blurAmount}px)`;
         });
       },
     });
@@ -681,9 +691,33 @@ export function initHeroNumberCountdown() {
             // Use requestAnimationFrame to ensure smooth updates
             requestAnimationFrame(() => {
               heroNumber.style.setProperty("--digit-opacity", opacity);
+              heroNumber.style.filter = "blur(0px)"; // Ensure no blur during countdown
             });
 
             // No need to set visibility on parent - wrapper opacity handles overall visibility
+          },
+          onEnter: function (self) {
+            // Force update when entering trigger area
+            const opacity = 0.44 + self.progress * 0.56;
+            requestAnimationFrame(() => {
+              heroNumber.style.setProperty("--digit-opacity", opacity);
+              heroNumber.style.filter = "blur(0px)"; // Ensure no blur during countdown
+            });
+          },
+          onLeave: function (self) {
+            // Ensure opacity is at 1.0 when leaving (completed countdown)
+            requestAnimationFrame(() => {
+              heroNumber.style.setProperty("--digit-opacity", "1.0");
+              heroNumber.style.filter = "blur(0px)"; // Ensure no blur when countdown completes
+            });
+          },
+          onEnterBack: function (self) {
+            // Force update when re-entering from below
+            const opacity = 0.44 + self.progress * 0.56;
+            requestAnimationFrame(() => {
+              heroNumber.style.setProperty("--digit-opacity", opacity);
+              heroNumber.style.filter = "blur(0px)"; // Ensure no blur during countdown
+            });
           },
           onComplete: function () {
             // Ensure the number stays at 1876 after countdown completes
@@ -705,6 +739,7 @@ export function initHeroNumberCountdown() {
               console.log("Hero countdown: Complete at 1876, opacity 1.0");
               requestAnimationFrame(() => {
                 heroNumber.style.setProperty("--digit-opacity", "1.0");
+                heroNumber.style.filter = "blur(0px)"; // Ensure no blur when countdown completes
               });
               // No need to set visibility on parent - wrapper opacity handles overall visibility
             }
@@ -729,11 +764,19 @@ export function initHeroNumberCountdown() {
               console.log("Hero countdown: Reset to 2026, opacity 0.44");
               requestAnimationFrame(() => {
                 heroNumber.style.setProperty("--digit-opacity", "0.44");
+                heroNumber.style.filter = "blur(0px)"; // Ensure no blur when resetting countdown
               });
               // No need to set visibility on parent - wrapper opacity handles overall visibility
             }
           },
-          onRefresh: (self) => {},
+          onRefresh: (self) => {
+            // Force update opacity after refresh based on current progress
+            const opacity = 0.44 + self.progress * 0.56;
+            requestAnimationFrame(() => {
+              heroNumber.style.setProperty("--digit-opacity", opacity);
+              heroNumber.style.filter = "blur(0px)"; // Ensure no blur during countdown
+            });
+          },
         },
       });
 
@@ -744,6 +787,9 @@ export function initHeroNumberCountdown() {
           end: animationState.heroNumberTween.scrollTrigger.end,
           trigger: animationState.heroNumberTween.scrollTrigger.trigger,
         });
+
+        // Force a refresh to ensure proper initialization
+        ScrollTrigger.refresh();
       } else {
         console.error("Hero countdown: ScrollTrigger creation failed!");
       }
