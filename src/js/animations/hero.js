@@ -138,14 +138,12 @@ export function initCoverArea() {
   if (header) {
     gsap.set(header, {
       opacity: 0,
-      autoAlpha: 0,
     });
   }
 
   if (sectionTimeline) {
     gsap.set(sectionTimeline, {
       opacity: 0,
-      autoAlpha: 0,
     });
   }
 
@@ -154,7 +152,6 @@ export function initCoverArea() {
   if (shareButton) {
     gsap.set(shareButton, {
       opacity: 0,
-      autoAlpha: 0,
     });
   }
 
@@ -166,7 +163,6 @@ export function initCoverArea() {
   // Set initial nav visibility
   gsap.set(nav, {
     opacity: 1,
-    autoAlpha: 1,
   });
 
   // Make the logo fixed position so it stays in place while scrolling
@@ -201,7 +197,6 @@ export function initCoverArea() {
     enterExperienceBtn,
     {
       opacity: 1,
-      autoAlpha: 1,
       duration: 0.6,
       ease: "power2.out",
     },
@@ -215,7 +210,6 @@ export function initCoverArea() {
       if (header) {
         gsap.to(header, {
           opacity: 1,
-          autoAlpha: 1,
           duration: 0.8,
           ease: "power2.inOut",
         });
@@ -225,7 +219,6 @@ export function initCoverArea() {
       if (sectionTimeline) {
         gsap.to(sectionTimeline, {
           opacity: 1,
-          autoAlpha: 1,
           duration: 0.8,
           ease: "power2.inOut",
           delay: 0.2,
@@ -272,7 +265,6 @@ export function initCoverArea() {
       // Fade out the enter-experience button
       gsap.to(enterExperienceBtn, {
         opacity: 0,
-        autoAlpha: 0,
         duration: 0.5,
         ease: "power2.in",
         onComplete: () => {
@@ -285,7 +277,6 @@ export function initCoverArea() {
       if (shareButton) {
         gsap.to(shareButton, {
           opacity: 1,
-          autoAlpha: 1,
           duration: 0.8,
           delay: 0.4,
           ease: "power2.out",
@@ -434,13 +425,11 @@ export function initHeroAnimation() {
   // Hide the number initially
   gsap.set(heroNumber, {
     opacity: 0,
-    autoAlpha: 0, // Uses visibility and opacity together
   });
 
   // Also hide the heroHeading (h1) element itself initially
   gsap.set(heroHeading, {
     opacity: 0,
-    autoAlpha: 0,
   });
 
   // Split the text into words first, then characters to prevent mid-word breaks
@@ -483,7 +472,6 @@ export function initHeroAnimation() {
   // First, fade in the h1 container element
   heroAnimationTl.to(heroHeading, {
     opacity: 1,
-    autoAlpha: 1,
     duration: 0.8,
     ease: "power2.out",
   });
@@ -507,7 +495,6 @@ export function initHeroAnimation() {
   // After all characters are revealed, show the number wrapper (keep at full opacity)
   heroAnimationTl.to(heroNumber, {
     opacity: 1,
-    autoAlpha: 1, // Uses visibility and opacity together
     duration: 0.5,
     ease: "power1.inOut",
   });
@@ -696,14 +683,7 @@ export function initHeroNumberCountdown() {
 
             // No need to set visibility on parent - wrapper opacity handles overall visibility
           },
-          onEnter: function (self) {
-            // Force update when entering trigger area
-            const opacity = 0.44 + self.progress * 0.56;
-            requestAnimationFrame(() => {
-              heroNumber.style.setProperty("--digit-opacity", opacity);
-              heroNumber.style.filter = "blur(0px)"; // Ensure no blur during countdown
-            });
-          },
+
           onLeave: function (self) {
             // Ensure opacity is at 1.0 when leaving (completed countdown)
             requestAnimationFrame(() => {
@@ -711,14 +691,7 @@ export function initHeroNumberCountdown() {
               heroNumber.style.filter = "blur(0px)"; // Ensure no blur when countdown completes
             });
           },
-          onEnterBack: function (self) {
-            // Force update when re-entering from below
-            const opacity = 0.44 + self.progress * 0.56;
-            requestAnimationFrame(() => {
-              heroNumber.style.setProperty("--digit-opacity", opacity);
-              heroNumber.style.filter = "blur(0px)"; // Ensure no blur during countdown
-            });
-          },
+
           onComplete: function () {
             // Ensure the number stays at 1876 after countdown completes
             animationState.heroYearObj.year = 1876;

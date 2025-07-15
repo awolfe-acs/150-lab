@@ -253,6 +253,7 @@ html {
     max-width: calc(100vw - 48px);
     height: auto;
     position: relative;
+    pointer-events: none;
 
     svg {
       width: 100%;
