@@ -1,4 +1,5 @@
 // Gloabl Footer
+@use '../utilities' as *;
 
 #ft {
     position: relative;
@@ -19,7 +20,7 @@
         margin: 0 auto;
         padding: 0 16px;
 
-        @media (max-width:640px) {
+        @media (max-width:$mobile-viewport) {
             max-width: calc(100% - 24px);
         }
     }
@@ -27,14 +28,29 @@
     #ft-sitemap {
         margin: 0;
         padding: 0; //myaccount: padding: 20px 30px;
-        display: block;
+        display: flex;
+        justify-content: space-between;
+
+        @media (max-width:$desktop-viewport) {
+            justify-content: flex-start;
+            flex-wrap: wrap;
+        }
     }
 
     .sitemap-col {
         float: left;
-        width: 20%;
         max-width: 250px;
         margin-bottom: 10px;
+
+        @media (max-width:$desktop-viewport) {
+            width: 50%;
+            max-width: 50%;
+        }
+
+        @media (max-width:480px) {
+            width: 100%;
+            max-width: 100%;
+        }
     }
 
     dt {
@@ -295,6 +311,12 @@
             dd a {
                 display: block;
                 padding: 4px 10px;
+                opacity: 1;
+                color: #fff;
+
+                &:hover {
+                    text-decoration: underline !important;
+                }
             }
         }
 
@@ -358,18 +380,7 @@
     }
 }
 
-@media screen and (max-width: 480px) {
-    #ft {
-        #ft-sitemap {
-            margin-top: 0;
-        }
 
-        .sitemap-col:first-of-type {
-            position: relative;
-            top: unset;
-        }
-    }
-}
 
 footer .menu {
     box-shadow: none;

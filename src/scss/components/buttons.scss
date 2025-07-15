@@ -132,7 +132,12 @@
 
     @media (max-width:332px) {
         width: 232px;
-        leter-spacing: 2px;
+    }
+
+    span {
+        @media (max-width:332px) {
+            letter-spacing: 2px;
+        }
     }
 }
 

@@ -250,10 +250,14 @@ html {
 
   .cover-logo {
     width: 715px;
-    max-width: calc(100vw - 48px);
+    max-width: 66vw;
     height: auto;
     position: relative;
     pointer-events: none;
+
+    @media (max-width:$desktop-viewport) {
+      width: 500px;
+    }
 
     svg {
       width: 100%;
