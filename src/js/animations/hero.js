@@ -206,6 +206,9 @@ export function initCoverArea() {
   // Add click event listener to the enter-experience button
   if (enterExperienceBtn) {
     enterExperienceBtn.addEventListener("click", () => {
+      // Disable further clicks immediately
+      enterExperienceBtn.style.pointerEvents = "none";
+
       // Fade in header
       if (header) {
         gsap.to(header, {

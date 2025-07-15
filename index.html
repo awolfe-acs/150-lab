@@ -35,6 +35,51 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+    
+    <!-- Accessibility Styles -->
+    <style>
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+      
+      .error-message {
+        font-size: 14px;
+        color: #ff6b6b;
+        margin-top: 4px;
+        display: none;
+      }
+      
+      .error-message.visible {
+        display: block;
+      }
+      
+      /* High contrast mode support */
+      @media (prefers-contrast: high) {
+        .skip-link:focus {
+          background: #ffff00 !important;
+          color: #000000 !important;
+          border: 2px solid #000000 !important;
+        }
+      }
+      
+      /* Reduced motion support */
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+    
     <script>
       window.scrollTo(0, 0);
     </script>
@@ -52,11 +97,38 @@
         </script>
   </head>
   <body>
+    <!-- Skip Links for Keyboard Navigation -->
+    <div class="skip-links" style="position: absolute; top: -40px; left: 6px; z-index: 9999;">
+      <!-- Always visible skip link to enter-experience button -->
+      <a href="#cover-area" class="skip-link skip-to-enter" style="position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden;" 
+         onfocus="this.style.position='static'; this.style.width='auto'; this.style.height='auto'; this.style.overflow='visible'; this.style.padding='8px'; this.style.background='#fff'; this.style.color='#000'; this.style.textDecoration='underline';"
+         onblur="this.style.position='absolute'; this.style.left='-10000px'; this.style.width='1px'; this.style.height='1px'; this.style.overflow='hidden'; this.style.padding='0'; this.style.background='transparent';">
+        Skip to Enter Experience
+      </a>
+      <!-- These links are hidden until enter-experience is clicked -->
+      <a href="#main-content" class="skip-link skip-after-enter" style="position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; display: none;" 
+         onfocus="this.style.position='static'; this.style.width='auto'; this.style.height='auto'; this.style.overflow='visible'; this.style.padding='8px'; this.style.background='#fff'; this.style.color='#000'; this.style.textDecoration='underline'; this.style.display='inline';"
+         onblur="this.style.position='absolute'; this.style.left='-10000px'; this.style.width='1px'; this.style.height='1px'; this.style.overflow='hidden'; this.style.padding='0'; this.style.background='transparent';">
+        Skip to main content
+      </a>
+      <a href="#navigation" class="skip-link skip-after-enter" style="position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; display: none;" 
+         onfocus="this.style.position='static'; this.style.width='auto'; this.style.height='auto'; this.style.overflow='visible'; this.style.padding='8px'; this.style.background='#fff'; this.style.color='#000'; this.style.textDecoration='underline'; this.style.display='inline';"
+         onblur="this.style.position='absolute'; this.style.left='-10000px'; this.style.width='1px'; this.style.height='1px'; this.style.overflow='hidden'; this.style.padding='0'; this.style.background='transparent';">
+        Skip to navigation
+      </a>
+      <a href="#signup-form" class="skip-link skip-after-enter" style="position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; display: none;" 
+         onfocus="this.style.position='static'; this.style.width='auto'; this.style.height='auto'; this.style.overflow='visible'; this.style.padding='8px'; this.style.background='#fff'; this.style.color='#000'; this.style.textDecoration='underline'; this.style.display='inline';"
+         onblur="this.style.position='absolute'; this.style.left='-10000px'; this.style.width='1px'; this.style.height='1px'; this.style.overflow='hidden'; this.style.padding='0'; this.style.background='transparent';">
+        Skip to signup form
+      </a>
+    </div>
+
     <div id="app">
-      <nav class="ease" style="opacity:0;">
+      <nav class="ease" style="opacity:0;" id="navigation" role="navigation" aria-label="Main navigation" tabindex="-1">
         <div class="nav-logo">
-          <a href="https://www.acs.org">
-            <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Layer_1" x="0px" y="0px" width="678.5px" height="218.5px" viewBox="0 0 678.5 218.5" enable-background="new 0 0 678.5 218.5" xml:space="preserve">
+          <a href="https://www.acs.org" aria-label="American Chemical Society home page" tabindex="-1">
+            <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Layer_1" x="0px" y="0px" width="678.5px" height="218.5px" viewBox="0 0 678.5 218.5" enable-background="new 0 0 678.5 218.5" xml:space="preserve" role="img" aria-label="ACS Logo"
+                 title="American Chemical Society logo">
               <g id="Layer_2" display="none">
                 <polygon display="inline" fill="#0054A6" points="119.568,153.427 697.633,153.427 406.396,442.34  "/>
                 <path display="inline" fill="#FFCE34" d="M381.39,149.101L337.667,149c0,0-1.333-5,3-7.667s10.274-5.501,7.274-13.835   c0,0,4.485-1.612,10.818,7.721c0,0-1.141-6.465,0.761-13.881c1.757-6.85,5.516-9.128,5.516-9.128s2.662,5.515,7.605,9.888   c6.002,5.31,8.357,6.235,9.357,15.568S381.39,149.101,381.39,149.101z"/>
@@ -129,19 +201,19 @@
           </a>
         </div>
         <div class="nav-items flex justify-center">
-          <a href="https://www.acs.org/meetings.html">Events</a>
-          <a href="https://www.acs.org/education.html">Education</a>
-          <a href="https://www.acs.org/careers.html">Careers</a>
-          <a href="https://www.acs.org/funding.html">Funding & Awards</a>
-          <a href="https://www.acs.org/membership-and-networks.html">Get Involved</a>
-          <a href="https://www.acs.org/about.html">About Us</a>
-          <a href="https://www.acs.org/membership.html">Membership</a>
+          <a href="https://www.acs.org/meetings.html" tabindex="-1">Meetings & Events</a>
+          <a href="https://www.acs.org/careers.html" tabindex="-1">Careers</a>
+          <a href="https://www.acs.org/education.html" tabindex="-1">Students & Educators</a>
+          <a href="https://www.acs.org/membership-and-networks.html" tabindex="-1">Communities</a>
+          <a href="https://www.acs.org/funding.html" tabindex="-1">Funding & Awards</a>
+          <a href="https://www.acs.org/about.html" tabindex="-1">About Us</a>
+          <a href="https://www.acs.org/membership.html" tabindex="-1">Membership</a>
 
         </div>
-        <button class="close-toggle-menu ease-opacity"><span>CLOSE</span></button>
+        <button class="close-toggle-menu ease-opacity" aria-label="Close navigation menu" aria-expanded="false" tabindex="-1"><span>CLOSE</span></button>
       </nav>
-      <header class="anniversary flex space-between align-center active" style="opacity:0;">
-        <a class="logo ease-opacity" href="https://www.acs.org">
+      <header class="anniversary flex space-between align-center active" style="opacity:0;" role="banner">
+        <a class="logo ease-opacity" href="https://www.acs.org" aria-label="American Chemical Society home page">
           <!--
           <svg style="display:block;" width="425" height="130" viewBox="0 0 425 130" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M16.2563 117.682C6.9488 117.682 3.0813 111.736 3.0813 103.531C3.0813 94.6655 7.4588 88.0376 17.2338 88.0376C19.465 88.0376 21.8238 88.336 23.885 88.9327L23.2475 92.5556C21.2288 91.8737 18.9975 91.4474 16.8088 91.4474C10.2 91.4474 7.3738 96.5196 7.3738 102.892C7.3738 110.031 10.455 114.165 17.1913 114.165C19.295 114.165 21.8238 113.569 23.545 112.695L24.1825 116.147C21.9938 117.043 19.1675 117.703 16.235 117.703L16.2563 117.682Z" fill="white"/>
@@ -173,7 +245,8 @@
             <path d="M167.322 20.2458C163.03 18.7753 158.312 17.8376 154.02 17.8376C149.515 17.8376 147.007 19.3081 147.007 22.3556C147.007 31.7114 174.654 28.6638 174.654 51.872C174.654 65.5327 163.859 75.2933 146.051 75.2933C139.655 75.2933 133.067 74.3556 127.819 73.1835L129.71 54.5786C134.427 56.5819 141.227 58.2655 146.795 58.2655C151.3 58.2655 153.807 56.795 153.807 53.7474C153.807 44.6048 126.459 47.5458 126.459 24.231C126.459 11.1032 137.147 1.64087 154.636 1.64087C159.46 1.64087 164.177 2.17366 169.086 3.11136L167.301 20.2458H167.322Z" fill="white"/>
           </svg>
           -->
-          <svg class="main-logo" width="139" height="45" viewBox="0 0 139 45" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg class="main-logo" width="139" height="45" viewBox="0 0 139 45" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ACS Logo" 
+               title="American Chemical Society logo">
             <path
               fill-rule="evenodd"
               clip-rule="evenodd"
@@ -265,9 +338,9 @@
             />
           </svg>
         </a>
-        <button class="sound-toggle ease-opacity">
+        <button class="sound-toggle ease-opacity" aria-label="Toggle sound on/off" aria-pressed="false">
           <span>Sound</span>
-          <svg viewBox="0 0 100 100">
+          <svg viewBox="0 0 100 100" role="img" aria-label="Sound wave icon">
             <!-- Use a clipPath to confine the visible area -->
             <defs></defs>
             <g id="waveGroup" clip-path="url(#clip)">
@@ -286,9 +359,9 @@
             </g>
           </svg>
         </button>
-        <button class="toggle-menu ease-opacity"><span>MENU</span></button>
+        <button class="toggle-menu ease-opacity" aria-label="Open navigation menu" aria-expanded="false"><span>MENU</span></button>
       </header>
-      <div class="section-timeline" style="opacity:0;">
+      <div class="section-timeline" style="opacity:0;" role="navigation" aria-label="Page section navigation">
         <div class="timeline-nav-wrapper">
           <div class="indicator-wrapper">
             <div class="indicator">
@@ -298,20 +371,21 @@
             </div>
           </div>
           <div class="page-nav">
-            <a href="" class="active anniversary page-nav-link">150 Years of ACS</a>
+            <a href="" class="active anniversary page-nav-link" aria-current="page" tabindex="-1">150 Years of ACS</a>
             <!-- <a href="" class="story page-nav-link">Our Story</a> -->
-            <a href="" class="get-involved page-nav-link">Get Involved</a>
-            <a href="" class="events page-nav-link">Events</a>
+            <a href="" class="get-involved page-nav-link" tabindex="-1">Get Involved</a>
+            <a href="" class="events page-nav-link" tabindex="-1">Events</a>
           </div>
         </div>
       </div>
 
       <!-- New! Phase 0 Cover Section Goes Here-->
        <section id="cover-travel-area" class="height-100svh">
-        <section id="cover-area" class="flex vertical justify-center align-center pin-top-top z-index-200">
+        <section id="cover-area" class="flex vertical justify-center align-center pin-top-top z-index-200" role="main" aria-label="Welcome section">
         
           <div class="cover-logo" style="opacity:0;">
-            <svg width="751" height="227" viewBox="0 0 751 227" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="751" height="227" viewBox="0 0 751 227" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ACS 150th Anniversary Chemistry is Everything Logo" 
+                 title="American Chemical Society 150th Anniversary - Chemistry is Everything">
               <path d="M25.9552 207.112C9.37692 207.112 2.48822 196.547 2.48822 181.967C2.48822 166.214 10.2853 154.436 27.6963 154.436C31.6706 154.436 35.8719 154.966 39.5434 156.027L38.4079 162.465C34.8121 161.253 30.8379 160.495 26.9393 160.495C15.168 160.495 10.1339 169.508 10.1339 180.831C10.1339 193.517 15.6222 200.864 27.6206 200.864C31.3678 200.864 35.8719 199.803 38.9378 198.251L40.0733 204.385C36.1747 205.976 31.1407 207.15 25.9174 207.15L25.9552 207.112Z" fill="white"/>
               <path d="M71.2995 206.506V182.043C71.2995 176.703 69.8612 173.484 64.7893 173.484C58.5062 173.484 54.0021 179.922 54.0021 188.329V206.506H47.1134V150.687H54.0021V168.713C54.0021 171.174 53.8507 174.204 53.3208 176.287L53.4722 176.362C55.7053 171.174 60.3609 167.804 66.6818 167.804C75.3873 167.804 78.1504 173.219 78.1504 179.96V206.506H71.2617H71.2995Z" fill="white"/>
               <path d="M93.0254 187.382C92.7226 197.304 96.7726 201.621 105.024 201.621C108.695 201.621 112.518 200.864 115.887 199.387L116.871 204.802C113.048 206.317 108.468 207.188 103.737 207.188C92.1927 207.188 85.9475 201.053 85.9475 187.685C85.9475 176.362 92.3063 167.804 103.056 167.804C113.805 167.804 118.12 174.923 118.12 183.406C118.12 184.315 118.044 185.867 117.893 187.382H93.0254ZM102.564 172.992C97.6053 172.992 94.0852 176.665 93.2525 182.459H111.042C111.193 176.665 107.9 172.992 102.564 172.992Z" fill="white"/>
@@ -341,35 +415,40 @@
               <path d="M295.031 33.9755C287.385 31.3626 278.982 29.6963 271.337 29.6963C263.313 29.6963 258.846 32.3093 258.846 37.7245C258.846 54.349 308.089 48.9337 308.089 90.1729C308.089 114.447 288.861 131.791 257.143 131.791C245.75 131.791 234.017 130.125 224.668 128.042L228.036 94.9822C236.439 98.5419 248.551 101.534 258.468 101.534C266.492 101.534 270.958 98.9206 270.958 93.5054C270.958 77.2596 222.245 82.4855 222.245 41.057C222.245 17.7298 241.284 0.916016 272.434 0.916016C281.026 0.916016 289.429 1.86274 298.172 3.52897L294.993 33.9755H295.031Z" fill="white"/>
             </svg>
           </div>
-          <button class="enter-experience fancy-btn" style="opacity:0;"><span>Start The Journey</span></button>
+          <button class="enter-experience fancy-btn" style="opacity:0;" aria-label="Start the 150th Anniversary experience" tabindex="1"><span>Start The Journey</span></button>
         </section>
        </section>
         <!-- Phase 0 Cover Section End -->
-      <section id="hero-area" class="flex vertical justify-center align-center pin-top-top z-index-200">
-        <h1 style="opacity:0;">Mark Your Calendar for ACS' 150th Anniversary</h1>
-        <span id="hero-number" style="opacity:0;">2026</span>
+      <section id="hero-area" class="flex vertical justify-center align-center pin-top-top z-index-200" role="main" aria-label="Main hero section">
+        <h1 style="opacity:0;" id="main-content">Mark Your Calendar for ACS' 150th Anniversary</h1>
+        <span id="hero-number" style="opacity:0;" aria-label="Year 2026">2026</span>
       </section>
        <section id="hero-travel-area" class="height-300svh z-index-100 flex align-flex-end">
-        <section id="video" class="flex vertical justify-center align-flex-end height-100svh">
+        <section id="video" class="flex vertical justify-center align-flex-end height-100svh" aria-label="Anniversary video section">
           <div class="video-wrapper">
-            <video id="anniversary-video" preload="auto" playsinline webkit-playsinline style="width: 100%; height: 100%; object-fit: cover; background: #000;" data-poster="anniversary-video-poster.jpg"></video>
+            <video id="anniversary-video" preload="auto" playsinline webkit-playsinline style="width: 100%; height: 100%; object-fit: cover; background: #000;" data-poster="anniversary-video-poster.jpg" 
+                   aria-label="ACS 150th Anniversary celebration video" 
+                   title="Watch the ACS 150th Anniversary video"></video>
           </div>
         </section>
       </section>
       <section id="video-travel-area" class="height-100svh"></section>
-      <section id="get-involved">
+      <section id="get-involved" role="region" aria-labelledby="get-involved-heading">
         <div class="get-involved-message">
-          <h4 class="split-lines text-align-center">Chemistry is the solution: It connects us. It transforms us. It is everything. In 2026, we will celebrate ACS' 150th anniversary, the transformative power of chemistry, and the people who have made it all possible—including you. Together, we will catalyze the next 150 years of chemistry.</h4>
+          <h4 class="split-lines text-align-center" id="get-involved-heading">Chemistry is the solution: It connects us. It transforms us. It is everything. In 2026, we will celebrate ACS' 150th anniversary, the transformative power of chemistry, and the people who have made it all possible—including you.</h4>
+          <h4 class="split-lines text-align-center">Together, we will catalyze the next 150 years of chemistry.</h4>
         </div>
 
-        <div class="form-panel colored-glass">
+        <div class="form-panel colored-glass" id="signup-form">
 
           <div class="inner-wrapper">
             <div class="text-column">
-              <h3 style="font-weight:400; margin-bottom:16px;">Celebrate 150 Years With Us</h3>
+              <h3 style="font-weight:400; margin-bottom:16px;" id="signup-heading">Celebrate 150 Years With Us</h3>
               <p>Join us to get involved and receive extra surprises.</p>
               <div class="form-wrapper">
-                <form method="post" name="150InsiderSignUpForm" action="https://s341921710.t.eloqua.com/e/f2" onsubmit="return handleFormSubmit(this)" id="form1214" class="elq-form">
+                <form method="post" name="150InsiderSignUpForm" action="https://s341921710.t.eloqua.com/e/f2" onsubmit="return handleFormSubmit(this)" id="form1214" class="elq-form" 
+                      role="form" aria-labelledby="signup-heading" aria-describedby="signup-description">
+                  <div id="signup-description" class="sr-only">Sign up for ACS 150th anniversary updates and surprises</div>
                   <input value="150InsiderSignUpForm" type="hidden" name="elqFormName">
                   <input value="341921710" type="hidden" name="elqSiteId">
                   <input name="elqCampaignId" type="hidden">
@@ -383,7 +462,9 @@
                           </label>
                         </div>
                         <div class="field-control-wrapper">
-                          <input type="text" class="elq-item-input" name="emailAddress" id="fe25315" value=""  placeholder="Enter Email Address">
+                          <input type="text" class="elq-item-input" name="emailAddress" id="fe25315" value=""  placeholder="Enter Email Address" 
+                                 aria-required="true" aria-describedby="fe25315-error" autocomplete="email">
+                          <div id="fe25315-error" class="error-message" role="alert" aria-live="polite"></div>
                         </div>
                       </div>
                       <div id="formElement1" class="elq-field-style form-element-layout row">
@@ -394,7 +475,8 @@
                           </label>
                         </div>
                           <div class="field-control-wrapper">
-                            <select class="elq-item-select" id="fe25391" name="Country" data-value="">
+                            <select class="elq-item-select" id="fe25391" name="Country" data-value="" 
+                                    aria-required="true" aria-describedby="fe25391-error" autocomplete="country">
                               <option value="">Select Country/Region
                               </option>
                               <option value="United States of America">United States of America
@@ -896,15 +978,18 @@
                               <option value="Zimbabwe">Zimbabwe
                               </option>
                             </select>
+                            <div id="fe25391-error" class="error-message" role="alert" aria-live="polite"></div>
                           </div>
                       </div>
                     </div>
                     <div>
                       <div id="formElement2" class="elq-field-style form-element-layout row">
                         <!--<input type="Submit" class="submit-button-style " value="Submit" id="fe25317">-->
-                        <button class="submit-button-style secondary-btn icon-anim" id="fe25317">
+                        <button class="submit-button-style secondary-btn icon-anim" id="fe25317" type="submit" 
+                                aria-label="Sign up for ACS 150th anniversary updates">
                           <span>Sign Up</span>
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" 
+                               role="img" aria-label="Arrow pointing right">
                             <path d="M23.0868 12.9159L24 12.0027L23.0868 11.0896L14.8362 2.83888L13.923 1.92572L12.1021 3.74667L13.0152 4.65983L19.0636 10.7135H1.28917H0V13.2919H1.28917H19.0636L13.0098 19.3402L12.0967 20.2534L13.9176 22.0743L14.8308 21.1612L23.0868 12.9159Z" fill="black"/>
                           </svg>
                           <div class="color-overlay">
@@ -994,7 +1079,10 @@
 
             <div class="animation-column">
               <!-- endless upward translating image goes here-->
-               <img style="opacity:0;" src="public\images\insider-marquee-image.png">
+               <img style="opacity:0;" src="public\images\insider-marquee-image.png" 
+                    alt="Chemistry celebration imagery" 
+                    aria-describedby="animation-description">
+               <div id="animation-description" class="sr-only">Decorative animation showing chemistry-related imagery</div>
             </div>
           </div>
 
@@ -1003,35 +1091,36 @@
           </div>
         </div>
 
-          <section id="get-involved-cards" class="flex vertical justify-center">
+          <section id="get-involved-cards" class="flex vertical justify-center" role="region" aria-labelledby="involvement-cards-heading">
+            <h2 id="involvement-cards-heading" class="sr-only">Ways to Get Involved</h2>
             <div class="sliding-card-row-wrapper">
-              <div class="sliding-card-row">
-                <div class="card scroll-reveal" style="opacity:0;">
-                  <a href="#/" alt="People walking around and mingling in a large conference hall.">
+              <div class="sliding-card-row" role="list">
+                <div class="card scroll-reveal" style="opacity:0;" role="listitem">
+                  <a href="#/" aria-label="Learn about meetings and conferences">
                     <h5>Meetings & Conferences</h5>
                     <div class="card-content">
                       <p style="width:296px; max-width:100%;">Be a part of events in your community and around the world.</p>
                     </div>
                   </a>
                 </div>
-                <div class="card scroll-reveal" style="opacity:0;">
-                  <a href="#/" alt="A woman behind a microphone speaking to a room full of people.">
+                <div class="card scroll-reveal" style="opacity:0;" role="listitem">
+                  <a href="#/" aria-label="Learn about engaging talks and panels">
                     <h5>Engaging Talks & Panels</h5>
                     <div class="card-content">
                       <p>Hear from industry leaders as they discuss the solutions that will define the next 150 years of chemistry.</p>
                     </div>
                   </a>
                 </div>
-                <div class="card scroll-reveal" style="opacity:0;">
-                  <a href="#/" alt="A close-up image of a scientifi c experiment setup with glowing elements under a dark background.">
+                <div class="card scroll-reveal" style="opacity:0;" role="listitem">
+                  <a href="#/" aria-label="Learn about storytelling initiatives">
                     <h5>Storytelling</h5>
                     <div class="card-content">
                       <p>Behind every innovation is an unexpected story. Stay tuned to hear from the people in our community who are shaping chemistry today.</p>
                     </div>
                   </a>
                 </div>
-                <div class="card scroll-reveal" style="opacity:0;">
-                  <a href="#/" alt="A close up shot of people in an audience attentively listening to a presentation.">
+                <div class="card scroll-reveal" style="opacity:0;" role="listitem">
+                  <a href="#/" aria-label="Learn about community engagement opportunities">
                     <h5>Community Engagement</h5>
                     <div class="card-content">
                       <p>Look out for opportunities to get involved in #ACS150—join in the conversation and pass it on!</p>
@@ -1043,11 +1132,11 @@
           </section>
         </section>
       </section>
-      <section id="events" class="flex vertical justify-center">
+      <section id="events" class="flex vertical justify-center" role="region" aria-labelledby="events-heading">
         <div class="events-panel">
           <div class="content-area">
             <div class="title-row">
-              <h2 style="margin:0;">Events</h2>
+              <h2 style="margin:0;" id="events-heading">Events</h2>
               <!--
               <a class="secondary-btn icon-anim"><span>More Events</span>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1057,31 +1146,31 @@
                 </div>
                 </a>-->
             </div>
-            <div class="events-list">
-              <a href="#/" class="event-list-item disabled">
+            <div class="events-list" role="list" aria-label="Upcoming ACS events">
+              <a href="#/" class="event-list-item disabled" role="listitem" aria-label="Green Chemistry Conferences, November 9 to 10, 2025. Link currently disabled.">
                 <span class="event-title">Green Chemistry Conferences
-                  <span class="external-link-icon">
-                    <svg width="23" height="23" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <span class="external-link-icon" aria-label="External link">
+                    <svg width="23" height="23" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="External link icon">
                       <path d="M13.6562 1.07812C13.6562 1.67559 14.1369 2.15625 14.7344 2.15625H19.3209L9.29883 12.1738C8.87656 12.5961 8.87656 13.2789 9.29883 13.6967C9.72109 14.1145 10.4039 14.1189 10.8217 13.6967L20.8393 3.6791L20.8438 8.26562C20.8438 8.86309 21.3244 9.34375 21.9219 9.34375C22.5193 9.34375 23 8.86309 23 8.26562V1.07812C23 0.480664 22.5193 0 21.9219 0H14.7344C14.1369 0 13.6562 0.480664 13.6562 1.07812ZM3.23438 1.4375C1.44648 1.4375 0 2.88398 0 4.67188V19.7656C0 21.5535 1.44648 23 3.23438 23H18.3281C20.116 23 21.5625 21.5535 21.5625 19.7656V14.0156C21.5625 13.4182 21.0818 12.9375 20.4844 12.9375C19.8869 12.9375 19.4062 13.4182 19.4062 14.0156V19.7656C19.4062 20.3631 18.9256 20.8438 18.3281 20.8438H3.23438C2.63691 20.8438 2.15625 20.3631 2.15625 19.7656V4.67188C2.15625 4.07441 2.63691 3.59375 3.23438 3.59375H8.98438C9.58184 3.59375 10.0625 3.11309 10.0625 2.51562C10.0625 1.91816 9.58184 1.4375 8.98438 1.4375H3.23438Z" fill="white"/>
                       </svg>
                   </span>
                 </span>
                 <span class="event-date">November 9 – 10, 2025</span>
             </a>
-              <a href="#/" class="event-list-item disabled">
+              <a href="#/" class="event-list-item disabled" role="listitem" aria-label="Pacifichem 2025, December 15 to 20, 2025. Link currently disabled.">
                   <span class="event-title">Pacifichem 2025
-                    <span class="external-link-icon">
-                      <svg width="23" height="23" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <span class="external-link-icon" aria-label="External link">
+                      <svg width="23" height="23" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="External link icon">
                         <path d="M13.6562 1.07812C13.6562 1.67559 14.1369 2.15625 14.7344 2.15625H19.3209L9.29883 12.1738C8.87656 12.5961 8.87656 13.2789 9.29883 13.6967C9.72109 14.1145 10.4039 14.1189 10.8217 13.6967L20.8393 3.6791L20.8438 8.26562C20.8438 8.86309 21.3244 9.34375 21.9219 9.34375C22.5193 9.34375 23 8.86309 23 8.26562V1.07812C23 0.480664 22.5193 0 21.9219 0H14.7344C14.1369 0 13.6562 0.480664 13.6562 1.07812ZM3.23438 1.4375C1.44648 1.4375 0 2.88398 0 4.67188V19.7656C0 21.5535 1.44648 23 3.23438 23H18.3281C20.116 23 21.5625 21.5535 21.5625 19.7656V14.0156C21.5625 13.4182 21.0818 12.9375 20.4844 12.9375C19.8869 12.9375 19.4062 13.4182 19.4062 14.0156V19.7656C19.4062 20.3631 18.9256 20.8438 18.3281 20.8438H3.23438C2.63691 20.8438 2.15625 20.3631 2.15625 19.7656V4.67188C2.15625 4.07441 2.63691 3.59375 3.23438 3.59375H8.98438C9.58184 3.59375 10.0625 3.11309 10.0625 2.51562C10.0625 1.91816 9.58184 1.4375 8.98438 1.4375H3.23438Z" fill="white"/>
                         </svg>
                     </span>
                   </span>
                   <span class="event-date">December 15 – 20, 2025</span>
               </a>
-              <a href="#/" class="event-list-item disabled">
+              <a href="#/" class="event-list-item disabled" role="listitem" aria-label="ACS Spring Meeting, March 23 to 26, 2026. Link currently disabled.">
                   <span class="event-title">ACS Spring Meeting
-                    <span class="external-link-icon">
-                      <svg width="23" height="23" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <span class="external-link-icon" aria-label="External link">
+                      <svg width="23" height="23" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="External link icon">
                         <path d="M13.6562 1.07812C13.6562 1.67559 14.1369 2.15625 14.7344 2.15625H19.3209L9.29883 12.1738C8.87656 12.5961 8.87656 13.2789 9.29883 13.6967C9.72109 14.1145 10.4039 14.1189 10.8217 13.6967L20.8393 3.6791L20.8438 8.26562C20.8438 8.86309 21.3244 9.34375 21.9219 9.34375C22.5193 9.34375 23 8.86309 23 8.26562V1.07812C23 0.480664 22.5193 0 21.9219 0H14.7344C14.1369 0 13.6562 0.480664 13.6562 1.07812ZM3.23438 1.4375C1.44648 1.4375 0 2.88398 0 4.67188V19.7656C0 21.5535 1.44648 23 3.23438 23H18.3281C20.116 23 21.5625 21.5535 21.5625 19.7656V14.0156C21.5625 13.4182 21.0818 12.9375 20.4844 12.9375C19.8869 12.9375 19.4062 13.4182 19.4062 14.0156V19.7656C19.4062 20.3631 18.9256 20.8438 18.3281 20.8438H3.23438C2.63691 20.8438 2.15625 20.3631 2.15625 19.7656V4.67188C2.15625 4.07441 2.63691 3.59375 3.23438 3.59375H8.98438C9.58184 3.59375 10.0625 3.11309 10.0625 2.51562C10.0625 1.91816 9.58184 1.4375 8.98438 1.4375H3.23438Z" fill="white"/>
                         </svg>
                     </span>
@@ -1092,11 +1181,13 @@
           </div>
 
           <div data-testid="layout-footer" class="footer acsFooter parbase">
-            <div data-testid="acsfooter-component" id="ft" class="search-ignore extended" role="contentinfo">
+            <footer data-testid="acsfooter-component" id="ft" class="search-ignore extended" role="contentinfo" aria-labelledby="footer-heading">
               <div class="container">
                   <div id="ft-sitemap">
+                    <h2 id="footer-heading" class="sr-only">Footer Navigation and Information</h2>
                     <div class="sitemap-col">
-                      <a href="/" class="footer__logo">          <svg class="main-logo" width="139" height="45" viewBox="0 0 139 45" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <a href="/" class="footer__logo" aria-label="American Chemical Society home page">          <svg class="main-logo" width="139" height="45" viewBox="0 0 139 45" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ACS Logo" 
+                         title="American Chemical Society logo">
                         <path
                           fill-rule="evenodd"
                           clip-rule="evenodd"
@@ -1217,24 +1308,24 @@
             </div>
                     <div class="sitemap-col social-links">
                       <div class="footer__title">Follow Us</div>
-                      <div class="ft-social-links">
-                        <a href="https://www.facebook.com/AmericanChemicalSociety" class="social-icon facebook" aria-label="Follow us on Facebook">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <div class="ft-social-links" role="list" aria-label="Social media links">
+                        <a href="https://www.facebook.com/AmericanChemicalSociety" class="social-icon facebook" aria-label="Follow us on Facebook" role="listitem">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Facebook icon">
                             <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" fill="currentColor"/>
                           </svg>
                         </a>
-                        <a href="https://twitter.com/AmerChemSociety" class="social-icon twitter" aria-label="Follow us on Twitter">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <a href="https://twitter.com/AmerChemSociety" class="social-icon twitter" aria-label="Follow us on Twitter" role="listitem">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Twitter icon">
                             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" fill="currentColor"/>
                           </svg>
                         </a>
-                        <a href="https://www.linkedin.com/company/american-chemical-society" class="social-icon linkedin" aria-label="Follow us on LinkedIn">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <a href="https://www.linkedin.com/company/american-chemical-society" class="social-icon linkedin" aria-label="Follow us on LinkedIn" role="listitem">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="LinkedIn icon">
                             <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" fill="currentColor"/>
                           </svg>
                         </a>
-                        <a href="https://www.instagram.com/amerchemsociety/?hl=en" class="social-icon instagram" aria-label="Follow us on Instagram">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <a href="https://www.instagram.com/amerchemsociety/?hl=en" class="social-icon instagram" aria-label="Follow us on Instagram" role="listitem">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Instagram icon">
                             <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" fill="currentColor"/>
                           </svg>
                         </a>
@@ -1321,7 +1412,7 @@
                   <p><a href="/copyright.html">Copyright ©</a> 2025 American Chemical Society</p>
                 </div>
               </div>
-            </div>
+            </footer>
           </div>
 
         </div>
@@ -1339,8 +1430,8 @@
         <!--<span class="text-align-center split-chars" style="position:absolute; bottom:0; left:50%; transform:translateX(-50%); opacity:0.6;">More coming soon! Check back for updates.</span>-->
       </section>
       <div class="share-button-container">
-        <button class="share-button-pinned" style="opacity:0;">
-          <svg width="15" height="16" viewBox="0 0 15 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <button class="share-button-pinned" style="opacity:0;" aria-label="Share this page" title="Share this page">
+          <svg width="15" height="16" viewBox="0 0 15 16" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Share icon">
             <path d="M5.46057 6.89704L9.5397 4.60254" stroke="white" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M5.46057 9.10278L9.5397 11.3973" stroke="white" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M3.5 10.25C4.743 10.25 5.75 9.243 5.75 8C5.75 6.757 4.743 5.75 3.5 5.75C2.257 5.75 1.25 6.757 1.25 8C1.25 9.243 2.257 10.25 3.5 10.25Z" stroke="white" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1539,6 +1630,119 @@
             form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
           });
         }
+      });
+    </script>
+
+    <script>
+      // Skip link and navigation tab management
+      document.addEventListener('DOMContentLoaded', function() {
+        const enterExperienceBtn = document.querySelector('.enter-experience');
+        const skipAfterEnterLinks = document.querySelectorAll('.skip-after-enter');
+        const skipToEnterLink = document.querySelector('.skip-to-enter');
+        const nav = document.querySelector('nav');
+        const navLinks = document.querySelectorAll('nav a, nav button');
+        const pageNavLinks = document.querySelectorAll('.page-nav-link');
+        const toggleMenuBtn = document.querySelector('.toggle-menu');
+        const closeMenuBtn = document.querySelector('.close-toggle-menu');
+        let experienceStarted = false;
+
+        function enableAllSkipLinks() {
+          if (experienceStarted) return;
+          experienceStarted = true;
+          
+          // Show the other skip links
+          skipAfterEnterLinks.forEach(link => {
+            link.style.display = 'block';
+            // Remove tabindex restriction
+            link.removeAttribute('tabindex');
+          });
+          
+          // Hide the "Skip to Enter Experience" link since it's no longer needed
+          if (skipToEnterLink) {
+            skipToEnterLink.style.display = 'none';
+            skipToEnterLink.setAttribute('tabindex', '-1');
+          }
+        }
+
+        function enableNavTabbing() {
+          // Enable all navigation links when nav is active
+          navLinks.forEach(link => {
+            link.removeAttribute('tabindex');
+          });
+        }
+
+        function disableNavTabbing() {
+          // Disable all navigation links when nav is inactive
+          navLinks.forEach(link => {
+            link.setAttribute('tabindex', '-1');
+          });
+        }
+
+        function enablePageNavTabbing() {
+          // Enable page navigation links
+          pageNavLinks.forEach(link => {
+            link.removeAttribute('tabindex');
+          });
+        }
+
+        function disablePageNavTabbing() {
+          // Disable page navigation links
+          pageNavLinks.forEach(link => {
+            link.setAttribute('tabindex', '-1');
+          });
+        }
+
+        // Enable skip links when enter-experience button is clicked
+        if (enterExperienceBtn) {
+          enterExperienceBtn.addEventListener('click', function() {
+            enableAllSkipLinks();
+            enablePageNavTabbing(); // Enable page nav when experience starts
+          });
+          enterExperienceBtn.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+              enableAllSkipLinks();
+              enablePageNavTabbing();
+            }
+          });
+        }
+
+        // Menu toggle functionality
+        if (toggleMenuBtn) {
+          toggleMenuBtn.addEventListener('click', function() {
+            if (nav && nav.classList.contains('active')) {
+              enableNavTabbing();
+            }
+          });
+        }
+
+        if (closeMenuBtn) {
+          closeMenuBtn.addEventListener('click', function() {
+            disableNavTabbing();
+          });
+        }
+
+        // Watch for nav class changes (in case they happen elsewhere)
+        if (nav) {
+          const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+              if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                if (nav.classList.contains('active')) {
+                  enableNavTabbing();
+                } else {
+                  disableNavTabbing();
+                }
+              }
+            });
+          });
+          observer.observe(nav, { attributes: true, attributeFilter: ['class'] });
+        }
+
+        // Initially disable tabbing to the hidden skip links and nav elements
+        skipAfterEnterLinks.forEach(link => {
+          link.setAttribute('tabindex', '-1');
+        });
+        disableNavTabbing();
+        disablePageNavTabbing(); // Initially disable page nav until experience starts
       });
     </script>
 

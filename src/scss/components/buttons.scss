@@ -114,6 +114,11 @@
         transition: transform 0.3s cubic-bezier(0.2, 0.1, 0.2, 1);
     }
 
+    &:focus-visible {
+        outline: 2px solid white;
+        outline-offset: 2px;
+    }
+
     &.wide {
         width: 240px;
     }
@@ -194,6 +199,11 @@
     &:hover {
         background: #001E9C;
     }
+
+    &:focus-visible {
+        outline: 2px solid white;
+        outline-offset: 2px;
+    }
 }
 
 .secondary-btn {
@@ -264,6 +274,11 @@
     &:active {
         transform: translateY(1px);
         transition: transform 0.15s ease;
+    }
+
+    &:focus-visible {
+        outline: 2px solid white;
+        outline-offset: 2px;
     }
 
     &.wide {
@@ -366,6 +381,11 @@
     &:active {
         transform: scale(0.95);
         filter: brightness(0.98);
+    }
+
+    &:focus-visible {
+        outline: 2px solid white;
+        outline-offset: 2px;
     }
 
     svg {

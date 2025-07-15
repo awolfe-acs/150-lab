@@ -100,7 +100,7 @@
     }
 
     a {
-        color: #ddd;
+        color: #fff !important;
         text-decoration: none;
 
         &:hover {
@@ -312,7 +312,6 @@
                 display: block;
                 padding: 4px 10px;
                 opacity: 1;
-                color: #fff;
 
                 &:hover {
                     text-decoration: underline !important;
