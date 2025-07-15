@@ -75,12 +75,12 @@
         display: block;
         font-size: 14px !important;
         text-transform: uppercase;
-        letter-spacing: 6px;
+        letter-spacing: 4px;
         color: white;
         text-align: center;
         font-weight: 400 !important;
         pointer-events: none;
-        transform: translateX(3px) translateY(0.5px);
+        transform: translateX(3px);
         position: relative;
         z-index: 2;
         transition: color 0.7s cubic-bezier(0.2, 0.1, 0.2, 1),
@@ -123,6 +123,16 @@
         transition: filter 0.7s cubic-bezier(0.2, 0.1, 0.2, 1),
             box-shadow 0.7s cubic-bezier(0.2, 0.1, 0.2, 1),
             border-color 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
+    }
+}
+
+.enter-experience {
+    width: 300px;
+    max-width: calc(100% - 32px);
+
+    @media (max-width:332px) {
+        width: 232px;
+        leter-spacing: 2px;
     }
 }
 
@@ -208,7 +218,7 @@
         display: block;
         font-size: 14px !important;
         text-transform: uppercase;
-        letter-spacing: 6px;
+        letter-spacing: 4px;
         color: white;
         text-align: center;
         font-weight: 400 !important;
