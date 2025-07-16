@@ -64,8 +64,12 @@ h3 {
     }
 
     &.cards-heading {
+        @media (max-width:1280px) {
+            margin: 10vw auto 0;
+        }
+
         @media (max-width:$desktop-viewport) {
-            margin: 64px auto;
+            margin: 15vw auto 0;
         }
     }
 }

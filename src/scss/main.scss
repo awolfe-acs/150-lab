@@ -32,6 +32,10 @@ html, body {
   margin: 0; // Ensure no margin creates gap with scrollbar
   padding: 0; // Ensure no padding creates gap with scrollbar
 
+  *::selection {
+    background: #0029cf5b !important;
+  }
+
   #bd, #maincontent {
     width: 100% !important;
   }

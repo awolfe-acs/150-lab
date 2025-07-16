@@ -319,106 +319,211 @@
             }
 
 
+            .submit-button-style {
+                height: 56px;
+                background: #3E2BF4;
+                color: #fff;
+                font-weight: 700;
+                font-size: 16px;
+                border-radius: 48px;
+                width: 178px;
+                border: 1px solid rgba(255, 255, 255, 0);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                gap: 12px;
+                cursor: pointer;
+                position: relative;
+                overflow: hidden;
+                transform: translate3d(0, 0, 0);
+                will-change: transform;
+                backface-visibility: hidden;
+                perspective: 1000px;
+                transition: all 0.7s cubic-bezier(0.2, 0.1, 0.2, 1),
+                    box-shadow 0.7s cubic-bezier(0.2, 0.1, 0.2, 1),
+                    border-color 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
 
-            input, select {
-                &[type="submit"] {
-                    height: 56px;
-                    background: #3E2BF4;
-                    color: #fff;
-                    font-weight: 700;
-                    font-size: 16px;
+                /* Add subtle initial glow */
+                box-shadow: 0 0 10px rgba(62, 43, 244, 0.2),
+                    0 0 20px rgba(62, 43, 244, 0.1);
+
+                /* Create gradient overlay effect */
+                &::before {
+                    content: '';
+                    position: absolute;
+                    top: -50%;
+                    left: -50%;
+                    right: -50%;
+                    bottom: -50%;
+                    background: radial-gradient(circle at 50% 50%,
+                            rgba(255, 255, 255, 0.1),
+                            rgba(62, 43, 244, 0.3) 40%,
+                            rgba(255, 255, 255, 0.05) 80%);
+                    background-size: 400% 400%;
+                    border-radius: 50px;
+                    z-index: -1;
+                    opacity: 0;
+                    filter: blur(8px);
+                    transition: opacity 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
+                    animation: subtleGradientShift 15s ease-in-out infinite alternate;
+                    pointer-events: none;
+                }
+
+                /* Create hover effect for button fill */
+                &::after {
+                    content: '';
+                    position: absolute;
+                    inset: -10%;
                     border-radius: 48px;
-                    width: 178px;
-                    border: 1px solid rgba(255, 255, 255, 0);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    text-align: center;
-                    gap: 12px;
-                    cursor: pointer;
-                    position: relative;
-                    overflow: hidden;
-                    transform: translate3d(0, 0, 0);
-                    will-change: transform;
-                    backface-visibility: hidden;
-                    perspective: 1000px;
-                    transition: all 0.7s cubic-bezier(0.2, 0.1, 0.2, 1),
-                        box-shadow 0.7s cubic-bezier(0.2, 0.1, 0.2, 1),
-                        border-color 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
+                    background: radial-gradient(circle at 50% 50%,
+                            rgba(255, 255, 255, 0.1),
+                            rgba(62, 43, 244, 0.2) 40%,
+                            rgba(255, 255, 255, 0.05) 80%);
+                    background-size: 400% 400%;
+                    opacity: 0;
+                    filter: blur(5px);
+                    transition: opacity 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
+                    animation: subtleGradientShift 25s ease-in-out infinite alternate;
+                    z-index: -1;
+                    pointer-events: none;
+                }
 
-                    /* Add subtle initial glow */
-                    box-shadow: 0 0 10px rgba(62, 43, 244, 0.2),
-                        0 0 20px rgba(62, 43, 244, 0.1);
+                &:hover {
+                    transform: translate3d(0, -2px, 0) scale3d(1.02, 1.02, 1);
+                    background: #4A35FF;
+                    border-color: rgba(255, 255, 255, 0.4);
+                    //box-shadow: 0 0 20px rgba(62, 43, 244, 0.4),
+                    //0 0 30px rgba(62, 43, 244, 0.2),
+                    //0 8px 25px rgba(62, 43, 244, 0.15);
 
-                    /* Create gradient overlay effect */
+                    &::before {
+                        opacity: 0.6;
+                    }
+
+                    &::after {
+                        opacity: 0.8;
+                    }
+                }
+
+                &:active {
+                    transform: translate3d(0, 1px, 0) scale3d(0.98, 0.98, 1);
+                    transition: transform 0.3s cubic-bezier(0.2, 0.1, 0.2, 1);
+                }
+
+                &:focus {
+                    outline: none;
+                    border-color: rgba(255, 255, 255, 0.6);
+                    //box-shadow: 0 0 25px rgba(62, 43, 244, 0.5),
+                    //    0 0 35px rgba(62, 43, 244, 0.3);
+                }
+            }
+
+
+            // Custom checkbox styling for better visibility on colored glass background
+            input[type="checkbox"] {
+                appearance: none;
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                width: 24px;
+                height: 24px;
+                border: 2px solid rgba(255, 255, 255, 0.6);
+                border-radius: 4px;
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                cursor: pointer;
+                position: relative;
+                transition: all 0.3s ease;
+                flex-shrink: 0;
+                margin: 0;
+
+                // Enhanced visibility with subtle glow
+                box-shadow:
+                    0 0 0 1px rgba(255, 255, 255, 0.1),
+                    0 2px 4px rgba(0, 0, 0, 0.2),
+                    inset 0 1px 2px rgba(255, 255, 255, 0.1);
+
+                &:not(:checked):hover {
+                    border-color: rgba(255, 255, 255, 0.8);
+                    background: rgba(255, 255, 255, 0.15);
+                    box-shadow:
+                        0 0 0 1px rgba(255, 255, 255, 0.2),
+                        0 2px 8px rgba(0, 0, 0, 0.3),
+                        0 0 12px rgba(0, 188, 212, 0.3),
+                        inset 0 1px 2px rgba(255, 255, 255, 0.2);
+                }
+
+                &:focus {
+                    outline: none;
+                    border-color: #00bcd4;
+                    box-shadow:
+                        0 0 0 2px rgba(0, 188, 212, 0.3),
+                        0 2px 8px rgba(0, 0, 0, 0.3),
+                        0 0 16px rgba(0, 188, 212, 0.4),
+                        inset 0 1px 2px rgba(255, 255, 255, 0.2);
+                }
+
+                &:checked {
+                    background: linear-gradient(135deg, #00bcd4 0%, #0097a7 100%);
+                    border-color: #00bcd4;
+                    box-shadow:
+                        0 0 0 1px #00bcd4,
+                        0 2px 8px rgba(0, 188, 212, 0.4),
+                        0 0 16px rgba(0, 188, 212, 0.3),
+                        inset 0 1px 2px rgba(255, 255, 255, 0.3);
+
                     &::before {
                         content: '';
                         position: absolute;
-                        top: -50%;
-                        left: -50%;
-                        right: -50%;
-                        bottom: -50%;
-                        background: radial-gradient(circle at 50% 50%,
-                                rgba(255, 255, 255, 0.1),
-                                rgba(62, 43, 244, 0.3) 40%,
-                                rgba(255, 255, 255, 0.05) 80%);
-                        background-size: 400% 400%;
-                        border-radius: 50px;
-                        z-index: -1;
-                        opacity: 0;
-                        filter: blur(8px);
-                        transition: opacity 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
-                        animation: subtleGradientShift 15s ease-in-out infinite alternate;
-                        pointer-events: none;
-                    }
-
-                    /* Create hover effect for button fill */
-                    &::after {
-                        content: '';
-                        position: absolute;
-                        inset: -10%;
-                        border-radius: 48px;
-                        background: radial-gradient(circle at 50% 50%,
-                                rgba(255, 255, 255, 0.1),
-                                rgba(62, 43, 244, 0.2) 40%,
-                                rgba(255, 255, 255, 0.05) 80%);
-                        background-size: 400% 400%;
-                        opacity: 0;
-                        filter: blur(5px);
-                        transition: opacity 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
-                        animation: subtleGradientShift 25s ease-in-out infinite alternate;
-                        z-index: -1;
-                        pointer-events: none;
+                        top: calc(50% - 1px);
+                        left: 50%;
+                        transform: translate(-50%, -50%) rotate(45deg);
+                        width: 6px;
+                        height: 12px;
+                        border: 2px solid #ffffff;
+                        border-top: none;
+                        border-left: none;
+                        opacity: 1;
+                        animation: checkmarkAppear 0.3s ease-out;
                     }
 
                     &:hover {
-                        transform: translate3d(0, -2px, 0) scale3d(1.02, 1.02, 1);
-                        background: #4A35FF;
-                        border-color: rgba(255, 255, 255, 0.4);
-                        box-shadow: 0 0 20px rgba(62, 43, 244, 0.4),
-                            0 0 30px rgba(62, 43, 244, 0.2),
-                            0 8px 25px rgba(62, 43, 244, 0.15);
-
-                        &::before {
-                            opacity: 0.6;
-                        }
-
-                        &::after {
-                            opacity: 0.8;
-                        }
+                        background: linear-gradient(135deg, #26c6da 0%, #00acc1 100%);
+                        border-color: #26c6da;
+                        box-shadow:
+                            0 0 0 1px #26c6da,
+                            0 2px 12px rgba(0, 188, 212, 0.5),
+                            0 0 20px rgba(0, 188, 212, 0.4),
+                            inset 0 1px 2px rgba(255, 255, 255, 0.4);
                     }
+                }
+            }
 
-                    &:active {
-                        transform: translate3d(0, 1px, 0) scale3d(0.98, 0.98, 1);
-                        transition: transform 0.3s cubic-bezier(0.2, 0.1, 0.2, 1);
-                    }
+            // Checkbox label styling
+            .checkbox-label {
+                display: flex !important;
+                align-items: flex-start !important;
+                gap: 12px !important;
+                cursor: pointer !important;
+                line-height: 1.4 !important;
+                font-size: 14px !important;
+                color: #fff !important;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+                user-select: none;
 
-                    &:focus {
-                        outline: none;
-                        border-color: rgba(255, 255, 255, 0.6);
-                        box-shadow: 0 0 25px rgba(62, 43, 244, 0.5),
-                            0 0 35px rgba(62, 43, 244, 0.3);
-                    }
+                span {
+                    flex: 1;
+                    margin-top: 1px; // Slight adjustment for better visual alignment
+                }
+            }
+
+            // Checkbox row styling
+            .checkbox-row {
+                margin-top: 20px !important;
+                margin-bottom: 20px !important;
+
+                .checkbox-wrapper {
+                    width: 100%;
                 }
             }
         }
@@ -1817,5 +1922,23 @@
                 rgba(25, 191, 189, 0.12) 60%,
                 rgba(178, 224, 0, 0.12) 80%,
                 rgba(228, 9, 31, 0.10) 100%);
+    }
+}
+
+/* Checkbox checkmark animation */
+@keyframes checkmarkAppear {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) rotate(45deg) scale(0.5);
+    }
+
+    50% {
+        opacity: 0.7;
+        transform: translate(-50%, -50%) rotate(45deg) scale(1.1);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) rotate(45deg) scale(1);
     }
 }

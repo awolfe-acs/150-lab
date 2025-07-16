@@ -982,6 +982,24 @@
                           </div>
                       </div>
                     </div>
+                    
+                    <!-- Email preferences checkbox -->
+                    <div class="input-row checkbox-row" style="margin-top: 20px; margin-bottom: 20px;">
+                      <div id="formElement3" class="elq-field-style form-element-layout row">
+                        <div class="field-control-wrapper checkbox-wrapper">
+                          <label class="checkbox-label" for="fe25318" style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer; line-height: 1.4; font-size: 14px; color: #fff;">
+                            <input type="checkbox" 
+                                   class="elq-item-checkbox" 
+                                   name="emailPreferences" 
+                                   id="fe25318" 
+                                   value="Yes"
+                                   style="margin: 0; accent-color: #00bcd4; width:24px; height:24px;">
+                            <span style="flex: 1;">I would like to receive more information on programs, products, and services from the ACS via email.</span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                    
                     <div>
                       <div id="formElement2" class="elq-field-style form-element-layout row">
                         <!--<input type="Submit" class="submit-button-style " value="Submit" id="fe25317">-->
@@ -1090,8 +1108,21 @@
 
           </div>
         </div>
-        <div class="jacs-banner coming-soon">
-          <span>Coming Soon</span>
+        <div class="jacs-banner">
+          <div class="panel-body">
+            <div>
+              <h5 style="font-weight:600;"><span style="font-weight:400;">Learn more about our ACS 150th:<br></span>JACS Symposia Series</h5>
+              <p>Dates and locations will be announced soon.</p>
+            </div>
+            <a href="https://pubs.acs.org/JACS-SymposiumSeries" class="submit-button-style secondary-btn icon-anim" target="_blank">
+              <span>Visit Site</span>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" 
+                   role="img" aria-label="Arrow pointing right">
+                <path d="M23.0868 12.9159L24 12.0027L23.0868 11.0896L14.8362 2.83888L13.923 1.92572L12.1021 3.74667L13.0152 4.65983L19.0636 10.7135H1.28917H0V13.2919H1.28917H19.0636L13.0098 19.3402L12.0967 20.2534L13.9176 22.0743L14.8308 21.1612L23.0868 12.9159Z" fill="black"/>
+              </svg>
+              <div class="color-overlay"></div>
+            </a>
+          </div>
         </div>
 
           <section id="get-involved-cards" class="flex vertical justify-center" role="region" aria-labelledby="involvement-cards-heading">
@@ -1151,6 +1182,7 @@
                 </a>-->
             </div>
             <div class="events-list" role="list" aria-label="Upcoming ACS events">
+              <!--
               <a href="#/" class="event-list-item disabled" role="listitem" aria-label="Green Chemistry Conferences, November 9 to 10, 2025. Link currently disabled.">
                 <span class="event-title">Green Chemistry Conferences
                   <span class="external-link-icon" aria-label="External link">
@@ -1160,7 +1192,8 @@
                   </span>
                 </span>
                 <span class="event-date">November 9 – 10, 2025</span>
-            </a>
+              </a>
+              -->
               <a href="#/" class="event-list-item disabled" role="listitem" aria-label="Pacifichem 2025, December 15 to 20, 2025. Link currently disabled.">
                   <span class="event-title">Pacifichem 2025
                     <span class="external-link-icon" aria-label="External link">
@@ -1350,6 +1383,7 @@
 
           <div class="footer-bar">
             <div class="inner-wrapper">
+              <!--
               <svg width="124" height="22" viewBox="0 0 124 22" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <g clip-path="url(#clip0_872_428)">
                 <path d="M114.324 21.6483H87.2098C83.9472 21.6483 81.8715 18.979 82.5924 15.6908L84.5686 6.6763C85.2895 3.39434 88.5336 0.71875 91.7962 0.71875H118.911C122.173 0.71875 124.249 3.38808 123.528 6.6763L121.552 15.6908C120.831 18.9727 117.587 21.6483 114.324 21.6483ZM91.1996 3.42559C89.416 3.42559 87.6449 4.88216 87.2533 6.6763L85.2771 15.6908C84.8856 17.4849 86.0166 18.9415 87.794 18.9415H114.908C116.692 18.9415 118.463 17.4849 118.855 15.6908L120.831 6.6763C121.222 4.88216 120.091 3.42559 118.314 3.42559H91.1996Z" fill="white"/>
@@ -1371,13 +1405,14 @@
                     </svg>                    
                   150thanniversary@acs.org
                 </div>
-
+              -->
+              <div class="external-links" style="display:flex; gap:12px; align-items:center;">
+                <a href="https://pubs.acs.org/" style="display:flex; align-items:center; width:auto; font-size:12px;">ACS Publications</a>
+                <a href="https://cen.acs.org/" style="display:flex; align-items:center; width:auto; font-size:12px;">C&EN</a>
+                <a href="https://www.cas.org/" style="display:flex; align-items:center; width:auto; font-size:12px;">CAS</a>
+              </div>
               <div class="right-column">
-                <div class="external-links" style="display:flex; gap:12px; align-items:center;">
-                  <a href="https://pubs.acs.org/" style="display:flex; align-items:center; width:auto; font-size:12px;">ACS Publications</a>
-                  <a href="https://cen.acs.org/" style="display:flex; align-items:center; width:auto; font-size:12px;">C&EN</a>
-                  <a href="https://www.cas.org/" style="display:flex; align-items:center; width:auto; font-size:12px;">CAS</a>
-                </div>
+                <a href="https://www.acs.org/privacy.html" style="display:flex; align-items:center; width:auto; font-size:12px;">Privacy</a>
                 <span class="separator"></span>
                 <span style="font-size:12px;">©2025 American Chemical Society. All rights reserved.</span>
                 <div class="social-wrapper" style="display:flex; gap:32px;">

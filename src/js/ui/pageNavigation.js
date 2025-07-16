@@ -12,6 +12,7 @@ export function updatePageNavigation() {
   const pageNav = document.querySelector(".page-nav");
   const activeTitle = document.querySelector(".section-timeline .indicator .active-title");
   const sectionTimeline = document.querySelector(".section-timeline");
+  const formPanel = document.querySelector(".form-panel");
 
   if (!heroTravelArea || !getInvolvedSection || !pageNav || !activeTitle || !sectionTimeline) return;
 
@@ -21,10 +22,21 @@ export function updatePageNavigation() {
   // Track if navigation was clicked and should stay hidden
   let navClickedAndHidden = false;
 
+  // Helper function to check if mouse is within form panel boundaries
+  const isMouseInFormPanel = (event) => {
+    if (!formPanel) return false;
+
+    const rect = formPanel.getBoundingClientRect();
+    const mouseX = event.clientX;
+    const mouseY = event.clientY;
+
+    return mouseX >= rect.left && mouseX <= rect.right && mouseY >= rect.top && mouseY <= rect.bottom;
+  };
+
   // Add hover functionality to show/hide page navigation
-  sectionTimeline.addEventListener("mouseenter", () => {
-    // Only show if not in clicked-and-hidden state
-    if (!navClickedAndHidden) {
+  sectionTimeline.addEventListener("mouseenter", (event) => {
+    // Only show if not in clicked-and-hidden state AND mouse is not within form panel
+    if (!navClickedAndHidden && !isMouseInFormPanel(event)) {
       gsap.to(pageNav, { opacity: 1, duration: 0.3, ease: "power2.out" });
     }
   });
@@ -36,8 +48,11 @@ export function updatePageNavigation() {
   });
 
   // Add hover functionality to fade out active title when hovering over page nav
-  pageNav.addEventListener("mouseenter", () => {
-    gsap.to(activeTitle, { opacity: 0, duration: 0.2, ease: "power2.out" });
+  pageNav.addEventListener("mouseenter", (event) => {
+    // Only hide active title if mouse is not within form panel
+    if (!isMouseInFormPanel(event)) {
+      gsap.to(activeTitle, { opacity: 0, duration: 0.2, ease: "power2.out" });
+    }
   });
 
   pageNav.addEventListener("mouseleave", () => {
