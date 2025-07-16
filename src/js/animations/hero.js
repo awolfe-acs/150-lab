@@ -607,9 +607,9 @@ export function initHeroAnimation() {
     // Fade-out animation (approaching video area) - optimized for fast scrolling
     ScrollTrigger.create({
       trigger: "#video-travel-area",
-      start: "top 110%",
-      end: "top 100%",
-      scrub: 0.5, // Faster scrubbing for better responsiveness
+      start: "top 105%", // Start earlier to give more fade-out distance
+      end: "top 95%", // Extended range for more reliable fade-out
+      scrub: 0.3, // Faster scrubbing for better responsiveness
       markers: false,
       invalidateOnRefresh: true, // Ensure this recalculates
       fastScrollEnd: true, // Enable fast scroll optimization
@@ -617,16 +617,14 @@ export function initHeroAnimation() {
         const progress = self.progress;
 
         // Get the current countdown opacity (0.44 to 1.0 range)
-        let baseOpacity = 0.44; // Default minimum opacity
+        let baseOpacity = 1.0; // Default to full opacity if countdown is complete
 
         if (animationState.heroNumberTween && animationState.heroNumberTween.scrollTrigger) {
           const countdownProgress = animationState.heroNumberTween.scrollTrigger.progress;
           baseOpacity = 0.44 + countdownProgress * 0.56; // Same calculation as countdown
 
-          // Only apply fade-out if countdown is near completion (progress > 0.8)
-          if (countdownProgress < 0.8) {
-            return; // Don't fade out yet, let countdown handle opacity
-          }
+          // REMOVED: No longer skip fade-out based on countdown progress
+          // The fade-out should always work regardless of countdown state
         }
 
         // Fade from current countdown opacity to 0
@@ -664,6 +662,41 @@ export function initHeroAnimation() {
         }
       },
       id: "hero-fade-out", // Add ID for reference
+    });
+
+    // Additional backup fade-out trigger to ensure hero number is hidden deeper in video area
+    ScrollTrigger.create({
+      trigger: "#video-travel-area",
+      start: "top 80%", // Start where previous fade-out ends
+      end: "top 50%", // Continue fading until well into video area
+      scrub: 0.5,
+      markers: false,
+      invalidateOnRefresh: true,
+      fastScrollEnd: true,
+      onUpdate: function (self) {
+        // Force opacity to stay at 0 regardless of other animations
+        heroNumber.style.setProperty("--digit-opacity", "0");
+        heroNumber.style.filter = "blur(16px)";
+
+        // Also hide the heroNumber element itself for extra safety
+        heroNumber.style.opacity = "0";
+      },
+      onLeave: () => {
+        // Ensure complete invisibility
+        heroNumber.style.setProperty("--digit-opacity", "0");
+        heroNumber.style.filter = "blur(16px)";
+        heroNumber.style.opacity = "0";
+      },
+      onEnterBack: () => {
+        // When coming back, let the main fade-out trigger handle the opacity
+        // Don't interfere with the main fade-out animation
+      },
+      onLeaveBack: () => {
+        // When scrolling back up, restore the hero number visibility
+        // The main fade-out trigger will handle the proper opacity
+        heroNumber.style.opacity = "1";
+      },
+      id: "hero-backup-fade-out",
     });
   }
 }

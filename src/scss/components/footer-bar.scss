@@ -48,10 +48,20 @@
             }
         }
 
+        .email {
+            @media (max-width:$desktop-viewport) {
+                width: 100%;
+                display: flex;
+                justify-content: center;
+                margin: 0 !important;
+            }
+        }
+
         .right-column {
             height: 24px;
             display: flex;
-            gap: 48px;
+            align-items: center;
+            gap: 24px;
             margin-right: 0;
             margin-left: auto;
 
@@ -60,15 +70,6 @@
                 flex-direction: column;
                 gap: 16px;
                 margin: 0 auto;
-            }
-
-            .email {
-                @media (max-width:$desktop-viewport) {
-                    width: 100%;
-                    display: flex;
-                    justify-content: center;
-                    margin: 24px auto 8px !important;
-                }
             }
 
             .social-wrapper {
@@ -112,6 +113,18 @@
                     transform: scale(0.88);
                 }
             }
+        }
+    }
+
+    .separator {
+        width: 1px;
+        height: 16px;
+        background: #fff;
+        opacity: 0.33;
+        margin: 0;
+
+        @media (max-width:$desktop-viewport) {
+            display: none;
         }
     }
 }
