@@ -129,6 +129,9 @@ const processSplitElement = (element, index) => {
           markers: false, // Set to true for debugging
           id: `split-lines-${index}`,
           onEnter: () => {
+            // Add 200ms delay for each sequential element
+            const sequentialDelay = index * 200;
+
             // Animate the lines when they enter the viewport
             gsap.to(splitText.lines, {
               opacity: 1,
@@ -136,6 +139,7 @@ const processSplitElement = (element, index) => {
               duration: 1.2,
               stagger: 0.1, // Staggered animation for each line
               ease: "power2.out",
+              delay: sequentialDelay / 1000, // Convert to seconds for GSAP
               overwrite: true,
             });
           },

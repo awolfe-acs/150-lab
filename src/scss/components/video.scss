@@ -115,3 +115,17 @@ video {
 }
 
 /* Remove SVG outline styles */
+
+/* Prevent title tooltip from showing on anniversary video while keeping it for accessibility */
+#anniversary-video[title] {
+    /* The most effective cross-browser method to disable tooltips */
+    pointer-events: none;
+    pointer-events: auto;
+    /* Re-enable for click/touch interactions */
+
+    /* Fallback method for browsers that still show tooltips */
+    &:hover::after,
+    &:hover::before {
+        display: none !important;
+    }
+}
