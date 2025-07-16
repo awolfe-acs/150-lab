@@ -94,29 +94,69 @@ export function setupHeroHeadingFadeAnimation() {
     animationState.heroHeadingFadeScrollTrigger = ScrollTrigger.create({
       animation: fadeOutTl,
       trigger: "#hero-travel-area",
-      start: "25% top", // Start much later - when 25% of hero-travel-area has passed top of viewport
-      end: "33% top", // End when 45% of hero-travel-area has passed the top of viewport
-      scrub: true, // Makes the animation scrubbable with scroll
+      start: "16% top", // Adjusted to 50% of previous change - when 17% of hero-travel-area has passed top of viewport
+      end: "36% top", // Reduced end point by 50% - when 50% of hero-travel-area has passed the top of viewport
+      scrub: true, // Use true for smoother scrubbing without lag
       markers: false, // Set to true for debugging
       invalidateOnRefresh: true, // **CRITICAL** Recalculate positions on refresh
       onUpdate: (self) => {
-        // Update character opacities based on scroll position
-        // (Handled by scrub automatically linking timeline progress to scroll progress)
+        // Let the timeline handle the animation naturally - this prevents conflicts
+        // The timeline is already linked to scroll progress via scrub: true
 
-        // Check if scrolling back up near the top
-        if (self.direction === -1 && self.progress < 0.1) {
-          // Make sure chars are fully visible when scrolling back to top
-          gsap.set(splitTextChars, {
+        // Only intervene if we detect the animation getting stuck
+        if (self.progress === 0) {
+          // Ensure characters are fully visible at start
+          gsap.set(shuffledChars, {
             opacity: 1,
             z: 0,
+            scale: 1,
+            filter: "blur(0px)",
+            clearProps: "transform", // Clear any stuck transforms
+          });
+        } else if (self.progress === 1) {
+          // Ensure characters are fully faded at end
+          gsap.set(shuffledChars, {
+            opacity: 0,
+            z: -50,
+            filter: "blur(16px)",
           });
         }
       },
       onRefresh: (self) => {
-        // When ScrollTrigger refreshes (after resize), immediately update animation
-        // progress to match current scroll position based on *new* boundaries.
-        const progress = self.progress;
-        fadeOutTl.progress(progress); // Update the timeline's progress
+        // When ScrollTrigger refreshes, sync the timeline progress
+        if (fadeOutTl) {
+          fadeOutTl.progress(self.progress);
+        }
+      },
+      onLeave: () => {
+        // Ensure all characters are fully faded when leaving
+        gsap.set(shuffledChars, {
+          opacity: 0,
+          z: -50,
+          filter: "blur(16px)",
+        });
+      },
+      onEnterBack: () => {
+        // Let the timeline handle the re-entry based on current progress
+        const progress = animationState.heroHeadingFadeScrollTrigger
+          ? animationState.heroHeadingFadeScrollTrigger.progress
+          : 0;
+        if (fadeOutTl) {
+          fadeOutTl.progress(progress);
+        }
+      },
+      onLeaveBack: () => {
+        // Reset to fully visible when scrolling back up
+        gsap.set(shuffledChars, {
+          opacity: 1,
+          z: 0,
+          scale: 1,
+          filter: "blur(0px)",
+          clearProps: "transform", // Clear any stuck transforms
+        });
+        if (fadeOutTl) {
+          fadeOutTl.progress(0);
+        }
       },
     });
   } else {
@@ -298,12 +338,10 @@ export function initCoverArea() {
   }
 }
 
-// Separate function to handle cover logo ScrollTrigger - moved outside click handler for better state management
+// Separate function to handle cover logo ScrollTrigger - optimized for fast scrolling
 function initCoverLogoScrollTrigger(coverLogo) {
-  // State variables for the cover logo animation
-  let isEnterBackMode = false; // Track if we're in enter-back mode
-  let enterBackStartTime = null; // Track when enter-back mode started
   let coverLogoScrollTrigger = null; // Reference to the ScrollTrigger
+  let lastOpacity = -1; // Track last applied opacity to avoid redundant updates
 
   // Function to create the ScrollTrigger
   function createScrollTrigger() {
@@ -315,66 +353,37 @@ function initCoverLogoScrollTrigger(coverLogo) {
       trigger: "#cover-travel-area",
       start: "top top",
       end: "67% center",
-      scrub: 1,
+      scrub: 0.5, // Faster, more responsive scrubbing
       markers: false,
       id: "cover-logo-fade",
+      invalidateOnRefresh: true,
+      fastScrollEnd: true, // Enable fast scroll optimization
       onUpdate: (self) => {
-        const expectedOpacity = 1 - self.progress;
+        const targetOpacity = 1 - self.progress;
 
-        // Handle enter-back mode with scrub-based reveal
-        if (isEnterBackMode) {
-          // Calculate time-based delay factor (0 to 1 over 0.8 seconds)
-          const timeElapsed = (Date.now() - enterBackStartTime) / 800; // 0.8 second delay
-          const delayFactor = Math.min(timeElapsed, 1); // Clamp to 1
-
-          // Calculate opacity based on both scroll position and time delay
-          // The logo should fade in based on scroll position, but only after the delay
-          let targetOpacity;
-
-          if (delayFactor < 1) {
-            // Still in delay period - interpolate between 0 and scroll-based opacity
-            targetOpacity = delayFactor * expectedOpacity;
-          } else {
-            // Delay period over - use full scroll-based opacity
-            targetOpacity = expectedOpacity;
-          }
-
-          gsap.set(coverLogo, { opacity: targetOpacity, overwrite: true });
-
-          // Exit enter-back mode if we scroll down significantly or if fully revealed
-          if (self.direction === 1 && self.progress > 0.15) {
-            console.log("Cover logo: Exiting enter-back mode due to scroll down");
-            isEnterBackMode = false;
-            enterBackStartTime = null;
-          } else if (delayFactor >= 1 && expectedOpacity >= 0.95) {
-            console.log("Cover logo: Exiting enter-back mode - fully revealed");
-            isEnterBackMode = false;
-            enterBackStartTime = null;
-          }
-        } else {
-          // Normal scrub-based fade out/in
-          gsap.set(coverLogo, { opacity: expectedOpacity, overwrite: true });
+        // Only update if opacity changed significantly (avoid micro-updates during fast scroll)
+        if (Math.abs(targetOpacity - lastOpacity) > 0.01) {
+          lastOpacity = targetOpacity;
+          // Use direct style setting for maximum performance during fast scrolling
+          coverLogo.style.opacity = targetOpacity;
         }
       },
       onLeave: () => {
-        // Clean up and hide logo when leaving trigger area
-        isEnterBackMode = false;
-        enterBackStartTime = null;
-        gsap.set(coverLogo, { opacity: 0, overwrite: true });
+        // Ensure logo is hidden when leaving trigger area
+        coverLogo.style.opacity = "0";
+        lastOpacity = 0;
       },
       onEnterBack: () => {
-        // Enter scrub-based reveal mode with initial delay
-        isEnterBackMode = true;
-        enterBackStartTime = Date.now();
-        console.log("Cover logo: Starting scrub-based enter-back reveal");
-
-        // Set initial opacity to 0 - the onUpdate will handle the reveal
-        gsap.set(coverLogo, { opacity: 0, overwrite: true });
+        // Simplified enter-back - no complex timing logic
+        const currentProgress = coverLogoScrollTrigger.progress;
+        const targetOpacity = 1 - currentProgress;
+        coverLogo.style.opacity = targetOpacity;
+        lastOpacity = targetOpacity;
       },
       onLeaveBack: () => {
-        // Clean up when scrolling back up past trigger
-        isEnterBackMode = false;
-        enterBackStartTime = null;
+        // Reset when scrolling back up past trigger
+        coverLogo.style.opacity = "1";
+        lastOpacity = 1;
       },
     });
 
@@ -498,7 +507,8 @@ export function initHeroAnimation() {
   // After all characters are revealed, show the number wrapper (keep at full opacity)
   heroAnimationTl.to(heroNumber, {
     opacity: 1,
-    duration: 0.5,
+    duration: 1.5,
+    scrub: 1.5,
     ease: "power1.inOut",
   });
 
@@ -540,16 +550,23 @@ export function initHeroAnimation() {
   // Create ScrollTrigger for hero animation
   ScrollTrigger.create({
     trigger: "#hero-travel-area",
-    start: "top 60%", // Start later when hero-travel-area is 60% into viewport
-    end: "top 10%", // End when hero-travel-area is 10% from top of viewport
+    start: "top 90%", // Extended start - when hero-travel-area is 83% into viewport (longer fade-in distance)
+    end: "top 0%",
     animation: heroAnimationTl,
-    scrub: 2, // Slower scrubbing for more gradual animation
+    scrub: 0.5, // Faster scrubbing for better fast scroll responsiveness
     markers: false,
     invalidateOnRefresh: true,
+    fastScrollEnd: true, // Enable fast scroll optimization
     onEnter: () => {
       // Dispatch event to start particle fade-in when entering hero area
       const veryEarlyFadeEvent = new CustomEvent("veryEarlyParticleFade");
       document.dispatchEvent(veryEarlyFadeEvent);
+    },
+    onUpdate: (self) => {
+      // Ensure timeline progress stays in sync during fast scrolling
+      if (heroAnimationTl) {
+        heroAnimationTl.progress(self.progress);
+      }
     },
   });
 
@@ -557,35 +574,49 @@ export function initHeroAnimation() {
 
   // Create the hero number animation (size/scale/opacity)
   if (heroNumber) {
-    // Scale animation
-    gsap.to(heroNumber, {
-      scale: 0.5,
-      ease: "none",
-      scrollTrigger: {
-        trigger: "#hero-travel-area",
-        start: "top top",
-        end: "bottom bottom",
-        scrub: 0.5,
-        markers: false,
-        invalidateOnRefresh: true, // Ensure this recalculates
+    // Scale animation - optimized for fast scrolling
+    ScrollTrigger.create({
+      trigger: "#hero-travel-area",
+      start: "15% top",
+      end: "bottom bottom",
+      scrub: 0.3, // Faster scrubbing for better responsiveness
+      markers: false,
+      invalidateOnRefresh: true,
+      fastScrollEnd: true,
+      onUpdate: (self) => {
+        // Direct transform setting for maximum performance
+        const scale = 1 - self.progress * 0.5; // Scale from 1 to 0.5
+        heroNumber.style.transform = `scale(${scale})`;
       },
+      onLeave: () => {
+        heroNumber.style.transform = "scale(0.5)";
+      },
+      onEnterBack: () => {
+        const currentProgress = ScrollTrigger.getById("hero-scale") ? ScrollTrigger.getById("hero-scale").progress : 0;
+        const scale = 1 - currentProgress * 0.5;
+        heroNumber.style.transform = `scale(${scale})`;
+      },
+      onLeaveBack: () => {
+        heroNumber.style.transform = "scale(1)";
+      },
+      id: "hero-scale",
     });
 
     // Remove the separate opacity animation - we'll handle it in the countdown animation
 
-    // Fade-out animation (approaching video area) - use CSS custom property for digits
+    // Fade-out animation (approaching video area) - optimized for fast scrolling
     ScrollTrigger.create({
       trigger: "#video-travel-area",
       start: "top 110%",
       end: "top 100%",
-      scrub: true,
+      scrub: 0.5, // Faster scrubbing for better responsiveness
       markers: false,
       invalidateOnRefresh: true, // Ensure this recalculates
+      fastScrollEnd: true, // Enable fast scroll optimization
       onUpdate: function (self) {
         const progress = self.progress;
 
         // Get the current countdown opacity (0.44 to 1.0 range)
-        // We need to check if the countdown ScrollTrigger exists and get its progress
         let baseOpacity = 0.44; // Default minimum opacity
 
         if (animationState.heroNumberTween && animationState.heroNumberTween.scrollTrigger) {
@@ -593,7 +624,6 @@ export function initHeroAnimation() {
           baseOpacity = 0.44 + countdownProgress * 0.56; // Same calculation as countdown
 
           // Only apply fade-out if countdown is near completion (progress > 0.8)
-          // This prevents interference with the 0.44 to 1.0 opacity transition
           if (countdownProgress < 0.8) {
             return; // Don't fade out yet, let countdown handle opacity
           }
@@ -605,12 +635,35 @@ export function initHeroAnimation() {
         // Calculate blur based on fade progress - blur increases as opacity decreases
         const blurAmount = progress * 16; // 0px to 16px blur, matching the entry animation
 
-        // Use requestAnimationFrame to ensure smooth updates
-        requestAnimationFrame(() => {
+        // Direct style setting for maximum performance during fast scrolling
+        heroNumber.style.setProperty("--digit-opacity", opacity);
+        heroNumber.style.filter = `blur(${blurAmount}px)`;
+      },
+      onLeave: () => {
+        // Ensure number is fully faded when leaving
+        heroNumber.style.setProperty("--digit-opacity", "0");
+        heroNumber.style.filter = "blur(16px)";
+      },
+      onEnterBack: () => {
+        // Reset based on current progress when re-entering
+        const self = ScrollTrigger.getById("hero-fade-out");
+        if (self) {
+          const progress = self.progress;
+          let baseOpacity = 1.0; // Assume countdown is complete
+
+          if (animationState.heroNumberTween && animationState.heroNumberTween.scrollTrigger) {
+            const countdownProgress = animationState.heroNumberTween.scrollTrigger.progress;
+            baseOpacity = 0.44 + countdownProgress * 0.56;
+          }
+
+          const opacity = baseOpacity * (1 - progress);
+          const blurAmount = progress * 16;
+
           heroNumber.style.setProperty("--digit-opacity", opacity);
           heroNumber.style.filter = `blur(${blurAmount}px)`;
-        });
+        }
       },
+      id: "hero-fade-out", // Add ID for reference
     });
   }
 }
@@ -627,11 +680,12 @@ export function initHeroNumberCountdown() {
         paused: true, // Start paused, ScrollTrigger will control it
         scrollTrigger: {
           trigger: "#hero-travel-area",
-          start: "top top",
+          start: "15% top",
           end: "75% bottom", // Reach 1876 earlier - at 75% through hero-travel-area
-          scrub: 1.5, // Slightly slower scrubbing for more gradual countdown
+          scrub: 0.5, // Faster scrubbing for better fast scroll responsiveness
           markers: false,
           invalidateOnRefresh: true, // **CRITICAL**
+          fastScrollEnd: true, // Enable fast scroll optimization
           id: "hero-countdown", // Add ID for debugging
           onUpdate: function (self) {
             // Calculate the year value based on scroll progress
@@ -642,49 +696,48 @@ export function initHeroNumberCountdown() {
             // Calculate opacity based on progress: 0.44 at start (2026) to 1.0 at end (1876)
             const opacity = 0.44 + self.progress * 0.56; // 0.44 + (progress * 0.56) = 0.44 to 1.0
 
-            // Debug logging to track opacity changes
-            if (Math.abs(opacity - 0.44) > 0.01) {
-              // Only log when opacity changes significantly from initial
-              console.log(
-                `Hero countdown: progress=${self.progress.toFixed(3)}, opacity=${opacity.toFixed(
-                  3
-                )}, year=${currentYear}`
-              );
-            }
-
             const yearValue = currentYear.toString();
             const currentDigits = heroNumber.querySelectorAll(".digit");
             const newDigits = yearValue.split("");
 
+            // Optimize digit updating for fast scrolling
+            let needsUpdate = false;
             if (currentDigits.length !== newDigits.length) {
-              heroNumber.innerHTML = "";
-              newDigits.forEach((digit) => {
-                const digitSpan = document.createElement("span");
-                digitSpan.className = "digit";
-                digitSpan.textContent = digit;
-                digitSpan.setAttribute("data-digit", digit);
-                // No need to set individual opacity or visibility - CSS custom property handles it
-                heroNumber.appendChild(digitSpan);
-              });
+              needsUpdate = true;
             } else {
-              // Update existing digits with new content
-              currentDigits.forEach((digitSpan, index) => {
-                if (digitSpan.textContent !== newDigits[index]) {
-                  digitSpan.textContent = newDigits[index];
-                  digitSpan.setAttribute("data-digit", newDigits[index]);
+              // Check if any digit content changed
+              for (let i = 0; i < currentDigits.length; i++) {
+                if (currentDigits[i].textContent !== newDigits[i]) {
+                  needsUpdate = true;
+                  break;
                 }
-              });
+              }
             }
 
-            // Apply opacity via CSS custom property on the parent element
-            // This ensures ALL .digit elements get the same opacity simultaneously
-            // Use requestAnimationFrame to ensure smooth updates
-            requestAnimationFrame(() => {
-              heroNumber.style.setProperty("--digit-opacity", opacity);
-              heroNumber.style.filter = "blur(0px)"; // Ensure no blur during countdown
-            });
+            if (needsUpdate) {
+              if (currentDigits.length !== newDigits.length) {
+                heroNumber.innerHTML = "";
+                newDigits.forEach((digit) => {
+                  const digitSpan = document.createElement("span");
+                  digitSpan.className = "digit";
+                  digitSpan.textContent = digit;
+                  digitSpan.setAttribute("data-digit", digit);
+                  heroNumber.appendChild(digitSpan);
+                });
+              } else {
+                // Update existing digits with new content
+                currentDigits.forEach((digitSpan, index) => {
+                  if (digitSpan.textContent !== newDigits[index]) {
+                    digitSpan.textContent = newDigits[index];
+                    digitSpan.setAttribute("data-digit", newDigits[index]);
+                  }
+                });
+              }
+            }
 
-            // No need to set visibility on parent - wrapper opacity handles overall visibility
+            // Direct style setting for maximum performance during fast scrolling
+            heroNumber.style.setProperty("--digit-opacity", opacity);
+            heroNumber.style.filter = "blur(0px)"; // Ensure no blur during countdown
           },
 
           onLeave: function (self) {
