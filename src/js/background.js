@@ -4311,9 +4311,13 @@ export function initShaderBackground() {
     // Update globe model rotation if auto-rotate is enabled
     if (globeModel && globeParams.autoRotate && !globeParams.rotationPaused) {
       // Determine which rotation speed to use based on scroll state
-      const rotationSpeed = isScrolling
-        ? globeParams.scrollRotateSpeed // Use faster speed when scrolling
-        : globeParams.baseRotateSpeed; // Use normal speed when not scrolling
+      // COMMENTED OUT: Faster rotation during scroll - now uses constant base speed
+      // const rotationSpeed = isScrolling
+      //   ? globeParams.scrollRotateSpeed // Use faster speed when scrolling
+      //   : globeParams.baseRotateSpeed; // Use normal speed when not scrolling
+
+      // Always use base rotation speed (no faster spinning during scroll)
+      const rotationSpeed = globeParams.baseRotateSpeed;
 
       // Apply rotation to the model directly, keeping its position fixed
       globeModel.rotation.y += rotationSpeed * 0.01;

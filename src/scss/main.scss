@@ -2,6 +2,7 @@
 @use './layout' as *;
 @use './utilities' as *;
 @use './animation' as *;
+@use './typography' as *;
 @use './components/background' as *;
 @use './components/header' as *;
 @use './components/buttons' as *;
@@ -10,11 +11,12 @@
 @use './components/section-timeline' as *;
 @use './components/nav' as *;
 @use './components/cards' as *;
+@use './components/jacs-banner' as *;
 @use './components/events-panel' as *;
 @use './components/form-panel' as *;
 @use './components/footer-bar' as *;
 @use './components/footer' as *;
-@use './typography' as *;
+
 
 
 :root {
