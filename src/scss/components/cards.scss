@@ -23,6 +23,11 @@
         margin-top: 8vw;
         margin-bottom: 12vw;
     }
+
+    @media (max-width:$mobile-viewport) {
+        margin-top: 8vw;
+        margin-bottom: 12vw;
+    }
 }
 
 .sliding-card-row {

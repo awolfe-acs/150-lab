@@ -5,14 +5,23 @@
     width: 1336px;
     max-width: calc(100% - 80px);
     margin: 0 auto;
-    margin-top: 64px;
+    margin-top: 20svh;
     padding: 4px;
     position: relative;
     border-radius: 32px;
     overflow: hidden;
 
+    @media (max-width:$desktop-viewport) {
+        margin-top: 12svh;
+    }
+
     @media (min-width:$desktop-viewport) {
         max-width: calc(100% - 200px);
+    }
+
+    @media (max-width:$mobile-viewport) {
+        width: calc(100% - 32px);
+        max-width: calc(100% - 32px);
     }
 
     .panel-body {
@@ -28,24 +37,48 @@
 
         @media (max-width:$desktop-viewport) {
             padding: 32px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 24px;
         }
 
         @media (max-width:$mobile-viewport) {
             padding: 24px;
-            flex-direction: column;
+            gap: 20px;
         }
 
         div {
             display: flex;
             flex-direction: column;
             gap: 8px;
+
+            @media (max-width:$desktop-viewport) {
+                width: 100%;
+            }
         }
 
         h5 {
             font-size: 36px;
+            max-width: 100%;
 
-            @media (max-width:$mobile-viewport) {
+            span {
+                @media (max-width:588px) {
+                    display: block;
+                    margin-bottom: 12px;
+                }
+            }
+
+            @media (max-width:1280px) {
                 font-size: 24px;
+            }
+        }
+
+        p {
+            max-width: 600px;
+
+            @media (max-width:$desktop-viewport) {
+                width: 458px;
+                max-width: 100%;
             }
         }
     }
