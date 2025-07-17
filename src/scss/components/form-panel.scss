@@ -472,21 +472,6 @@
                         0 0 16px rgba(0, 188, 212, 0.3),
                         inset 0 1px 2px rgba(255, 255, 255, 0.3);
 
-                    &::before {
-                        content: '';
-                        position: absolute;
-                        top: calc(50% - 1px);
-                        left: 50%;
-                        transform: translate(-50%, -50%) rotate(45deg);
-                        width: 6px;
-                        height: 12px;
-                        border: 2px solid #ffffff;
-                        border-top: none;
-                        border-left: none;
-                        opacity: 1;
-                        animation: checkmarkAppear 0.3s ease-out;
-                    }
-
                     &:hover {
                         background: linear-gradient(135deg, #26c6da 0%, #00acc1 100%);
                         border-color: #26c6da;
@@ -1944,11 +1929,29 @@
 }
 
 html.v1 input[type=checkbox]:checked:before {
-    background-color: transparent !important;
-    border-color: none !important;
-    color: transparent !important;
+    background-color: rgba(255, 255, 255, 1);
+    border-color: none;
+    color: transparent;
 }
 
 html.v1 input[type=checkbox]:checked:active:before {
-    background-color: transparent !important;
+    background-color: rgba(255, 255, 255, 0.5);
+}
+
+
+html:not(.v1) {
+    input[type="checkbox"]:checked::before {
+        content: '';
+        position: absolute;
+        top: calc(50% - 1px);
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(45deg);
+        width: 6px;
+        height: 12px;
+        border: 2px solid #ffffff;
+        border-top: none;
+        border-left: none;
+        opacity: 1;
+        animation: checkmarkAppear 0.3s ease-out;
+    }
 }
