@@ -1647,7 +1647,7 @@
             const formData = new FormData(form);
             
             // Submit via fetch to prevent page redirect
-            fetch(form.action, {
+            fetch(form.action, { 
               method: 'POST',
               body: formData,
               mode: 'no-cors' // Important for cross-origin requests

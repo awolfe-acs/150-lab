@@ -140,18 +140,9 @@ export function updatePageNavigation() {
     gsap.to(pageNav, { opacity: 0, duration: 0.2, ease: "power2.out" });
     navClickedAndHidden = true;
 
-    // Calculate fresh scroll position for video-travel-area
-    if (videoTravelArea) {
+    // Calculate fresh scroll position for get-involved section
+    if (getInvolvedSection) {
       // Add a small delay to ensure any ongoing animations have settled
-      setTimeout(() => {
-        const targetOffset = getElementScrollPosition(videoTravelArea);
-        window.scrollTo({
-          top: targetOffset,
-          behavior: "smooth",
-        });
-      }, 50);
-    } else if (getInvolvedSection) {
-      // Fallback to get-involved section
       setTimeout(() => {
         const targetOffset = getElementScrollPosition(getInvolvedSection);
         window.scrollTo({
@@ -201,14 +192,6 @@ export function updatePageNavigation() {
       bottom: 0,
     },
     {
-      id: "getinvolved-video",
-      element: videoTravelArea,
-      title: "Get Involved",
-      link: getInvolvedLink,
-      top: 0,
-      bottom: 0,
-    },
-    {
       id: "getinvolved",
       element: getInvolvedSection,
       title: "Get Involved",
@@ -236,20 +219,17 @@ export function updatePageNavigation() {
       }
     });
 
-    // Special adjustment: Hero section ends at the start of video travel area
-    if (sections[0].element && videoTravelArea) {
-      sections[0].bottom = getElementScrollPosition(videoTravelArea);
+    // Special adjustment: Hero section ends at the start of get-involved section
+    if (sections[0].element && getInvolvedSection) {
+      sections[0].bottom = getElementScrollPosition(getInvolvedSection);
     }
 
-    // Make video-travel-area and get-involved one logical section
-    if (videoTravelArea && eventsSection) {
-      const videoSection = sections.find((s) => s.id === "getinvolved-video");
-      const getInvolvedSection = sections.find((s) => s.id === "getinvolved");
-
-      if (videoSection && getInvolvedSection) {
-        // Get-involved section now spans from video-travel-area to events section
-        getInvolvedSection.top = videoSection.top;
-        getInvolvedSection.bottom = getElementScrollPosition(eventsSection);
+    // Get-involved section spans from its start to events section
+    if (getInvolvedSection && eventsSection) {
+      const getInvolvedSectionObj = sections.find((s) => s.id === "getinvolved");
+      if (getInvolvedSectionObj) {
+        getInvolvedSectionObj.top = getElementScrollPosition(getInvolvedSection);
+        getInvolvedSectionObj.bottom = getElementScrollPosition(eventsSection);
       }
     }
   }
@@ -281,11 +261,6 @@ export function updatePageNavigation() {
           activeSection = section;
           break;
         }
-      }
-
-      // If we're in video-travel-area, treat as get-involved
-      if (activeSection.id === "getinvolved-video") {
-        activeSection = sections.find((s) => s.id === "getinvolved") || activeSection;
       }
 
       // Only update if the section has changed
