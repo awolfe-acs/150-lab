@@ -1942,3 +1942,13 @@
         transform: translate(-50%, -50%) rotate(45deg) scale(1);
     }
 }
+
+html.v1 input[type=checkbox]:checked:before {
+    background-color: transparent !important;
+    border-color: none !important;
+    color: transparent !important;
+}
+
+html.v1 input[type=checkbox]:checked:active:before {
+    background-color: transparent !important;
+}

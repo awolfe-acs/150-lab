@@ -55,6 +55,7 @@ video {
     margin: 0 auto;
     position: relative;
     z-index: 1;
+    width: 100% !important;
 
     &.scale-active {
         box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);

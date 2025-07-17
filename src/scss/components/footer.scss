@@ -184,6 +184,7 @@
     .ft-social-links {
         a:hover {
             text-decoration: none;
+            cursor: pointer;
         }
     }
 
@@ -408,4 +409,10 @@
 
 footer .menu {
     box-shadow: none;
+}
+
+html.v1 {
+    .ft-social-links .social-icon svg {
+        display: none !important;
+    }
 }
