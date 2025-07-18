@@ -278,6 +278,9 @@ export function initCoverArea() {
         window.enableMouseParticles();
       }
 
+      // Start background particle fade-in
+      document.dispatchEvent(new CustomEvent("veryEarlyParticleFade"));
+
       // Try to play audio
       playBackgroundAudio(true);
 

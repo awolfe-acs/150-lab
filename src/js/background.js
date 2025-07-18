@@ -444,31 +444,31 @@ export function initShaderBackground() {
           // Color2 reaches phase 1.5 at 40% progress (original timing)
           let currentColor1, currentColor2;
 
-          // Handle Color1 timing (reaches phase 1.5 at 20% progress)
-          if (progress <= 0.28) {
-            // First 20% for color1: interpolate from phase 1 to phase 1.5
-            const color1FirstStageProgress = progress / 0.28; // Map 0-0.2 to 0-1
+          // Handle Color1 timing (reaches phase 1.5 at 40% progress - delayed from 28%)
+          if (progress <= 0.4) {
+            // First 40% for color1: stay at phase 1 color (extended persistence)
+            currentColor1 = phase1Color1.clone();
+          } else if (progress <= 0.8) {
+            // From 40% to 80%: interpolate from phase 1 to phase 1.5 (delayed start)
+            const color1FirstStageProgress = (progress - 0.4) / (0.8 - 0.4); // Map 0.40-0.80 to 0-1
             currentColor1 = phase1Color1.clone().lerp(phase1_5Color1, color1FirstStageProgress);
-          } else if (progress <= 0.75) {
-            // From 20% to 75%: stay at phase 1.5 color
-            currentColor1 = phase1_5Color1.clone();
           } else {
-            // Final 25% (0.75-1): quick transition from phase 1.5 to phase 2
-            const color1FinalStageProgress = (progress - 0.75) / 0.25; // Map 0.75-1 to 0-1
+            // Final 20% (0.80-1): quick transition from phase 1.5 to phase 2
+            const color1FinalStageProgress = (progress - 0.8) / 0.2; // Map 0.80-1 to 0-1
             currentColor1 = phase1_5Color1.clone().lerp(phase2Color1, color1FinalStageProgress);
           }
 
-          // Handle Color2 timing (persists in phase 1 for ~33% longer, starts transition at ~48%)
-          if (progress <= 0.48) {
-            // First 48% for color2: stay at phase 1 color (~33% longer persistence)
+          // Handle Color2 timing (persists in phase 1 even longer, starts transition at ~60%)
+          if (progress <= 0.6) {
+            // First 60% for color2: stay at phase 1 color (extended persistence)
             currentColor2 = phase1Color2.clone();
-          } else if (progress <= 0.75) {
-            // From 48% to 75%: interpolate from phase 1 to phase 1.5
-            const color2FirstStageProgress = (progress - 0.48) / (0.75 - 0.48); // Map 0.48-0.75 to 0-1
+          } else if (progress <= 0.8) {
+            // From 60% to 80%: interpolate from phase 1 to phase 1.5 (delayed start)
+            const color2FirstStageProgress = (progress - 0.6) / (0.8 - 0.6); // Map 0.60-0.80 to 0-1
             currentColor2 = phase1Color2.clone().lerp(phase1_5Color2, color2FirstStageProgress);
           } else {
-            // Final 25% (0.75-1): quick transition from phase 1.5 to phase 2
-            const color2FinalStageProgress = (progress - 0.75) / 0.25; // Map 0.75-1 to 0-1
+            // Final 20% (0.80-1): quick transition from phase 1.5 to phase 2
+            const color2FinalStageProgress = (progress - 0.8) / 0.2; // Map 0.80-1 to 0-1
             currentColor2 = phase1_5Color2.clone().lerp(phase2Color2, color2FinalStageProgress);
           }
 
@@ -494,6 +494,25 @@ export function initShaderBackground() {
           // Reset phase 1 timer since we've entered transition
           phase1StartTime = Date.now();
           window.specialColorsActive = true;
+
+          // Handle cover area overlay fade-in as we leave phase 1 colors
+          const coverAreaOverlay = document.querySelector("#cover-area-overlay");
+          if (coverAreaOverlay) {
+            // Start fading in the overlay at 30% progress (when colors start changing more noticeably)
+            // Reach max opacity (0.5) at 100% progress (when we reach #video-travel-area)
+            let overlayOpacity = 0;
+            if (progress >= 0.3) {
+              // Map progress from 30%-100% to opacity 0-0.5
+              const fadeInProgress = (progress - 0.3) / (1.0 - 0.3); // Map 0.30-1.0 to 0-1
+              overlayOpacity = Math.min(0.5, fadeInProgress * 0.5);
+            }
+
+            // Maintain saturation increase as colors change
+            const saturation = 1 + progress * 1.2; // 1 + (1 * 1.2) = 2.2
+
+            coverAreaOverlay.style.opacity = overlayOpacity;
+            coverAreaOverlay.style.filter = `saturate(${saturation})`;
+          }
 
           // Update the GUI to reflect the current interpolated colors
           updateColorGUI();
@@ -525,6 +544,31 @@ export function initShaderBackground() {
           console.log("Video travel area: Returning to phase 1->2 transition");
           // When scrolling back up, the hero-travel-area ScrollTrigger will handle the transition
           // No need to do anything here as the transition will be handled by the previous trigger
+        },
+      },
+    });
+
+    // Create a ScrollTrigger to fade out the cover area overlay when video-travel-area enters viewport
+    gsap.timeline({
+      scrollTrigger: {
+        trigger: "#video-travel-area",
+        start: "top bottom", // Start when video-travel-area top reaches bottom of viewport
+        end: "top 66.67%", // End when video-travel-area top is 1/3 into viewport (66.67% from top)
+        scrub: true, // Smooth scrubbing effect, tied to scroll position
+        markers: false, // Set to true for debugging
+        onUpdate: (self) => {
+          // Get the current progress from start to end (0 to 1)
+          const progress = self.progress;
+
+          // Quickly fade out the cover area overlay
+          const coverAreaOverlay = document.querySelector("#cover-area-overlay");
+          if (coverAreaOverlay) {
+            // Fade from opacity 0.5 to 0 as video-travel-area enters viewport
+            const overlayOpacity = 0.5 - progress * 0.5;
+            coverAreaOverlay.style.opacity = overlayOpacity;
+            // Keep the saturation effect from previous transition
+            coverAreaOverlay.style.filter = `saturate(2.2)`;
+          }
         },
       },
     });
@@ -2938,7 +2982,7 @@ export function initShaderBackground() {
   overlayFolder.open();
 
   // Create particle system
-  let particleCount = 276; // Make this mutable
+  let particleCount = 150; // Make this mutable
   let particles = new Float32Array(particleCount * 3);
   let particleVelocities = new Float32Array(particleCount * 3);
   let particleColors = new Float32Array(particleCount * 3);
@@ -2951,16 +2995,18 @@ export function initShaderBackground() {
   const scrollObj = {
     scrollSpeed: 0.005,
     verticalSpread: 1.0,
+    horizontalSpread: 0.56,
     damping: 0.95,
     depthRange: 1000, // Default depth range
-    sizeMin: 1, // Minimum particle size
-    sizeMax: 5, // Maximum particle size
+    sizeMin: 1.1, // Minimum particle size
+    sizeMax: 4.0, // Maximum particle size
     floatSpeed: 0.8, // Floating speed multiplier
     verticalOffset: 0, // Vertical offset for the entire particle system
   };
 
-  // Set vertical distribution area based on the verticalSpread value
+  // Set vertical and horizontal distribution areas based on the spread values
   let verticalDistribution = window.innerHeight * scrollObj.verticalSpread;
+  let horizontalDistribution = window.innerWidth * scrollObj.horizontalSpread;
 
   // Function to redistribute particles with size variation
   function redistributeParticles() {
@@ -2998,8 +3044,8 @@ export function initShaderBackground() {
   // Initialize particles with random positions and velocities
   for (let i = 0; i < particleCount; i++) {
     const i3 = i * 3;
-    // Random positions within viewport width but with correct vertical range
-    particles[i3] = (Math.random() - 0.5) * window.innerWidth;
+    // Random positions within horizontal and vertical spread ranges
+    particles[i3] = (Math.random() - 0.5) * horizontalDistribution;
     particles[i3 + 1] = (Math.random() - 0.5) * verticalDistribution + scrollObj.verticalOffset;
     particles[i3 + 2] = Math.random() * 500 - 250; // Random z position for rendering order
 
@@ -3216,8 +3262,8 @@ export function initShaderBackground() {
           newColors[i3 + 1] = particleColors[i3 + 1];
           newColors[i3 + 2] = particleColors[i3 + 2];
         } else {
-          // Create new particles with extended vertical range
-          newParticles[i3] = (Math.random() - 0.5) * window.innerWidth;
+          // Create new particles with extended vertical and horizontal ranges
+          newParticles[i3] = (Math.random() - 0.5) * horizontalDistribution;
           newParticles[i3 + 1] = (Math.random() - 0.5) * verticalDistribution + scrollObj.verticalOffset;
           newParticles[i3 + 2] = Math.random() * 500 - 250; // Random z position
 
@@ -4217,7 +4263,7 @@ export function initShaderBackground() {
         positions[i3 + 1] += scrollDelta * (0.5 + sizeRatio * 0.5);
 
         // Bounce off horizontal boundaries
-        if (Math.abs(positions[i3]) > window.innerWidth / 2) {
+        if (Math.abs(positions[i3]) > horizontalDistribution / 2) {
           particleVelocities[i3] *= -1;
         }
 
@@ -4297,7 +4343,7 @@ export function initShaderBackground() {
 
     // Gradually fade in particles if needed - but only if not fully hidden by scrolling
     if (!window.particlesFullyHidden && customParticleMaterial.uniforms.opacity.value < targetParticleOpacity) {
-      customParticleMaterial.uniforms.opacity.value += 0.002; // Much slower fade in
+      customParticleMaterial.uniforms.opacity.value += 0.001; // Slower, more elegant fade in
       if (customParticleMaterial.uniforms.opacity.value > targetParticleOpacity) {
         customParticleMaterial.uniforms.opacity.value = targetParticleOpacity;
       }
@@ -4349,8 +4395,18 @@ export function initShaderBackground() {
 
   // Listen for very early particle fade start event (before hero animation)
   document.addEventListener("veryEarlyParticleFade", () => {
-    // Start with a very low opacity target to begin the fade-in
-    targetParticleOpacity = 0.1;
+    console.log("veryEarlyParticleFade event received");
+    // Start with a higher opacity target for more noticeable fade-in
+    targetParticleOpacity = 0.3;
+
+    // Also immediately start the fade if material is available
+    if (customParticleMaterial && customParticleMaterial.uniforms && customParticleMaterial.uniforms.opacity) {
+      console.log("Starting immediate particle fade-in");
+      // Start from current value and ensure it's not 0
+      if (customParticleMaterial.uniforms.opacity.value < 0.1) {
+        customParticleMaterial.uniforms.opacity.value = 0.05;
+      }
+    }
   });
 
   // Listen for early particle fade start event (after text animation)
@@ -4387,8 +4443,9 @@ export function initShaderBackground() {
     mesh.geometry.dispose(); // Clean up old geometry
     mesh.geometry = new THREE.PlaneGeometry(width, height, width / 10, height / 10);
 
-    // Update vertical distribution based on new window height
+    // Update vertical and horizontal distribution based on new window dimensions
     verticalDistribution = height * scrollObj.verticalSpread;
+    horizontalDistribution = width * scrollObj.horizontalSpread;
 
     // Update the vertical offset range in the GUI only if GUI exists
     if (typeof gui !== "undefined" && gui && gui.__folders && gui.__folders["Particle System"]) {
@@ -4497,8 +4554,9 @@ export function initShaderBackground() {
     mesh.geometry.dispose(); // Clean up old geometry
     mesh.geometry = new THREE.PlaneGeometry(width, height, width / 10, height / 10);
 
-    // Update vertical distribution based on new window height
+    // Update vertical and horizontal distribution based on new window dimensions
     verticalDistribution = height * scrollObj.verticalSpread;
+    horizontalDistribution = width * scrollObj.horizontalSpread;
 
     // Update the vertical offset range in the GUI only if GUI exists
     if (typeof gui !== "undefined" && gui && gui.__folders["Particle System"]) {
@@ -4730,6 +4788,43 @@ export function initShaderBackground() {
         // Check if the particle is outside the new bounds and reset if needed
         if (Math.abs(newRelativePos) > verticalDistribution / 2) {
           positions[i3 + 1] = (Math.random() - 0.5) * verticalDistribution + scrollObj.verticalOffset;
+        }
+      }
+
+      particleGeometry.attributes.position.needsUpdate = true;
+    });
+
+  particleFolder
+    .add(scrollObj, "horizontalSpread", 0.02, 5.0, 0.01)
+    .name("Horizontal Spread")
+    .onChange((value) => {
+      // Store the old distribution value
+      const oldDistribution = horizontalDistribution;
+
+      // Update horizontal distribution
+      horizontalDistribution = window.innerWidth * value;
+
+      // Calculate the scale factor for adjusting positions
+      const scaleFactor = horizontalDistribution / oldDistribution;
+
+      // Redistribute particles horizontally while maintaining relative positions
+      const positions = particleGeometry.attributes.position.array;
+
+      for (let i = 0; i < particleCount; i++) {
+        const i3 = i * 3;
+
+        // Get the current horizontal position relative to center
+        const relativePos = positions[i3];
+
+        // Scale the relative position by the new distribution size
+        const newRelativePos = relativePos * scaleFactor;
+
+        // Apply the new position
+        positions[i3] = newRelativePos;
+
+        // Check if the particle is outside the new bounds and reset if needed
+        if (Math.abs(newRelativePos) > horizontalDistribution / 2) {
+          positions[i3] = (Math.random() - 0.5) * horizontalDistribution;
         }
       }
 

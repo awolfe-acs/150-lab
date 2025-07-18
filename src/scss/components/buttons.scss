@@ -300,6 +300,7 @@
             z-index: 3;
             font-weight: 700;
             text-transform: uppercase;
+            margin: 0 24px 0 0;
         }
 
         svg {
@@ -405,4 +406,8 @@
             stroke: #fff;
         }
     }
+}
+
+html.v1 body input[type=submit], html.v1 body .submit-button-style {
+    height: 56px !important;
 }
