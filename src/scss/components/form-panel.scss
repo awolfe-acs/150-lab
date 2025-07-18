@@ -1928,26 +1928,26 @@
     }
 }
 
-html.v1 input[type=checkbox]:before {
+html.v1 .form-panel input[type=checkbox]:before {
     border: 0px solid transparent;
     top: calc(50% + 1px);
     left: 50%;
     transform: translateX(-50%) translateY(-50%);
 }
 
-html.v1 input[type=checkbox]:hover:before {
+html.v1 .form-panel input[type=checkbox]:hover:before {
     border-color: transparent;
     background: transparent;
 }
 
-html.v1 input[type=checkbox]:checked:before {
+html.v1 .form-panel input[type=checkbox]:checked:before {
     background-color: transparent;
     border-color: transparent;
     border: 0px solid transparent;
     color: #fff;
 }
 
-html.v1 input[type=checkbox]:checked:active:before {
+html.v1 .form-panel input[type=checkbox]:checked:active:before {
     background-color: rgba(255, 255, 255, 0.5);
 }
 
@@ -1963,5 +1963,8 @@ html:not(.v1) {
         border-left: none;
         opacity: 1;
         animation: checkmarkAppear 0.3s ease-out;
+        top: calc(50% - 1px);
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(45deg) scale(1);
     }
 }

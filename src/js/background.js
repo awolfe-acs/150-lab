@@ -2663,48 +2663,24 @@ export function initShaderBackground() {
       return;
     }
 
-    // For desktop viewports (> 1024px), use the existing positioning logic
-    // Get the wave parameters from the shader uniforms
-    const waveEnabled = uniforms.bottomWaveEnabled.value;
-    const waveDepth = uniforms.bottomWaveDepth.value;
-    const edgeDepth = uniforms.edgeDepth.value;
+    // For desktop viewports (> 1024px), use fixed positioning
+    // Set fixed Y position and Z position for desktop
+    const desktopYPosition = -40;
+    const desktopZPosition = -10;
 
-    // Calculate the position needed to place the globe behind the bottom edge
-    // The bottom wave creates an edge at the bottom of the screen
-    // We need to move the globe down enough that it appears behind this edge
+    // Apply the positions to the globe model
+    globeModel.position.y = desktopYPosition;
+    globeModel.position.z = desktopZPosition;
 
-    // First determine if the wave effect is enabled
-    if (waveEnabled) {
-      // Calculate an approximation of how much the wave extends into the screen
-      // This is based on the shader's wave depth and edge depth calculations
-      const waveExtension = svh * waveDepth * edgeDepth * 0.5;
-
-      // Set the Y position of the globe to place it partially behind the wave
-      // The position needs to be in THREE.js world units
-      const cameraViewHeight = (camera.top - camera.bottom) / camera.zoom;
-      const pixelsToWorldRatio = cameraViewHeight / svh;
-
-      // Calculate the world space position - move it down beyond the wave
-      // We add a little extra (-10% of viewport) to ensure it goes behind the wave
-      const worldYPosition = -waveExtension * pixelsToWorldRatio - svh * 0.1 * pixelsToWorldRatio;
-
-      // Set Z position to ensure the globe is behind the shader layer
-      const worldZPosition = -10; // Negative value to move "behind" the camera
-
-      // Apply the positions to the globe model
-      globeModel.position.y = worldYPosition;
-      globeModel.position.z = worldZPosition;
-
-      // Update the position values in the GUI
-      for (let i = 0; i < positionFolder.__controllers.length; i++) {
-        const controller = positionFolder.__controllers[i];
-        if (controller.property === "positionY") {
-          // Update without triggering onChange
-          controller.setValue(worldYPosition);
-        } else if (controller.property === "positionZ") {
-          // Update without triggering onChange
-          controller.setValue(worldZPosition);
-        }
+    // Update the position values in the GUI
+    for (let i = 0; i < positionFolder.__controllers.length; i++) {
+      const controller = positionFolder.__controllers[i];
+      if (controller.property === "positionY") {
+        // Update without triggering onChange
+        controller.setValue(desktopYPosition);
+      } else if (controller.property === "positionZ") {
+        // Update without triggering onChange
+        controller.setValue(desktopZPosition);
       }
     }
   }
@@ -2716,8 +2692,35 @@ export function initShaderBackground() {
     // Get the current viewport width
     const vw = window.innerWidth;
 
-    // Calculate 90vw in actual pixels
-    const targetWidth = vw * 0.9;
+    // Check if we're on desktop (> 1024px)
+    if (vw > 1024) {
+      // For desktop, use fixed scale of 40
+      const desktopScale = 40;
+      globeModel.scale.set(desktopScale, desktopScale, desktopScale);
+
+      // Update GUI slider without triggering onChange
+      for (let i = 0; i < globeFolder.__controllers.length; i++) {
+        if (globeFolder.__controllers[i].property === "scale") {
+          globeFolder.__controllers[i].setValue(desktopScale);
+          break;
+        }
+      }
+
+      // Position the globe with fixed desktop positioning
+      positionGlobeBehindBottomWave();
+      return;
+    }
+
+    // For mobile and tablet (≤ 1024px), keep the responsive calculation
+    // Calculate target width - 90vw for tablet, 120vw (33% larger) for mobile
+    let targetWidth;
+    if (vw <= 640) {
+      // Mobile: 90vw * 1.33 = 120vw (33% larger)
+      targetWidth = vw * 1.2; // 120% of viewport width for mobile
+    } else {
+      // Tablet: keep original 90vw
+      targetWidth = vw * 0.9;
+    }
 
     // We need the actual size of the model in its natural state
     // Store the original scale

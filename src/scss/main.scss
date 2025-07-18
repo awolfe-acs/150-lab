@@ -407,6 +407,10 @@ html {
 }
 
 #get-involved {
+  @media (min-width:641px) {
+    padding-top: 20svh;
+    padding-bottom: 20svh;
+  }
 
   @media (max-width:$mobile-viewport) {
     padding-top: 4svh;
@@ -415,6 +419,7 @@ html {
   .get-involved-message {
     padding-top: 6svh;
     padding-bottom: 64px;
+    text-shadow: 0 2px 2px rgba(0, 0, 0, 0.32), 0px 2px 6px rgba(2, 2, 2, 0.18), 0px 2px 20px rgba(2, 2, 2, 0.12), 0px 2px 24px rgba(2, 2, 2, 0.08), 0 2px 2px rgba(0, 0, 0, 0.24), 0px 2px 6px rgba(2, 2, 2, 0.12), 0px 2px 20px rgba(2, 2, 2, 0.08), 0px 2px 24px rgba(2, 2, 2, 0.04);
   }
 
   .get-involved-header {
@@ -461,6 +466,10 @@ html {
 }
 
 #get-involved-cards {
+  @media (min-width:641px) {
+    padding-top: 20svh;
+  }
+
   @media (max-width:$mobile-viewport) {
     padding: 8svh 0;
   }

@@ -14,7 +14,7 @@ let heroAnimationComplete = false;
 let backgroundAudioLoaded = false;
 let enterButtonClicked = false;
 let audioRetryCount = 0;
-const maxAudioRetries = 18;
+const maxAudioRetries = 25;
 let audioRetryTimer = null;
 let wasPlayingBeforeHidden = false;
 
@@ -25,7 +25,7 @@ let uiClickSound = null;
 function initializeUIClickSound() {
   if (!uiClickSound) {
     uiClickSound = new Audio(uiClickAudioUrl);
-    uiClickSound.volume = 0.32;
+    uiClickSound.volume = 0.35;
     uiClickSound.preload = "auto";
   }
 }
@@ -42,7 +42,7 @@ const playUIClickSound = () => {
 
     // Clone the audio to allow multiple overlapping sounds
     const clickSound = uiClickSound.cloneNode();
-    clickSound.volume = 0.32;
+    clickSound.volume = 0.35;
     clickSound.play().catch((error) => {
       console.warn("UI click sound play was prevented:", error);
     });
@@ -112,8 +112,8 @@ function playBackgroundAudioWhenReady(fromEnterButton = false) {
   }
 
   try {
-    // Play the audio at 25% volume
-    backgroundAudioInstance.volume = 0.25;
+    // Play the audio at 22% volume
+    backgroundAudioInstance.volume = 0.22;
 
     // Create a user gesture for Safari if needed
     if (fromEnterButton) {
@@ -595,7 +595,7 @@ export function setupSoundToggle() {
           }
         } else if (audioInitialized && backgroundAudioInstance) {
           // Unmute the audio only if it was previously initialized
-          backgroundAudioInstance.volume = 0.25;
+          backgroundAudioInstance.volume = 0.22;
 
           // If audio was paused, restart it
           if (backgroundAudioInstance.paused) {
@@ -660,6 +660,6 @@ export function toggleMute() {
 
   // Update audio volume
   if (backgroundAudioInstance) {
-    backgroundAudioInstance.volume = audioMuted ? 0 : 0.25;
+    backgroundAudioInstance.volume = audioMuted ? 0 : 0.22;
   }
 }
