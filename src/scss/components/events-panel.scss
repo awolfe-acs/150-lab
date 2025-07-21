@@ -61,11 +61,17 @@
         //width: 1366px;
         width: 1416px;
         max-width: 100%;
+        max-width: calc(100% - 100px);
         padding: 0 40px;
         margin: 0 auto;
 
+        @media (min-width:1025px) and (max-width:1548px) {
+            //padding: 0 100px;
+        }
+
         @media (max-width:$mobile-viewport) {
             padding: 0 24px;
+            max-width: calc(100% - 32px);
         }
 
         .title-row {
@@ -85,7 +91,7 @@
             margin-bottom: 12svh;
 
             @media (max-width:$mobile-viewport) {
-                margin-bottom: 6svh;
+                margin-bottom: 48px;
             }
         }
 
