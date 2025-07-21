@@ -277,7 +277,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Initialize shader background (always run this)
-  initShaderBackground();
+  // Add a small delay to ensure canvas element is fully ready
+  setTimeout(() => {
+    try {
+      initShaderBackground();
+    } catch (error) {
+      console.error("Failed to initialize shader background:", error);
+      console.warn("Continuing without shader background...");
+    }
+  }, 100);
 
   // Only run animations and video on main pages
   if (isMainPage()) {

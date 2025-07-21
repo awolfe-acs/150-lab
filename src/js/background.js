@@ -4,6 +4,12 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import globeModelUrl from "../../public/models/globe-hd.glb?url";
 
 export function initShaderBackground() {
+  // Prevent multiple initializations
+  if (window.shaderBackgroundInitialized) {
+    console.warn("Shader background already initialized. Skipping...");
+    return;
+  }
+
   // Set up default values
   window.colorPhase = 1; // Start in phase one (default colors)
   window.specialColorsActive = false;
@@ -33,6 +39,29 @@ export function initShaderBackground() {
   // Get the canvas element
   const canvas = document.getElementById("shaderBackground");
   if (!canvas) return;
+
+  // Check for WebGL support before proceeding
+  function checkWebGLSupport() {
+    try {
+      const testCanvas = document.createElement("canvas");
+      const webglContext = testCanvas.getContext("webgl") || testCanvas.getContext("experimental-webgl");
+      if (!webglContext) {
+        return false;
+      }
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // If WebGL is not supported, show a fallback and exit gracefully
+  if (!checkWebGLSupport()) {
+    console.warn("WebGL is not supported on this device/browser. Skipping shader background initialization.");
+    // Hide the canvas and show a fallback background color
+    canvas.style.display = "none";
+    document.body.style.backgroundColor = "#1a1a2e"; // Fallback dark background
+    return;
+  }
 
   // Global state to track special colors activation
   window.specialColorsActive = false;
@@ -1014,10 +1043,59 @@ export function initShaderBackground() {
   canvas.style.transformStyle = "preserve-3d";
   canvas.style.willChange = "transform";
 
-  // Create the WebGL renderer
-  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true });
-  renderer.setSize(initialWidth, initialHeight);
-  renderer.setPixelRatio(window.devicePixelRatio);
+  // Create the WebGL renderer with error handling
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({
+      canvas,
+      alpha: true,
+      antialias: false, // Disable antialiasing to reduce GPU load
+      powerPreference: "default", // Use default power preference to avoid high-power GPU issues
+      failIfMajorPerformanceCaveat: false, // Allow fallback to software rendering if needed
+    });
+    renderer.setSize(initialWidth, initialHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap pixel ratio to prevent memory issues
+  } catch (error) {
+    console.error("Failed to create WebGL renderer:", error);
+    console.warn("Falling back to fallback background. WebGL initialization failed.");
+
+    // Hide the canvas and show a fallback background
+    canvas.style.display = "none";
+    document.body.style.backgroundColor = "#1a1a2e"; // Fallback dark background
+
+    // Add a simple CSS gradient as fallback
+    document.body.style.background = "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%)";
+    return;
+  }
+
+  // Mark initialization as successful
+  window.shaderBackgroundInitialized = true;
+
+  // Add context loss handling
+  canvas.addEventListener("webglcontextlost", function (event) {
+    console.warn("WebGL context lost. Attempting to restore...");
+    event.preventDefault();
+    // Reset initialization flag so it can be reinitialized
+    window.shaderBackgroundInitialized = false;
+  });
+
+  canvas.addEventListener("webglcontextrestored", function () {
+    console.log("WebGL context restored. Reinitializing...");
+    // Reinitialize the background after context restoration with some safety checks
+    setTimeout(() => {
+      // Only reinitialize if we're not already in the process
+      if (!window.shaderBackgroundReinitializing) {
+        window.shaderBackgroundReinitializing = true;
+        try {
+          initShaderBackground();
+        } catch (error) {
+          console.error("Failed to reinitialize shader background after context restore:", error);
+        } finally {
+          window.shaderBackgroundReinitializing = false;
+        }
+      }
+    }, 100);
+  });
 
   // Create scene and an orthographic camera
   const scene = new THREE.Scene();

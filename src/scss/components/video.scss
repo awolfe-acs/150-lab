@@ -22,8 +22,9 @@
         aspect-ratio: 16/9;
         //background: rgba(22, 22, 22, 0.66);
         max-height: calc(100svh - 80px);
-        width: calc(86vw - 32px);
-        max-width: 1366px;
+        //width: calc(86vw - 32px);
+        //max-width: 1366px;
+        max-width: min(calc(86vw - 32px), 1366px);
         margin: 0 auto;
         border-radius: 16px;
         overflow: hidden;
@@ -56,6 +57,7 @@ video {
     position: relative;
     z-index: 1;
     width: 100% !important;
+    min-width: 100% !important;
 
     &.scale-active {
         box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);

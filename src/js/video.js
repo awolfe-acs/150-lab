@@ -2,6 +2,9 @@
 import videoUrl from "../../public/video/acs-150-compressed.mp4?url";
 import posterUrl from "../../public/images/anniversary-video-poster.jpg?url";
 
+// Flag to indicate when sound toggle is triggered by video slider
+let videoSliderTriggeredUnmute = false;
+
 export function initVideo() {
   const videoElement = document.getElementById("anniversary-video");
   const videoSection = document.querySelector("#video");
@@ -215,8 +218,47 @@ export function initVideo() {
     // Convert slider percentage (0-100) to true volume (0-0.5)
     const sliderPercentage = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
     const volume = (sliderPercentage / 100) * MAX_VOLUME;
+
+    console.log("Video slider moved to volume:", volume, "Global muted:", window.audioMuted);
+
+    // If user is dragging the video slider while global audio is muted,
+    // this indicates intent to unmute and hear the video
+    if (window.audioMuted && volume > 0) {
+      console.log("User dragged video slider while globally muted - unmuting global audio");
+
+      // Unmute global audio by simulating a sound toggle click
+      const soundToggle = document.querySelector(".sound-toggle");
+      if (soundToggle && soundToggle.classList.contains("muted")) {
+        console.log("Programmatically clicking sound toggle to unmute");
+        // Set flag to indicate this unmute was triggered by video slider
+        videoSliderTriggeredUnmute = true;
+        // Simulate a click on the sound toggle to properly unmute everything
+        // This ensures all the audio.js logic runs properly
+        soundToggle.click();
+        // Clear flag after a short delay
+        setTimeout(() => {
+          videoSliderTriggeredUnmute = false;
+        }, 100);
+      }
+    }
+
+    // Always unmute the video element when user is actively setting volume > 0
+    if (volume > 0) {
+      videoElement.muted = false;
+    } else {
+      videoElement.muted = true;
+    }
+
     videoElement.volume = volume;
+
+    // Update original volume for restoration later
+    if (volume > 0) {
+      originalVideoVolume = volume;
+    }
+
     updateSlider();
+
+    console.log("Video volume set to:", videoElement.volume, "Video muted:", videoElement.muted);
   };
 
   // Mouse events for slider
@@ -256,6 +298,14 @@ export function initVideo() {
 
   // Set initial volume to 25% (middle of our 0-50% range)
   videoElement.volume = DEFAULT_VOLUME;
+
+  // Set initial muted state based on global audio state
+  if (window.audioMuted) {
+    videoElement.muted = true;
+    videoElement.volume = 0;
+  } else {
+    videoElement.muted = false;
+  }
 
   // Initialize slider position
   updateSlider();
@@ -431,8 +481,8 @@ export function initVideo() {
         // Hide audio slider when video is paused
         audioSlider.style.opacity = "0";
         audioSlider.style.pointerEvents = "none";
-        // Fade in background music
-        if (window.backgroundAudio) {
+        // Fade in background music only if not muted
+        if (window.backgroundAudio && !window.audioMuted) {
           fadeAudio(window.backgroundAudio, 0.25);
         }
         scrollAwayFadeTimeout = null;
@@ -454,8 +504,8 @@ export function initVideo() {
       // Hide audio slider when video is paused
       audioSlider.style.opacity = "0";
       audioSlider.style.pointerEvents = "none";
-      // Fade in background music
-      if (window.backgroundAudio) {
+      // Fade in background music only if not muted
+      if (window.backgroundAudio && !window.audioMuted) {
         fadeAudio(window.backgroundAudio, 0.25);
       }
     }
@@ -479,8 +529,10 @@ export function initVideo() {
       // Restore original volume or set based on global audio state
       if (window.audioMuted) {
         videoElement.volume = 0;
+        videoElement.muted = true;
       } else {
         // Restore the original volume that was set before scroll-away fade
+        videoElement.muted = false;
         videoElement.volume = originalVideoVolume;
       }
       // Update slider after setting volume
@@ -502,8 +554,8 @@ export function initVideo() {
     // Hide audio slider when video ends
     audioSlider.style.opacity = "0";
     audioSlider.style.pointerEvents = "none";
-    // Fade in background music when video ends
-    if (window.backgroundAudio) {
+    // Fade in background music when video ends only if not muted
+    if (window.backgroundAudio && !window.audioMuted) {
       fadeAudio(window.backgroundAudio, 0.25);
     }
   });
@@ -514,8 +566,8 @@ export function initVideo() {
     // Hide audio slider when video is paused
     audioSlider.style.opacity = "0";
     audioSlider.style.pointerEvents = "none";
-    // Fade in background music
-    if (window.backgroundAudio) {
+    // Fade in background music only if not muted
+    if (window.backgroundAudio && !window.audioMuted) {
       fadeAudio(window.backgroundAudio, 0.25);
     }
   });
@@ -540,36 +592,114 @@ export function initVideo() {
 
   // Listen for sound toggle state changes
   const updateVideoAudioState = () => {
+    console.log("=== updateVideoAudioState called ===");
+    console.log("Video state:", {
+      paused: videoElement.paused,
+      ended: videoElement.ended,
+      currentTime: videoElement.currentTime,
+      duration: videoElement.duration,
+    });
+    console.log("Audio state:", {
+      globalMuted: window.audioMuted,
+      currentVideoVolume: videoElement.volume,
+      videoElementMuted: videoElement.muted,
+      originalVideoVolume: originalVideoVolume,
+      backgroundAudioPaused: window.backgroundAudio ? window.backgroundAudio.paused : "no background audio",
+    });
+
     // Update video volume based on global audio state
-    if (!videoElement.paused) {
+    if (!videoElement.paused && !videoElement.ended) {
+      console.log("Video is actively playing, updating volume...");
+
       if (window.audioMuted) {
+        console.log("Global audio is muted, muting video");
         videoElement.volume = 0;
+        videoElement.muted = true;
       } else {
-        // Use original volume or default
-        videoElement.volume = originalVideoVolume;
+        console.log("Global audio is unmuted, restoring video volume to:", originalVideoVolume);
+        // When unmuting, restore the original volume and unmute the video
+        // But if this unmute was triggered by the video slider, don't override the volume
+        videoElement.muted = false;
+
+        if (!videoSliderTriggeredUnmute) {
+          videoElement.volume = originalVideoVolume;
+          console.log("Restored volume to originalVideoVolume:", originalVideoVolume);
+        } else {
+          console.log("Unmute triggered by video slider - keeping current video volume:", videoElement.volume);
+        }
+
+        // Also fade out background audio if it's playing while video is active
+        if (window.backgroundAudio && !window.backgroundAudio.paused) {
+          console.log("Fading out background audio since video is playing");
+          fadeAudio(window.backgroundAudio, 0);
+        }
       }
       // Update slider after volume change
       updateSlider();
+      console.log("Video updated - Volume:", videoElement.volume, "Muted:", videoElement.muted);
+    } else {
+      console.log(
+        "Video is not playing, skipping volume update. Paused:",
+        videoElement.paused,
+        "Ended:",
+        videoElement.ended
+      );
     }
+    console.log("=== updateVideoAudioState complete ===");
   };
 
-  // Watch for sound toggle clicks
+  // Watch for sound toggle clicks with multiple detection methods
   const soundToggle = document.querySelector(".sound-toggle");
-  if (soundToggle) {
-    soundToggle.addEventListener("click", updateVideoAudioState);
-  }
 
-  // Also check for changes to the window.audioMuted property
-  // This creates a setter/getter for the audioMuted property to detect changes
-  let _audioMuted = window.audioMuted;
-  Object.defineProperty(window, "audioMuted", {
-    get: function () {
-      return _audioMuted;
-    },
-    set: function (value) {
-      _audioMuted = value;
-      // When audioMuted changes, update video volume
+  if (soundToggle) {
+    // Method 1: Direct click listener
+    soundToggle.addEventListener("click", () => {
+      console.log("Sound toggle clicked - Method 1");
+      // Use setTimeout to ensure the audio.js has updated window.audioMuted first
+      setTimeout(() => {
+        console.log("Processing sound toggle click after delay");
+        updateVideoAudioState();
+      }, 50); // Increased delay to 50ms for more reliability
+    });
+
+    // Method 2: MutationObserver to watch for class changes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === "attributes" && mutation.attributeName === "class") {
+          console.log("Sound toggle class changed - Method 2");
+          // Delay to ensure audio.js has processed the change
+          setTimeout(() => {
+            console.log("Processing class change after delay");
+            updateVideoAudioState();
+          }, 50);
+        }
+      });
+    });
+
+    observer.observe(soundToggle, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    // Method 3: Poll window.audioMuted every 500ms as fallback
+    let lastKnownMuteState = window.audioMuted;
+    console.log("Initial audio mute state:", lastKnownMuteState);
+
+    setInterval(() => {
+      if (window.audioMuted !== lastKnownMuteState) {
+        console.log("Audio mute state changed via polling - Method 3", {
+          was: lastKnownMuteState,
+          now: window.audioMuted,
+        });
+        lastKnownMuteState = window.audioMuted;
+        updateVideoAudioState();
+      }
+    }, 500);
+
+    // Also run initial check after a short delay to ensure all modules are loaded
+    setTimeout(() => {
+      console.log("Running initial video audio state check");
       updateVideoAudioState();
-    },
-  });
+    }, 1000);
+  }
 }

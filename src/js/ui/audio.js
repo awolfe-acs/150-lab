@@ -568,48 +568,55 @@ export function setupSoundToggle() {
       } else {
         if (waveAnimation) waveAnimation.resume();
 
-        // If audio hasn't been initialized yet but enter button was clicked, initialize it now
-        if (!audioInitialized && enterButtonClicked && backgroundAudioInstance) {
-          // Try to play with aggressive retry
-          playBackgroundAudio(true);
+        // Check if video is currently playing - if so, don't start background audio
+        const videoElement = document.getElementById("anniversary-video");
+        const isVideoPlaying = videoElement && !videoElement.paused && !videoElement.ended;
 
-          // Restart retry timer if needed
-          if (!audioRetryTimer) {
-            audioRetryTimer = setInterval(() => {
-              if (audioInitialized) {
-                // Audio started successfully, clear the retry timer
-                clearInterval(audioRetryTimer);
-                audioRetryTimer = null;
-              } else if (!audioMuted && enterButtonClicked) {
-                // Try again if the audio hasn't started yet
-                if (audioRetryCount < maxAudioRetries) {
-                  playBackgroundAudio(true);
-                } else {
-                  // Stop trying after max retries
-                  console.warn(`Exceeded maximum audio retry attempts (${maxAudioRetries}). Stopping retries.`);
+        // Only start background audio if no video is playing
+        if (!isVideoPlaying) {
+          // If audio hasn't been initialized yet but enter button was clicked, initialize it now
+          if (!audioInitialized && enterButtonClicked && backgroundAudioInstance) {
+            // Try to play with aggressive retry
+            playBackgroundAudio(true);
+
+            // Restart retry timer if needed
+            if (!audioRetryTimer) {
+              audioRetryTimer = setInterval(() => {
+                if (audioInitialized) {
+                  // Audio started successfully, clear the retry timer
                   clearInterval(audioRetryTimer);
                   audioRetryTimer = null;
+                } else if (!audioMuted && enterButtonClicked) {
+                  // Try again if the audio hasn't started yet
+                  if (audioRetryCount < maxAudioRetries) {
+                    playBackgroundAudio(true);
+                  } else {
+                    // Stop trying after max retries
+                    console.warn(`Exceeded maximum audio retry attempts (${maxAudioRetries}). Stopping retries.`);
+                    clearInterval(audioRetryTimer);
+                    audioRetryTimer = null;
+                  }
                 }
-              }
-            }, 500);
-          }
-        } else if (audioInitialized && backgroundAudioInstance) {
-          // Unmute the audio only if it was previously initialized
-          backgroundAudioInstance.volume = 0.22;
+              }, 500);
+            }
+          } else if (audioInitialized && backgroundAudioInstance) {
+            // Unmute the audio only if it was previously initialized
+            backgroundAudioInstance.volume = 0.22;
 
-          // If audio was paused, restart it
-          if (backgroundAudioInstance.paused) {
-            backgroundAudioInstance.play().catch((error) => {
-              console.warn("Audio play was prevented:", error);
+            // If audio was paused, restart it
+            if (backgroundAudioInstance.paused) {
+              backgroundAudioInstance.play().catch((error) => {
+                console.warn("Audio play was prevented:", error);
 
-              // If play failed, mark as not initialized so it can be retried
-              audioInitialized = false;
+                // If play failed, mark as not initialized so it can be retried
+                audioInitialized = false;
 
-              // Only try to replay if enter was clicked previously
-              if (enterButtonClicked) {
-                playBackgroundAudio(true);
-              }
-            });
+                // Only try to replay if enter was clicked previously
+                if (enterButtonClicked) {
+                  playBackgroundAudio(true);
+                }
+              });
+            }
           }
         }
       }
