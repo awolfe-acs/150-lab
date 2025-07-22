@@ -132,6 +132,7 @@
 }
 
 .enter-experience {
+    pointer-events: none;
     width: 300px;
     max-width: calc(100% - 32px);
 

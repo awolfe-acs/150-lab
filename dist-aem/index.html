@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="background:#000; margin:0;padding:0;">
+<html lang="en" style="margin:0;padding:0;">
   <head>
     <meta name="robots" content="noindex">
     <meta charset="UTF-8" />
@@ -35,7 +35,17 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
-    
+    <style>
+      body {
+        background: linear-gradient(135deg, #0f0f23 0%, #1a1a3a 50%, #0f0f23 100%);
+        overflow-x: hidden;
+      }
+      
+      /* Hide app initially until loader completes */
+      #app {
+        opacity: 0;
+      }
+    </style>
     <!-- Accessibility Styles -->
     <style>
       .sr-only {
@@ -95,11 +105,11 @@
             `;
           };
         </script>
-    <script type="module" crossorigin src="/content/dam/acsorg/150/assets/index-C7tWze8X.js"></script>
-    <link rel="stylesheet" crossorigin href="/content/dam/acsorg/150/assets/style-BqfjIhob.css">
+    <script type="module" crossorigin src="/content/dam/acsorg/150/assets/index-DPAabrpb.js"></script>
+    <link rel="stylesheet" crossorigin href="/content/dam/acsorg/150/assets/style-DE-ypjH-.css">
   
-              <link rel="preload" href="/content/dam/acsorg/150/assets/style-BqfjIhob.css" as="style">
-              <link rel="preload" href="/content/dam/acsorg/150/assets/index-C7tWze8X.js" as="script">
+              <link rel="preload" href="/content/dam/acsorg/150/assets/style-DE-ypjH-.css" as="style">
+              <link rel="preload" href="/content/dam/acsorg/150/assets/index-DPAabrpb.js" as="script">
             </head>
   <body>
     <!-- Skip Links for Keyboard Navigation -->
@@ -128,7 +138,7 @@
       </a>
     </div>
 
-    <div id="app">
+    <div id="app" style="opacity:0;">
       <nav class="ease" style="opacity:0;" id="navigation" role="navigation" aria-label="Main navigation" tabindex="-1">
         <div class="nav-logo">
           <a href="https://www.acs.org" aria-label="American Chemical Society home page" tabindex="-1">
@@ -1800,5 +1810,8 @@
       });
     </script>
 
+    <!-- Standalone Asset Loader - Must load BEFORE main.js -->
+    <script src="/loader.js"></script>
+    
   </body>
 </html>

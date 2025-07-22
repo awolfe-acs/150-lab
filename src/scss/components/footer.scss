@@ -22,7 +22,7 @@
         width: 1366px;
         max-width: calc(100% - 100px);
         margin: 0 auto;
-        padding: 0 32px;
+        padding: 0 24px;
 
         @media (max-width:$mobile-viewport) {
             max-width: calc(100% - 24px);

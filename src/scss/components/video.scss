@@ -37,6 +37,10 @@
         @media (max-width:$mobile-viewport) {
             width: calc(100vw - 32px);
         }
+
+        .mejs__container, .mejs__inner, .mejs__mediaelement, #anniversary-video {
+            width: 100%;
+        }
     }
 }
 

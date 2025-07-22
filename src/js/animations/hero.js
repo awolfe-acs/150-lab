@@ -239,6 +239,9 @@ export function initCoverArea() {
       opacity: 1,
       duration: 0.6,
       ease: "power2.out",
+      onComplete: () => {
+        enterExperienceBtn.style.pointerEvents = "auto";
+      },
     },
     "-=0.3"
   );
@@ -292,7 +295,6 @@ export function initCoverArea() {
             window.audioRetryTimer = null;
           } else if (window.enterButtonClicked && !window.audioMuted) {
             if (window.audioRetryCount < window.maxAudioRetries) {
-              console.log("Retrying audio playback...");
               playBackgroundAudio(true);
             } else {
               console.warn(`Exceeded maximum audio retry attempts (${window.maxAudioRetries}). Stopping retries.`);
@@ -316,6 +318,8 @@ export function initCoverArea() {
         onComplete: () => {
           // Create and show scroll down icon after button fades out
           createScrollDownIcon(enterExperienceBtn);
+          // Re-enable pointer events on the button
+          enterExperienceBtn.style.pointerEvents = "none";
         },
       });
 
@@ -799,9 +803,6 @@ export function initHeroNumberCountdown() {
                 }
                 // No need to set individual opacity or visibility - CSS custom property handles it
               });
-
-              // Set full opacity via CSS custom property for perfect synchronization
-              console.log("Hero countdown: Complete at 1876, opacity 1.0");
               requestAnimationFrame(() => {
                 heroNumber.style.setProperty("--digit-opacity", "1.0");
                 heroNumber.style.filter = "blur(0px)"; // Ensure no blur when countdown completes
@@ -824,9 +825,6 @@ export function initHeroNumberCountdown() {
                 }
                 // No need to set individual opacity or visibility - CSS custom property handles it
               });
-
-              // Set initial opacity via CSS custom property for perfect synchronization
-              console.log("Hero countdown: Reset to 2026, opacity 0.44");
               requestAnimationFrame(() => {
                 heroNumber.style.setProperty("--digit-opacity", "0.44");
                 heroNumber.style.filter = "blur(0px)"; // Ensure no blur when resetting countdown
@@ -847,12 +845,6 @@ export function initHeroNumberCountdown() {
 
       // Debug: Check if ScrollTrigger was created successfully
       if (animationState.heroNumberTween.scrollTrigger) {
-        console.log("Hero countdown: ScrollTrigger created successfully", {
-          start: animationState.heroNumberTween.scrollTrigger.start,
-          end: animationState.heroNumberTween.scrollTrigger.end,
-          trigger: animationState.heroNumberTween.scrollTrigger.trigger,
-        });
-
         // Force a refresh to ensure proper initialization
         ScrollTrigger.refresh();
       } else {
@@ -862,10 +854,8 @@ export function initHeroNumberCountdown() {
       // If the tween exists, ensure its ScrollTrigger is enabled (might be needed if killed previously)
       if (animationState.heroNumberTween.scrollTrigger) {
         animationState.heroNumberTween.scrollTrigger.enable();
-        console.log("Hero countdown: Re-enabled existing ScrollTrigger");
       }
       animationState.heroNumberTween.resume(); // Ensure tween is not paused
-      console.log("Hero countdown: Resumed existing tween");
     }
   } else {
     console.warn("#hero-number element not found for countdown animation.");

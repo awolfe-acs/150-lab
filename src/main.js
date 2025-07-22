@@ -46,6 +46,9 @@ gsap.registerPlugin(ScrollTrigger);
 gsap.registerPlugin(MorphSVGPlugin);
 gsap.registerPlugin(SplitType);
 
+// Make GSAP available globally for background.js
+window.gsap = gsap;
+
 // At the top of the file, add the debugMode flag
 const debugMode = false;
 
@@ -83,9 +86,6 @@ function isMainPage() {
 
 // Initialize all animations directly from modules
 function initAnimations() {
-  // Preload audio immediately - before anything else
-  preloadBackgroundAudio();
-
   // Initial refresh and clear match media
   ScrollTrigger.refresh();
   ScrollTrigger.clearMatchMedia();
@@ -276,36 +276,65 @@ document.addEventListener("DOMContentLoaded", () => {
     initDebug();
   }
 
-  // Initialize shader background (always run this)
-  // Add a small delay to ensure canvas element is fully ready
-  setTimeout(() => {
-    try {
-      initShaderBackground();
-    } catch (error) {
-      console.error("Failed to initialize shader background:", error);
-      console.warn("Continuing without shader background...");
+  // Note: initShaderBackground will be called from initMainApp after assets load
+
+  // Check if assets are already loaded by standalone loader
+  function initMainApp() {
+    console.log("Initializing main application...");
+
+    // Only run animations and video on main pages
+    if (isMainPage()) {
+      console.log("Main page detected, initializing full experience...");
+
+      // Initialize cover area
+      initCoverArea();
+
+      // Initialize shader background first
+      setTimeout(() => {
+        try {
+          initShaderBackground();
+        } catch (error) {
+          console.error("Failed to initialize shader background:", error);
+          console.warn("Continuing without shader background...");
+        }
+      }, 100);
+
+      // Initialize animations directly from modules
+      initAnimations();
+
+      // Initialize video
+      initVideo();
+
+      // Preload audio for UI sounds
+      preloadBackgroundAudio();
+
+      // On main pages, Lenis will be enabled when the enter-experience button is clicked
+      // (this happens in the cover area module)
+    } else {
+      console.log("Running in lightweight mode - animations and video disabled");
+
+      // For non-main pages, we might want to start Lenis immediately
+      // Uncomment this if you want scrolling enabled on non-main pages
+      // window.lenis.start();
     }
-  }, 100);
+  }
 
-  // Only run animations and video on main pages
-  if (isMainPage()) {
-    // Initialize cover area first
-    initCoverArea();
-
-    // Initialize animations directly from modules
-    initAnimations();
-
-    // Initialize video
-    initVideo();
-
-    // On main pages, Lenis will be enabled when the enter-experience button is clicked
-    // (this happens in the cover area module)
+  // Wait for assets to be loaded by standalone loader
+  if (window.ASSETS_LOADED) {
+    // Assets already loaded, initialize immediately
+    console.log("Assets already loaded, initializing immediately...");
+    initMainApp();
   } else {
-    console.log("Running in lightweight mode - animations and video disabled");
-
-    // For non-main pages, we might want to start Lenis immediately
-    // Uncomment this if you want scrolling enabled on non-main pages
-    // window.lenis.start();
+    // Listen for assets loaded event from standalone loader
+    console.log("Waiting for assets to load...");
+    window.addEventListener(
+      "assetsLoaded",
+      () => {
+        console.log("Assets loaded event received, initializing main app...");
+        initMainApp();
+      },
+      { once: true }
+    );
   }
 
   // Final attempt to ensure we're at the top
