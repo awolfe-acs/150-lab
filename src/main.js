@@ -46,6 +46,9 @@ gsap.registerPlugin(ScrollTrigger);
 gsap.registerPlugin(MorphSVGPlugin);
 gsap.registerPlugin(SplitType);
 
+// Make GSAP available globally for background.js
+window.gsap = gsap;
+
 // At the top of the file, add the debugMode flag
 const debugMode = false;
 
@@ -90,8 +93,6 @@ function initAnimations() {
   ScrollTrigger.refresh();
   ScrollTrigger.clearMatchMedia();
 
-  // Kill any existing ScrollTriggers to prevent duplicates before setup
-  ScrollTrigger.getAll().forEach((st) => st.kill());
   // Reset animation state using centralized function
   resetAnimationState();
 

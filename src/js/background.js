@@ -1,7 +1,21 @@
 import * as THREE from "three";
 import * as dat from "dat.gui";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import globeModelUrl from "../../public/models/globe-hd.glb?url";
+
+// Helper function to get preloaded asset URL or fallback
+function getPreloadedAssetUrl(assetName, fallbackUrl) {
+  if (window.PRELOADED_ASSETS && window.PRELOADED_ASSETS[assetName]) {
+    const assetData = window.PRELOADED_ASSETS[assetName];
+    if (assetData instanceof ArrayBuffer) {
+      // Create blob URL for binary data
+      const blob = new Blob([assetData]);
+      return URL.createObjectURL(blob);
+    }
+  }
+  return fallbackUrl;
+}
 
 export function initShaderBackground() {
   // Prevent multiple initializations
@@ -18,7 +32,7 @@ export function initShaderBackground() {
 
   // Track time spent in phase 1 to prevent time accumulation issues
   let phase1StartTime = Date.now();
-  const PHASE1_RESET_TIMEOUT = 9999999999999999999999; // 90 seconds in milliseconds
+  const PHASE1_RESET_TIMEOUT = 6000000000;
 
   // Helper function to check if we're above the Phase 3 trigger point
   function isAbovePhase3Trigger() {
@@ -68,25 +82,15 @@ export function initShaderBackground() {
   // Track which color phase we're in (0 = cover area, 1 = original, 2 = hero-travel-area, 3 = events section)
   window.colorPhase = 0;
 
-  // Import GSAP and ScrollTrigger
-  let gsap, ScrollTrigger;
-
-  // Try to import GSAP and ScrollTrigger asynchronously
-  import("gsap")
-    .then((module) => {
-      gsap = module.default;
-
-      import("gsap/ScrollTrigger").then((module) => {
-        ScrollTrigger = module.default;
-        gsap.registerPlugin(ScrollTrigger);
-
-        // Set up the ScrollTrigger for colorDarkness after GSAP is loaded
-        setupColorDarknessAnimation(gsap, ScrollTrigger);
-      });
-    })
-    .catch((error) => {
-      console.error("Error loading GSAP:", error);
-    });
+  // Use GSAP and ScrollTrigger from global scope (imported by main.js)
+  // Wait a bit to ensure main.js has finished initializing
+  setTimeout(() => {
+    if (typeof window.gsap !== "undefined") {
+      setupColorDarknessAnimation(window.gsap, window.gsap.ScrollTrigger);
+    } else {
+      console.warn("GSAP not found on window object - ScrollTrigger animations may not work");
+    }
+  }, 200);
 
   // Function to set up the color darkness animation with ScrollTrigger
   function setupColorDarknessAnimation(gsap, ScrollTrigger) {
@@ -570,7 +574,6 @@ export function initShaderBackground() {
           }
         },
         onLeaveBack: () => {
-          console.log("Video travel area: Returning to phase 1->2 transition");
           // When scrolling back up, the hero-travel-area ScrollTrigger will handle the transition
           // No need to do anything here as the transition will be handled by the previous trigger
         },
@@ -605,9 +608,9 @@ export function initShaderBackground() {
     // Create a ScrollTrigger to transition to phase three colors when #events enters the viewport
     gsap.timeline({
       scrollTrigger: {
-        trigger: "#events",
-        start: "top 120%", // Start earlier - when the top of events is 120% from the top of viewport (20% below viewport)
-        end: "top 60%", // End when the top of events reaches 60% from the top of viewport
+        trigger: "#get-involved-cards",
+        start: "top 50%",
+        end: "top -10%",
         scrub: true, // Smooth scrubbing effect, tied to scroll position
         markers: false, // Set to true for debugging
         onUpdate: (self) => {
@@ -696,8 +699,8 @@ export function initShaderBackground() {
     gsap.timeline({
       scrollTrigger: {
         trigger: "#get-involved-cards",
-        start: "top 50%", // Start when the top of get-involved-cards is 50% from the top of viewport (later than before)
-        end: "top -10%", // End when the top of get-involved-cards is 10% from the top of viewport
+        start: "top 50%",
+        end: "top -10%",
         scrub: 1.0, // Slightly increased scrub for even smoother transition
         markers: false, // Set to true for debugging
         onUpdate: (self) => {
@@ -837,9 +840,9 @@ export function initShaderBackground() {
     // Create a second ScrollTrigger to animate colorDarkness back to 0 when scrolling through #events
     gsap.timeline({
       scrollTrigger: {
-        trigger: "#events",
-        start: "top 120%", // Start earlier - same timing as Phase 3 color transition
-        end: "top 50%", // End when the top of events reaches 50% from the top of viewport
+        trigger: "#get-involved-cards",
+        start: "top top",
+        end: "bottom 33%",
         scrub: true, // Smooth scrubbing effect, tied to scroll position
         markers: false, // Set to true for debugging
         onUpdate: (self) => {
@@ -1325,134 +1328,148 @@ export function initShaderBackground() {
     rotationPaused: false, // New parameter to track if rotation should be paused
   };
 
-  // Load the GLTF model
+  // Load the GLTF model - check if preloaded first
   const gltfLoader = new GLTFLoader();
+
+  // Set up DRACOLoader for compressed geometry
+  const dracoLoader = new DRACOLoader();
+  dracoLoader.setDecoderPath("https://www.gstatic.com/draco/versioned/decoders/1.5.6/");
+  dracoLoader.setDecoderConfig({ type: "js" });
+  gltfLoader.setDRACOLoader(dracoLoader);
+
   let globeModel;
 
-  gltfLoader.load(
-    globeModelUrl,
-    (gltf) => {
-      globeModel = gltf.scene;
+  // Function to handle loaded GLTF data
+  const handleGltfLoad = (gltf) => {
+    globeModel = gltf.scene;
 
-      // Center the model's geometry to ensure proper rotation around its center
-      let boundingBox = new THREE.Box3().setFromObject(globeModel);
-      let center = boundingBox.getCenter(new THREE.Vector3());
+    // Center the model's geometry to ensure proper rotation around its center
+    let boundingBox = new THREE.Box3().setFromObject(globeModel);
+    let center = boundingBox.getCenter(new THREE.Vector3());
 
-      // Create a centered wrapper group
-      let centeredGroup = new THREE.Group();
-      // Add the model to the centered group with offset to center it
-      centeredGroup.add(globeModel);
-      // Position the model so its center is at the origin of the group
-      globeModel.position.set(-center.x, -center.y, -center.z);
+    // Create a centered wrapper group
+    let centeredGroup = new THREE.Group();
+    // Add the model to the centered group with offset to center it
+    centeredGroup.add(globeModel);
+    // Position the model so its center is at the origin of the group
+    globeModel.position.set(-center.x, -center.y, -center.z);
 
-      // Use the centered group instead of the raw model
-      globeModel = centeredGroup;
+    // Use the centered group instead of the raw model
+    globeModel = centeredGroup;
 
-      // Apply initial parameters
-      globeModel.visible = globeParams.visible;
+    // Apply initial parameters
+    globeModel.visible = globeParams.visible;
 
-      // Enable frustum culling for performance optimization
-      globeModel.frustumCulled = true;
+    // Enable frustum culling for performance optimization
+    globeModel.frustumCulled = true;
 
-      // Apply frustum culling to all child meshes for more granular culling
-      globeModel.traverse((child) => {
-        if (child.isMesh) {
-          child.frustumCulled = true;
-        }
-      });
-
-      // First add to the scene
-      globeGroup.add(globeModel);
-
-      // Set initial position and rotation
-      globeModel.position.set(globeParams.positionX, globeParams.positionY, globeParams.positionZ);
-      globeModel.rotation.set(
-        (globeParams.rotationX * Math.PI) / 180,
-        (globeParams.rotationY * Math.PI) / 180,
-        (globeParams.rotationZ * Math.PI) / 180
-      );
-
-      // Apply initial scale after adding to scene
-      if (globeParams.responsive) {
-        // Use responsive sizing
-        updateGlobeSize();
-      } else {
-        // Use fixed scale
-        globeModel.scale.set(globeParams.scale, globeParams.scale, globeParams.scale);
-
-        // Position behind the bottom wave
-        positionGlobeBehindBottomWave();
+    // Apply frustum culling to all child meshes for more granular culling
+    globeModel.traverse((child) => {
+      if (child.isMesh) {
+        child.frustumCulled = true;
       }
+    });
 
-      // Set up material controls for the globe
-      const materialFolder = globeFolder.addFolder("Material");
+    // First add to the scene
+    globeGroup.add(globeModel);
 
-      // Traverse the model to find materials
-      let materialCount = 0;
-      globeModel.traverse((child) => {
-        if (child.isMesh && child.material) {
-          const globeMaterial = child.material;
-          materialCount++;
+    // Set initial position and rotation
+    globeModel.position.set(globeParams.positionX, globeParams.positionY, globeParams.positionZ);
+    globeModel.rotation.set(
+      (globeParams.rotationX * Math.PI) / 180,
+      (globeParams.rotationY * Math.PI) / 180,
+      (globeParams.rotationZ * Math.PI) / 180
+    );
 
-          // Add material properties to GUI if it's a MeshStandardMaterial or MeshPhongMaterial
-          if (globeMaterial.isMeshStandardMaterial || globeMaterial.isMeshPhongMaterial) {
-            // Add metalness control if available
-            if (globeMaterial.metalness !== undefined) {
-              materialFolder
-                .add({ metalness: globeMaterial.metalness }, "metalness", 0, 1)
-                .name(`Metalness${materialCount > 1 ? " " + materialCount : ""}`)
-                .onChange((value) => {
-                  globeMaterial.metalness = value;
-                });
-            }
+    // Apply initial scale after adding to scene
+    if (globeParams.responsive) {
+      // Use responsive sizing
+      updateGlobeSize();
+    } else {
+      // Use fixed scale
+      globeModel.scale.set(globeParams.scale, globeParams.scale, globeParams.scale);
 
-            // Add roughness control if available
-            if (globeMaterial.roughness !== undefined) {
-              materialFolder
-                .add({ roughness: globeMaterial.roughness }, "roughness", 0, 1)
-                .name(`Roughness${materialCount > 1 ? " " + materialCount : ""}`)
-                .onChange((value) => {
-                  globeMaterial.roughness = value;
-                });
-            }
+      // Position behind the bottom wave
+      positionGlobeBehindBottomWave();
+    }
 
-            // Add shininess control for MeshPhongMaterial
-            if (globeMaterial.shininess !== undefined) {
-              materialFolder
-                .add({ shininess: globeMaterial.shininess }, "shininess", 0, 100)
-                .name(`Shininess${materialCount > 1 ? " " + materialCount : ""}`)
-                .onChange((value) => {
-                  globeMaterial.shininess = value;
-                });
-            }
+    // Set up material controls for the globe
+    const materialFolder = globeFolder.addFolder("Material");
 
-            // Add opacity control
+    // Traverse the model to find materials
+    let materialCount = 0;
+    globeModel.traverse((child) => {
+      if (child.isMesh && child.material) {
+        const globeMaterial = child.material;
+        materialCount++;
+
+        // Add material properties to GUI if it's a MeshStandardMaterial or MeshPhongMaterial
+        if (globeMaterial.isMeshStandardMaterial || globeMaterial.isMeshPhongMaterial) {
+          // Add metalness control if available
+          if (globeMaterial.metalness !== undefined) {
             materialFolder
-              .add({ opacity: globeMaterial.opacity }, "opacity", 0, 1)
-              .name(`Opacity${materialCount > 1 ? " " + materialCount : ""}`)
+              .add({ metalness: globeMaterial.metalness }, "metalness", 0, 1)
+              .name(`Metalness${materialCount > 1 ? " " + materialCount : ""}`)
               .onChange((value) => {
-                globeMaterial.opacity = value;
-                globeMaterial.transparent = value < 1;
-              });
-
-            // Add emissive color control
-            const emissiveColor = globeMaterial.emissive ? "#" + globeMaterial.emissive.getHexString() : "#000000";
-            materialFolder
-              .addColor({ color: emissiveColor }, "color")
-              .name(`Emissive Color${materialCount > 1 ? " " + materialCount : ""}`)
-              .onChange((value) => {
-                if (globeMaterial.emissive) {
-                  globeMaterial.emissive.set(value);
-                }
+                globeMaterial.metalness = value;
               });
           }
+
+          // Add roughness control if available
+          if (globeMaterial.roughness !== undefined) {
+            materialFolder
+              .add({ roughness: globeMaterial.roughness }, "roughness", 0, 1)
+              .name(`Roughness${materialCount > 1 ? " " + materialCount : ""}`)
+              .onChange((value) => {
+                globeMaterial.roughness = value;
+              });
+          }
+
+          // Add shininess control for MeshPhongMaterial
+          if (globeMaterial.shininess !== undefined) {
+            materialFolder
+              .add({ shininess: globeMaterial.shininess }, "shininess", 0, 100)
+              .name(`Shininess${materialCount > 1 ? " " + materialCount : ""}`)
+              .onChange((value) => {
+                globeMaterial.shininess = value;
+              });
+          }
+
+          // Add opacity control
+          materialFolder
+            .add({ opacity: globeMaterial.opacity }, "opacity", 0, 1)
+            .name(`Opacity${materialCount > 1 ? " " + materialCount : ""}`)
+            .onChange((value) => {
+              globeMaterial.opacity = value;
+              globeMaterial.transparent = value < 1;
+            });
+
+          // Add emissive color control
+          const emissiveColor = globeMaterial.emissive ? "#" + globeMaterial.emissive.getHexString() : "#000000";
+          materialFolder
+            .addColor({ color: emissiveColor }, "color")
+            .name(`Emissive Color${materialCount > 1 ? " " + materialCount : ""}`)
+            .onChange((value) => {
+              if (globeMaterial.emissive) {
+                globeMaterial.emissive.set(value);
+              }
+            });
         }
-      });
-    },
+      }
+    });
+  };
+
+  // Actually load the globe model using preloaded asset if available
+  const globeUrl = getPreloadedAssetUrl("globe-hd.glb", globeModelUrl);
+  gltfLoader.load(
+    globeUrl,
+    handleGltfLoad,
     // Progress callback
     (xhr) => {},
     // Error callback
-    (error) => {}
+    (error) => {
+      console.error("Error loading globe model:", error);
+    }
   );
 
   // Define uniforms with tunable parameters - increased default values for larger displacement
@@ -4409,7 +4426,6 @@ export function initShaderBackground() {
     if (isAbovePhase3Trigger()) {
       const timeInPhase1 = Date.now() - phase1StartTime;
       if (timeInPhase1 > PHASE1_RESET_TIMEOUT) {
-        console.log("Timeout reached while above Phase 3 trigger (25s), stabilizing background effects");
         // Instead of resetting time, adjust the colorCycleOffset to maintain perfect continuity
         // Calculate the current effective time (time + offset) and preserve it
         const currentEffectiveTime = uniforms.time.value + uniforms.colorCycleOffset.value;
@@ -4476,13 +4492,11 @@ export function initShaderBackground() {
 
   // Listen for very early particle fade start event (before hero animation)
   document.addEventListener("veryEarlyParticleFade", () => {
-    console.log("veryEarlyParticleFade event received");
     // Start with a higher opacity target for more noticeable fade-in
     targetParticleOpacity = 0.3;
 
     // Also immediately start the fade if material is available
     if (customParticleMaterial && customParticleMaterial.uniforms && customParticleMaterial.uniforms.opacity) {
-      console.log("Starting immediate particle fade-in");
       // Start from current value and ensure it's not 0
       if (customParticleMaterial.uniforms.opacity.value < 0.1) {
         customParticleMaterial.uniforms.opacity.value = 0.05;
@@ -4751,7 +4765,6 @@ export function initShaderBackground() {
         // Only force a resize if there's a significant change
         setTimeout(handleResize, 100);
       } else {
-        console.log("Tab refocused but no significant viewport change, skipping resize");
       }
     } else {
       // When tab becomes hidden, store the current dimensions
@@ -5102,6 +5115,5 @@ function updateWaveGUI() {
       }
     }
   } else {
-    console.log("WARNING: Wave Controls folder not found");
   }
 }
