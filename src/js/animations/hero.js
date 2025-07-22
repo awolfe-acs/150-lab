@@ -171,6 +171,7 @@ export function initCoverArea() {
   const header = document.querySelector("header");
   const nav = document.querySelector("nav");
   const sectionTimeline = document.querySelector(".section-timeline");
+  const app = document.querySelector("#app");
 
   if (!coverLogo || !enterExperienceBtn) return;
 
@@ -216,6 +217,21 @@ export function initCoverArea() {
 
   // Create a timeline for the cover area animation
   const tl = gsap.timeline({ delay: 0.6 });
+
+  // First, fade in #app from opacity 0 to 1
+  if (app) {
+    tl.fromTo(
+      app,
+      {
+        opacity: 0,
+      },
+      {
+        opacity: 1,
+        duration: 0.8,
+        ease: "power2.out",
+      }
+    );
+  }
 
   // Animate the logo in
   tl.fromTo(
