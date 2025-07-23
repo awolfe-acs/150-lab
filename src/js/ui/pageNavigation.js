@@ -13,11 +13,12 @@ export function updatePageNavigation() {
   const activeTitle = document.querySelector(".section-timeline .indicator .active-title");
   const sectionTimeline = document.querySelector(".section-timeline");
   const formPanel = document.querySelector(".form-panel");
+  const timelineNavWrapper = document.querySelector(".timeline-nav-wrapper");
 
   if (!heroTravelArea || !getInvolvedSection || !pageNav || !activeTitle || !sectionTimeline) return;
 
   // Initially hide the page navigation
-  gsap.set(pageNav, { opacity: 0 });
+  gsap.set(pageNav, { opacity: 0, pointerEvents: "none" });
 
   // Track if navigation was clicked and should stay hidden
   let navClickedAndHidden = false;
@@ -37,12 +38,12 @@ export function updatePageNavigation() {
   sectionTimeline.addEventListener("mouseenter", (event) => {
     // Only show if not in clicked-and-hidden state AND mouse is not within form panel
     if (!navClickedAndHidden && !isMouseInFormPanel(event)) {
-      gsap.to(pageNav, { opacity: 1, duration: 0.3, ease: "power2.out" });
+      gsap.to(pageNav, { opacity: 1, pointerEvents: "auto", duration: 0.3, ease: "power2.out" });
     }
   });
 
   sectionTimeline.addEventListener("mouseleave", () => {
-    gsap.to(pageNav, { opacity: 0, duration: 0.3, ease: "power2.out" });
+    gsap.to(pageNav, { opacity: 0, pointerEvents: "none", duration: 0.3, ease: "power2.out" });
     // Reset the clicked state on mouseleave - ready for next mouseenter
     navClickedAndHidden = false;
   });
@@ -58,6 +59,17 @@ export function updatePageNavigation() {
   pageNav.addEventListener("mouseleave", () => {
     gsap.to(activeTitle, { opacity: 1, duration: 0.2, ease: "power2.out" });
   });
+
+  // Control pointer events on timeline-nav-wrapper when mouse is inside form-panel
+  if (formPanel && timelineNavWrapper) {
+    formPanel.addEventListener("mouseenter", () => {
+      gsap.set(timelineNavWrapper, { pointerEvents: "none" });
+    });
+
+    formPanel.addEventListener("mouseleave", () => {
+      gsap.set(timelineNavWrapper, { pointerEvents: "auto" });
+    });
+  }
 
   const heroYearsLink = pageNav.querySelector(".anniversary");
   const getInvolvedLink = pageNav.querySelector(".get-involved");
@@ -118,7 +130,7 @@ export function updatePageNavigation() {
     updateActiveTitle("150 Years of ACS");
 
     // Hide navigation and mark as clicked
-    gsap.to(pageNav, { opacity: 0, duration: 0.2, ease: "power2.out" });
+    gsap.to(pageNav, { opacity: 0, pointerEvents: "none", duration: 0.2, ease: "power2.out" });
     navClickedAndHidden = true;
 
     // Always scroll to top for hero section
@@ -137,7 +149,7 @@ export function updatePageNavigation() {
     updateActiveTitle("Get Involved");
 
     // Hide navigation and mark as clicked
-    gsap.to(pageNav, { opacity: 0, duration: 0.2, ease: "power2.out" });
+    gsap.to(pageNav, { opacity: 0, pointerEvents: "none", duration: 0.2, ease: "power2.out" });
     navClickedAndHidden = true;
 
     // Calculate fresh scroll position for get-involved section
@@ -162,7 +174,7 @@ export function updatePageNavigation() {
     updateActiveTitle("Events");
 
     // Hide navigation and mark as clicked
-    gsap.to(pageNav, { opacity: 0, duration: 0.2, ease: "power2.out" });
+    gsap.to(pageNav, { opacity: 0, pointerEvents: "none", duration: 0.2, ease: "power2.out" });
     navClickedAndHidden = true;
 
     // Calculate fresh scroll position for events section

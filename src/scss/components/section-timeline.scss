@@ -10,6 +10,7 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    //pointer-events: none;
 }
 
 .section-timeline {
@@ -47,7 +48,6 @@
             color: rgba(255, 255, 255, 0.7);
             margin-left: 0;
             margin-right: auto;
-            pointer-events: auto;
             transition: color 0.3s ease;
             text-decoration: none;
             padding: 3px 0;
