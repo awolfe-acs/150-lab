@@ -563,7 +563,6 @@ export function initShaderBackground() {
         scrub: false,
         markers: false,
         onEnter: () => {
-          console.log("Video travel area: Maintaining phase 2 colors");
           // Ensure we're in phase 2 and maintain the final transition colors
           if (uniforms && uniforms.color1 && uniforms.color2) {
             uniforms.color1.value.set("#DA281C");
@@ -1083,7 +1082,6 @@ export function initShaderBackground() {
   });
 
   canvas.addEventListener("webglcontextrestored", function () {
-    console.log("WebGL context restored. Reinitializing...");
     // Reinitialize the background after context restoration with some safety checks
     setTimeout(() => {
       // Only reinitialize if we're not already in the process

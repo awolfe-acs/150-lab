@@ -245,20 +245,8 @@ export const playBackgroundAudio = (fromEnterButton = false) => {
   // IMPORTANT: Only proceed if enterButtonClicked is true
   // This ensures only the enter button can start the audio
   if (!enterButtonClicked) {
-    console.log("Audio play blocked: Enter button not clicked yet");
     return;
   }
-
-  // Allow audio to play even if hero animation isn't complete yet
-  // The retry logic will handle the timing
-  console.log("Audio play attempt:", {
-    enterButtonClicked,
-    heroAnimationComplete,
-    audioInitialized,
-    audioMuted,
-    backgroundAudioLoaded,
-    readyState: backgroundAudioInstance?.readyState,
-  });
 
   // Don't try to play if already initialized
   if (audioInitialized) return;
@@ -276,7 +264,6 @@ export const playBackgroundAudio = (fromEnterButton = false) => {
 
   // Add 2-second delay when called from enter button
   if (fromEnterButton) {
-    console.log("Adding 2-second delay before starting background audio");
     setTimeout(() => {
       if (audioMuted) return; // Check if audio was muted during the delay
 
@@ -284,7 +271,6 @@ export const playBackgroundAudio = (fromEnterButton = false) => {
       if (backgroundAudioLoaded || (backgroundAudioInstance && backgroundAudioInstance.readyState >= 3)) {
         playBackgroundAudioWhenReady(true);
       } else {
-        console.log("Audio not ready yet after delay, readyState:", backgroundAudioInstance?.readyState);
         // Audio not ready yet - it will play when ready via the canplaythrough event
         try {
           // Try to force load again
@@ -301,8 +287,6 @@ export const playBackgroundAudio = (fromEnterButton = false) => {
   if (backgroundAudioLoaded || (backgroundAudioInstance && backgroundAudioInstance.readyState >= 3)) {
     playBackgroundAudioWhenReady(fromEnterButton);
   } else {
-    console.log("Audio not ready yet, readyState:", backgroundAudioInstance?.readyState);
-
     // Audio not ready yet - it will play when ready via the canplaythrough event
 
     // If from enter button and the audio isn't loaded yet, force reload
@@ -325,12 +309,10 @@ export function preloadBackgroundAudio() {
   // Set audio load event listeners before setting src to ensure they're captured
   backgroundAudio.addEventListener("canplaythrough", () => {
     backgroundAudioLoaded = true;
-    console.log("Background audio loaded and ready to play");
 
     // If user has clicked the enter button but audio wasn't ready, play it now
     // IMPORTANT: Only attempt playback if enterButtonClicked is true
     if (enterButtonClicked && !audioInitialized && !audioMuted) {
-      console.log("Enter button was clicked, attempting to play audio now");
       playBackgroundAudioWhenReady(true);
     }
   });

@@ -60,7 +60,6 @@ export function initInfiniteMarqueeAnimation() {
       if (actualHeight <= 0) {
         // Check if viewport is less than 580px - if so, don't retry since marquee is hidden
         if (window.innerWidth < 580) {
-          console.log("Viewport width < 580px, skipping marquee setup (element is hidden)");
           return;
         }
         console.warn("Image height is 0, retrying marquee setup...");

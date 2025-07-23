@@ -198,6 +198,7 @@
         flex-direction: column;
         align-items: flex-start;
         justify-content: center;
+        position: relative !important;
 
         a:not(.footer__logo) {
             color: #fff;
