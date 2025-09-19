@@ -21,12 +21,12 @@ export function animateVideoScale() {
       pointerEvents: "none",
     });
 
-    // Create a timeline for the video animations - start when entering video-travel-area
+    // Create a timeline for the video animations - start after countdown area is scrolled through
     const videoTl = gsap.timeline({
       scrollTrigger: {
-        trigger: "#video-travel-area", // Changed from hero-travel-area to video-travel-area
-        start: "top bottom", // Start when the top of video-travel-area enters the viewport
-        end: "top 20%", // End when the top of video-travel-area is 20% from the top of viewport
+        trigger: "#countdown-area", // Use countdown area as trigger
+        start: "bottom 50%", // Start when bottom of countdown area reaches center of viewport
+        end: "bottom 20%", // End when bottom of countdown area is near top of viewport
         scrub: true,
         markers: false,
         onUpdate: (self) => {
@@ -47,14 +47,14 @@ export function animateVideoScale() {
       ease: "power2.out", // Slightly more pronounced easing
     });
 
-    // Separate ScrollTrigger for pointer events control at 33% viewport penetration
+    // Separate ScrollTrigger for pointer events control after countdown area
     ScrollTrigger.create({
-      trigger: "#video-travel-area",
-      start: "top 67%", // 33% into viewport (100% - 33% = 67%)
+      trigger: "#countdown-area",
+      start: "bottom 30%", // Enable after countdown area has mostly passed
       end: "bottom top",
       markers: false,
       onEnter: () => {
-        // Enable pointer events when video-travel-area is 33% into viewport
+        // Enable pointer events after countdown area has passed
         gsap.set(videoSection, {
           pointerEvents: "auto",
         });

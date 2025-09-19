@@ -3,7 +3,7 @@
 
 #ft {
     position: relative;
-    background-color: rgba(57, 55, 175, 0.05);
+    background-color: rgba(57, 55, 175, 0.08);
     backdrop-filter: blur(10px);
     color: #aaa;
     width: 100%; //myaccount
@@ -187,6 +187,7 @@
     }
 
     .ft-social-links {
+
         a:hover {
             text-decoration: none;
             cursor: pointer;
@@ -421,7 +422,7 @@ footer .menu {
     box-shadow: none;
 }
 
-html.v1 {
+#bd {
     .ft-social-links .social-icon svg {
         display: none !important;
     }

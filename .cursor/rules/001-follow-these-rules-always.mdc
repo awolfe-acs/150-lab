@@ -2,15 +2,14 @@
 alwaysApply: true
 ---
 
-Our terminal is powershell, so use powershell commands.
-Do not use Unix-shell shorthand commands, they will fail.
+1. Our terminal is powershell, so use powershell commands.
+   Do not use Unix-shell shorthand commands, they will fail.
 
-Avoid inserting control characters as text (^D, ^C).
+2. Avoid inserting control characters as text (^D, ^C).
 
 To simulate those behaviors in PowerShell scripts or commands:
-
 Use exit to leave the shell.
-
 Use Ctrl+C manually if interrupting is needed.
-
 Don’t type q unless it’s a valid command.
+
+3. If I used the term `scrub` in chat, this is likely referring to an entire span of scroll time of a GSAP ScrollTrigger (start and end time), not the ScrollTrigger `scrub` property itself.

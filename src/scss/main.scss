@@ -711,3 +711,19 @@ html {
   user-select: none;
   pointer-events: none;
 }
+
+.osano-cm-window {
+  span, a {
+    @media (max-width:$mobile-viewport) {
+      font-size: 12px;
+    }
+  }
+
+  button {
+    text-align: center;
+
+    @media (max-width:$mobile-viewport) {
+      width: 100%;
+    }
+  }
+}

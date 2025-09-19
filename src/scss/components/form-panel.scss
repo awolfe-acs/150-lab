@@ -257,12 +257,12 @@
                 }
 
                 @media (max-width:580px) {
-                    max-width: calc(100% - 36px);
+                    max-width: 100%;
                 }
             }
 
             select {
-                width: 240px;
+                width: 260px;
                 max-width: calc(100% - 8px);
 
                 @media (max-width:$desktop-viewport) {
@@ -270,7 +270,7 @@
                 }
 
                 @media (max-width:580px) {
-                    max-width: calc(100% - 36px);
+                    max-width: 100%;
                 }
             }
 
@@ -498,7 +498,8 @@
 
                 span {
                     flex: 1;
-                    margin-top: 1px; // Slight adjustment for better visual alignment
+                    margin-top: 0;
+                    font-weight: 400;
                 }
             }
 

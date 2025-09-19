@@ -3,7 +3,7 @@ import "./scss/main.scss";
 import "lenis/dist/lenis.css";
 import { initShaderBackground } from "./js/background.js";
 import { initVideo } from "./js/video.js";
-//import { initCountdown } from "./js/countdown.js";
+import { initCountdown } from "./js/countdown.js";
 import { initDebug } from "./js/debug.js";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
@@ -270,7 +270,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Initialize countdown timer
-  // initCountdown(targetDate);
+  initCountdown(targetDate);
 
   // Initialize debug mode if enabled
   if (debugMode) {

@@ -4,31 +4,43 @@ import ScrollTrigger from "gsap/ScrollTrigger";
 
 // Initialize simple scroll reveal animation without text splitting
 export function initScrollRevealAnimation() {
-  // Get all elements with the scroll-reveal class
-  const scrollRevealElements = document.querySelectorAll(".scroll-reveal");
+  // Get all elements with reveal classes
+  const scrollRevealElements = document.querySelectorAll(".scroll-reveal, .reveal-top-center, .reveal-center-center");
 
   if (!scrollRevealElements.length) {
-    console.warn("No .scroll-reveal elements found");
+    console.warn("No reveal elements found");
     return;
   }
 
-  // Process each scroll-reveal element
+  // Process each reveal element
   scrollRevealElements.forEach((element, index) => {
     // Check if this element has the button class
     const isButton = element.classList.contains("fancy-btn");
+    
+    // Determine animation direction and trigger position based on class
+    let initialY = 50; // Default: from bottom
+    let triggerStart = "top 85%"; // Default: trigger early
+    
+    if (element.classList.contains("reveal-top-center")) {
+      initialY = -50; // From top
+      triggerStart = "top 50%"; // Trigger when top of element reaches center of viewport
+    } else if (element.classList.contains("reveal-center-center")) {
+      initialY = 0; // From center (no Y movement)
+      triggerStart = "center 50%"; // Trigger when center of element reaches center of viewport
+    }
 
     if (isButton) {
       // For button elements, use filter:opacity() instead of opacity
-      // Set initial state - hidden using filter opacity and shifted down
+      // Set initial state - hidden using filter opacity and shifted
       gsap.set(element, {
-        y: 50,
+        y: initialY,
         filter: "opacity(0)", // Use filter instead of opacity
       });
 
       // Create ScrollTrigger animation for button elements
       ScrollTrigger.create({
         trigger: element,
-        start: "top 85%", // Trigger when the top of the element is 85% from the top of viewport
+        start: triggerStart, // Use dynamic trigger position based on class
         once: false, // Allow the animation to run multiple times if scrolled past
         markers: false, // Set to true for debugging
         id: `scroll-reveal-button-${index}`,
@@ -45,7 +57,7 @@ export function initScrollRevealAnimation() {
         onLeaveBack: () => {
           // Reset the animation when scrolling back up
           gsap.to(element, {
-            y: 50,
+            y: initialY,
             filter: "opacity(0)", // Reset filter to invisible
             duration: 0.8,
             ease: "power2.in",
@@ -54,17 +66,17 @@ export function initScrollRevealAnimation() {
         },
       });
     } else {
-      // For normal scroll-reveal elements, use regular opacity
-      // Set initial state - hidden and shifted down
+      // For normal reveal elements, use regular opacity
+      // Set initial state - hidden and shifted based on class
       gsap.set(element, {
         opacity: 0,
-        y: 50,
+        y: initialY,
       });
 
       // Create ScrollTrigger animation for each element
       ScrollTrigger.create({
         trigger: element,
-        start: "top 85%", // Trigger when the top of the element is 85% from the top of viewport
+        start: triggerStart, // Use dynamic trigger position based on class
         once: false, // Allow the animation to run multiple times if scrolled past
         markers: false, // Set to true for debugging
         id: `scroll-reveal-${index}`,
@@ -82,7 +94,7 @@ export function initScrollRevealAnimation() {
           // Reset the animation when scrolling back up
           gsap.to(element, {
             opacity: 0,
-            y: 50,
+            y: initialY,
             duration: 0.8,
             ease: "power2.in",
             overwrite: true,

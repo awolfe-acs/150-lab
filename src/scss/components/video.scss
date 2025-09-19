@@ -24,6 +24,7 @@
         max-height: calc(100svh - 80px);
         //width: calc(86vw - 32px);
         //max-width: 1366px;
+        min-width: min(calc(86vw - 32px), 1366px);
         max-width: min(calc(86vw - 32px), 1366px);
         margin: 0 auto;
         border-radius: 16px;
@@ -32,14 +33,16 @@
 
         @media (min-width:$desktop-viewport) and (max-width:1440px) {
             max-width: calc(100% - 200px);
+            max-width: calc(100% - 200px);
         }
 
         @media (max-width:$mobile-viewport) {
             width: calc(100vw - 32px);
+            min-width: calc(100vw - 32px);
         }
 
         .mejs__container, .mejs__inner, .mejs__mediaelement, #anniversary-video {
-            width: 100%;
+            width: 100% !important;
         }
     }
 }
@@ -89,6 +92,10 @@ video {
         .play-button {
             transform: scale(1.1);
             background: rgba(255, 255, 255, 1);
+
+            @media (max-width:$mobile-viewport) {
+                transform: scale(0.9);
+            }
         }
     }
 
@@ -109,6 +116,10 @@ video {
     justify-content: center;
     cursor: pointer;
     transition: transform 0.3s ease, background-color 0.3s ease;
+
+    @media (max-width:$mobile-viewport) {
+        transform: scale(0.8);
+    }
 
     &::before {
         content: '';

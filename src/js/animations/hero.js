@@ -627,11 +627,11 @@ export function initHeroAnimation() {
 
     // Remove the separate opacity animation - we'll handle it in the countdown animation
 
-    // Fade-out animation (approaching video area) - optimized for fast scrolling
+    // Fade-out animation (at end of hero pinned state) - optimized for fast scrolling
     ScrollTrigger.create({
-      trigger: "#video-travel-area",
-      start: "top 105%", // Start earlier to give more fade-out distance
-      end: "top 95%", // Extended range for more reliable fade-out
+      trigger: "#hero-travel-area",
+      start: "bottom 90%", // Start fading just before unpinning
+      end: "bottom 80%", // Complete fade right at unpinning point
       scrub: 0.3, // Faster scrubbing for better responsiveness
       markers: false,
       invalidateOnRefresh: true, // Ensure this recalculates
@@ -687,11 +687,11 @@ export function initHeroAnimation() {
       id: "hero-fade-out", // Add ID for reference
     });
 
-    // Additional backup fade-out trigger to ensure hero number is hidden deeper in video area
+    // Additional backup fade-out trigger to ensure hero number stays hidden after unpinning
     ScrollTrigger.create({
-      trigger: "#video-travel-area",
-      start: "top 80%", // Start where previous fade-out ends
-      end: "top 50%", // Continue fading until well into video area
+      trigger: "#hero-travel-area",
+      start: "bottom 80%", // Start where previous fade-out ends (at unpinning)
+      end: "bottom 60%", // Continue ensuring it's hidden after unpinning
       scrub: 0.5,
       markers: false,
       invalidateOnRefresh: true,
