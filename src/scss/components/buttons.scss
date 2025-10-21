@@ -368,7 +368,8 @@
 
 .share-button-pinned {
     position: relative;
-    background: #3E2BF4;
+    background: rgba(62,43,244,0.75);
+    backdrop-filter: blur(8px);
     border-radius: 50%;
     width: 52px;
     height: 52px;
@@ -405,6 +406,19 @@
             stroke: #000;
             stroke: #fff;
         }
+    }
+}
+
+
+.share-panel-content {
+    button {
+        display:flex;
+        justify-content:flex-start;
+    }
+    span {
+        max-width:100%;
+        margin-left:16px;
+        margin-right:0;
     }
 }
 

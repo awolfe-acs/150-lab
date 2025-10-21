@@ -167,6 +167,7 @@ export function setupHeroHeadingFadeAnimation() {
 // New function to initialize the cover area
 export function initCoverArea() {
   const coverLogo = document.querySelector("#cover-area .cover-logo");
+  const countdown = document.querySelector("#countdown");
   const enterExperienceBtn = document.querySelector("#cover-area button.enter-experience");
   const header = document.querySelector("header");
   const nav = document.querySelector("nav");
@@ -209,11 +210,18 @@ export function initCoverArea() {
   // Make the logo fixed position so it stays in place while scrolling
   gsap.set(coverLogo, {
     position: "fixed",
-    top: "50%",
+    top: "calc(50% - 100px)",
     left: "50%",
     transform: "translate(-50%, -50%)",
     zIndex: 1000,
   });
+
+  // Ensure countdown starts hidden
+  if (countdown) {
+    gsap.set(countdown, {
+      opacity: 0,
+    });
+  }
 
   // Create a timeline for the cover area animation
   const tl = gsap.timeline({ delay: 0.6 });
@@ -247,6 +255,19 @@ export function initCoverArea() {
       ease: "power1.out",
     }
   );
+
+  // Animate the countdown in (directly after logo)
+  if (countdown) {
+    tl.to(
+      countdown,
+      {
+        opacity: 1,
+        duration: 1.8,
+        ease: "power1.out",
+      },
+      "-=0.4"
+    );
+  }
 
   // Animate the enter button in
   tl.to(
@@ -356,15 +377,17 @@ export function initCoverArea() {
       }
 
       // Initialize the cover logo ScrollTrigger after the enter button is clicked
-      initCoverLogoScrollTrigger(coverLogo);
+      initCoverLogoScrollTrigger(coverLogo, countdown);
     });
   }
 }
 
 // Separate function to handle cover logo ScrollTrigger - optimized for fast scrolling
-function initCoverLogoScrollTrigger(coverLogo) {
+function initCoverLogoScrollTrigger(coverLogo, countdown) {
   let coverLogoScrollTrigger = null; // Reference to the ScrollTrigger
   let lastOpacity = -1; // Track last applied opacity to avoid redundant updates
+  let lastCountdownOpacity = -1; // Track countdown opacity separately
+  let countdownTween = null; // Track any ongoing countdown animation
 
   // Function to create the ScrollTrigger
   function createScrollTrigger() {
@@ -389,12 +412,36 @@ function initCoverLogoScrollTrigger(coverLogo) {
           lastOpacity = targetOpacity;
           // Use direct style setting for maximum performance during fast scrolling
           coverLogo.style.opacity = targetOpacity;
+          
+          // Kill any existing countdown animation and set opacity directly
+          if (countdownTween) {
+            countdownTween.kill();
+            countdownTween = null;
+          }
+          
+          // Fade out countdown at the exact same time
+          if (countdown) {
+            countdown.style.opacity = targetOpacity;
+            lastCountdownOpacity = targetOpacity;
+          }
         }
       },
       onLeave: () => {
+        // Kill any existing countdown animation
+        if (countdownTween) {
+          countdownTween.kill();
+          countdownTween = null;
+        }
+        
         // Ensure logo is hidden when leaving trigger area
         coverLogo.style.opacity = "0";
         lastOpacity = 0;
+        
+        // Also hide countdown
+        if (countdown) {
+          countdown.style.opacity = "0";
+          lastCountdownOpacity = 0;
+        }
       },
       onEnterBack: () => {
         // Simplified enter-back - no complex timing logic
@@ -402,11 +449,45 @@ function initCoverLogoScrollTrigger(coverLogo) {
         const targetOpacity = 1 - currentProgress;
         coverLogo.style.opacity = targetOpacity;
         lastOpacity = targetOpacity;
+        
+        // Kill any existing countdown animation first
+        if (countdownTween) {
+          countdownTween.kill();
+          countdownTween = null;
+        }
+        
+        // Fade countdown back in 240ms after logo starts fading in
+        if (countdown) {
+          countdownTween = gsap.to(countdown, {
+            opacity: targetOpacity,
+            duration: 0.3,
+            delay: 0.24,
+            ease: "power2.out",
+            onUpdate: function() {
+              lastCountdownOpacity = parseFloat(countdown.style.opacity);
+            },
+            onComplete: function() {
+              countdownTween = null; // Clear reference when done
+            }
+          });
+        }
       },
       onLeaveBack: () => {
+        // Kill any existing countdown animation
+        if (countdownTween) {
+          countdownTween.kill();
+          countdownTween = null;
+        }
+        
         // Reset when scrolling back up past trigger
         coverLogo.style.opacity = "1";
         lastOpacity = 1;
+        
+        // Also reset countdown
+        if (countdown) {
+          countdown.style.opacity = "1";
+          lastCountdownOpacity = 1;
+        }
       },
     });
 

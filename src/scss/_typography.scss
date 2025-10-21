@@ -36,6 +36,19 @@ h2 {
         margin-left: auto;
         margin-right: auto;
     }
+
+    &.hashtag-celebrate {
+        margin-top:128px;
+        margin-bottom:48px;
+        @media (max-width:$mobile-viewport) {
+            margin-bottom:80px;
+        }
+        + h5 + span {
+            margin-top:12px;
+            transform:scale(0.8);
+            display:block;
+        }
+    }
 }
 
 h3 {

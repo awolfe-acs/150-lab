@@ -5,13 +5,16 @@
     margin-bottom: 0 !important;
 }
 
+.pinned-hover-image {
+    //Hiding Hover Images for now
+    display:none!important;
+}
+
 .events-panel {
     border-top-left-radius: 64px;
     border-top-right-radius: 64px;
     padding-top: 12svh;
 
-    //padding-bottom: 134px;
-    //padding-bottom: 71px;
     &.original {
         padding-top: 92px;
 
