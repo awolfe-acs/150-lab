@@ -17,6 +17,9 @@ export function initScrollRevealAnimation() {
     // Check if this element has the button class
     const isButton = element.classList.contains("fancy-btn");
     
+    // Check for custom delay attribute (in seconds)
+    const customDelay = parseFloat(element.getAttribute("data-reveal-delay")) || 0;
+    
     // Determine animation direction and trigger position based on class
     let initialY = 50; // Default: from bottom
     let triggerStart = "top 85%"; // Default: trigger early
@@ -50,6 +53,7 @@ export function initScrollRevealAnimation() {
             y: 0,
             filter: "opacity(1)", // Animate filter to fully visible
             duration: 1.2,
+            delay: customDelay,
             ease: "power2.out",
             overwrite: true,
           });
@@ -86,6 +90,7 @@ export function initScrollRevealAnimation() {
             opacity: 1,
             y: 0,
             duration: 1.2,
+            delay: customDelay,
             ease: "power2.out",
             overwrite: true,
           });

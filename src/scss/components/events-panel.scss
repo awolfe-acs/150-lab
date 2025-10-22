@@ -157,10 +157,20 @@
 
                 .external-link-icon {
                     transition: opacity 0.3s ease;
-                    opacity: 0;
+                    opacity: 1; // Always visible
                     margin-left: 8px;
                     display: flex;
                     align-items: center;
+
+                    svg {
+                        width: 23px;
+                        height: 23px;
+
+                        @media (max-width:$mobile-viewport) {
+                            width: 16px;
+                            height: 16px;
+                        }
+                    }
                 }
             }
 
@@ -187,10 +197,6 @@
 
                 .event-date {
                     transform: translateX(-16px);
-                }
-
-                .event-title .external-link-icon {
-                    opacity: 1;
                 }
             }
         }

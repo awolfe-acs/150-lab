@@ -376,8 +376,11 @@ export function initCoverArea() {
         soundToggle.classList.add("active");
       }
 
-      // Initialize the cover logo ScrollTrigger after the enter button is clicked
-      initCoverLogoScrollTrigger(coverLogo, countdown);
+      // Initialize the cover logo ScrollTrigger after a short delay to prevent flicker
+      // This ensures all initial animations are settled before the ScrollTrigger activates
+      setTimeout(() => {
+        initCoverLogoScrollTrigger(coverLogo, countdown);
+      }, 100);
     });
   }
 }
@@ -388,6 +391,40 @@ function initCoverLogoScrollTrigger(coverLogo, countdown) {
   let lastOpacity = -1; // Track last applied opacity to avoid redundant updates
   let lastCountdownOpacity = -1; // Track countdown opacity separately
   let countdownTween = null; // Track any ongoing countdown animation
+  let isReady = false; // Track if ScrollTrigger is ready to prevent premature updates
+  let hasScrolledPast = false; // Track if user has already scrolled past cover area
+
+  // Check current scroll position to see if we're already past the cover area
+  const coverTravelArea = document.querySelector("#cover-travel-area");
+  if (coverTravelArea) {
+    const rect = coverTravelArea.getBoundingClientRect();
+    const coverAreaHeight = rect.height;
+    const viewportHeight = window.innerHeight;
+    const scrollProgress = Math.abs(rect.top) / (coverAreaHeight - viewportHeight * 0.67);
+    
+    // If we've scrolled significantly past the cover area, don't show it
+    if (scrollProgress >= 0.9) {
+      hasScrolledPast = true;
+      gsap.set([coverLogo, countdown], {
+        opacity: 0,
+      });
+      lastOpacity = 0;
+      lastCountdownOpacity = 0;
+    } else {
+      // Set correct initial opacity based on current scroll position
+      const initialOpacity = Math.max(0, 1 - scrollProgress);
+      gsap.set([coverLogo, countdown], {
+        opacity: initialOpacity,
+      });
+      lastOpacity = initialOpacity;
+      lastCountdownOpacity = initialOpacity;
+    }
+  } else {
+    // Ensure elements start in the correct state if we can't find the trigger
+    gsap.set([coverLogo, countdown], {
+      opacity: 1,
+    });
+  }
 
   // Function to create the ScrollTrigger
   function createScrollTrigger() {
@@ -405,6 +442,8 @@ function initCoverLogoScrollTrigger(coverLogo, countdown) {
       invalidateOnRefresh: true,
       fastScrollEnd: true, // Enable fast scroll optimization
       onUpdate: (self) => {
+        // Prevent updates until ScrollTrigger is fully ready
+        if (!isReady) return;
         const targetOpacity = 1 - self.progress;
 
         // Only update if opacity changed significantly (avoid micro-updates during fast scroll)
@@ -427,6 +466,9 @@ function initCoverLogoScrollTrigger(coverLogo, countdown) {
         }
       },
       onLeave: () => {
+        // Prevent premature callback firing
+        if (!isReady) return;
+        
         // Kill any existing countdown animation
         if (countdownTween) {
           countdownTween.kill();
@@ -444,6 +486,9 @@ function initCoverLogoScrollTrigger(coverLogo, countdown) {
         }
       },
       onEnterBack: () => {
+        // Prevent premature callback firing
+        if (!isReady) return;
+        
         // Set logo opacity based on current scroll position
         const currentProgress = coverLogoScrollTrigger.progress;
         const targetOpacity = 1 - currentProgress;
@@ -473,6 +518,9 @@ function initCoverLogoScrollTrigger(coverLogo, countdown) {
         }
       },
       onLeaveBack: () => {
+        // Prevent premature callback firing
+        if (!isReady) return;
+        
         // Kill any existing countdown animation
         if (countdownTween) {
           countdownTween.kill();
@@ -490,6 +538,37 @@ function initCoverLogoScrollTrigger(coverLogo, countdown) {
         }
       },
     });
+
+    // Mark as ready after a brief delay to ensure proper initialization
+    setTimeout(() => {
+      isReady = true;
+      
+      // Only sync if user hasn't already scrolled past the cover area
+      if (!hasScrolledPast && coverLogoScrollTrigger) {
+        const currentProgress = coverLogoScrollTrigger.progress;
+        const targetOpacity = 1 - currentProgress;
+        
+        // Update opacity based on current scroll position
+        if (currentProgress > 0 && currentProgress < 1) {
+          coverLogo.style.opacity = targetOpacity;
+          lastOpacity = targetOpacity;
+          
+          if (countdown) {
+            countdown.style.opacity = targetOpacity;
+            lastCountdownOpacity = targetOpacity;
+          }
+        } else if (currentProgress >= 1) {
+          // User has scrolled past - ensure hidden
+          coverLogo.style.opacity = "0";
+          lastOpacity = 0;
+          
+          if (countdown) {
+            countdown.style.opacity = "0";
+            lastCountdownOpacity = 0;
+          }
+        }
+      }
+    }, 200);
 
     return coverLogoScrollTrigger;
   }
