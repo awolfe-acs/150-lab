@@ -419,7 +419,7 @@ function initCoverLogoScrollTrigger(coverLogo, countdown) {
             countdownTween = null;
           }
           
-          // Fade out countdown at the exact same time
+          // Fade countdown with same timing during normal scroll
           if (countdown) {
             countdown.style.opacity = targetOpacity;
             lastCountdownOpacity = targetOpacity;
@@ -444,7 +444,7 @@ function initCoverLogoScrollTrigger(coverLogo, countdown) {
         }
       },
       onEnterBack: () => {
-        // Simplified enter-back - no complex timing logic
+        // Set logo opacity based on current scroll position
         const currentProgress = coverLogoScrollTrigger.progress;
         const targetOpacity = 1 - currentProgress;
         coverLogo.style.opacity = targetOpacity;
@@ -456,12 +456,12 @@ function initCoverLogoScrollTrigger(coverLogo, countdown) {
           countdownTween = null;
         }
         
-        // Fade countdown back in 240ms after logo starts fading in
+        // Fade countdown in slower with a delay and longer duration
         if (countdown) {
           countdownTween = gsap.to(countdown, {
             opacity: targetOpacity,
-            duration: 0.3,
-            delay: 0.24,
+            duration: 0.8, // Longer duration for slower fade
+            delay: 0.4, // Delay to lag behind the logo
             ease: "power2.out",
             onUpdate: function() {
               lastCountdownOpacity = parseFloat(countdown.style.opacity);

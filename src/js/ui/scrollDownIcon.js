@@ -59,7 +59,7 @@ export function createScrollDownIcon(referenceElement) {
       line-height: 1;
       margin: 0;
       padding: 0;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     `;
   }
 

@@ -9,11 +9,12 @@
     transform: translate(-50%, -50%);
     opacity: 0;
     z-index: 1000;
+    transition: opacity 0.8s ease;
     .time-unit {
         position: relative;
         text-align: center;
         white-space: nowrap;
-
+        user-select: none;
         &#hours,
         &#minutes,
         &#seconds {
@@ -44,7 +45,7 @@
         font-size: min(6vw, 88px);
         font-weight: 900;
         white-space: nowrap;
-
+        user-select: none;
         .char {
             display: inline-block;
             font-weight: inherit;
@@ -60,7 +61,7 @@
         transform: translateX(-50%);
         opacity: 0.62;
         font-weight: 320;
-
+        user-select: none;
         @media (max-width:620px) {
             font-size: 10px;
         }

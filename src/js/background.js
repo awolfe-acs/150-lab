@@ -840,8 +840,8 @@ export function initShaderBackground() {
     gsap.timeline({
       scrollTrigger: {
         trigger: "#get-involved-cards",
-        start: "top top",
-        end: "bottom 33%",
+        start: "top -20%", // Delayed by 20% - starts when top of trigger is 20% above viewport top
+        end: "bottom 13%", // Adjusted to maintain animation duration with delayed start
         scrub: true, // Smooth scrubbing effect, tied to scroll position
         markers: false, // Set to true for debugging
         onUpdate: (self) => {
