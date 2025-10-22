@@ -262,7 +262,7 @@ export function initCoverArea() {
       countdown,
       {
         opacity: 1,
-        duration: 1.8,
+        duration: 0.4,
         ease: "power1.out",
       },
       "-=0.4"
