@@ -43,6 +43,9 @@ h2 {
         @media (max-width:$mobile-viewport) {
             margin-bottom:80px;
         }
+        + h5 {
+            margin-bottom:48px;
+        }
         + h5 + span {
             margin-top:12px;
             transform:scale(0.8);
