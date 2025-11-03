@@ -1,3 +1,5 @@
+@use '../utilities' as *;
+
 #countdown {
     display: flex;
     align-items: center;
@@ -11,6 +13,10 @@
     z-index: 1000;
     transition: opacity 0.8s ease;
     margin-top:32px;
+    @media (max-height:$short-viewport-height) {
+        transform: translate(-50%, -50%) scale(0.9);
+        margin-top:-24px;
+    }
     .countdown-title {
         font-size: 14px;
         font-weight: 300;
@@ -60,6 +66,9 @@
         font-weight: 900;
         white-space: nowrap;
         user-select: none;
+        @media (max-height:$short-viewport-height) {
+            font-size: 48px;
+        }
         .char {
             display: inline-block;
             font-weight: inherit;
