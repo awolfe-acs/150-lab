@@ -1106,7 +1106,14 @@ export async function initShaderBackground() {
   window.shaderBackgroundInitialized = true;
 
   // Add cleanup on page unload to free memory
-  window.addEventListener('beforeunload', () => {
+  window.addEventListener('beforeunload', (e) => {
+    // Don't cleanup if this is a mailto: link or other non-navigation action
+    // Check if we're doing a mailto operation (flag set by mailto handler)
+    if (window._isMailtoOperation || window._preventBackgroundCleanup) {
+      console.log('[Background] Skipping cleanup for mailto/non-navigation action');
+      return;
+    }
+    
     console.log('[Background] Cleaning up resources before page unload');
     
     // Stop rendering
@@ -1517,12 +1524,12 @@ export async function initShaderBackground() {
 
   // Function to load the globe model
   const loadGlobeModel = () => {
-    const globeUrl = getPreloadedAssetUrl("globe-hd.glb", globeModelUrl);
+  const globeUrl = getPreloadedAssetUrl("globe-hd.glb", globeModelUrl);
     console.log('[Background Init] Loading globe model...');
-    gltfLoader.load(
-      globeUrl,
-      handleGltfLoad,
-      // Progress callback
+  gltfLoader.load(
+    globeUrl,
+    handleGltfLoad,
+    // Progress callback
       (xhr) => {
         if (xhr.lengthComputable) {
           const percentComplete = (xhr.loaded / xhr.total) * 100;
@@ -1531,11 +1538,11 @@ export async function initShaderBackground() {
           }
         }
       },
-      // Error callback
-      (error) => {
-        console.error("Error loading globe model:", error);
-      }
-    );
+    // Error callback
+    (error) => {
+      console.error("Error loading globe model:", error);
+    }
+  );
   };
 
   // Defer globe loading for low-end devices and AEM to improve initial load time
@@ -3191,6 +3198,9 @@ export async function initShaderBackground() {
   function redistributeParticles() {
     // Create a size attribute for individual particle sizes
     const sizes = new Float32Array(particleCount);
+    
+    // Reuse color object to avoid creating thousands of objects
+    const depthColor = new THREE.Color(particleColorObj.color);
 
     for (let i = 0; i < particleCount; i++) {
       const i3 = i * 3;
@@ -3204,7 +3214,6 @@ export async function initShaderBackground() {
       sizes[i] = particleSize / customParticleMaterial.uniforms.baseSize.value;
 
       // Adjust particle color slightly based on size to enhance depth perception
-      const depthColor = new THREE.Color(particleColorObj.color);
       // Larger particles are brighter (appear closer) - increased brightness factor
       const brightnessAdjust = 0.8 + sizeRatio * 0.6; // Increased from 0.6 + 0.4 to 0.8 + 0.6
       particleColors[i3] = depthColor.r * brightnessAdjust;
@@ -3472,7 +3481,7 @@ export async function initShaderBackground() {
       if (particleGeometry.attributes.color) {
         particleGeometry.attributes.color.array = null;
       }
-      
+
       // Update the geometry attributes
       particleGeometry.setAttribute("position", new THREE.BufferAttribute(particles, 3));
       particleGeometry.setAttribute("color", new THREE.BufferAttribute(particleColors, 3));
@@ -3500,8 +3509,13 @@ export async function initShaderBackground() {
         particleColors[i3 + 1] = color.g;
         particleColors[i3 + 2] = color.b;
       }
-      particleGeometry.setAttribute("color", new THREE.BufferAttribute(particleColors, 3));
-      particleGeometry.attributes.color.needsUpdate = true;
+      // Reuse existing attribute instead of creating new one
+      if (particleGeometry.attributes.color) {
+        particleGeometry.attributes.color.array.set(particleColors);
+        particleGeometry.attributes.color.needsUpdate = true;
+      } else {
+        particleGeometry.setAttribute("color", new THREE.BufferAttribute(particleColors, 3));
+      }
     });
 
   // Add particle size and glow controls
@@ -3834,28 +3848,35 @@ export async function initShaderBackground() {
     return particle;
   }
 
+  // Track previous particle count to detect size changes
+  let previousMouseParticleCount = 0;
+  
   // Function to update mouse particle geometry
   function updateMouseParticleGeometry() {
     // Combine both regular and drawn particles
     const allParticles = [...mouseParticles, ...drawnParticles];
+    const currentCount = allParticles.length;
 
-    if (allParticles.length === 0) {
-      // Clear geometry if no particles
-      if (mouseParticleGeometry.attributes.position) {
-        mouseParticleGeometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(0), 3));
-        mouseParticleGeometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(0), 3));
-        mouseParticleGeometry.setAttribute("size", new THREE.BufferAttribute(new Float32Array(0), 1));
-        mouseParticleGeometry.setAttribute("opacity", new THREE.BufferAttribute(new Float32Array(0), 1));
+    // If no particles and geometry already cleared, skip
+    if (currentCount === 0) {
+      if (previousMouseParticleCount === 0) {
+        return; // Already cleared, nothing to do
       }
+      // Delete all attributes when clearing to 0 particles
+      mouseParticleGeometry.deleteAttribute('position');
+      mouseParticleGeometry.deleteAttribute('color');
+      mouseParticleGeometry.deleteAttribute('size');
+      mouseParticleGeometry.deleteAttribute('opacity');
+      previousMouseParticleCount = 0;
       return;
     }
 
-    const positions = new Float32Array(allParticles.length * 3);
-    const colors = new Float32Array(allParticles.length * 3);
-    const sizes = new Float32Array(allParticles.length);
-    const opacities = new Float32Array(allParticles.length);
+    const positions = new Float32Array(currentCount * 3);
+    const colors = new Float32Array(currentCount * 3);
+    const sizes = new Float32Array(currentCount);
+    const opacities = new Float32Array(currentCount);
 
-    for (let i = 0; i < allParticles.length; i++) {
+    for (let i = 0; i < currentCount; i++) {
       const particle = allParticles[i];
       const i3 = i * 3;
 
@@ -3874,17 +3895,39 @@ export async function initShaderBackground() {
       opacities[i] = particle.opacity;
     }
 
-    // Update geometry attributes
-    mouseParticleGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    mouseParticleGeometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-    mouseParticleGeometry.setAttribute("size", new THREE.BufferAttribute(sizes, 1));
-    mouseParticleGeometry.setAttribute("opacity", new THREE.BufferAttribute(opacities, 1));
+    // Check if particle count changed (size changed)
+    const sizeChanged = currentCount !== previousMouseParticleCount;
 
-    // Mark attributes as needing update
-    mouseParticleGeometry.attributes.position.needsUpdate = true;
-    mouseParticleGeometry.attributes.color.needsUpdate = true;
-    mouseParticleGeometry.attributes.size.needsUpdate = true;
-    mouseParticleGeometry.attributes.opacity.needsUpdate = true;
+    if (sizeChanged) {
+      // Particle count changed - MUST delete and recreate attributes
+      // Three.js does NOT support resizing buffer attributes
+      if (mouseParticleGeometry.attributes.position) {
+        mouseParticleGeometry.deleteAttribute('position');
+        mouseParticleGeometry.deleteAttribute('color');
+        mouseParticleGeometry.deleteAttribute('size');
+        mouseParticleGeometry.deleteAttribute('opacity');
+      }
+      
+      // Create new attributes with correct size
+      mouseParticleGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      mouseParticleGeometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      mouseParticleGeometry.setAttribute("size", new THREE.BufferAttribute(sizes, 1));
+      mouseParticleGeometry.setAttribute("opacity", new THREE.BufferAttribute(opacities, 1));
+      
+      previousMouseParticleCount = currentCount;
+    } else {
+      // Same particle count - safe to reuse and update in place (no memory leak)
+      mouseParticleGeometry.attributes.position.array.set(positions);
+      mouseParticleGeometry.attributes.color.array.set(colors);
+      mouseParticleGeometry.attributes.size.array.set(sizes);
+      mouseParticleGeometry.attributes.opacity.array.set(opacities);
+      
+      // Mark attributes as needing update
+      mouseParticleGeometry.attributes.position.needsUpdate = true;
+      mouseParticleGeometry.attributes.color.needsUpdate = true;
+      mouseParticleGeometry.attributes.size.needsUpdate = true;
+      mouseParticleGeometry.attributes.opacity.needsUpdate = true;
+    }
   }
 
   // Mouse move event listener
@@ -4416,6 +4459,9 @@ export async function initShaderBackground() {
     particleGeometry.attributes.position.needsUpdate = true;
   }
 
+  // Create reusable color object to avoid creating new objects in animation loop
+  const reusableBaseColor = new THREE.Color();
+  
   // Separate animation loop for particles
   function animateParticles() {
     const positions = particleGeometry.attributes.position.array;
@@ -4481,6 +4527,9 @@ export async function initShaderBackground() {
 
     // Always update colors for twinkle effect, even when movement is paused
     // This ensures a smooth transition when particles become visible again
+    // Reuse the color object instead of creating new ones (critical for memory performance)
+    reusableBaseColor.set(particleColorObj.color);
+    
     for (let i = 0; i < particleCount; i++) {
       const i3 = i * 3;
 
@@ -4488,15 +4537,14 @@ export async function initShaderBackground() {
       const sizeRatio = sizes ? (sizes[i] - scrollObj.sizeMin) / (scrollObj.sizeMax - scrollObj.sizeMin) : 0.5;
 
       // Add twinkle effect - subtle brightness variation over time
-      const baseColor = new THREE.Color(particleColorObj.color);
       const twinkleFactor = 0.2 * Math.sin(twinkleTime + i * 0.1) + 0.9; // Increased from 0.15/0.85 to 0.2/0.9
 
       // Apply size-based brightness - larger particles are brighter
       const sizeBrightness = 0.8 + sizeRatio * 0.6; // Increased from 0.6/0.4 to 0.8/0.6
 
-      colors[i3] = baseColor.r * twinkleFactor * sizeBrightness;
-      colors[i3 + 1] = baseColor.g * twinkleFactor * sizeBrightness;
-      colors[i3 + 2] = baseColor.b * twinkleFactor * sizeBrightness;
+      colors[i3] = reusableBaseColor.r * twinkleFactor * sizeBrightness;
+      colors[i3 + 1] = reusableBaseColor.g * twinkleFactor * sizeBrightness;
+      colors[i3 + 2] = reusableBaseColor.b * twinkleFactor * sizeBrightness;
     }
 
     particleGeometry.attributes.color.needsUpdate = true;

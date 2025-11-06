@@ -105,11 +105,11 @@
             `;
       };
     </script>
-    <script type="module" crossorigin src="/content/dam/acsorg/150/assets/index-CYpaQcoG.js"></script>
-    <link rel="stylesheet" crossorigin href="/content/dam/acsorg/150/assets/style-8rn-znNP.css">
+    <script type="module" crossorigin src="/content/dam/acsorg/150/assets/index-Bg74Lhax.js"></script>
+    <link rel="stylesheet" crossorigin href="/content/dam/acsorg/150/assets/style-DLtVUlcq.css">
   
-              <link rel="preload" href="/content/dam/acsorg/150/assets/style-8rn-znNP.css" as="style">
-              <link rel="preload" href="/content/dam/acsorg/150/assets/index-CYpaQcoG.js" as="script">
+              <link rel="preload" href="/content/dam/acsorg/150/assets/style-DLtVUlcq.css" as="style">
+              <link rel="preload" href="/content/dam/acsorg/150/assets/index-Bg74Lhax.js" as="script">
             </head>
   <body>
     <!-- Skip Links for Keyboard Navigation -->
@@ -1692,7 +1692,7 @@ year-long celebration guided by 12 monthly pillars.
                   <div data-testid="text-component" class="container" data-ishtl="true">
                     <div>
                       <p>
-                        1155 Sixteenth Street, NW, Washington, DC 20036, USA |&nbsp;<a href="mailto:service@acs.org"
+                        1155 Sixteenth Street, NW, Washington, DC 20036, USA |&nbsp;<a class="safe-mailto" href="mailto:service@acs.org"
                           >service@acs.org</a
                         >&nbsp;|&nbsp;1-800-333-9511 (US and Canada) | 614-447-3776 (outside North America)
                       </p>
@@ -1719,7 +1719,7 @@ year-long celebration guided by 12 monthly pillars.
                 </defs>
                 </svg>
                 <div class="email" style="display:flex; gap:8px; align-items:center; margin-left:24px; font-size:12px;">
-                  <a style="display:flex; align-items:center; gap:8px;" href="mailto:acs150anniversary@acs.org">
+                  <a class="safe-mailto" style="display:flex; align-items:center; gap:8px;" href="mailto:acs150anniversary@acs.org">
                   <svg width="20" height="15" viewBox="0 0 20 15" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:16px;">
                     <path d="M2.5 1.875C2.15625 1.875 1.875 2.15625 1.875 2.5V3.36328L8.61328 8.89453C9.42188 9.55859 10.582 9.55859 11.3906 8.89453L18.125 3.36328V2.5C18.125 2.15625 17.8438 1.875 17.5 1.875H2.5ZM1.875 5.78906V12.5C1.875 12.8438 2.15625 13.125 2.5 13.125H17.5C17.8438 13.125 18.125 12.8438 18.125 12.5V5.78906L12.5781 10.3438C11.0781 11.5742 8.91797 11.5742 7.42188 10.3438L1.875 5.78906ZM0 2.5C0 1.12109 1.12109 0 2.5 0H17.5C18.8789 0 20 1.12109 20 2.5V12.5C20 13.8789 18.8789 15 17.5 15H2.5C1.12109 15 0 13.8789 0 12.5V2.5Z" fill="white"/>
                     </svg>                    
@@ -2275,6 +2275,64 @@ year-long celebration guided by 12 monthly pillars.
         });
         disableNavTabbing();
         disablePageNavTabbing(); // Initially disable page nav until experience starts
+      });
+    </script>
+
+    <!-- Safe mailto handler to prevent scroll-to-top behavior -->
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        // Handle all mailto links with the safe-mailto class
+        const mailtoLinks = document.querySelectorAll('a.safe-mailto[href^="mailto:"]');
+        
+        mailtoLinks.forEach(function(mailtoLink) {
+          mailtoLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Get the mailto href
+            const mailtoHref = this.getAttribute('href');
+            
+            // Set flag to prevent background cleanup during mailto operation
+            window._isMailtoOperation = true;
+            window._preventBackgroundCleanup = true;
+            
+            // Create a hidden iframe to handle mailto without affecting page state
+            // This method is the safest and doesn't trigger beforeunload
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = mailtoHref;
+            document.body.appendChild(iframe);
+            
+            // Clean up iframe and reset flags after a short delay
+            setTimeout(function() {
+              try {
+                document.body.removeChild(iframe);
+              } catch(e) {
+                // Ignore errors if iframe already removed
+              }
+              window._isMailtoOperation = false;
+              window._preventBackgroundCleanup = false;
+            }, 100);
+            
+            return false;
+          });
+        });
+        
+        // General protection for external links to prevent background cleanup
+        document.addEventListener('click', function(e) {
+          const link = e.target.closest('a');
+          if (link && link.href) {
+            const href = link.getAttribute('href');
+            // If it's an external link or special protocol, prevent cleanup
+            if (href && (href.startsWith('http') || href.startsWith('mailto:') || href.startsWith('tel:'))) {
+              window._preventBackgroundCleanup = true;
+              // Reset flag after a short delay
+              setTimeout(function() {
+                window._preventBackgroundCleanup = false;
+              }, 200);
+            }
+          }
+        }, true); // Use capture phase to ensure we catch it early
       });
     </script>
 

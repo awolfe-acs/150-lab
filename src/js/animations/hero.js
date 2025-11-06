@@ -642,7 +642,7 @@ export function initHeroAnimation() {
     heroHeadingSplitInstance.revert();
     heroHeadingSplitInstance = null;
   }
-  
+
   // Split the text into words first, then characters to prevent mid-word breaks
   heroHeadingSplitInstance = new SplitType(heroHeading, {
     types: "words,chars",
