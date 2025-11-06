@@ -3,6 +3,11 @@ import * as dat from "dat.gui";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import globeModelUrl from "../../public/models/globe-hd.glb?url";
+import performanceDetector from "./utils/performanceDetector.js";
+import { AdaptiveRenderer } from "./utils/adaptiveRenderer.js";
+import { PerformanceMonitor } from "./utils/performanceMonitor.js";
+import memoryManager from "./utils/memoryManager.js";
+import aemModeDetector from "./utils/aemModeDetector.js";
 
 // Helper function to get preloaded asset URL or fallback
 function getPreloadedAssetUrl(assetName, fallbackUrl) {
@@ -17,12 +22,37 @@ function getPreloadedAssetUrl(assetName, fallbackUrl) {
   return fallbackUrl;
 }
 
-export function initShaderBackground() {
+export async function initShaderBackground() {
   // Prevent multiple initializations
   if (window.shaderBackgroundInitialized) {
     console.warn("Shader background already initialized. Skipping...");
     return;
   }
+
+  // Check AEM mode first
+  const aemMode = aemModeDetector.detect();
+  const aemSettings = aemModeDetector.getSettings();
+  
+  // If in fallback mode (AEM Edit), skip initialization entirely
+  if (aemSettings.mode === 'fallback' || !aemSettings.enableBackground) {
+    console.log('[Background Init] Skipping initialization - AEM fallback mode detected');
+    console.log('[Background Init] AEM Mode:', aemMode);
+    
+    // Apply static background
+    aemModeDetector.applyStaticBackground();
+    
+    // Mark as initialized to prevent retries
+    window.shaderBackgroundInitialized = true;
+    return;
+  }
+
+  // Detect device performance tier
+  const performanceTier = await performanceDetector.detect();
+  const perfSettings = performanceDetector.getSettings();
+  
+  console.log('[Background Init] AEM Mode:', aemMode);
+  console.log('[Background Init] Performance Tier:', performanceTier);
+  console.log('[Background Init] Settings:', perfSettings);
 
   // Set up default values
   window.colorPhase = 1; // Start in phase one (default colors)
@@ -1045,18 +1075,20 @@ export function initShaderBackground() {
   canvas.style.transformStyle = "preserve-3d";
   canvas.style.willChange = "transform";
 
-  // Create the WebGL renderer with error handling
+  // Create the WebGL renderer with error handling and performance settings
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({
       canvas,
       alpha: true,
-      antialias: false, // Disable antialiasing to reduce GPU load
-      powerPreference: "default", // Use default power preference to avoid high-power GPU issues
+      antialias: perfSettings.antialias, // Use performance-based setting
+      powerPreference: performanceTier === 'high' ? 'high-performance' : 'default',
       failIfMajorPerformanceCaveat: false, // Allow fallback to software rendering if needed
     });
     renderer.setSize(initialWidth, initialHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap pixel ratio to prevent memory issues
+    renderer.setPixelRatio(perfSettings.pixelRatio); // Use performance-based pixel ratio
+    
+    console.log('[Background Init] Renderer pixel ratio:', perfSettings.pixelRatio);
   } catch (error) {
     console.error("Failed to create WebGL renderer:", error);
     console.warn("Falling back to fallback background. WebGL initialization failed.");
@@ -1072,6 +1104,29 @@ export function initShaderBackground() {
 
   // Mark initialization as successful
   window.shaderBackgroundInitialized = true;
+
+  // Add cleanup on page unload to free memory
+  window.addEventListener('beforeunload', () => {
+    console.log('[Background] Cleaning up resources before page unload');
+    
+    // Stop rendering
+    if (window.shaderBackgroundRenderer) {
+      window.shaderBackgroundRenderer.pause();
+    }
+    
+    // Dispose all tracked resources
+    const disposed = memoryManager.disposeAll();
+    console.log(`[Background] Disposed ${disposed} Three.js resources`);
+    
+    // Dispose renderer
+    if (renderer) {
+      renderer.dispose();
+      renderer.forceContextLoss();
+    }
+    
+    // Hint at garbage collection
+    memoryManager.forceGC();
+  });
 
   // Add context loss handling
   canvas.addEventListener("webglcontextlost", function (event) {
@@ -1329,13 +1384,16 @@ export function initShaderBackground() {
   // Load the GLTF model - check if preloaded first
   const gltfLoader = new GLTFLoader();
 
-  // Set up DRACOLoader for compressed geometry
+  // Set up DRACOLoader for compressed geometry with lazy loading
   const dracoLoader = new DRACOLoader();
   dracoLoader.setDecoderPath("https://www.gstatic.com/draco/versioned/decoders/1.5.6/");
   dracoLoader.setDecoderConfig({ type: "js" });
   gltfLoader.setDRACOLoader(dracoLoader);
 
   let globeModel;
+  
+  // For low-end devices, defer globe loading using requestIdleCallback
+  const shouldDeferGlobeLoading = performanceTier === 'low' || performanceDetector.isAEMEmbedded();
 
   // Function to handle loaded GLTF data
   const handleGltfLoad = (gltf) => {
@@ -1457,18 +1515,42 @@ export function initShaderBackground() {
     });
   };
 
-  // Actually load the globe model using preloaded asset if available
-  const globeUrl = getPreloadedAssetUrl("globe-hd.glb", globeModelUrl);
-  gltfLoader.load(
-    globeUrl,
-    handleGltfLoad,
-    // Progress callback
-    (xhr) => {},
-    // Error callback
-    (error) => {
-      console.error("Error loading globe model:", error);
+  // Function to load the globe model
+  const loadGlobeModel = () => {
+    const globeUrl = getPreloadedAssetUrl("globe-hd.glb", globeModelUrl);
+    console.log('[Background Init] Loading globe model...');
+    gltfLoader.load(
+      globeUrl,
+      handleGltfLoad,
+      // Progress callback
+      (xhr) => {
+        if (xhr.lengthComputable) {
+          const percentComplete = (xhr.loaded / xhr.total) * 100;
+          if (percentComplete % 25 === 0) {
+            console.log(`[Background Init] Globe loading: ${percentComplete.toFixed(0)}%`);
+          }
+        }
+      },
+      // Error callback
+      (error) => {
+        console.error("Error loading globe model:", error);
+      }
+    );
+  };
+
+  // Defer globe loading for low-end devices and AEM to improve initial load time
+  if (shouldDeferGlobeLoading) {
+    console.log('[Background Init] Deferring globe model load for performance');
+    // Use requestIdleCallback if available, otherwise setTimeout
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => loadGlobeModel(), { timeout: 2000 });
+    } else {
+      setTimeout(() => loadGlobeModel(), 1000);
     }
-  );
+  } else {
+    // Load immediately for high-end devices
+    loadGlobeModel();
+  }
 
   // Define uniforms with tunable parameters - increased default values for larger displacement
   window.uniforms = {
@@ -3077,8 +3159,9 @@ export function initShaderBackground() {
   // Open the overlay folder by default
   overlayFolder.open();
 
-  // Create particle system
-  let particleCount = 150; // Make this mutable
+  // Create particle system with performance-based count
+  let particleCount = perfSettings.particleCount; // Use performance-based particle count
+  console.log('[Background Init] Using particle count:', particleCount);
   let particles = new Float32Array(particleCount * 3);
   let particleVelocities = new Float32Array(particleCount * 3);
   let particleColors = new Float32Array(particleCount * 3);
@@ -3161,9 +3244,11 @@ export function initShaderBackground() {
   const particleGeometry = new THREE.BufferGeometry();
   particleGeometry.setAttribute("position", new THREE.BufferAttribute(particles, 3));
   particleGeometry.setAttribute("color", new THREE.BufferAttribute(particleColors, 3));
+  memoryManager.track(particleGeometry, 'geometry'); // Track for cleanup
 
   // Create a sparkle texture for particles
   const sparkleTexture = createSparkleTexture();
+  memoryManager.track(sparkleTexture, 'texture'); // Track for cleanup
 
   // Function to create a sparkle texture
   function createSparkleTexture() {
@@ -3380,6 +3465,14 @@ export function initShaderBackground() {
       particleVelocities = newVelocities;
       particleColors = newColors;
 
+      // Dispose old attributes first to free memory
+      if (particleGeometry.attributes.position) {
+        particleGeometry.attributes.position.array = null;
+      }
+      if (particleGeometry.attributes.color) {
+        particleGeometry.attributes.color.array = null;
+      }
+      
       // Update the geometry attributes
       particleGeometry.setAttribute("position", new THREE.BufferAttribute(particles, 3));
       particleGeometry.setAttribute("color", new THREE.BufferAttribute(particleColors, 3));
@@ -3565,9 +3658,9 @@ export function initShaderBackground() {
   // Mouse follow particle parameters
   const mouseParticleParams = {
     enabled: false, // Start disabled, will be enabled when enter-experience button is clicked
-    mobileDisabled: isMobileDevice, // Disable on mobile for performance
-    spawnRate: 0.52, // Chance to spawn particle on mouse move (0-1)
-    maxParticles: 150, //150
+    mobileDisabled: !perfSettings.mouseParticles, // Disable based on performance settings
+    spawnRate: performanceTier === 'high' ? 0.52 : (performanceTier === 'medium' ? 0.35 : 0.0),
+    maxParticles: performanceTier === 'high' ? 150 : (performanceTier === 'medium' ? 75 : 0), // Reduce for lower tiers
     baseSize: 1.9, // Base particle size
     fadeInSpeed: 0.62, // Maximum opacity/brightness (0-1) - controls peak intensity
     fadeOutSpeed: 0.88, // Fade out intensity multiplier (0-1) - controls fade strength
@@ -3594,6 +3687,7 @@ export function initShaderBackground() {
 
   // Create mouse particle geometry and material (clone of main particles)
   const mouseParticleGeometry = new THREE.BufferGeometry();
+  memoryManager.track(mouseParticleGeometry, 'geometry'); // Track for cleanup
 
   // Create material for mouse particles (clone and modify existing material)
   const mouseParticleMaterial = new THREE.ShaderMaterial({
@@ -4412,9 +4506,13 @@ export function initShaderBackground() {
   // Start particle animation
   animateParticles();
 
-  // Main shader animation loop
-  function animate() {
-    requestAnimationFrame(animate);
+  // Main shader animation loop using adaptive renderer
+  function animate(deltaTime) {
+    // Check if timeline has paused the background for performance
+    if (window.backgroundPaused) {
+      // Skip all rendering and updates when timeline is active
+      return;
+    }
 
     // Update shader uniforms with slower speed
     uniforms.time.value += 0.001; // Reduced from 0.01 to 0.001
@@ -4486,7 +4584,44 @@ export function initShaderBackground() {
     // This ensures: Background -> Particles -> Globe+Overlay (correct z-order)
   }
 
-  animate();
+  // Initialize performance monitor (optional, for debugging)
+  const perfMonitor = new PerformanceMonitor();
+  window.shaderBackgroundPerfMonitor = perfMonitor;
+  
+  // Enable performance monitoring in debug mode
+  const debugPerformance = new URLSearchParams(window.location.search).has('debugPerf');
+  if (debugPerformance) {
+    perfMonitor.createDebugOverlay();
+    console.log('[Background Init] Performance monitoring enabled');
+  }
+  
+  // Set up warning callback for performance issues
+  perfMonitor.setWarningCallback((warnings) => {
+    console.warn('[Performance Warning]', warnings);
+    // Could potentially trigger quality reduction here
+  });
+  
+  // Initialize adaptive renderer with performance-based FPS
+  const adaptiveRenderer = new AdaptiveRenderer((deltaTime) => {
+    animate(deltaTime);
+    // Update performance monitor after each frame
+    perfMonitor.update(renderer);
+  }, perfSettings.targetFPS);
+  adaptiveRenderer.start();
+  
+  // Store references for external control
+  window.shaderBackgroundRenderer = adaptiveRenderer;
+  
+  // Hook into backgroundPaused to control renderer
+  Object.defineProperty(window, 'backgroundPaused', {
+    get() { return this._backgroundPaused || false; },
+    set(value) {
+      this._backgroundPaused = value;
+      if (adaptiveRenderer) {
+        adaptiveRenderer.setPausedByTimeline(value);
+      }
+    }
+  });
 
   // Listen for very early particle fade start event (before hero animation)
   document.addEventListener("veryEarlyParticleFade", () => {

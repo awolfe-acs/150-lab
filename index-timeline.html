@@ -12,7 +12,7 @@
       property="og:description"
       content="American Chemical Society 150th Anniversary Celebration - Join us for this historic milestone."
     />
-    <meta property="og:image" content="/150-lab/assets/images/thumbnail.jpg" />
+    <meta property="og:image" content="./public/images/thumbnail.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:url" content="" />
@@ -26,7 +26,7 @@
       name="twitter:description"
       content="American Chemical Society 150th Anniversary Celebration - Join us for this historic milestone."
     />
-    <meta name="twitter:image" content="/150-lab/assets/images/thumbnail.jpg" />
+    <meta name="twitter:image" content="./public/images/thumbnail.jpg" />
 
     <!--<link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -105,12 +105,7 @@
             `;
       };
     </script>
-    <script type="module" crossorigin src="/150-lab/assets/index-BljwXgMR.js"></script>
-    <link rel="stylesheet" crossorigin href="/150-lab/assets/style-8rn-znNP.css">
-  
-              <link rel="preload" href="/150-lab/assets/style-8rn-znNP.css" as="style">
-              <link rel="preload" href="/150-lab/assets/index-BljwXgMR.js" as="script">
-            </head>
+  </head>
   <body>
     <!-- Skip Links for Keyboard Navigation -->
     <div class="skip-links" style="position: absolute; top: -40px; left: 6px; z-index: 9999">
@@ -789,8 +784,135 @@
             possible—including you.
           </h4>
           <h4 class="split-lines text-align-center">Together, we will catalyze the next 150 years of chemistry.</h4>
+          <h4 class="split-lines text-align-center">Explore the <span id="timeline-window-start">timeline</span>, celebrate 150 years of innovation, and be a part of the journey ahead.</h4>
+          
         </div>
-
+        <!------ Start of ACS Timeline Section ------>
+        <section id="acs-timeline">
+          <div class="timeline-container">
+            
+            <!-- Timeline close button -->
+            <button class="timeline-close" aria-label="Close timeline">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M24 8L8 24M8 8L24 24" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            
+            <!-- Three.js container for sphere and dot plane -->
+            <div class="timeline-threejs-container">
+              <canvas id="timeline-canvas"></canvas>
+            </div>
+            
+            <!-- Horizontal scrolling timeline content -->
+            <div class="timeline-track">
+              
+              <!-- Timeline Event: 1876 - ACS Founded -->
+              <div class="timeline-event timeline-cover" data-year="1876">
+                <div class="event-content-wrapper">
+                  <div class="event-date">
+                    <div class="event-value">1876</div>
+                    <div class="event-label">When ACS is born</div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Timeline Event: 1900 -->
+              <div class="timeline-event" data-year="1900">
+                <div class="event-content-wrapper">
+                  <div class="event-date">
+                    <div class="event-value">1900s</div>
+                    <div class="event-label">The new century</div>
+                  </div>
+                  <div class="event-panel">
+                    <h3 class="event-year">1900</h3>
+                    <div class="event-description">
+                      <p>ACS enters the 20th century with groundbreaking chemical discoveries and expanding membership across the United States.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Timeline Event: 1950 -->
+              <div class="timeline-event" data-year="1950">
+                <div class="event-content-wrapper">
+                  <div class="event-date">
+                    <div class="event-value">1950s</div>
+                    <div class="event-label">Post-war innovation</div>
+                  </div>
+                  <div class="event-panel">
+                    <h3 class="event-year">1950</h3>
+                    <div class="event-description">
+                      <p>Chemistry plays a pivotal role in post-World War II innovation, with breakthroughs in materials science and pharmaceutical development.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Timeline Event: 2000 -->
+              <div class="timeline-event" data-year="2000">
+                <div class="event-content-wrapper">
+                  <div class="event-date">
+                    <div class="event-value">2000s</div>
+                    <div class="event-label">Digital age chemistry</div>
+                  </div>
+                  <div class="event-panel">
+                    <h3 class="event-year">2000</h3>
+                    <div class="event-description">
+                      <p>The millennium brings computational chemistry, green chemistry initiatives, and unprecedented collaboration across the global chemistry community.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Timeline Event: 2026 -->
+              <div class="timeline-event" data-year="2026">
+                <div class="event-content-wrapper">
+                  <div class="event-date">
+                    <div class="event-value">2026</div>
+                    <div class="event-label">150 years of ACS</div>
+                  </div>
+                  <div class="event-panel">
+                    <h3 class="event-year">2026</h3>
+                    <div class="event-description">
+                      <p>Join us in celebrating 150 years of advancing chemistry, connecting chemists, and catalyzing innovation. Together, we shape the next 150 years.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+            </div>
+            
+            <!-- Bottom scrubber -->
+            <div class="timeline-scrubber">
+              <div class="scrubber-line">
+                <div class="scrubber-progress"></div>
+              </div>
+              <div class="scrubber-markers">
+                <div class="marker" data-decade="1870s">
+                  <div class="marker-dot"></div>
+                  <div class="marker-label">1870s</div>
+                </div>
+                <div class="marker" data-decade="1900s">
+                  <div class="marker-dot"></div>
+                  <div class="marker-label">1900s</div>
+                </div>
+                <div class="marker" data-decade="2000s">
+                  <div class="marker-dot"></div>
+                  <div class="marker-label">2000s</div>
+                </div>
+                <div class="marker" data-decade="2020s">
+                  <div class="marker-dot"></div>
+                  <div class="marker-label">2020s</div>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+        </section>
+        
+        <!-- Expanding background element (sits behind everything via z-index) -->
+        <div id="timeline-window-bg"></div>
+        <!------ End of ACS Timeline Section ------>
         <div class="form-panel colored-glass" id="signup-form">
           <div class="inner-wrapper">
             <div class="text-column">
@@ -1282,7 +1404,7 @@
               <!-- endless upward translating image goes here-->
               <img
                 style="opacity: 0"
-                src="/150-lab/assets/images/insider-marquee-image.png"
+                src="public\images\insider-marquee-image.png"
                 alt="Chemistry celebration imagery"
                 aria-describedby="animation-description"
               />
@@ -1589,15 +1711,15 @@ year-long celebration guided by 12 monthly pillars.
                   <div class="sitemap-col">
                     <dl data-testid="acsfooterlinklist-component" class="sitemap-cat">
                       <dt>GET TO KNOW US</dt>
-                      <dd><a href="https://www.acs.org/about.html?sc=180808_GlobalFooter_od">About ACS</a></dd>
-                      <dd><a href="https://www.acs.org/pressroom/news-room.html?sc=180808_GlobalFooter_od">Press Room</a></dd>
+                      <dd><a href="/about.html?sc=180808_GlobalFooter_od">About ACS</a></dd>
+                      <dd><a href="/pressroom/news-room.html?sc=180808_GlobalFooter_od">Press Room</a></dd>
                       <dd>
                         <a
-                          href="https://recruiting.ultipro.com/AME1095ACHM/JobBoard/c52f9a39-fdc5-4ae2-9eaf-cb8a7bda923e/?q=&o=postedDateDesc&w=&wc=&we=&wpst="
+                          href="https://recruiting.ultipro.com/AME1095ACHM/JobBoard/c52f9a39-fdc5-4ae2-9eaf-cb8a7bda923e/?q=&amp;o=postedDateDesc&amp;w=&amp;wc=&amp;we=&amp;wpst="
                           >Jobs at ACS</a
                         >
                       </dd>
-                      <dd><a href="https://www.acs.org/about/governance.html?sc=180808_GlobalFooter_od">Governance</a></dd>
+                      <dd><a href="/about/governance.html?sc=180808_GlobalFooter_od">Governance</a></dd>
                       <dd><a href="https://www.store.acs.org/?sc=180808_GlobalFooter_od">ACS Store</a></dd>
                     </dl>
                   </div>
@@ -1614,9 +1736,9 @@ year-long celebration guided by 12 monthly pillars.
                   <div class="sitemap-col">
                     <dl data-testid="acsfooterlinklist-component" class="sitemap-cat">
                       <dt>GET INVOLVED</dt>
-                      <dd><a href="https://www.acs.org/policy.html">Advocate</a></dd>
-                      <dd><a href="https://www.acs.org/volunteer.html">Volunteer</a></dd>
-                      <dd><a href="https://www.acs.org/donate.html">Donate</a></dd>
+                      <dd><a href="/policy.html">Advocate</a></dd>
+                      <dd><a href="/volunteer.html">Volunteer</a></dd>
+                      <dd><a href="/donate.html">Donate</a></dd>
                     </dl>
                   </div>
                   <div class="sitemap-col social-links">
@@ -1719,12 +1841,10 @@ year-long celebration guided by 12 monthly pillars.
                 </defs>
                 </svg>
                 <div class="email" style="display:flex; gap:8px; align-items:center; margin-left:24px; font-size:12px;">
-                  <a style="display:flex; align-items:center; gap:8px;" href="mailto:acs150anniversary@acs.org">
                   <svg width="20" height="15" viewBox="0 0 20 15" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:16px;">
                     <path d="M2.5 1.875C2.15625 1.875 1.875 2.15625 1.875 2.5V3.36328L8.61328 8.89453C9.42188 9.55859 10.582 9.55859 11.3906 8.89453L18.125 3.36328V2.5C18.125 2.15625 17.8438 1.875 17.5 1.875H2.5ZM1.875 5.78906V12.5C1.875 12.8438 2.15625 13.125 2.5 13.125H17.5C17.8438 13.125 18.125 12.8438 18.125 12.5V5.78906L12.5781 10.3438C11.0781 11.5742 8.91797 11.5742 7.42188 10.3438L1.875 5.78906ZM0 2.5C0 1.12109 1.12109 0 2.5 0H17.5C18.8789 0 20 1.12109 20 2.5V12.5C20 13.8789 18.8789 15 17.5 15H2.5C1.12109 15 0 13.8789 0 12.5V2.5Z" fill="white"/>
                     </svg>                    
                     acs150anniversary@acs.org
-                    </a>
                 </div>
                 <span class="separator"></span>
                     <div class="external-links" style="display: flex; gap: 12px; align-items: center">
@@ -2278,5 +2398,6 @@ year-long celebration guided by 12 monthly pillars.
       });
     </script>
 
+    <script type="module" src="/src/main.js"></script>
   </body>
 </html>

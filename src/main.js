@@ -26,6 +26,7 @@ import {
 } from "./js/animations/getInvolved.js";
 import { initInfiniteMarqueeAnimation } from "./js/animations/marquee.js";
 import { initScrollRevealAnimation } from "./js/animations/scrollReveal.js";
+import { initTimelineAnimation } from "./js/animations/timeline.js";
 
 // Import UI functions
 import { preloadBackgroundAudio, setupUIClickSounds, setupSoundToggle } from "./js/ui/audio.js";
@@ -37,6 +38,7 @@ import { initEventListItemHover } from "./js/ui/eventListHover.js";
 // Import utilities
 import { initSplitLinesAnimation, initSplitCharsAnimation } from "./js/utils/splitText.js";
 import { initGlobalResizeHandler } from "./js/utils/globalHandlers.js";
+import aemModeDetector from "./js/utils/aemModeDetector.js";
 
 // Import config
 import { resetAnimationState } from "./js/config/animationConfig.js";
@@ -109,6 +111,9 @@ function initAnimations() {
   initGetInvolvedLogoAnimation();
   initInfiniteMarqueeAnimation();
   initScrollRevealAnimation();
+  
+  // Initialize timeline
+  initTimelineAnimation();
 
   // Initialize UI components
   updatePageNavigation();
@@ -202,6 +207,23 @@ document.addEventListener("DOMContentLoaded", () => {
   // Force scroll to top again when DOM is ready
   window.scrollTo(0, 0);
 
+  // Detect AEM mode first
+  const aemMode = aemModeDetector.detect();
+  const aemSettings = aemModeDetector.getSettings();
+  
+  console.log('[Main] AEM Mode:', aemMode);
+  console.log('[Main] Settings:', aemSettings);
+
+  // Apply static background immediately if in fallback mode
+  if (aemSettings.showStaticBackground) {
+    aemModeDetector.applyStaticBackground();
+  }
+
+  // Show placeholder message in edit mode
+  if (aemSettings.showPlaceholderMessage) {
+    aemModeDetector.showPlaceholderMessage();
+  }
+
   // Add mobile-specific device detection first
   const isMobileDevice =
     /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
@@ -277,27 +299,44 @@ document.addEventListener("DOMContentLoaded", () => {
     initDebug();
   }
 
-  // Initialize shader background (always run this)
-  // Add a small delay to ensure canvas element is fully ready
-  setTimeout(() => {
-    try {
-      initShaderBackground();
-    } catch (error) {
-      console.error("Failed to initialize shader background:", error);
-      console.warn("Continuing without shader background...");
-    }
-  }, 100);
+  // Initialize shader background (only if not in fallback mode)
+  if (aemSettings.enableBackground) {
+    // Add a small delay to ensure canvas element is fully ready
+    setTimeout(async () => {
+      try {
+        await initShaderBackground();
+        console.log('[Main] Shader background initialized successfully');
+      } catch (error) {
+        console.error("Failed to initialize shader background:", error);
+        console.warn("Continuing without shader background...");
+        // Apply static background as fallback
+        aemModeDetector.applyStaticBackground();
+      }
+    }, 100);
+  } else {
+    console.log('[Main] Skipping shader background (AEM mode or fallback)');
+  }
 
   // Only run animations and video on main pages
   if (isMainPage()) {
     // Initialize cover area first
     initCoverArea();
 
-    // Initialize animations directly from modules
-    initAnimations();
+    // Initialize animations (unless in fallback mode)
+    if (aemSettings.enableAnimations) {
+      initAnimations();
+      console.log('[Main] Animations initialized');
+    } else {
+      console.log('[Main] Skipping animations (AEM fallback mode)');
+    }
 
-    // Initialize video
-    initVideo();
+    // Initialize video (unless disabled)
+    if (aemSettings.enableVideo) {
+      initVideo();
+      console.log('[Main] Video initialized');
+    } else {
+      console.log('[Main] Skipping video (AEM fallback mode)');
+    }
 
     // On main pages, Lenis will be enabled when the enter-experience button is clicked
     // (this happens in the cover area module)

@@ -11,6 +11,10 @@ import {
   playBackgroundAudio,
 } from "../ui/audio.js";
 
+// Store SplitType instances for cleanup
+let heroHeadingSplitInstance = null;
+let heroHeadingFadeSplitInstance = null;
+
 // Function to set up hero heading character fade animations
 export function setupHeroHeadingFadeAnimation() {
   // Clean up existing ScrollTrigger if it exists
@@ -34,11 +38,17 @@ export function setupHeroHeadingFadeAnimation() {
 
       // Apply SplitType to create character elements
       try {
-        const splitText = new SplitType(heroHeading, {
+        // Clean up previous instance if it exists
+        if (heroHeadingFadeSplitInstance) {
+          heroHeadingFadeSplitInstance.revert();
+          heroHeadingFadeSplitInstance = null;
+        }
+        
+        heroHeadingFadeSplitInstance = new SplitType(heroHeading, {
           types: "words,chars",
           absolute: false,
         });
-        splitTextChars = splitText.chars;
+        splitTextChars = heroHeadingFadeSplitInstance.chars;
 
         // Make all chars visible as a starting point after re-split
         gsap.set(splitTextChars, {
@@ -627,11 +637,18 @@ export function initHeroAnimation() {
     opacity: 0,
   });
 
+  // Clean up previous instance if it exists
+  if (heroHeadingSplitInstance) {
+    heroHeadingSplitInstance.revert();
+    heroHeadingSplitInstance = null;
+  }
+  
   // Split the text into words first, then characters to prevent mid-word breaks
-  const splitText = new SplitType(heroHeading, {
+  heroHeadingSplitInstance = new SplitType(heroHeading, {
     types: "words,chars",
     absolute: false,
   });
+  const splitText = heroHeadingSplitInstance;
 
   // Hide all characters initially and add blur effect
   gsap.set(splitText.chars, {

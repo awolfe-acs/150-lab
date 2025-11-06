@@ -1,0 +1,260 @@
+// Timeline Section Styles
+
+// Timeline colors
+$timeline-blue-light: #4fb3d9;
+$timeline-blue-mid: #2088b8;
+$timeline-blue-dark: #1a5f8f;
+$timeline-accent: #00d4ff;
+
+// Timeline measurements
+$timeline-scrubber-height: 80px;
+$timeline-event-width: 100vw;
+
+// #timeline-window-start: Inline span in the text (reference point only)
+#timeline-window-start {
+  // Subtle styling to hint at interactivity (optional)
+  cursor: pointer;
+  position: relative;
+  z-index: 1; // Above the highlight background
+}
+
+// #timeline-window-bg: The expanding background element
+#timeline-window-bg {
+  position: fixed;
+  z-index: 0; // Behind timeline content but visible
+  pointer-events: none; // Don't block interactions
+  will-change: transform, width, height, opacity;
+  // Initial state: highlight box (GSAP will position and animate)
+  // background, dimensions, and opacity controlled by GSAP
+}
+
+// #acs-timeline: Timeline section container
+#acs-timeline {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  margin-top: -50vh; //trying to get the timeline elements to reveal sooner with acs-timeline reaching top of viewport sooner.
+  z-index: 10; // Above the expanding background
+}
+
+.timeline-container {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  z-index: 10;
+}
+
+// Timeline close button
+.timeline-close {
+  position: fixed;
+  top: 32px;
+  right: 32px;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  opacity: 0; // Will fade in with ScrollTrigger
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.5);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: scale(1.1);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  svg {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+// Three.js container
+.timeline-threejs-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 15;
+  pointer-events: none;
+  opacity: 0; // Will fade in with ScrollTrigger
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+}
+
+// Horizontal scrolling track
+.timeline-track {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  z-index: 20;
+  will-change: transform;
+  
+  // Add padding to account for absolute positioned cover event
+  // This pushes remaining events to start off-screen to the right
+  padding-left: 100vw;
+}
+
+// Timeline events
+.timeline-event {
+  width: $timeline-event-width;
+  height: 100%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 80px;
+  opacity: 0; // Will be animated by GSAP
+
+  .event-content-wrapper {
+    width: 100%;
+    max-width: 1400px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: center;
+  }
+  
+  // First event (1876) - centered and doesn't move horizontally
+  &.timeline-cover {
+    position: absolute;
+    left: 0;
+    right: 0;
+    
+    .event-content-wrapper {
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      grid-template-columns: none; // Override grid for centered layout
+    }
+    
+    .event-date {
+      width: 100%;
+    }
+  }
+}
+
+// Event date display (left side)
+.event-date {
+  text-align: center;
+  color: white;
+
+  .event-value {
+    font-size: clamp(80px, 15vw, 200px);
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 20px;
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+
+  .event-label {
+    font-size: clamp(20px, 2.5vw, 32px);
+    font-weight: 300;
+    opacity: 0.9;
+    letter-spacing: 0.05em;
+  }
+}
+
+// Event panel (right side)
+.event-panel {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 24px;
+  padding: 48px;
+  color: white;
+
+  .event-year {
+    font-size: clamp(32px, 4vw, 56px);
+    font-weight: 700;
+    margin-bottom: 24px;
+    color: $timeline-accent;
+  }
+
+  .event-description {
+    font-size: clamp(16px, 1.5vw, 20px);
+    line-height: 1.6;
+    opacity: 0.95;
+
+    p {
+      margin: 0 0 16px 0;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+
+  .event-image {
+    margin-top: 32px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+
+    img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 1024px) {
+  .timeline-event {
+    padding: 0 40px;
+
+    .event-content-wrapper {
+      grid-template-columns: 1fr;
+      gap: 40px;
+    }
+  }
+
+  .event-panel {
+    padding: 32px;
+  }
+}
+
+@media (max-width: 768px) {
+  .timeline-close {
+    top: 16px;
+    right: 16px;
+    width: 48px;
+    height: 48px;
+  }
+
+  .timeline-event {
+    padding: 0 24px;
+  }
+
+  .event-date {
+    .event-value {
+      font-size: clamp(60px, 12vw, 120px);
+    }
+  }
+
+  .event-panel {
+    padding: 24px;
+  }
+}
+
