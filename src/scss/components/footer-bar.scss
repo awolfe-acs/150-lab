@@ -61,6 +61,9 @@
 
         .external-links {
             transform:translateY(2px) translateX(16px);
+            @media (max-width:$desktop-viewport) {
+                transform:translateY(2px);
+            }
         }
         .right-column {
             height: 24px;
@@ -129,7 +132,7 @@
         margin: 0;
 
         @media (max-width:$desktop-viewport) {
-            display: none;
+            display: none!important;
         }
     }
 }
