@@ -784,7 +784,135 @@
             possible—including you.
           </h4>
           <h4 class="split-lines text-align-center">Together, we will catalyze the next 150 years of chemistry.</h4>
+          <h4 class="split-lines text-align-center">Explore the <span id="timeline-window-start">timeline</span>, celebrate 150 years of innovation, and be a part of the journey ahead.</h4>
+          
         </div>
+        <!------ Start of ACS Timeline Section ------>
+        <section id="acs-timeline">
+          <div class="timeline-container">
+            
+            <!-- Timeline close button -->
+            <button class="timeline-close" aria-label="Close timeline">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M24 8L8 24M8 8L24 24" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            
+            <!-- Three.js container for sphere and dot plane -->
+            <div class="timeline-threejs-container">
+              <canvas id="timeline-canvas"></canvas>
+            </div>
+            
+            <!-- Horizontal scrolling timeline content -->
+            <div class="timeline-track">
+              
+              <!-- Timeline Event: 1876 - ACS Founded -->
+              <div class="timeline-event timeline-cover" data-year="1876">
+                <div class="event-content-wrapper">
+                  <div class="event-date">
+                    <div class="event-value">1876</div>
+                    <div class="event-label">When ACS is born</div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Timeline Event: 1900 -->
+              <div class="timeline-event" data-year="1900">
+                <div class="event-content-wrapper">
+                  <div class="event-date">
+                    <div class="event-value">1900s</div>
+                    <div class="event-label">The new century</div>
+                  </div>
+                  <div class="event-panel">
+                    <h3 class="event-year">1900</h3>
+                    <div class="event-description">
+                      <p>ACS enters the 20th century with groundbreaking chemical discoveries and expanding membership across the United States.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Timeline Event: 1950 -->
+              <div class="timeline-event" data-year="1950">
+                <div class="event-content-wrapper">
+                  <div class="event-date">
+                    <div class="event-value">1950s</div>
+                    <div class="event-label">Post-war innovation</div>
+                  </div>
+                  <div class="event-panel">
+                    <h3 class="event-year">1950</h3>
+                    <div class="event-description">
+                      <p>Chemistry plays a pivotal role in post-World War II innovation, with breakthroughs in materials science and pharmaceutical development.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Timeline Event: 2000 -->
+              <div class="timeline-event" data-year="2000">
+                <div class="event-content-wrapper">
+                  <div class="event-date">
+                    <div class="event-value">2000s</div>
+                    <div class="event-label">Digital age chemistry</div>
+                  </div>
+                  <div class="event-panel">
+                    <h3 class="event-year">2000</h3>
+                    <div class="event-description">
+                      <p>The millennium brings computational chemistry, green chemistry initiatives, and unprecedented collaboration across the global chemistry community.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Timeline Event: 2026 -->
+              <div class="timeline-event" data-year="2026">
+                <div class="event-content-wrapper">
+                  <div class="event-date">
+                    <div class="event-value">2026</div>
+                    <div class="event-label">150 years of ACS</div>
+                  </div>
+                  <div class="event-panel">
+                    <h3 class="event-year">2026</h3>
+                    <div class="event-description">
+                      <p>Join us in celebrating 150 years of advancing chemistry, connecting chemists, and catalyzing innovation. Together, we shape the next 150 years.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+            </div>
+            
+            <!-- Bottom scrubber -->
+            <div class="timeline-scrubber">
+              <div class="scrubber-line">
+                <div class="scrubber-progress"></div>
+              </div>
+              <div class="scrubber-markers">
+                <div class="marker" data-decade="1870s">
+                  <div class="marker-dot"></div>
+                  <div class="marker-label">1870s</div>
+                </div>
+                <div class="marker" data-decade="1900s">
+                  <div class="marker-dot"></div>
+                  <div class="marker-label">1900s</div>
+                </div>
+                <div class="marker" data-decade="2000s">
+                  <div class="marker-dot"></div>
+                  <div class="marker-label">2000s</div>
+                </div>
+                <div class="marker" data-decade="2020s">
+                  <div class="marker-dot"></div>
+                  <div class="marker-label">2020s</div>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+        </section>
+        
+        <!-- Expanding background element (sits behind everything via z-index) -->
+        <div id="timeline-window-bg"></div>
+        <!------ End of ACS Timeline Section ------>
 
         <div class="form-panel colored-glass" id="signup-form">
           <div class="inner-wrapper">

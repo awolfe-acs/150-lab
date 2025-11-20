@@ -471,6 +471,26 @@ export function initTimelineAnimation() {
     });
   }
 
+  // Fade out timeline elements when bottom of #acs-timeline passes above bottom of viewport
+  gsap.timeline({
+    scrollTrigger: {
+      trigger: timeline,
+      start: 'bottom bottom', // When bottom of timeline reaches bottom of viewport
+      end: 'bottom top',       // When bottom of timeline reaches top of viewport
+      scrub: 1,
+      onEnterBack: () => {
+        // Fade back in when scrolling back up
+        gsap.to([timelineWindowBg, timeline], {
+          opacity: 1,
+          duration: 0.3
+        });
+      }
+    }
+  }).to([timelineWindowBg, timeline], {
+    opacity: 0,
+    ease: 'power2.in'
+  });
+
   // Store cleanup references
   window._timelineCleanup = {
     interval: trackingInterval,

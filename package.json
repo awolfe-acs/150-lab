@@ -8,6 +8,7 @@
     "build": "vite build --mode standard --outDir dist-aem",
     "build:gh": "vite build --mode github",
     "build:assets": "vite build --mode assets --outDir dist-assets",
+    "build:banner": "vite build --mode banner --outDir dist-banner",
     "preview": "vite preview"
   },
   "devDependencies": {
@@ -21,6 +22,8 @@
     "globe.gl": "^2.41.6",
     "gsap": "file:gsap-bonus.tgz",
     "lenis": "^1.1.20",
-    "split-type": "^0.3.4"
+    "lil-gui": "^0.21.0",
+    "split-type": "^0.3.4",
+    "three": "^0.181.0"
   }
 }
