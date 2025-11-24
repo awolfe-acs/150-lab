@@ -124,7 +124,8 @@ $timeline-event-width: 100vw;
   justify-content: center;
   padding: 0 80px;
   opacity: 0; // Will be animated by GSAP
-
+  position: relative;
+  z-index: 20;
   .event-content-wrapper {
     width: 100%;
     max-width: 1400px;
@@ -132,6 +133,8 @@ $timeline-event-width: 100vw;
     grid-template-columns: 1fr 1fr;
     gap: 80px;
     align-items: center;
+    position: relative;
+    z-index: 20;
   }
   
   // First event (1876) - centered and doesn't move horizontally
@@ -178,7 +181,7 @@ $timeline-event-width: 100vw;
 // Event panel (right side)
 .event-panel {
   background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
+  //backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 24px;
   padding: 48px;

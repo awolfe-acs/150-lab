@@ -152,9 +152,13 @@ export function animateSlidingCards() {
               invalidateOnRefresh: true, // Recalculate on resize
               markers: false, // Set to true for debugging
               id: "sliding-cards-animation", // For debugging
+              refreshPriority: -1, // Ensure this calculates AFTER the timeline pin above it
             },
           }
         ).scrollTrigger;
+      } else if (scrollTriggerInstance) {
+        // If it already exists, just refresh it
+        scrollTriggerInstance.refresh();
       }
     };
 

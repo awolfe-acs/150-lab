@@ -64,14 +64,11 @@ export function initTimelineAnimation() {
   const positionBgToSpan = () => {
     const rect = timelineWindowStart.getBoundingClientRect();
     const computedStyle = window.getComputedStyle(timelineWindowStart);
-    const parentRect = timelineWindowStart.parentElement.getBoundingClientRect();
     
     // Calculate actual text height accounting for line-height
     const fontSize = parseFloat(computedStyle.fontSize);
-    const lineHeight = computedStyle.lineHeight === 'normal' ? fontSize * 1.2 : parseFloat(computedStyle.lineHeight);
     
     // Center the background within the span's bounding box
-    const verticalOffset = (rect.height - fontSize) / 2;
     
     // Get current opacity (preserve during tracking)
     const currentOpacity = timelineWindowBg.style.opacity || '0';
@@ -133,10 +130,88 @@ export function initTimelineAnimation() {
 
   // Calculate total horizontal scroll distance
   const events = gsap.utils.toArray('.timeline-event');
-  // Track width: 100vw padding + (remaining events * 100vw)
-  // First event is absolute positioned, so only count remaining events
   const remainingEventsCount = events.length - 1;
-  const trackWidth = window.innerWidth + (remainingEventsCount * window.innerWidth);
+  
+  // Define scroll durations (in viewport heights)
+  // Much larger scroll area to accommodate pause/hold
+  const initialPhaseDuration = window.innerHeight * 1.0; // Phase A - giving it a full hold duration
+  const scrollPerEvent = window.innerHeight * 2.0; // Move + Hold per event
+  
+  const totalScrollDistance = initialPhaseDuration + (remainingEventsCount * scrollPerEvent);
+  
+  // Adjust animation durations (relative timeline units)
+  const moveDuration = 1.0;
+  const holdDuration = 1.0; // Equal time holding as moving
+  const totalCycleDuration = moveDuration + holdDuration;
+  
+  // Calculate theoretical total duration of the timeline for accurate scrubbing
+  // Phase A: 0.04 (delay) + 0.05 (fade) + 1.0 (hold) = 1.09
+  const phaseADuration = 0.09 + holdDuration; 
+  const phaseBDuration = remainingEventsCount * totalCycleDuration;
+  const timelineTotalDuration = phaseADuration + phaseBDuration;
+
+  // Helper to update scrubber based on dynamic lengths
+  const updateScrubber = (progress) => {
+    const scrubberProgress = document.querySelector('.scrubber-progress');
+    const markers = gsap.utils.toArray('.marker');
+    
+    if (!scrubberProgress) return;
+    
+    const totalMarkers = markers.length;
+    let activeMarkerIndex = 0;
+    let scrubberProgressValue = 0;
+    
+    // Calculate threshold based on timeline duration ratios
+    // This matches exactly how GSAP distributes the scroll distance
+    const coverThreshold = phaseADuration / timelineTotalDuration;
+    
+    if (progress < coverThreshold) {
+      activeMarkerIndex = 0;
+      scrubberProgressValue = 1 / (2 * totalMarkers);
+    } else {
+      const remainingProgress = progress - coverThreshold;
+      const adjustedTotal = 1.0 - coverThreshold;
+      const normalizedProgress = remainingProgress / adjustedTotal;
+      
+      const remainingEventsCount = events.length - 1;
+      // Map normalized progress to the cycle count (e.g., 0.0 to 4.0 for 4 remaining events)
+      const floatCycle = normalizedProgress * remainingEventsCount;
+      
+      // Determine active marker:
+      // Cycle 0 (Event 1): 0.0 - 0.5 (Move) -> Marker 0 active
+      //                    0.5 - 1.0 (Hold) -> Marker 1 active
+      // Logic: floor(cycle + 0.5)
+      const calculatedIndex = Math.floor(floatCycle + 0.5);
+      
+      // Clamp index to valid range (0 to N)
+      activeMarkerIndex = Math.min(calculatedIndex, totalMarkers - 1);
+      
+      // Calculate scrubber position
+      // Use space-around formula: (2 * i + 1) / (2 * n)
+      scrubberProgressValue = (2 * activeMarkerIndex + 1) / (2 * totalMarkers);
+    }
+
+    gsap.to(scrubberProgress, {
+      scaleX: scrubberProgressValue,
+      transformOrigin: 'left',
+      duration: 0.3,
+      ease: 'power2.out'
+    });
+
+    if (markers.length > 0) {
+      markers.forEach((marker, index) => {
+        // Remove all classes first
+        marker.classList.remove('active', 'complete');
+        
+        if (index === activeMarkerIndex) {
+          marker.classList.add('active');
+        } else if (index < activeMarkerIndex) {
+          marker.classList.add('complete');
+        }
+        // If index > activeMarkerIndex, it remains with just base .marker class
+      });
+    }
+  };
 
   // Phase 0: Fade in background highlight after get-involved-message text is visible
   gsap.timeline({
@@ -278,17 +353,27 @@ export function initTimelineAnimation() {
     scrollTrigger: {
       trigger: timeline,
       start: 'top top',
-      end: `+=${trackWidth}`,
+      end: `+=${totalScrollDistance}`,
       pin: timelineContainer,
-      scrub: 1,
+      scrub: 1, // smooth scrubbing
       anticipatePin: 1,
       invalidateOnRefresh: true,
       onUpdate: (self) => {
-        updateTimelineScrubber(self.progress);
+        // Use animation progress to account for scrub lag (visual position)
+        updateScrubber(self.animation.progress());
         manageBackgroundPause(self.progress);
+        
+        // Ensure background stays opaque during timeline scrub
+        if (self.progress > 0 && self.progress < 0.95) {
+          if (timelineWindowBg.style.opacity !== '1') {
+            timelineWindowBg.style.opacity = '1';
+          }
+        }
       },
       onEnter: () => {
         console.log('Timeline: Entering timeline section');
+        // Ensure background is fully visible when entering timeline proper
+        gsap.to(timelineWindowBg, { opacity: 1, duration: 0.2, overwrite: 'auto' });
       },
       onLeave: () => {
         console.log('Timeline: Leaving timeline section');
@@ -339,8 +424,8 @@ export function initTimelineAnimation() {
     const firstEvent = events[0];
     const remainingEvents = events.slice(1);
     
-    // Phase A: First event (1876) - Pinned in center, fades in then out (8% of timeline)
-    // Fade in first event - slower and softer
+    // Phase A: First event (1876) - Pinned in center, fades in then out
+    // Fade in first event
     tl.fromTo(
       firstEvent,
       {
@@ -350,114 +435,75 @@ export function initTimelineAnimation() {
       {
         opacity: 1,
         scale: 1,
-        duration: 0.025,
+        duration: 0.05,
         ease: 'power1.out'
       },
       0.04
     );
     
     // Hold first event visible
-    tl.to({}, { duration: 0.025 }, 0.065);
+    tl.to({}, { duration: holdDuration }, '>');
     
-    // Fade out first event - slower and softer
-    tl.to(
-      firstEvent,
-      {
+    // NOTE: We don't fade out first event here anymore, 
+    // it will fade out as part of the main loop transition
+    
+    // Phase B: Horizontal scrolling loop
+    // We chain movements and holds
+    
+    // Initial accumulated duration (after Phase A)
+    // GSAP timelines append automatically, so we just add to the timeline
+    
+    remainingEvents.forEach((event, index) => {
+      // Calculate target X to center this event
+      // Event 1 is at 100vw, needs to move to 0 -> x: -100vw
+      // Event 2 is at 200vw, needs to move to 0 -> x: -200vw
+      const targetX = -(index + 1) * window.innerWidth;
+      
+      const eventLabel = `event-${index}`;
+      
+      // 1. Move Track
+      tl.to(timelineTrack, {
+        x: targetX,
+        duration: moveDuration,
+        ease: 'power1.inOut'
+      }, eventLabel);
+      
+      // 2. Handle Opacity during Move
+      
+      // Fade Out Previous Event (or Cover Event if index is 0)
+      const prevEvent = index === 0 ? firstEvent : remainingEvents[index - 1];
+      
+      // Fade out LATE in the movement (so it stays visible longer)
+      // Start fading out at 40% of movement, end at 90%
+      tl.to(prevEvent, {
         opacity: 0,
         scale: 1.02,
-        duration: 0.025,
+        duration: moveDuration * 0.5,
         ease: 'power1.in'
-      },
-      0.09
-    );
-    
-    // Phase B: Horizontal scrolling starts after first event fades (remaining timeline)
-    const horizontalStartProgress = 0.13; // Start at 13% after first event
-    const horizontalDuration = 0.75; // 75% of timeline for horizontal scroll
-    
-    tl.to(
-      timelineTrack,
-      {
-        x: -trackWidth + window.innerWidth,
-        duration: horizontalDuration,
-        ease: 'none'
-      },
-      horizontalStartProgress
-    );
-
-    // Animate remaining events based on their position during horizontal scroll
-    remainingEvents.forEach((event, index) => {
-      const totalRemaining = remainingEvents.length;
+      }, `${eventLabel}+=${moveDuration * 0.4}`);
       
-      // Calculate the duration allocated for each event in the timeline
-      const eventDuration = horizontalDuration / totalRemaining;
+      // Fade In Current Event
+      // Fade in EARLY in the movement (but not too early)
+      // Start fading in at 30% of movement, end at 80%
+      tl.fromTo(event, {
+        opacity: 0,
+        scale: 0.98
+      }, {
+        opacity: 1,
+        scale: 1,
+        duration: moveDuration * 0.5,
+        ease: 'power1.out'
+      }, `${eventLabel}+=${moveDuration * 0.3}`);
       
-      // Base progress point when this event starts entering from right edge
-      const eventBaseProgress = horizontalStartProgress + (index * eventDuration);
+      // 3. Hold
+      tl.to({}, { duration: holdDuration });
       
-      // Calculate progress points for this event's journey through viewport:
-      // - Event enters from right edge (0%)
-      // - Event is 33% into viewport (fade-in complete)
-      // - Event is 50% centered (marker activation)
-      // - Event is 67% through viewport (fade-out starts)
-      // - Event exits left edge (100% gone)
-      
-      const enterStart = eventBaseProgress;
-      const enter33Percent = eventBaseProgress + (0.33 * eventDuration);
-      const eventCenter = eventBaseProgress + (0.5 * eventDuration);
-      const exit67Percent = eventBaseProgress + (0.67 * eventDuration);
-      const exitComplete = eventBaseProgress + eventDuration;
-      
-      // Fade-in duration: from entering (0%) to 33% through viewport
-      const fadeInDuration = enter33Percent - enterStart;
-      
-      // Fade-out duration: from 67% through viewport to fully exited (100%)
-      const fadeOutDuration = exitComplete - exit67Percent;
-      
-      // Debug logging
-      console.log(`Event ${index} timing:`, {
-        enterStart: enterStart.toFixed(3),
-        enter33: enter33Percent.toFixed(3),
-        center: eventCenter.toFixed(3),
-        exit67: exit67Percent.toFixed(3),
-        exitComplete: exitComplete.toFixed(3),
-        fadeInDur: fadeInDuration.toFixed(3),
-        fadeOutDur: fadeOutDuration.toFixed(3)
-      });
-
-      // Phase 1: Fade in as event enters (0% to 33% through viewport)
-      tl.fromTo(
-        event,
-        {
-          opacity: 0
-        },
-        {
-          opacity: 1,
-          duration: fadeInDuration,
-          ease: 'power2.out'
-        },
-        enterStart
-      );
-
-      // Phase 2: Stay at full opacity (33% to 67% through viewport)
-      // This happens automatically - no animation needed
-
-      // Phase 3: Fade out as event exits (67% to 100% through viewport)
-      // Skip for last event so it stays visible
-      if (index < remainingEvents.length - 1) {
-        tl.to(
-          event,
-          {
-            opacity: 0,
-            duration: fadeOutDuration,
-            ease: 'power2.in'
-          },
-          exit67Percent
-        );
-      }
-      
-      // Store center progress for scrubber marker activation
-      event.dataset.centerProgress = eventCenter;
+      // Calculate the timeline progress where this event is centered (middle of hold)
+      // We need this for the scrubber update logic
+      // Note: This is approximate as we don't know the exact total duration yet
+      // so we store the *relative* position in the timeline structure
+      // event.dataset.timelineRef = tl.duration(); // This gets current end
+      // Instead, we'll calculate it based on uniform durations in updateTimelineScrubber
     });
   }
 
@@ -476,7 +522,7 @@ export function initTimelineAnimation() {
     scrollTrigger: {
       trigger: timeline,
       start: 'bottom bottom', // When bottom of timeline reaches bottom of viewport
-      end: 'bottom top',       // When bottom of timeline reaches top of viewport
+      end: 'bottom 80%',       // Fast fade out (20% of viewport travel)
       scrub: 1,
       onEnterBack: () => {
         // Fade back in when scrolling back up
@@ -497,6 +543,12 @@ export function initTimelineAnimation() {
     resizeObserver: resizeObserver,
     lenisCallback: trackWithLenis
   };
+
+  // Force a refresh to ensure subsequent ScrollTriggers (like sliding cards) 
+  // recalculate their positions after the timeline pin is set up
+  requestAnimationFrame(() => {
+    ScrollTrigger.refresh();
+  });
 
   return tl;
 }
@@ -532,56 +584,9 @@ function manageBackgroundPause(progress) {
   }
 }
 
+// Remove the old updateTimelineScrubber function from the bottom of the file as it is now defined inside initTimelineAnimation
 function updateTimelineScrubber(progress) {
-  const scrubberProgress = document.querySelector('.scrubber-progress');
-  const markers = gsap.utils.toArray('.marker');
-  const events = gsap.utils.toArray('.timeline-event');
-
-  if (!scrubberProgress) return;
-
-  // Calculate progress based on which event is centered
-  let scrubberProgressValue = 0;
-  let activeMarkerIndex = -1;
-  
-  // First event (cover) is active from 4-9%
-  if (progress >= 0.04 && progress < 0.13) {
-    scrubberProgressValue = 0;
-    activeMarkerIndex = 0;
-  } else if (progress >= 0.13) {
-    // After cover event, calculate based on event center positions
-    const remainingEvents = events.slice(1);
-    
-    remainingEvents.forEach((event, index) => {
-      const centerProgress = parseFloat(event.dataset.centerProgress);
-      const markerIndex = index + 1; // +1 because first marker is for cover event
-      
-      if (progress >= centerProgress) {
-        // This event has reached or passed center
-        const totalMarkers = markers.length;
-        scrubberProgressValue = markerIndex / (totalMarkers - 1); // Normalized 0-1
-        activeMarkerIndex = markerIndex;
-      }
-    });
-  }
-
-  // Update progress line
-  gsap.to(scrubberProgress, {
-    scaleX: scrubberProgressValue,
-    transformOrigin: 'left',
-    duration: 0.3,
-    ease: 'power2.out'
-  });
-
-  // Update active marker
-  if (markers.length > 0) {
-    markers.forEach((marker, index) => {
-      if (index === activeMarkerIndex) {
-        marker.classList.add('active');
-      } else {
-        marker.classList.remove('active');
-      }
-    });
-  }
+  // This function is now deprecated/replaced by the internal updateScrubber
 }
 
 // Export cleanup function
@@ -606,4 +611,3 @@ export function disposeTimeline() {
   
   window.backgroundPaused = false;
 }
-
