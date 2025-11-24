@@ -2,6 +2,7 @@
 
 $timeline-active: #FFFFFF;
 $timeline-inactive: #4DBAFF;
+$timeline-inactive: #6BB8F9;
 $timeline-scrubber-height: 80px;
 
 .timeline-scrubber {
@@ -36,7 +37,7 @@ $timeline-scrubber-height: 80px;
   transform-origin: left;
   transform: scaleX(0);
   border-radius: 1px;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  //box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
 }
 
 .scrubber-markers {
@@ -66,6 +67,7 @@ $timeline-scrubber-height: 80px;
     }
 
     .marker-label {
+      color: $timeline-active;
       opacity: 1 !important;
       transform: translateY(-2px);
     }
@@ -74,7 +76,7 @@ $timeline-scrubber-height: 80px;
   &.active, &.complete {
     .marker-dot {
       background: $timeline-active;
-      box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+      //box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
       transform: scale(1.5);
     }
 
@@ -90,12 +92,12 @@ $timeline-scrubber-height: 80px;
   width: 14px;
   height: 14px;
   background: $timeline-inactive;
-  border: 2px solid rgba(255, 255, 255, 0.8);
+  //border: 2px solid rgba(255, 255, 255, 0.8);
   border-radius: 50%;
   transition: all 0.3s ease;
   position: relative;
   z-index: 2;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  //box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .marker-label {
@@ -103,7 +105,7 @@ $timeline-scrubber-height: 80px;
   top: -32px;
   font-size: 14px;
   font-weight: 600;
-  color: white;
+  color: $timeline-inactive;
   opacity: 0.9; // More visible
   white-space: nowrap;
   transition: all 0.3s ease;

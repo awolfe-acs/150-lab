@@ -51,6 +51,11 @@ export function initTimelineAnimation() {
     return;
   }
 
+  // Ensure background pause state is initialized (not paused at start)
+  if (typeof window.backgroundPaused === 'undefined') {
+    window.backgroundPaused = false;
+  }
+
   // Initialize Three.js scene for timeline visuals
   try {
     timelineScene = initTimelineScene();
@@ -130,6 +135,7 @@ export function initTimelineAnimation() {
 
   // Calculate total horizontal scroll distance
   const events = gsap.utils.toArray('.timeline-event');
+  const decades = gsap.utils.toArray('.timeline-decade');
   const remainingEventsCount = events.length - 1;
   
   // Define scroll durations (in viewport heights)
@@ -141,7 +147,7 @@ export function initTimelineAnimation() {
   
   // Adjust animation durations (relative timeline units)
   const moveDuration = 1.0;
-  const holdDuration = 1.0; // Equal time holding as moving
+  const holdDuration = 0.2; // Reduced by 80% for faster scroll transitions
   const totalCycleDuration = moveDuration + holdDuration;
   
   // Calculate theoretical total duration of the timeline for accurate scrubbing
@@ -150,45 +156,84 @@ export function initTimelineAnimation() {
   const phaseBDuration = remainingEventsCount * totalCycleDuration;
   const timelineTotalDuration = phaseADuration + phaseBDuration;
 
-  // Helper to update scrubber based on dynamic lengths
+  // Lock to prevent updateScrubber from overriding clicked marker
+  let markerClickLock = {
+    isLocked: false,
+    targetIndex: -1,
+    unlockTimer: null
+  };
+
+  // Helper to update scrubber based on decades (not individual events)
   const updateScrubber = (progress) => {
     const scrubberProgress = document.querySelector('.scrubber-progress');
     const markers = gsap.utils.toArray('.marker');
     
-    if (!scrubberProgress) return;
+    if (!scrubberProgress || !decades.length) return;
     
     const totalMarkers = markers.length;
     let activeMarkerIndex = 0;
     let scrubberProgressValue = 0;
     
-    // Calculate threshold based on timeline duration ratios
-    // This matches exactly how GSAP distributes the scroll distance
-    const coverThreshold = phaseADuration / timelineTotalDuration;
-    
-    if (progress < coverThreshold) {
-      activeMarkerIndex = 0;
-      scrubberProgressValue = 1 / (2 * totalMarkers);
-    } else {
-      const remainingProgress = progress - coverThreshold;
-      const adjustedTotal = 1.0 - coverThreshold;
-      const normalizedProgress = remainingProgress / adjustedTotal;
-      
-      const remainingEventsCount = events.length - 1;
-      // Map normalized progress to the cycle count (e.g., 0.0 to 4.0 for 4 remaining events)
-      const floatCycle = normalizedProgress * remainingEventsCount;
-      
-      // Determine active marker:
-      // Cycle 0 (Event 1): 0.0 - 0.5 (Move) -> Marker 0 active
-      //                    0.5 - 1.0 (Hold) -> Marker 1 active
-      // Logic: floor(cycle + 0.5)
-      const calculatedIndex = Math.floor(floatCycle + 0.5);
-      
-      // Clamp index to valid range (0 to N)
-      activeMarkerIndex = Math.min(calculatedIndex, totalMarkers - 1);
-      
-      // Calculate scrubber position
-      // Use space-around formula: (2 * i + 1) / (2 * n)
+    // If marker click is in progress, use the locked target index
+    if (markerClickLock.isLocked && markerClickLock.targetIndex >= 0) {
+      activeMarkerIndex = markerClickLock.targetIndex;
       scrubberProgressValue = (2 * activeMarkerIndex + 1) / (2 * totalMarkers);
+    } else {
+      // Calculate threshold based on timeline duration ratios
+      const coverThreshold = phaseADuration / timelineTotalDuration;
+      
+      if (progress < coverThreshold) {
+        // We're in the cover/first event phase
+        activeMarkerIndex = 0;
+        scrubberProgressValue = 1 / (2 * totalMarkers);
+      } else {
+        const remainingProgress = progress - coverThreshold;
+        const adjustedTotal = 1.0 - coverThreshold;
+        const normalizedProgress = remainingProgress / adjustedTotal;
+        
+        // Map progress to decades (excluding first decade if it's the cover)
+        // Determine which decade we're in based on how many events we've passed
+        const firstDecade = decades[0];
+        const firstDecadeEvents = gsap.utils.toArray('.timeline-event', firstDecade);
+        const isFirstDecadeCover = firstDecadeEvents.length === 1 && firstDecadeEvents[0].classList.contains('timeline-cover');
+        
+        // Calculate cumulative event positions to determine current decade
+        let cumulativeEvents = 0;
+        let currentDecadeIndex = 0;
+        
+        // Calculate how many events have been passed based on progress
+        const totalRemainingEvents = remainingEventsCount;
+        const eventsPassed = Math.floor(normalizedProgress * totalRemainingEvents);
+        
+        // Find which decade this event belongs to
+        if (isFirstDecadeCover) {
+          // First decade is just the cover, start counting from second decade
+          const remainingDecades = decades.slice(1);
+          for (let i = 0; i < remainingDecades.length; i++) {
+            const decadeEvents = gsap.utils.toArray('.timeline-event', remainingDecades[i]);
+            if (eventsPassed < cumulativeEvents + decadeEvents.length) {
+              currentDecadeIndex = i + 1; // +1 because first is cover
+              break;
+            }
+            cumulativeEvents += decadeEvents.length;
+            currentDecadeIndex = i + 1;
+          }
+        } else {
+          // First decade contains events, count from there
+          for (let i = 0; i < decades.length; i++) {
+            const decadeEvents = gsap.utils.toArray('.timeline-event', decades[i]);
+            if (eventsPassed < cumulativeEvents + decadeEvents.length) {
+              currentDecadeIndex = i;
+              break;
+            }
+            cumulativeEvents += decadeEvents.length;
+            currentDecadeIndex = i;
+          }
+        }
+        
+        activeMarkerIndex = Math.min(currentDecadeIndex, totalMarkers - 1);
+        scrubberProgressValue = (2 * activeMarkerIndex + 1) / (2 * totalMarkers);
+      }
     }
 
     gsap.to(scrubberProgress, {
@@ -211,6 +256,45 @@ export function initTimelineAnimation() {
         // If index > activeMarkerIndex, it remains with just base .marker class
       });
     }
+  };
+
+  // Helper to calculate the timeline progress for a given marker/decade index
+  const calculateProgressForMarker = (markerIndex) => {
+    if (markerIndex === 0) {
+      // Jump to middle of first event's hold period (Phase A)
+      const phaseAMidpoint = 0.09 + (holdDuration * 0.5); // After fade-in, middle of hold
+      return phaseAMidpoint / timelineTotalDuration;
+    }
+    
+    // For subsequent decades, we need to count how many events come before this decade
+    // and calculate the timeline position accordingly
+    let eventsBefore = 0;
+    
+    for (let i = 0; i < markerIndex && i < decades.length; i++) {
+      const decadeEvents = gsap.utils.toArray('.timeline-event', decades[i]);
+      eventsBefore += decadeEvents.length;
+    }
+    
+    // Get the first event of the target decade
+    const targetDecade = decades[markerIndex];
+    const targetDecadeEvents = gsap.utils.toArray('.timeline-event', targetDecade);
+    
+    if (targetDecadeEvents.length === 0) {
+      console.warn(`Decade ${markerIndex} has no events`);
+      return 0;
+    }
+    
+    // The first event of this decade is at index (eventsBefore) in the overall events array
+    // After Phase A (which covers the first event), we're in Phase B
+    // Each remaining event takes totalCycleDuration time units
+    
+    // eventsBefore includes the first event (covered in Phase A), so we need eventsBefore - 1
+    const eventIndexInPhaseB = eventsBefore - 1;
+    
+    // Timeline position: Phase A duration + (event cycles * cycle duration) + half of hold
+    const timelinePosition = phaseADuration + (eventIndexInPhaseB * totalCycleDuration) + moveDuration + (holdDuration * 0.5);
+    
+    return Math.min(timelinePosition / timelineTotalDuration, 0.99); // Cap at 99% to avoid edge cases
   };
 
   // Phase 0: Fade in background highlight after get-involved-message text is visible
@@ -444,6 +528,18 @@ export function initTimelineAnimation() {
     // Hold first event visible
     tl.to({}, { duration: holdDuration }, '>');
     
+    // Fade in the background decal image during the hold
+    tl.to(timelineWindowBg, {
+      '--decal-opacity': 1,
+      duration: holdDuration * 0.6,
+      ease: 'power2.out',
+      onUpdate: function() {
+        // Update the ::after pseudo-element opacity via custom property
+        const opacityValue = gsap.getProperty(timelineWindowBg, '--decal-opacity') || 0;
+        timelineWindowBg.style.setProperty('--decal-opacity', opacityValue);
+      }
+    }, `<+=${holdDuration * 0.2}`); // Start 20% into the hold
+    
     // NOTE: We don't fade out first event here anymore, 
     // it will fade out as part of the main loop transition
     
@@ -517,6 +613,77 @@ export function initTimelineAnimation() {
     });
   }
 
+  // Add click handlers to timeline scrubber markers
+  const markers = gsap.utils.toArray('.marker');
+  markers.forEach((marker, index) => {
+    marker.addEventListener('click', () => {
+      // Lock the marker to prevent updateScrubber from changing it during scroll
+      markerClickLock.isLocked = true;
+      markerClickLock.targetIndex = index;
+      
+      // Clear any existing unlock timer
+      if (markerClickLock.unlockTimer) {
+        clearTimeout(markerClickLock.unlockTimer);
+      }
+      
+      // Immediately set the clicked marker as active
+      markers.forEach((m, i) => {
+        m.classList.remove('active', 'complete');
+        if (i === index) {
+          m.classList.add('active');
+        } else if (i < index) {
+          m.classList.add('complete');
+        }
+      });
+      
+      // Calculate the target progress for this marker
+      const targetProgress = calculateProgressForMarker(index);
+      
+      // Get the ScrollTrigger instance
+      const scrollTriggerInstance = tl.scrollTrigger;
+      if (!scrollTriggerInstance) return;
+      
+      // Calculate the scroll position from the progress
+      const start = scrollTriggerInstance.start;
+      const end = scrollTriggerInstance.end;
+      const scrollDistance = end - start;
+      const targetScroll = start + (scrollDistance * targetProgress);
+      
+      console.log(`Marker Click: Index ${index}, Target Progress: ${targetProgress.toFixed(3)}, Target Scroll: ${targetScroll.toFixed(0)}`);
+      
+      // Smooth scroll to the target position
+      if (window.lenis) {
+        window.lenis.scrollTo(targetScroll, { 
+          duration: 1.2,
+          easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // easeOutExpo
+          onComplete: () => {
+            // Unlock after scroll completes, with a small delay for scrub to settle
+            markerClickLock.unlockTimer = setTimeout(() => {
+              markerClickLock.isLocked = false;
+              markerClickLock.targetIndex = -1;
+              console.log('Marker Click: Unlocked after scroll complete');
+            }, 500);
+          }
+        });
+      } else {
+        window.scrollTo({
+          top: targetScroll,
+          behavior: 'smooth'
+        });
+        
+        // Fallback unlock timer for native scroll
+        markerClickLock.unlockTimer = setTimeout(() => {
+          markerClickLock.isLocked = false;
+          markerClickLock.targetIndex = -1;
+          console.log('Marker Click: Unlocked after scroll complete (native)');
+        }, 1500);
+      }
+    });
+    
+    // Add hover cursor style
+    marker.style.cursor = 'pointer';
+  });
+
   // Fade out timeline elements when bottom of #acs-timeline passes above bottom of viewport
   gsap.timeline({
     scrollTrigger: {
@@ -544,6 +711,11 @@ export function initTimelineAnimation() {
     lenisCallback: trackWithLenis
   };
 
+  // Store ScrollTrigger reference for resize handling
+  if (tl.scrollTrigger) {
+    resizeState.timelineScrollTrigger = tl.scrollTrigger;
+  }
+
   // Force a refresh to ensure subsequent ScrollTriggers (like sliding cards) 
   // recalculate their positions after the timeline pin is set up
   requestAnimationFrame(() => {
@@ -553,19 +725,149 @@ export function initTimelineAnimation() {
   return tl;
 }
 
-// Handle window resize - recalculate dimensions
-function refreshTimelineDimensions() {
+// Handle window resize - recalculate dimensions while preserving timeline position
+let resizeState = {
+  isResizing: false,
+  savedProgress: null,
+  savedActiveEvent: null,
+  savedActiveDecade: null,
+  timelineScrollTrigger: null
+};
+
+function captureTimelineState() {
+  // Only capture state if we're within the timeline section
+  const timelineScrollTrigger = resizeState.timelineScrollTrigger;
+  if (!timelineScrollTrigger || !timelineScrollTrigger.isActive) {
+    return null;
+  }
+  
+  const progress = timelineScrollTrigger.progress;
+  
+  // Find which event is currently visible/active
+  const events = gsap.utils.toArray('.timeline-event');
+  const decades = gsap.utils.toArray('.timeline-decade');
+  
+  let activeEventIndex = 0;
+  let activeDecadeIndex = 0;
+  
+  // Use the same logic as updateScrubber to determine active event
+  const totalEvents = events.length;
+  if (totalEvents > 0 && progress > 0) {
+    // Simple estimation: progress maps to event index
+    activeEventIndex = Math.min(
+      Math.floor(progress * totalEvents),
+      totalEvents - 1
+    );
+    
+    // Find which decade this event belongs to
+    let eventCount = 0;
+    for (let i = 0; i < decades.length; i++) {
+      const decadeEvents = gsap.utils.toArray('.timeline-event', decades[i]);
+      if (activeEventIndex < eventCount + decadeEvents.length) {
+        activeDecadeIndex = i;
+        break;
+      }
+      eventCount += decadeEvents.length;
+    }
+  }
+  
+  return {
+    progress,
+    activeEventIndex,
+    activeDecadeIndex,
+    scrollPosition: window.pageYOffset || document.documentElement.scrollTop
+  };
+}
+
+function restoreTimelinePosition(state) {
+  if (!state || !resizeState.timelineScrollTrigger) {
+    return;
+  }
+  
+  // Calculate the new scroll position that corresponds to the same event
+  const timelineScrollTrigger = resizeState.timelineScrollTrigger;
+  const start = timelineScrollTrigger.start;
+  const end = timelineScrollTrigger.end;
+  const scrollDistance = end - start;
+  
+  // Use the saved progress to calculate new scroll position
+  const targetScroll = start + (scrollDistance * state.progress);
+  
+  console.log(`Timeline Resize: Restoring to event ${state.activeEventIndex}, decade ${state.activeDecadeIndex}, progress ${state.progress.toFixed(3)}`);
+  
+  // Immediately jump to position (no smooth scroll during resize)
+  if (window.lenis) {
+    window.lenis.scrollTo(targetScroll, { 
+      immediate: true,
+      force: true,
+      lock: true
+    });
+  } else {
+    window.scrollTo({
+      top: targetScroll,
+      behavior: 'auto' // Instant, no smooth
+    });
+  }
+}
+
+let resizeDebounceTimer = null;
+let resizeStartTimer = null;
+
+function handleResizeStart() {
+  if (!resizeState.isResizing) {
+    resizeState.isResizing = true;
+    resizeState.savedProgress = captureTimelineState();
+    
+    // Add class to body to indicate resize in progress
+    document.body.classList.add('timeline-resizing');
+    
+    if (resizeState.savedProgress) {
+      console.log('Timeline Resize: Captured state -', resizeState.savedProgress);
+    }
+  }
+}
+
+function handleResizeEnd() {
+  // Refresh ScrollTrigger calculations
   ScrollTrigger.refresh();
-  // The getBoundingClientRect() will be recalculated on refresh
+  
+  // Wait a bit for ScrollTrigger to recalculate, then restore position
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      if (resizeState.savedProgress) {
+        restoreTimelinePosition(resizeState.savedProgress);
+      }
+      
+      // Remove resizing class and clear resize state after a brief delay
+      setTimeout(() => {
+        document.body.classList.remove('timeline-resizing');
+        resizeState.isResizing = false;
+        resizeState.savedProgress = null;
+      }, 150);
+    }, 50);
+  });
 }
 
 window.addEventListener('resize', () => {
-  clearTimeout(window.timelineResizeTimeout);
-  window.timelineResizeTimeout = setTimeout(refreshTimelineDimensions, 250);
+  // Clear existing timers
+  clearTimeout(resizeStartTimer);
+  clearTimeout(resizeDebounceTimer);
+  
+  // Trigger resize start (captures state on first resize event)
+  resizeStartTimer = setTimeout(handleResizeStart, 10);
+  
+  // Debounce the end of resize
+  resizeDebounceTimer = setTimeout(handleResizeEnd, 300);
 });
 
 function manageBackgroundPause(progress) {
   // Pause background when fully in timeline (after fade-ins complete)
+  // This improves performance by freezing:
+  // - Film grain animation
+  // - Wave shader movements
+  // - Color cycling effects
+  // - Particle animations
+  // - Globe rotation
   const pauseThreshold = 0.1; // Pause at 10% progress (after fade-ins)
   const resumeThresholdEnd = 0.95; // Resume at 95% when scrolling down
 
@@ -573,13 +875,19 @@ function manageBackgroundPause(progress) {
     // We're fully in the timeline - pause global background
     if (!window.backgroundPaused) {
       window.backgroundPaused = true;
-      console.log('Timeline: Pausing global background for performance');
+      console.log('[Timeline] Pausing background shader for performance (film grain, waves, particles frozen)');
+      
+      // Also dispatch event for other systems that might need to know
+      window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: true } }));
     }
   } else {
     // We're exiting or entering timeline - resume global background
     if (window.backgroundPaused) {
       window.backgroundPaused = false;
-      console.log('Timeline: Resuming global background');
+      console.log('[Timeline] Resuming background shader (film grain, waves, particles active)');
+      
+      // Dispatch resume event
+      window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: false } }));
     }
   }
 }
@@ -609,5 +917,10 @@ export function disposeTimeline() {
     window._timelineCleanup = null;
   }
   
-  window.backgroundPaused = false;
+  // Ensure background is resumed when timeline is disposed
+  if (window.backgroundPaused) {
+    window.backgroundPaused = false;
+    console.log('[Timeline] Cleanup: Resuming background shader');
+    window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: false } }));
+  }
 }

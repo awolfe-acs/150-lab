@@ -4559,6 +4559,13 @@ export async function initShaderBackground() {
     // Check if timeline has paused the background for performance
     if (window.backgroundPaused) {
       // Skip all rendering and updates when timeline is active
+      // This pauses:
+      // - Film grain animation (uniforms.time.value not updating)
+      // - Wave movements
+      // - Color cycling
+      // - Particle animations
+      // - Mouse particle effects
+      // - Globe rotation (if applicable)
       return;
     }
 

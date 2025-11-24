@@ -10,6 +10,21 @@ $timeline-accent: #00d4ff;
 $timeline-scrubber-height: 80px;
 $timeline-event-width: 100vw;
 
+// Resize handling - disable interactions during resize
+body.timeline-resizing {
+  #acs-timeline {
+    pointer-events: none;
+  }
+  
+  .timeline-scrubber {
+    pointer-events: none;
+  }
+  
+  .timeline-event {
+    pointer-events: none;
+  }
+}
+
 // #timeline-window-start: Inline span in the text (reference point only)
 #timeline-window-start {
   // Subtle styling to hint at interactivity (optional)
@@ -26,6 +41,31 @@ $timeline-event-width: 100vw;
   will-change: transform, width, height, opacity;
   // Initial state: highlight box (GSAP will position and animate)
   // background, dimensions, and opacity controlled by GSAP
+  // Gradient background only (on main element)
+  background-image: linear-gradient(to bottom, #0493E2, #0493E2);
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  
+  // CSS custom property for decal opacity
+  --decal-opacity: 0;
+  
+  // Decal image on pseudo-element for independent opacity control
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('/images/timeline-bg-decal.png');
+    background-position: center bottom;
+    background-repeat: no-repeat;
+    background-size: 100% auto;
+    opacity: var(--decal-opacity); // Controlled by CSS variable
+    pointer-events: none;
+    will-change: opacity;
+  }
 }
 
 // #acs-timeline: Timeline section container
@@ -114,6 +154,11 @@ $timeline-event-width: 100vw;
   padding-left: 100vw;
 }
 
+// Timeline decade wrapper (optional grouping, doesn't affect layout)
+.timeline-decade {
+  display: contents; // Makes the wrapper transparent to flexbox layout
+}
+
 // Timeline events
 .timeline-event {
   width: $timeline-event-width;
@@ -153,6 +198,10 @@ $timeline-event-width: 100vw;
     
     .event-date {
       width: 100%;
+      .event-value {
+        font-size: clamp(80px, 15vw, 200px);
+        font-weight:800;
+      }
     }
   }
 }
@@ -163,7 +212,8 @@ $timeline-event-width: 100vw;
   color: white;
 
   .event-value {
-    font-size: clamp(80px, 15vw, 200px);
+    //font-size: clamp(80px, 15vw, 200px);
+    font-size:24px;
     font-weight: 700;
     line-height: 1;
     margin-bottom: 20px;
@@ -180,26 +230,25 @@ $timeline-event-width: 100vw;
 
 // Event panel (right side)
 .event-panel {
-  background: rgba(255, 255, 255, 0.1);
+  //background: rgba(255, 255, 255, 0.1);
   //backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 24px;
+  //border: 1px solid rgba(255, 255, 255, 0.2);
+  //border-radius: 24px;
   padding: 48px;
   color: white;
 
   .event-year {
-    font-size: clamp(32px, 4vw, 56px);
+    font-size: 24px;
     font-weight: 700;
     margin-bottom: 24px;
-    color: $timeline-accent;
+    color: #fff;
   }
 
   .event-description {
-    font-size: clamp(16px, 1.5vw, 20px);
-    line-height: 1.6;
-    opacity: 0.95;
-
     p {
+      font-size: 20px;
+      line-height: 1.6;
+      opacity: 0.95;
       margin: 0 0 16px 0;
 
       &:last-child {
@@ -210,9 +259,9 @@ $timeline-event-width: 100vw;
 
   .event-image {
     margin-top: 32px;
-    border-radius: 16px;
+    border-radius: 20px;
     overflow: hidden;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    //box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 
     img {
       width: 100%;
