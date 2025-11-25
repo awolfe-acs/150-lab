@@ -1,6 +1,8 @@
 import gsap from 'gsap';
 import ScrollTrigger from 'gsap/ScrollTrigger';
+import SplitType from 'split-type';
 import { initTimelineScene } from '../threejs/timelineScene.js';
+import { initCoverOrb } from '../threejs/coverOrb.js';
 
 // Initialize timeline scene (Three.js)
 let timelineScene = null;
@@ -63,6 +65,14 @@ export function initTimelineAnimation() {
   } catch (error) {
     console.error('Timeline: Failed to initialize Three.js scene:', error);
     // Continue without Three.js visuals
+  }
+
+  // Initialize Cover Orb (Morphing Sphere)
+  try {
+    initCoverOrb();
+    console.log('Timeline: Cover orb initialized');
+  } catch (error) {
+    console.error('Timeline: Failed to initialize cover orb:', error);
   }
 
   // Cache for position with interpolation to prevent jitter
@@ -237,6 +247,136 @@ export function initTimelineAnimation() {
   // Track previous marker for direction detection
   let previousActiveMarkerIndex = 0;
 
+  // Track the current year display and split instance
+  let currentYearElement = null;
+  let currentYearSplit = null;
+  let lastDisplayedYear = null;
+  let isAnimatingYear = false; // Flag to prevent double animations
+
+  // Helper to update the current year display with split text animation
+  const updateCurrentYear = (year) => {
+    if (!year || year === lastDisplayedYear || isAnimatingYear) return;
+    
+    // Set flag to prevent overlapping animations
+    isAnimatingYear = true;
+    
+    if (!currentYearElement) {
+      currentYearElement = document.querySelector('#current-timeline-year');
+    }
+    
+    if (!currentYearElement) {
+      isAnimatingYear = false;
+      return;
+    }
+    
+    // Fade out old year first if it exists
+    if (currentYearSplit && currentYearSplit.chars && currentYearSplit.chars.length > 0) {
+      gsap.to(currentYearSplit.chars, {
+        opacity: 0,
+        y: -20,
+        duration: 0.25,
+        stagger: 0.015,
+        ease: 'power2.in',
+        onComplete: () => {
+          // Clean up and show new year after fade out
+          if (currentYearSplit && typeof currentYearSplit.revert === 'function') {
+            currentYearSplit.revert();
+          }
+          
+          showNewYear(year);
+        }
+      });
+    } else {
+      // No old year to fade out, show new year immediately
+      showNewYear(year);
+    }
+  };
+  
+  // Helper function to show the new year with animation
+  const showNewYear = (year) => {
+    if (!currentYearElement) {
+      isAnimatingYear = false;
+      return;
+    }
+    
+    // Update the text content
+    currentYearElement.textContent = year;
+    lastDisplayedYear = year;
+    
+    // Apply SplitType for character animation
+    currentYearSplit = new SplitType(currentYearElement, {
+      types: 'chars',
+      charClass: 'split-char'
+    });
+    
+    // Animate characters in
+    if (currentYearSplit.chars && currentYearSplit.chars.length > 0) {
+      gsap.set(currentYearSplit.chars, {
+        opacity: 0,
+        y: 20,
+        display: 'inline-block'
+      });
+      
+      gsap.to(currentYearSplit.chars, {
+        opacity: 1,
+        y: 0,
+        duration: 0.4,
+        stagger: 0.03,
+        ease: 'power2.out',
+        overwrite: true,
+        onComplete: () => {
+          // Reset flag when animation completes
+          isAnimatingYear = false;
+        }
+      });
+    } else {
+      isAnimatingYear = false;
+    }
+  };
+  
+  // Helper function to hide the year display
+  const hideCurrentYear = () => {
+    if (!currentYearElement) {
+      currentYearElement = document.querySelector('#current-timeline-year');
+    }
+    
+    if (!currentYearElement) return;
+    
+    // Fade out the entire element
+    gsap.to(currentYearElement, {
+      opacity: 0,
+      duration: 0.3,
+      ease: 'power2.out',
+      onComplete: () => {
+        // Clean up split and reset
+        if (currentYearSplit && typeof currentYearSplit.revert === 'function') {
+          currentYearSplit.revert();
+        }
+        currentYearElement.textContent = '';
+        lastDisplayedYear = null;
+        isAnimatingYear = false;
+      }
+    });
+  };
+  
+  // Helper function to show the year element (ensure it's visible)
+  const ensureYearVisible = () => {
+    if (!currentYearElement) {
+      currentYearElement = document.querySelector('#current-timeline-year');
+    }
+    
+    if (!currentYearElement) return;
+    
+    // Make sure the container is visible
+    if (currentYearElement.style.opacity !== '1') {
+      gsap.to(currentYearElement, {
+        opacity: 1,
+        duration: 0.3,
+        ease: 'power2.out'
+      });
+    }
+  };
+
   // Helper to update scrubber based on decades (not individual events)
   const updateScrubber = (progress) => {
     const scrubberProgress = document.querySelector('.scrubber-progress');
@@ -279,11 +419,13 @@ export function initTimelineAnimation() {
       
       // Determine if the closest event is the cover event or a regular event
       if (closestEvent && closestEvent.classList.contains('timeline-cover')) {
-        // Cover event is active - but we want to activate the FIRST minor node (April 6, 1876)
-        // The cover event itself has no minor node, but the first real event does
+        // Cover event is active - hide the year display
         activeMarkerIndex = 0;
         activeMinorNodeIndex = 0; // Activate first minor node (first non-cover event)
         scrubberProgressValue = 1 / (2 * totalMarkers);
+        
+        // Hide year display when at cover
+        hideCurrentYear();
       } else if (closestEvent) {
         // Regular event is active - find its corresponding minor node
         // Minor nodes are indexed excluding the cover event
@@ -292,6 +434,15 @@ export function initTimelineAnimation() {
         
         // Clamp to valid range
         activeMinorNodeIndex = Math.max(0, Math.min(activeMinorNodeIndex, minorNodes.length - 1));
+        
+        // Ensure year element is visible
+        ensureYearVisible();
+        
+        // Update year display from the event's data-year attribute
+        const eventYear = closestEvent.getAttribute('data-year');
+        if (eventYear) {
+          updateCurrentYear(eventYear);
+        }
         
         // Find which decade this minor node belongs to
         if (activeMinorNodeIndex >= 0 && minorNodes.length > 0) {
@@ -310,6 +461,9 @@ export function initTimelineAnimation() {
         activeMarkerIndex = 0;
         activeMinorNodeIndex = 0; // Activate first minor node by default
         scrubberProgressValue = 1 / (2 * totalMarkers);
+        
+        // Hide year display when no event found (before timeline)
+        hideCurrentYear();
       }
     }
 
@@ -807,6 +961,24 @@ export function initTimelineAnimation() {
         // Ensure background is fully visible when entering timeline proper
         gsap.to(timelineWindowBg, { opacity: 1, duration: 0.2, overwrite: 'auto' });
         
+        // Fade out the canvas
+        const canvas = document.querySelector('#background-canvas');
+        if (canvas) {
+          gsap.to(canvas, { opacity: 0, duration: 0.5, ease: 'power2.inOut' });
+        }
+        
+        // Set HTML background to timeline gradient
+        const htmlElement = document.documentElement;
+        gsap.to(htmlElement, {
+          duration: 0.5,
+          ease: 'power2.inOut',
+          onUpdate: function() {
+            const progress = this.progress();
+            // Interpolate from current to timeline gradient
+            htmlElement.style.background = `linear-gradient(to bottom, #0493AB, #0657A4)`;
+          }
+        });
+        
         // Initialize first minor node as active and set scrubber progress
         const minorNodes = gsap.utils.toArray('.minor-node');
         const markers = gsap.utils.toArray('.marker');
@@ -852,6 +1024,22 @@ export function initTimelineAnimation() {
       },
       onLeave: () => {
         console.log('Timeline: Leaving timeline section');
+        
+        // Fade canvas back in
+        const canvas = document.querySelector('#background-canvas');
+        if (canvas) {
+          gsap.to(canvas, { opacity: 1, duration: 0.5, ease: 'power2.inOut' });
+        }
+        
+        // Restore HTML background (remove inline style to use CSS default)
+        const htmlElement = document.documentElement;
+        gsap.to(htmlElement, {
+          duration: 0.5,
+          ease: 'power2.inOut',
+          onComplete: function() {
+            htmlElement.style.background = '';
+          }
+        });
       }
     }
   });
@@ -1118,10 +1306,13 @@ export function initTimelineAnimation() {
             const gapWidth = gapEnd - gapStart;
             
             // Position based on year within decade
-            // Add small offset (30px) from marker to avoid overlap
-            const offsetFromMarker = 30;
-            const availableWidth = gapWidth - offsetFromMarker;
-            const positionInGap = offsetFromMarker + (availableWidth * yearPositionInDecade);
+            // Add offset from marker to avoid overlap, plus additional left padding
+            const offsetFromMarker = 30; // Base offset from marker edge
+            const leftPadding = 20; // Additional padding to prevent overlap with marker dot
+            const availableWidth = gapWidth - offsetFromMarker - leftPadding;
+            
+            // Position uses the padded range, so even 0% position has spacing
+            const positionInGap = offsetFromMarker + leftPadding + (availableWidth * yearPositionInDecade);
             
             minorNode.style.left = `${positionInGap}px`;
             
@@ -1134,8 +1325,9 @@ export function initTimelineAnimation() {
             const estimatedGap = (viewportWidth - padding) / markersPerView;
             
             const offsetFromMarker = 30;
-            const availableWidth = estimatedGap - offsetFromMarker;
-            const positionInGap = offsetFromMarker + (availableWidth * yearPositionInDecade);
+            const leftPadding = 20; // Additional padding to prevent overlap with marker dot
+            const availableWidth = estimatedGap - offsetFromMarker - leftPadding;
+            const positionInGap = offsetFromMarker + leftPadding + (availableWidth * yearPositionInDecade);
             
             minorNode.style.left = `${positionInGap}px`;
           }

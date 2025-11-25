@@ -1,0 +1,330 @@
+import * as THREE from 'three';
+
+export function initCoverOrb() {
+  const canvas = document.querySelector('#timeline-cover-canvas');
+  if (!canvas) {
+    console.warn('Cover orb canvas not found');
+    return;
+  }
+
+  // Scene setup
+  const scene = new THREE.Scene();
+  
+  // Camera setup
+  const camera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
+  camera.position.z = 3.5;
+
+  // Renderer setup
+  const renderer = new THREE.WebGLRenderer({
+    canvas: canvas,
+    alpha: true,
+    antialias: true
+  });
+  renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  // Default Parameters (tuned for desired look)
+  const params = {
+    noiseStrength: 0.13,
+    noiseSpeed: 0.11,
+    noiseDensity: 0.73,
+    colorDeep: '#9b7bff', // Darker blue/purple
+    colorLight: '#0063d8', // Teal
+    colorHighlight: '#00d3c0', // Turquoise highlight
+    fresnelPower: 1.3,
+    fresnelIntensity: 0.33,
+    pulseSpeed: 0.68,
+    pulseIntensity: 0.14,
+    rotationSpeed: 0.24,
+    // New parameters
+    glitterStrength: 0.078,
+    glitterDensity: 70.0,
+    specularStrength: 1.2,
+    glossiness: 28.0
+  };
+
+  // Shader Material
+  const vertexShader = `
+    uniform float uTime;
+    uniform float uNoiseStrength;
+    uniform float uNoiseSpeed;
+    uniform float uNoiseDensity;
+    
+    varying vec2 vUv;
+    varying vec3 vNormal;
+    varying float vDisplacement;
+    varying vec3 vPosition;
+    varying vec3 vViewPosition;
+
+    // Simplex 3D Noise 
+    // by Ian McEwan, Ashima Arts
+    vec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}
+    vec4 taylorInvSqrt(vec4 r){return 1.79284291400159 - 0.85373472095314 * r;}
+
+    float snoise(vec3 v){ 
+      const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;
+      const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);
+
+      // First corner
+      vec3 i  = floor(v + dot(v, C.yyy) );
+      vec3 x0 = v - i + dot(i, C.xxx) ;
+
+      // Other corners
+      vec3 g = step(x0.yzx, x0.xyz);
+      vec3 l = 1.0 - g;
+      vec3 i1 = min( g.xyz, l.zxy );
+      vec3 i2 = max( g.xyz, l.zxy );
+
+      //  x0 = x0 - 0.0 + 0.0 * C 
+      vec3 x1 = x0 - i1 + 1.0 * C.xxx;
+      vec3 x2 = x0 - i2 + 2.0 * C.xxx;
+      vec3 x3 = x0 - 1.0 + 3.0 * C.xxx;
+
+      // Permutations
+      i = mod(i, 289.0 ); 
+      vec4 p = permute( permute( permute( 
+                 i.z + vec4(0.0, i1.z, i2.z, 1.0 ))
+               + i.y + vec4(0.0, i1.y, i2.y, 1.0 )) 
+               + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
+
+      // Gradients
+      // ( N*N points uniformly over a square, mapped onto an octahedron.)
+      float n_ = 1.0/7.0; // N=7
+      vec3  ns = n_ * D.wyz - D.xzx;
+
+      vec4 j = p - 49.0 * floor(p * ns.z *ns.z);  //  mod(p,N*N)
+
+      vec4 x_ = floor(j * ns.z);
+      vec4 y_ = floor(j - 7.0 * x_ );    // mod(j,N)
+
+      vec4 x = x_ *ns.x + ns.yyyy;
+      vec4 y = y_ *ns.x + ns.yyyy;
+      vec4 h = 1.0 - abs(x) - abs(y);
+
+      vec4 b0 = vec4( x.xy, y.xy );
+      vec4 b1 = vec4( x.zw, y.zw );
+
+      vec4 s0 = floor(b0)*2.0 + 1.0;
+      vec4 s1 = floor(b1)*2.0 + 1.0;
+      vec4 sh = -step(h, vec4(0.0));
+
+      vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;
+      vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;
+
+      vec3 p0 = vec3(a0.xy,h.x);
+      vec3 p1 = vec3(a0.zw,h.y);
+      vec3 p2 = vec3(a1.xy,h.z);
+      vec3 p3 = vec3(a1.zw,h.w);
+
+      //Normalise gradients
+      vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+      p0 *= norm.x;
+      p1 *= norm.y;
+      p2 *= norm.z;
+      p3 *= norm.w;
+
+      // Mix final noise value
+      vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+      m = m * m;
+      return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), 
+                                    dot(p2,x2), dot(p3,x3) ) );
+    }
+
+    void main() {
+      vUv = uv;
+      vNormal = normal;
+      
+      // Calculate noise based displacement
+      float noiseVal = snoise(position * uNoiseDensity + uTime * uNoiseSpeed);
+      vDisplacement = noiseVal;
+      
+      // Displace position along normal
+      vec3 newPosition = position + normal * (noiseVal * uNoiseStrength);
+      vPosition = newPosition;
+      
+      vec4 mvPosition = modelViewMatrix * vec4(newPosition, 1.0);
+      vViewPosition = -mvPosition.xyz;
+      
+      gl_Position = projectionMatrix * mvPosition;
+    }
+  `;
+
+  const fragmentShader = `
+    uniform float uTime;
+    uniform vec3 uColorDeep;
+    uniform vec3 uColorLight;
+    uniform vec3 uColorHighlight;
+    uniform float uFresnelPower;
+    uniform float uFresnelIntensity;
+    uniform float uPulseSpeed;
+    uniform float uPulseIntensity;
+    uniform float uGlitterStrength;
+    uniform float uGlitterDensity;
+    uniform float uSpecularStrength;
+    uniform float uGlossiness;
+    
+    varying vec2 vUv;
+    varying vec3 vNormal;
+    varying float vDisplacement;
+    varying vec3 vPosition;
+    varying vec3 vViewPosition;
+
+    // Simple pseudo-random function
+    float random(vec2 st) {
+        return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+    }
+
+    void main() {
+      // Mix colors based on displacement/noise
+      float mixFactor = smoothstep(-0.5, 0.5, vDisplacement);
+      vec3 baseColor = mix(uColorDeep, uColorLight, mixFactor);
+      
+      vec3 viewDirection = normalize(vViewPosition);
+      vec3 normal = normalize(vNormal);
+      
+      // Fresnel effect for metallic look
+      float fresnel = pow(1.0 - dot(viewDirection, normal), uFresnelPower);
+      
+      // Specular Reflection (Blinn-Phong)
+      vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0)); // Directional light from top-right-front
+      vec3 halfDir = normalize(lightDir + viewDirection);
+      float specAngle = max(dot(normal, halfDir), 0.0);
+      float specular = pow(specAngle, uGlossiness);
+      
+      // Glitter Effect
+      // Use normal direction for sparkles so they move naturally with rotation
+      // Add very slow time component for subtle life
+      float glitterNoise = random(vNormal.xy * uGlitterDensity + uTime * 0.05);
+      
+      // Use smoothstep for softer, more blended sparkles instead of harsh static
+      // High threshold (0.95) ensures only peaks sparkle
+      float glitter = smoothstep(0.95, 1.0, glitterNoise) * uGlitterStrength * (fresnel + specular);
+      
+      // Combine
+      vec3 finalColor = baseColor;
+      finalColor += uColorHighlight * fresnel * uFresnelIntensity; // Rim light
+      finalColor += uColorHighlight * specular * uSpecularStrength; // Glossy highlight
+      finalColor += vec3(1.0) * glitter; // White sparkles
+      
+      // Add subtle pulse to alpha/brightness
+      float pulse = 1.0 - uPulseIntensity + uPulseIntensity * sin(uTime * uPulseSpeed);
+      
+      gl_FragColor = vec4(finalColor * pulse, 1.0);
+    }
+  `;
+
+  const material = new THREE.ShaderMaterial({
+    vertexShader,
+    fragmentShader,
+    uniforms: {
+      uTime: { value: 0 },
+      uNoiseStrength: { value: params.noiseStrength },
+      uNoiseSpeed: { value: params.noiseSpeed },
+      uNoiseDensity: { value: params.noiseDensity },
+      uColorDeep: { value: new THREE.Color(params.colorDeep) },
+      uColorLight: { value: new THREE.Color(params.colorLight) },
+      uColorHighlight: { value: new THREE.Color(params.colorHighlight) },
+      uFresnelPower: { value: params.fresnelPower },
+      uFresnelIntensity: { value: params.fresnelIntensity },
+      uPulseSpeed: { value: params.pulseSpeed },
+      uPulseIntensity: { value: params.pulseIntensity },
+      uGlitterStrength: { value: params.glitterStrength },
+      uGlitterDensity: { value: params.glitterDensity },
+      uSpecularStrength: { value: params.specularStrength },
+      uGlossiness: { value: params.glossiness }
+    },
+    transparent: true
+  });
+
+  // Geometry
+  const geometry = new THREE.SphereGeometry(1, 128, 128);
+  const orb = new THREE.Mesh(geometry, material);
+  scene.add(orb);
+
+  // Setup DAT.GUI
+  const setupGUI = () => {
+    if (window.gui) {
+      // Check if folder already exists to prevent duplicates
+      if (window.gui.__folders["Cover Orb"]) return;
+
+      const folder = window.gui.addFolder('Cover Orb');
+      
+      folder.add(params, 'noiseStrength', 0, 2).onChange(v => material.uniforms.uNoiseStrength.value = v);
+      folder.add(params, 'noiseSpeed', 0, 2).onChange(v => material.uniforms.uNoiseSpeed.value = v);
+      folder.add(params, 'noiseDensity', 0, 5).onChange(v => material.uniforms.uNoiseDensity.value = v);
+      
+      folder.addColor(params, 'colorDeep').onChange(v => material.uniforms.uColorDeep.value.set(v));
+      folder.addColor(params, 'colorLight').onChange(v => material.uniforms.uColorLight.value.set(v));
+      folder.addColor(params, 'colorHighlight').onChange(v => material.uniforms.uColorHighlight.value.set(v));
+      
+      folder.add(params, 'fresnelPower', 0, 5).onChange(v => material.uniforms.uFresnelPower.value = v);
+      folder.add(params, 'fresnelIntensity', 0, 5).onChange(v => material.uniforms.uFresnelIntensity.value = v);
+      
+      folder.add(params, 'specularStrength', 0, 2).name('Spec Strength').onChange(v => material.uniforms.uSpecularStrength.value = v);
+      folder.add(params, 'glossiness', 1, 100).name('Glossiness').onChange(v => material.uniforms.uGlossiness.value = v);
+      
+      folder.add(params, 'glitterStrength', 0, 2).name('Glitter Str').onChange(v => material.uniforms.uGlitterStrength.value = v);
+      folder.add(params, 'glitterDensity', 1, 200).name('Glitter Dens').onChange(v => material.uniforms.uGlitterDensity.value = v);
+      
+      folder.add(params, 'pulseSpeed', 0, 5).onChange(v => material.uniforms.uPulseSpeed.value = v);
+      folder.add(params, 'pulseIntensity', 0, 1).onChange(v => material.uniforms.uPulseIntensity.value = v);
+      
+      folder.add(params, 'rotationSpeed', 0, 1);
+      
+      folder.open();
+    } else {
+      // Retry if GUI isn't ready yet
+      setTimeout(setupGUI, 500);
+    }
+  };
+  
+  // Start checking for GUI
+  setupGUI();
+
+  // Animation Loop
+  const clock = new THREE.Clock();
+  
+  const animate = () => {
+    const elapsedTime = clock.getElapsedTime();
+    material.uniforms.uTime.value = elapsedTime;
+    
+    // Rotation
+    orb.rotation.y = elapsedTime * params.rotationSpeed;
+    orb.rotation.z = elapsedTime * (params.rotationSpeed * 0.5);
+    
+    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+  };
+  
+  animate();
+
+  // Handle Resize
+  const handleResize = () => {
+    if (!canvas) return;
+    
+    // Update camera
+    camera.aspect = canvas.clientWidth / canvas.clientHeight;
+    camera.updateProjectionMatrix();
+    
+    // Update renderer
+    renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  };
+
+  window.addEventListener('resize', handleResize);
+  
+  // Initial resize check
+  handleResize();
+
+  return {
+    cleanup: () => {
+      window.removeEventListener('resize', handleResize);
+      renderer.dispose();
+      geometry.dispose();
+      material.dispose();
+      // Clean up GUI folder if needed? 
+      // dat.gui doesn't have a simple "removeFolder" that cleans up everything perfectly without reference, 
+      // but usually for dev mode it's fine.
+    }
+  };
+}

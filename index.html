@@ -798,6 +798,8 @@
               </svg>
             </button>
             
+            <div id="current-timeline-year"><!--dynamically set the active .timeline-event data-year="" here, with a per character reveal animation--></div>
+
             <!-- Three.js container for sphere and dot plane -->
             <div class="timeline-threejs-container">
               <canvas id="timeline-canvas"></canvas>
@@ -817,6 +819,7 @@
                         <div class="event-label">When ACS is born</div>
                       </div>
                     </div>
+                    <canvas id="timeline-cover-canvas"></canvas>
                   </div>
 
                   <div class="timeline-event" data-year="1876">
@@ -1651,6 +1654,28 @@
                   </div>
 
                 </div>
+                <!-- Timeline Decade: 2026 (150th Anniversary) -->
+                <div class="timeline-decade" data-decade="2026">
+                  <div class="timeline-event" data-year="2026">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">April 6, 2026</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">April 6, 2026</div>
+                        <div class="event-description">
+                          <p>ACS celebrates its 150th anniversary, marking a century and a half of advancing chemistry and serving the global scientific community.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/public/images/timeline/2026-150Anniversary.jpg" alt="American Chemical Society 150th Anniversary celebration" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
 
               </div>
 
@@ -1776,6 +1801,13 @@
                       <div class="marker-main">
                         <div class="marker-dot"></div>
                         <div class="marker-label">2020s</div>
+                      </div>
+                      <div class="marker-minor-nodes"></div>
+                    </div>
+                    <div class="marker" data-decade="2026">
+                      <div class="marker-main">
+                        <div class="marker-dot"></div>
+                        <div class="marker-label">2026</div>
                       </div>
                       <div class="marker-minor-nodes"></div>
                     </div>

@@ -102,8 +102,8 @@ $timeline-scrubber-height: 80px;
 .scrubber-line {
   position: absolute;
   top: 50%;
-  left: 60px;
-  right: 60px;
+  left: 65px;
+  right: 65px;
   transform: translateY(-50%);
   height: 3px;
   background: $timeline-inactive;
@@ -176,6 +176,12 @@ $timeline-scrubber-height: 80px;
       font-weight: 700;
     }
   }
+  &[data-decade="2026"] {
+    .marker-minor-nodes {
+      opacity:0;
+      pointer-events: none;
+    }
+  }
 }
 
 // Wrapper for the major marker dot and label
@@ -211,6 +217,7 @@ $timeline-scrubber-height: 80px;
   transform: translateY(0);
   letter-spacing: 0.05em;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  user-select: none;
 }
 
 // Container for minor nodes within a marker
@@ -299,6 +306,7 @@ $timeline-scrubber-height: 80px;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
   pointer-events: none;
   z-index: 20; // Above everything
+  user-select: none;
 }
 
 // Responsive adjustments
