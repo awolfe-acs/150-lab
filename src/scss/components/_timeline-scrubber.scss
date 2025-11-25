@@ -17,14 +17,98 @@ $timeline-scrubber-height: 80px;
   align-items: center;
   opacity: 0; // Will fade in with ScrollTrigger
   pointer-events: none;
+  overflow: visible;
+}
+
+// Scrollable wrapper for scrubber content
+.scrubber-scroll-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+  scrollbar-width: none; // Firefox
+  -ms-overflow-style: none; // IE/Edge
+  scroll-behavior: smooth;
+  pointer-events: all;
+  
+  &::-webkit-scrollbar {
+    display: none; // Chrome/Safari
+  }
+}
+
+// Navigation arrows
+.scrubber-nav {
+  position: absolute;
+  top: -24px;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.04);
+  border:1px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 110;
+  pointer-events: all;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(4px);
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.12);
+    border:1px solid rgba(255,255,255,0.66);
+  }
+  
+  &:active {
+    transform: translateY(-50%) scale(0.98);
+  }
+  
+  &.disabled {
+    opacity: 0;
+    pointer-events: none;
+  }
+  
+  svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: white;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+.scrubber-nav-prev {
+  left: 64px;
+}
+
+.scrubber-nav-next {
+  right: 20px;
+}
+
+// Content container for line and markers
+.scrubber-content {
+  position: relative;
+  min-width: max-content; // Allow content to determine width
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 60px; // Padding for nav arrows
 }
 
 .scrubber-line {
-  position: relative;
-  width: 100%;
+  position: absolute;
+  top: 50%;
+  left: 60px;
+  right: 60px;
+  transform: translateY(-50%);
   height: 3px;
   background: $timeline-inactive;
   border-radius: 2px;
+  pointer-events: none;
 }
 
 .scrubber-progress {
@@ -37,28 +121,34 @@ $timeline-scrubber-height: 80px;
   transform-origin: left;
   transform: scaleX(0);
   border-radius: 1px;
+  pointer-events: none;
   //box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
 }
 
 .scrubber-markers {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  transform: translateY(-50%);
+  position: relative;
   display: flex;
-  justify-content: space-around;
+  align-items: center;
+  gap: calc((100vw - 120px) / 5); // Dynamic gap: show 5 markers per viewport width
+  // Formula: (viewport width - nav button padding) / 5 markers
   pointer-events: all;
+  z-index: 5;
+}
+
+// Container for all minor nodes (kept for backwards compatibility, but not used)
+.scrubber-minor-nodes {
+  display: none; // Hidden, minor nodes are now children of .marker
 }
 
 .marker {
   position: relative;
   display: flex;
-  flex-direction: column;
+  flex-direction: row; // Changed to row to accommodate minor nodes
   align-items: center;
   cursor: pointer;
   transition: all 0.3s ease;
   padding: 8px;
+  gap: 0; // No gap, minor nodes will handle their own spacing
 
   &:hover {
     .marker-dot {
@@ -88,6 +178,15 @@ $timeline-scrubber-height: 80px;
   }
 }
 
+// Wrapper for the major marker dot and label
+.marker-main {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 10; // Above minor nodes
+}
+
 .marker-dot {
   width: 14px;
   height: 14px;
@@ -114,10 +213,117 @@ $timeline-scrubber-height: 80px;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
+// Container for minor nodes within a marker
+.marker-minor-nodes {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 100%; // Full width of parent gap
+  height: 100%;
+  z-index: 4; // Below major marker and main, above line
+  pointer-events: none; // Container doesn't block clicks
+}
+
+// Minor nodes (individual events within decades)
+.minor-node {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 4;
+  pointer-events: all; // Ensure clickability
+  
+  // Position will be set dynamically via inline style based on year
+
+  &:hover {
+    z-index: 15; // Above everything on hover
+    
+    .minor-node-dot {
+      transform: scale(1.8);
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+    }
+
+    .minor-node-label {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-2px);
+    }
+  }
+
+  &.active {
+    .minor-node-dot {
+      background: rgba(255, 255, 255, 0.95);
+      transform: scale(1.8);
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+    }
+
+    .minor-node-label {
+      opacity: 1;
+      color: $timeline-active;
+    }
+  }
+
+  &.complete {
+    .minor-node-dot {
+      background: rgba(255, 255, 255, 0.6);
+    }
+  }
+}
+
+.minor-node-dot {
+  width: 6px;
+  height: 6px;
+  background: rgba(107, 184, 249, 0.6);
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.minor-node-label {
+  position: absolute;
+  top: -26px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  opacity: 0;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  letter-spacing: 0.03em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  z-index: 20; // Above everything
+}
+
 // Responsive adjustments
 @media (max-width: 1024px) {
-  .timeline-scrubber {
-    padding: 0 40px;
+  .scrubber-content {
+    padding: 0 60px;
+  }
+
+  .scrubber-line {
+    left: 60px;
+    right: 60px;
+  }
+
+  .scrubber-markers {
+    gap: calc((100vw - 120px) / 5); // Maintain 5 markers per viewport on tablets
+  }
+
+  .scrubber-nav {
+    width: 36px;
+    height: 36px;
+    
+    svg {
+      width: 18px;
+      height: 18px;
+    }
   }
 
   .marker-label {
@@ -129,12 +335,52 @@ $timeline-scrubber-height: 80px;
     width: 10px;
     height: 10px;
   }
+
+  .minor-node-dot {
+    width: 5px;
+    height: 5px;
+  }
+
+  .minor-node-label {
+    font-size: 10px;
+    top: -20px;
+  }
 }
 
 @media (max-width: 768px) {
   .timeline-scrubber {
-    padding: 0 24px;
     height: 60px;
+  }
+
+  .scrubber-content {
+    padding: 0 50px;
+  }
+
+  .scrubber-line {
+    left: 50px;
+    right: 50px;
+  }
+
+  .scrubber-markers {
+    gap: calc((100vw - 100px) / 4); // Show 4 markers per viewport on mobile (more space per marker)
+  }
+
+  .scrubber-nav {
+    width: 32px;
+    height: 32px;
+    
+    &.scrubber-nav-prev {
+      left: 10px;
+    }
+    
+    &.scrubber-nav-next {
+      right: 10px;
+    }
+    
+    svg {
+      width: 16px;
+      height: 16px;
+    }
   }
 
   .marker {
@@ -149,6 +395,20 @@ $timeline-scrubber-height: 80px;
   .marker-dot {
     width: 8px;
     height: 8px;
+  }
+
+  .minor-node-dot {
+    width: 8px;
+    height: 8px;
+  }
+
+  .minor-node-label {
+    font-size: 9px;
+    top: -18px;
+  }
+  
+  .minor-node {
+    margin-right: 12px; // Tighter spacing on mobile
   }
 }
 

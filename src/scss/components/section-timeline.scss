@@ -23,12 +23,14 @@
     top: 12vw;
     z-index: 1500;
     mix-blend-mode: luminosity;
-
+    pointer-events:none;
     @media (max-width:$desktop-viewport) {
         pointer-events: none;
         display: none;
     }
-
+    .timeline-nav-wrapper {
+        pointer-events: auto;
+    }
     .page-nav {
         display: flex;
         flex-direction: column;

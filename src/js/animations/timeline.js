@@ -234,77 +234,118 @@ export function initTimelineAnimation() {
     reason: '' // 'click' or 'resize'
   };
 
+  // Track previous marker for direction detection
+  let previousActiveMarkerIndex = 0;
+
   // Helper to update scrubber based on decades (not individual events)
   const updateScrubber = (progress) => {
     const scrubberProgress = document.querySelector('.scrubber-progress');
     const markers = gsap.utils.toArray('.marker');
+    const minorNodes = gsap.utils.toArray('.minor-node');
     
     if (!scrubberProgress || !decades.length) return;
     
     const totalMarkers = markers.length;
     let activeMarkerIndex = 0;
     let scrubberProgressValue = 0;
+    let activeMinorNodeIndex = -1; // Index among minor nodes (not all events)
     
     // If marker is locked (click or resize), use the locked target index
     if (markerLock.isLocked && markerLock.targetIndex >= 0) {
       activeMarkerIndex = markerLock.targetIndex;
       scrubberProgressValue = (2 * activeMarkerIndex + 1) / (2 * totalMarkers);
     } else {
-      // Calculate threshold based on timeline duration ratios
-      const coverThreshold = phaseADuration / timelineTotalDuration;
+      // NEW APPROACH: Detect which .timeline-event is actually visible/centered in viewport
+      // This provides accurate synchronization with what's actually on screen
       
-      if (progress < coverThreshold) {
-        // We're in the cover/first event phase
+      // Find the event that's most centered in the viewport
+      const viewportCenterX = window.innerWidth / 2;
+      let closestEvent = null;
+      let closestDistance = Infinity;
+      let closestEventGlobalIndex = -1;
+      
+      events.forEach((event, globalIndex) => {
+        const rect = event.getBoundingClientRect();
+        const eventCenterX = rect.left + (rect.width / 2);
+        const distanceFromCenter = Math.abs(eventCenterX - viewportCenterX);
+        
+        // Check if this event is closer to center than previous closest
+        if (distanceFromCenter < closestDistance) {
+          closestDistance = distanceFromCenter;
+          closestEvent = event;
+          closestEventGlobalIndex = globalIndex;
+        }
+      });
+      
+      // Determine if the closest event is the cover event or a regular event
+      if (closestEvent && closestEvent.classList.contains('timeline-cover')) {
+        // Cover event is active - but we want to activate the FIRST minor node (April 6, 1876)
+        // The cover event itself has no minor node, but the first real event does
         activeMarkerIndex = 0;
+        activeMinorNodeIndex = 0; // Activate first minor node (first non-cover event)
         scrubberProgressValue = 1 / (2 * totalMarkers);
-      } else {
-        const remainingProgress = progress - coverThreshold;
-        const adjustedTotal = 1.0 - coverThreshold;
-        const normalizedProgress = remainingProgress / adjustedTotal;
+      } else if (closestEvent) {
+        // Regular event is active - find its corresponding minor node
+        // Minor nodes are indexed excluding the cover event
+        // So if closestEventGlobalIndex is 1 (first non-cover), minorNodeIndex is 0
+        activeMinorNodeIndex = closestEventGlobalIndex - 1; // Subtract 1 to account for cover
         
-        // Map progress to decades (excluding first decade if it's the cover)
-        // Determine which decade we're in based on how many events we've passed
-        const firstDecade = decades[0];
-        const firstDecadeEvents = gsap.utils.toArray('.timeline-event', firstDecade);
-        const isFirstDecadeCover = firstDecadeEvents.length === 1 && firstDecadeEvents[0].classList.contains('timeline-cover');
+        // Clamp to valid range
+        activeMinorNodeIndex = Math.max(0, Math.min(activeMinorNodeIndex, minorNodes.length - 1));
         
-        // Calculate cumulative event positions to determine current decade
-        let cumulativeEvents = 0;
-        let currentDecadeIndex = 0;
-        
-        // Calculate how many events have been passed based on progress
-        const totalRemainingEvents = remainingEventsCount;
-        const eventsPassed = Math.floor(normalizedProgress * totalRemainingEvents);
-        
-        // Find which decade this event belongs to
-        if (isFirstDecadeCover) {
-          // First decade is just the cover, start counting from second decade
-          const remainingDecades = decades.slice(1);
-          for (let i = 0; i < remainingDecades.length; i++) {
-            const decadeEvents = gsap.utils.toArray('.timeline-event', remainingDecades[i]);
-            if (eventsPassed < cumulativeEvents + decadeEvents.length) {
-              currentDecadeIndex = i + 1; // +1 because first is cover
-              break;
-            }
-            cumulativeEvents += decadeEvents.length;
-            currentDecadeIndex = i + 1;
+        // Find which decade this minor node belongs to
+        if (activeMinorNodeIndex >= 0 && minorNodes.length > 0) {
+          const activeNode = minorNodes[activeMinorNodeIndex];
+          if (activeNode) {
+            const nodeDecadeIndex = parseInt(activeNode.getAttribute('data-decade-index') || '0');
+            activeMarkerIndex = Math.min(nodeDecadeIndex, totalMarkers - 1);
+          } else {
+            activeMarkerIndex = 0;
           }
         } else {
-          // First decade contains events, count from there
-          for (let i = 0; i < decades.length; i++) {
-            const decadeEvents = gsap.utils.toArray('.timeline-event', decades[i]);
-            if (eventsPassed < cumulativeEvents + decadeEvents.length) {
-              currentDecadeIndex = i;
-              break;
-            }
-            cumulativeEvents += decadeEvents.length;
-            currentDecadeIndex = i;
-          }
+          activeMarkerIndex = 0;
         }
+      } else {
+        // Fallback to first marker and first minor node if no event found
+        activeMarkerIndex = 0;
+        activeMinorNodeIndex = 0; // Activate first minor node by default
+        scrubberProgressValue = 1 / (2 * totalMarkers);
+      }
+    }
+
+    // Calculate scrubber progress based on active minor node position
+    // This provides accurate progress bar positioning
+    if (activeMinorNodeIndex >= 0 && minorNodes.length > 0) {
+      // Find the active minor node
+      const activeNode = minorNodes[activeMinorNodeIndex];
+      if (activeNode) {
+        // Get the scrubber line and active node positions
+        const scrubberLine = document.querySelector('.scrubber-line');
+        const scrubberContent = document.querySelector('.scrubber-content');
         
-        activeMarkerIndex = Math.min(currentDecadeIndex, totalMarkers - 1);
+        if (scrubberLine && scrubberContent) {
+          // Get positions relative to the content container
+          const lineRect = scrubberLine.getBoundingClientRect();
+          const nodeRect = activeNode.getBoundingClientRect();
+          const contentRect = scrubberContent.getBoundingClientRect();
+          
+          // Calculate the node's center position relative to the line start
+          const nodeCenterX = nodeRect.left + (nodeRect.width / 2) - lineRect.left;
+          const lineWidth = lineRect.width;
+          
+          // Calculate progress as a percentage of the line width
+          scrubberProgressValue = Math.max(0, Math.min(1, nodeCenterX / lineWidth));
+        } else {
+          // Fallback to marker-based calculation
+          scrubberProgressValue = (2 * activeMarkerIndex + 1) / (2 * totalMarkers);
+        }
+      } else {
+        // Fallback to marker-based calculation
         scrubberProgressValue = (2 * activeMarkerIndex + 1) / (2 * totalMarkers);
       }
+    } else {
+      // Cover phase or no minor nodes - use marker-based calculation
+      scrubberProgressValue = (2 * activeMarkerIndex + 1) / (2 * totalMarkers);
     }
 
     gsap.to(scrubberProgress, {
@@ -314,18 +355,54 @@ export function initTimelineAnimation() {
       ease: 'power2.out'
     });
 
+    // Update major markers (decades)
+    // A decade marker is:
+    // - "active" when ANY of its minor nodes are active
+    // - "complete" when we've moved to a LATER decade (all its nodes are passed)
     if (markers.length > 0) {
       markers.forEach((marker, index) => {
         // Remove all classes first
         marker.classList.remove('active', 'complete');
         
         if (index === activeMarkerIndex) {
+          // This decade contains the currently active minor node
           marker.classList.add('active');
         } else if (index < activeMarkerIndex) {
+          // We've moved past this decade entirely
           marker.classList.add('complete');
         }
-        // If index > activeMarkerIndex, it remains with just base .marker class
+        // If index > activeMarkerIndex, it remains with just base .marker class (future decade)
       });
+    }
+
+    // Update minor nodes (individual events, excluding cover)
+    if (minorNodes.length > 0) {
+      minorNodes.forEach((node, index) => {
+        // Remove all classes first
+        node.classList.remove('active', 'complete');
+        
+        // Use the minor-index attribute which correctly tracks non-cover events
+        const nodeMinorIndex = parseInt(node.getAttribute('data-minor-index') || index);
+        
+        if (nodeMinorIndex === activeMinorNodeIndex) {
+          node.classList.add('active');
+        } else if (nodeMinorIndex < activeMinorNodeIndex) {
+          node.classList.add('complete');
+        }
+        // If nodeMinorIndex > activeMinorNodeIndex, it remains with just base .minor-node class
+      });
+    }
+
+    // Auto-scroll scrubber to show active marker
+    if (window.scrubberAutoScroll && !markerLock.isLocked) {
+      // Determine scroll direction
+      const direction = activeMarkerIndex > previousActiveMarkerIndex ? 1 : 
+                       activeMarkerIndex < previousActiveMarkerIndex ? -1 : 0;
+      
+      window.scrubberAutoScroll(activeMarkerIndex, direction);
+      
+      // Update previous marker index
+      previousActiveMarkerIndex = activeMarkerIndex;
     }
   };
 
@@ -729,6 +806,49 @@ export function initTimelineAnimation() {
         console.log('Timeline: Entering timeline section');
         // Ensure background is fully visible when entering timeline proper
         gsap.to(timelineWindowBg, { opacity: 1, duration: 0.2, overwrite: 'auto' });
+        
+        // Initialize first minor node as active and set scrubber progress
+        const minorNodes = gsap.utils.toArray('.minor-node');
+        const markers = gsap.utils.toArray('.marker');
+        const scrubberProgress = document.querySelector('.scrubber-progress');
+        
+        if (minorNodes.length > 0 && scrubberProgress) {
+          // Activate the first minor node (1876)
+          const firstMinorNode = minorNodes[0];
+          
+          // Clear all active/complete states
+          minorNodes.forEach(node => {
+            node.classList.remove('active', 'complete');
+          });
+          
+          // Set first node as active
+          firstMinorNode.classList.add('active');
+          
+          // Activate the first decade marker
+          if (markers.length > 0) {
+            markers.forEach(marker => {
+              marker.classList.remove('active', 'complete');
+            });
+            markers[0].classList.add('active');
+          }
+          
+          // Set scrubber progress to align with first minor node
+          const scrubberLine = document.querySelector('.scrubber-line');
+          if (scrubberLine) {
+            const lineRect = scrubberLine.getBoundingClientRect();
+            const nodeRect = firstMinorNode.getBoundingClientRect();
+            const nodeCenterX = nodeRect.left + (nodeRect.width / 2) - lineRect.left;
+            const lineWidth = lineRect.width;
+            const scrubberProgressValue = Math.max(0, Math.min(1, nodeCenterX / lineWidth));
+            
+            gsap.set(scrubberProgress, {
+              scaleX: scrubberProgressValue,
+              transformOrigin: 'left'
+            });
+            
+            console.log('Timeline: Initialized first minor node as active, scrubber progress:', scrubberProgressValue.toFixed(3));
+          }
+        }
       },
       onLeave: () => {
         console.log('Timeline: Leaving timeline section');
@@ -885,11 +1005,413 @@ export function initTimelineAnimation() {
     });
   }
 
+  // Function to generate minor nodes for individual events within decades
+  function generateMinorNodes() {
+    const markers = gsap.utils.toArray('.marker');
+    
+    if (!markers.length || !decades.length) {
+      console.warn('Timeline: Markers or decades not found');
+      return;
+    }
+
+    let globalEventIndex = 0;
+    let minorNodeIndex = 0; // Separate index for minor nodes (excludes cover)
+
+    // Iterate through each decade and its marker
+    decades.forEach((decade, decadeIndex) => {
+      const decadeName = decade.getAttribute('data-decade');
+      const decadeEvents = gsap.utils.toArray('.timeline-event', decade);
+      
+      // Find the corresponding marker for this decade
+      const marker = markers.find(m => m.getAttribute('data-decade') === decadeName);
+      if (!marker) {
+        console.warn(`Timeline: No marker found for decade ${decadeName}`);
+        return;
+      }
+
+      // Find the minor nodes container within this marker
+      const minorNodesContainer = marker.querySelector('.marker-minor-nodes');
+      if (!minorNodesContainer) {
+        console.warn(`Timeline: No minor nodes container found for decade ${decadeName}`);
+        return;
+      }
+
+      // Clear any existing minor nodes
+      minorNodesContainer.innerHTML = '';
+
+      // Extract decade start year from decade name (e.g., "1870s" -> 1870)
+      const decadeStartYear = parseInt(decadeName) || 0;
+      
+      // Generate minor nodes for each event in this decade
+      decadeEvents.forEach((event, localEventIndex) => {
+        // Skip the timeline cover event (no minor node needed)
+        const isCoverEvent = event.classList.contains('timeline-cover');
+        
+        if (isCoverEvent) {
+          globalEventIndex++;
+          return; // Skip this event, don't create a minor node
+        }
+
+        // Calculate progress for this event (same logic as main timeline)
+        const eventProgress = globalEventIndex === 0 
+          ? (0.09 + (holdDuration * 0.5)) / timelineTotalDuration
+          : (phaseADuration + ((globalEventIndex - 1) * totalCycleDuration) + moveDuration + (holdDuration * 0.5)) / timelineTotalDuration;
+
+        // Get event year for label and positioning
+        const eventYearStr = event.getAttribute('data-year') || '';
+        
+        // Parse the year from the event (handle formats like "1924", "April 6, 1876", "January, 1907")
+        let eventYear = 0;
+        const yearMatch = eventYearStr.match(/\d{4}/);
+        if (yearMatch) {
+          eventYear = parseInt(yearMatch[0]);
+        }
+        
+        // Calculate year-accurate position within the decade (0-1 range)
+        // For example: 1924 in 1920s = (1924 - 1920) / 10 = 0.4 (40% through decade)
+        let yearPositionInDecade = 0;
+        if (eventYear > 0 && decadeStartYear > 0) {
+          yearPositionInDecade = (eventYear - decadeStartYear) / 10;
+          // Clamp to 0-1 range
+          yearPositionInDecade = Math.max(0, Math.min(0.95, yearPositionInDecade));
+        }
+
+        // Create minor node element
+        const minorNode = document.createElement('div');
+        minorNode.className = 'minor-node';
+        minorNode.setAttribute('data-event-index', globalEventIndex); // Actual event index in timeline
+        minorNode.setAttribute('data-minor-index', minorNodeIndex); // Index among minor nodes only
+        minorNode.setAttribute('data-decade-index', decadeIndex);
+        minorNode.setAttribute('data-local-index', localEventIndex);
+        minorNode.setAttribute('data-year', eventYearStr);
+        minorNode.setAttribute('data-year-numeric', eventYear.toString());
+        minorNode.setAttribute('data-year-position', yearPositionInDecade.toFixed(3));
+
+        // Create dot
+        const dot = document.createElement('div');
+        dot.className = 'minor-node-dot';
+        minorNode.appendChild(dot);
+
+        // Create label (only show year, hidden by default)
+        if (eventYearStr) {
+          const label = document.createElement('div');
+          label.className = 'minor-node-label';
+          label.textContent = eventYearStr;
+          minorNode.appendChild(label);
+        }
+
+        // Position the minor node based on its year within the decade
+        // The container spans the gap between markers, so we position as percentage
+        // Calculate position dynamically after markers are laid out
+        requestAnimationFrame(() => {
+          const markerRect = marker.getBoundingClientRect();
+          const markers = gsap.utils.toArray('.marker');
+          const nextMarkerIndex = decadeIndex + 1;
+          
+          if (nextMarkerIndex < markers.length) {
+            const nextMarker = markers[nextMarkerIndex];
+            const nextMarkerRect = nextMarker.getBoundingClientRect();
+            
+            // Calculate the gap between this marker and the next
+            const gapStart = markerRect.right;
+            const gapEnd = nextMarkerRect.left;
+            const gapWidth = gapEnd - gapStart;
+            
+            // Position based on year within decade
+            // Add small offset (30px) from marker to avoid overlap
+            const offsetFromMarker = 30;
+            const availableWidth = gapWidth - offsetFromMarker;
+            const positionInGap = offsetFromMarker + (availableWidth * yearPositionInDecade);
+            
+            minorNode.style.left = `${positionInGap}px`;
+            
+            console.log(`Minor node ${eventYearStr}: position ${(yearPositionInDecade * 100).toFixed(1)}% in decade, ${positionInGap.toFixed(0)}px from marker`);
+          } else {
+            // Last decade - position based on percentage of expected gap
+            const viewportWidth = window.innerWidth;
+            const padding = viewportWidth > 768 ? 120 : 100;
+            const markersPerView = viewportWidth > 768 ? 5 : 4;
+            const estimatedGap = (viewportWidth - padding) / markersPerView;
+            
+            const offsetFromMarker = 30;
+            const availableWidth = estimatedGap - offsetFromMarker;
+            const positionInGap = offsetFromMarker + (availableWidth * yearPositionInDecade);
+            
+            minorNode.style.left = `${positionInGap}px`;
+          }
+        });
+
+        // Add click handler to scroll to this specific event
+        minorNode.addEventListener('click', (e) => {
+          e.stopPropagation(); // Prevent marker click from firing
+          
+          // Lock the scrubber to prevent auto-updates during scroll
+          markerLock.isLocked = true;
+          markerLock.reason = 'minor-node-click';
+
+          // Clear any existing unlock timer
+          if (markerLock.unlockTimer) {
+            clearTimeout(markerLock.unlockTimer);
+          }
+          
+          // Immediately update the active state of all nodes
+          const allMinorNodes = gsap.utils.toArray('.minor-node');
+          allMinorNodes.forEach((node) => {
+            node.classList.remove('active', 'complete');
+            const nodeMinorIndex = parseInt(node.getAttribute('data-minor-index') || '0');
+            
+            if (nodeMinorIndex < minorNodeIndex) {
+              node.classList.add('complete');
+            } else if (nodeMinorIndex === minorNodeIndex) {
+              node.classList.add('active');
+            }
+          });
+          
+          // Update decade markers based on the clicked minor node
+          const allMarkers = gsap.utils.toArray('.marker');
+          allMarkers.forEach((m, i) => {
+            m.classList.remove('active', 'complete');
+            if (i === decadeIndex) {
+              m.classList.add('active');
+            } else if (i < decadeIndex) {
+              m.classList.add('complete');
+            }
+          });
+          
+          // Update scrubber progress to align with clicked minor node
+          const scrubberProgress = document.querySelector('.scrubber-progress');
+          if (scrubberProgress) {
+            const scrubberLine = document.querySelector('.scrubber-line');
+            if (scrubberLine) {
+              const lineRect = scrubberLine.getBoundingClientRect();
+              const nodeRect = minorNode.getBoundingClientRect();
+              const nodeCenterX = nodeRect.left + (nodeRect.width / 2) - lineRect.left;
+              const lineWidth = lineRect.width;
+              const scrubberProgressValue = Math.max(0, Math.min(1, nodeCenterX / lineWidth));
+              
+              gsap.to(scrubberProgress, {
+                scaleX: scrubberProgressValue,
+                transformOrigin: 'left',
+                duration: 0.3,
+                ease: 'power2.out'
+              });
+            }
+          }
+
+          // Calculate the scroll position for this event
+          const scrollTriggerInstance = tl.scrollTrigger;
+          if (!scrollTriggerInstance) return;
+
+          const start = scrollTriggerInstance.start;
+          const end = scrollTriggerInstance.end;
+          const scrollDistance = end - start;
+          const targetScroll = start + (scrollDistance * eventProgress);
+
+          console.log(`Minor Node Click: Event ${globalEventIndex} (Decade: ${decadeName}, Local: ${localEventIndex}), Year ${eventYear}, Progress: ${eventProgress.toFixed(3)}`);
+
+          // Smooth scroll to the target position
+          if (window.lenis) {
+            window.lenis.scrollTo(targetScroll, {
+              duration: 1.0,
+              easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+              onComplete: () => {
+                markerLock.unlockTimer = setTimeout(() => {
+                  markerLock.isLocked = false;
+                  markerLock.targetIndex = -1;
+                  markerLock.reason = '';
+                  console.log('Minor Node Click: Unlocked after scroll complete');
+                }, 500);
+              }
+            });
+          } else {
+            window.scrollTo({
+              top: targetScroll,
+              behavior: 'smooth'
+            });
+
+            markerLock.unlockTimer = setTimeout(() => {
+              markerLock.isLocked = false;
+              markerLock.targetIndex = -1;
+              markerLock.reason = '';
+            }, 1500);
+          }
+        });
+
+        minorNodesContainer.appendChild(minorNode);
+        globalEventIndex++;
+        minorNodeIndex++; // Increment minor node index
+      });
+
+      const minorNodesCreated = decadeEvents.filter(e => !e.classList.contains('timeline-cover')).length;
+      console.log(`Timeline: Generated ${minorNodesCreated} minor nodes for decade ${decadeName}`);
+    });
+
+    console.log(`Timeline: Generated ${minorNodeIndex} total minor nodes across ${decades.length} decades`);
+  }
+
+  // Generate minor nodes for individual events
+  generateMinorNodes();
+
+  // Function to initialize scrubber horizontal scrolling with nav arrows
+  function initScrubberScrolling() {
+    const scrollWrapper = document.querySelector('.scrubber-scroll-wrapper');
+    const prevButton = document.querySelector('.scrubber-nav-prev');
+    const nextButton = document.querySelector('.scrubber-nav-next');
+    const markers = gsap.utils.toArray('.marker');
+
+    if (!scrollWrapper || !prevButton || !nextButton) {
+      console.warn('Timeline: Scrubber scroll elements not found');
+      return;
+    }
+
+    // Update nav button states based on scroll position
+    function updateNavButtons() {
+      const scrollLeft = scrollWrapper.scrollLeft;
+      const maxScroll = scrollWrapper.scrollWidth - scrollWrapper.clientWidth;
+
+      // Disable prev if at start
+      if (scrollLeft <= 10) {
+        prevButton.classList.add('disabled');
+      } else {
+        prevButton.classList.remove('disabled');
+      }
+
+      // Disable next if at end
+      if (scrollLeft >= maxScroll - 10) {
+        nextButton.classList.add('disabled');
+      } else {
+        nextButton.classList.remove('disabled');
+      }
+    }
+
+    // Scroll to a specific marker (centering it in view)
+    function scrollToMarker(markerIndex) {
+      if (markerIndex < 0 || markerIndex >= markers.length) return;
+
+      const marker = markers[markerIndex];
+      const markerRect = marker.getBoundingClientRect();
+      const wrapperRect = scrollWrapper.getBoundingClientRect();
+      
+      // Calculate offset to center the marker
+      const markerCenter = marker.offsetLeft + (markerRect.width / 2);
+      const wrapperCenter = scrollWrapper.clientWidth / 2;
+      const targetScroll = markerCenter - wrapperCenter;
+
+      scrollWrapper.scrollTo({
+        left: Math.max(0, targetScroll),
+        behavior: 'smooth'
+      });
+    }
+
+    // Scroll by one marker's width (dynamically calculated)
+    function scrollByMarker(direction) {
+      // Calculate dynamic gap based on viewport (matches CSS calculation)
+      const viewportWidth = window.innerWidth;
+      const padding = viewportWidth > 768 ? 120 : 100; // Match CSS padding
+      const dynamicGap = (viewportWidth - padding) / (viewportWidth > 768 ? 5 : 4); // 5 markers on desktop, 4 on mobile
+      
+      // Scroll amount = gap + approximate marker width (60px)
+      const scrollAmount = dynamicGap + 60;
+      const targetScroll = scrollWrapper.scrollLeft + (scrollAmount * direction);
+
+      scrollWrapper.scrollTo({
+        left: Math.max(0, targetScroll),
+        behavior: 'smooth'
+      });
+    }
+
+    // Nav button click handlers
+    prevButton.addEventListener('click', () => {
+      scrollByMarker(-1);
+    });
+
+    nextButton.addEventListener('click', () => {
+      scrollByMarker(1);
+    });
+
+    // Update button states on scroll
+    scrollWrapper.addEventListener('scroll', updateNavButtons);
+
+    // Initial button state
+    updateNavButtons();
+
+    // Auto-scroll based on active marker (called from updateScrubber)
+    // direction: 1 = forward, -1 = backward, 0 = no change
+    window.scrubberAutoScroll = (activeMarkerIndex, direction = 0) => {
+      // Only auto-scroll if marker is valid
+      if (activeMarkerIndex < 0 || activeMarkerIndex >= markers.length) return;
+
+      const marker = markers[activeMarkerIndex];
+      const markerRect = marker.getBoundingClientRect();
+      const wrapperRect = scrollWrapper.getBoundingClientRect();
+
+      // Calculate viewport boundaries (accounting for nav buttons)
+      const leftBoundary = wrapperRect.left + 100;  // Left edge + nav button + padding
+      const rightBoundary = wrapperRect.right - 100; // Right edge - nav button - padding
+
+      // Check if marker is fully visible with comfortable margins
+      const isFullyVisible = 
+        markerRect.left >= leftBoundary && 
+        markerRect.right <= rightBoundary;
+
+      // Check if we're approaching the edges (one marker away)
+      let shouldScroll = false;
+      let targetMarkerIndex = activeMarkerIndex;
+
+      if (!isFullyVisible) {
+        // Marker is not visible - scroll to it
+        shouldScroll = true;
+      } else {
+        // Marker is visible - check if we need proactive scrolling based on direction
+        
+        if (direction > 0) {
+          // Moving forward - check if next marker needs to come into view
+          if (activeMarkerIndex + 1 < markers.length) {
+            const nextMarker = markers[activeMarkerIndex + 1];
+            const nextMarkerRect = nextMarker.getBoundingClientRect();
+            
+            // If next marker is partially cut off or outside, scroll forward
+            if (nextMarkerRect.right > rightBoundary || nextMarkerRect.left > rightBoundary) {
+              shouldScroll = true;
+              targetMarkerIndex = activeMarkerIndex + 1; // Scroll to show next marker
+              console.log('Scrubber: Proactive scroll forward to show next marker');
+            }
+          }
+        } else if (direction < 0) {
+          // Moving backward - check if previous marker needs to come into view
+          if (activeMarkerIndex - 1 >= 0) {
+            const prevMarker = markers[activeMarkerIndex - 1];
+            const prevMarkerRect = prevMarker.getBoundingClientRect();
+            
+            // If previous marker is partially cut off or outside, scroll backward
+            if (prevMarkerRect.left < leftBoundary || prevMarkerRect.right < leftBoundary) {
+              shouldScroll = true;
+              targetMarkerIndex = activeMarkerIndex - 1; // Scroll to show previous marker
+              console.log('Scrubber: Proactive scroll backward to show previous marker');
+            }
+          }
+        }
+      }
+
+      if (shouldScroll) {
+        // Scroll to center the target marker
+        scrollToMarker(targetMarkerIndex);
+      }
+    };
+
+    console.log('Timeline: Scrubber scrolling initialized');
+  }
+
+  // Initialize scrubber scrolling functionality
+  initScrubberScrolling();
+
   // Add click handlers to timeline scrubber markers
   const markers = gsap.utils.toArray('.marker');
   markers.forEach((marker, index) => {
     marker.addEventListener('click', () => {
-      // Lock the marker to prevent updateScrubber from changing it during scroll
+      console.log(`Marker Click: Clicked marker index ${index}`);
+      
+      // Very short lock just to prevent interference during scroll start
       markerLock.isLocked = true;
       markerLock.targetIndex = index;
       markerLock.reason = 'click';
@@ -899,15 +1421,13 @@ export function initTimelineAnimation() {
         clearTimeout(markerLock.unlockTimer);
       }
       
-      // Immediately set the clicked marker as active
-      markers.forEach((m, i) => {
-        m.classList.remove('active', 'complete');
-        if (i === index) {
-          m.classList.add('active');
-        } else if (i < index) {
-          m.classList.add('complete');
-        }
-      });
+      // Unlock quickly - let updateScrubber handle the state during scroll
+      markerLock.unlockTimer = setTimeout(() => {
+        markerLock.isLocked = false;
+        markerLock.targetIndex = -1;
+        markerLock.reason = '';
+        console.log('Marker Click: Unlocked - updateScrubber will handle state');
+      }, 100); // Very short delay
       
       // Calculate the target progress for this marker
       const targetProgress = calculateProgressForMarker(index);
@@ -922,36 +1442,20 @@ export function initTimelineAnimation() {
       const scrollDistance = end - start;
       const targetScroll = start + (scrollDistance * targetProgress);
       
-      console.log(`Marker Click: Index ${index}, Target Progress: ${targetProgress.toFixed(3)}, Target Scroll: ${targetScroll.toFixed(0)}`);
+      console.log(`Marker Click: Scrolling to progress ${targetProgress.toFixed(3)}, scroll position: ${targetScroll.toFixed(0)}`);
       
       // Smooth scroll to the target position
+      // updateScrubber will handle all state updates during the scroll
       if (window.lenis) {
         window.lenis.scrollTo(targetScroll, { 
           duration: 1.2,
-          easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // easeOutExpo
-          onComplete: () => {
-            // Unlock after scroll completes, with a small delay for scrub to settle
-            markerLock.unlockTimer = setTimeout(() => {
-              markerLock.isLocked = false;
-              markerLock.targetIndex = -1;
-              markerLock.reason = '';
-              console.log('Marker Click: Unlocked after scroll complete');
-            }, 500);
-          }
+          easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) // easeOutExpo
         });
       } else {
         window.scrollTo({
           top: targetScroll,
           behavior: 'smooth'
         });
-        
-        // Fallback unlock timer for native scroll
-        markerLock.unlockTimer = setTimeout(() => {
-          markerLock.isLocked = false;
-          markerLock.targetIndex = -1;
-          markerLock.reason = '';
-          console.log('Marker Click: Unlocked after scroll complete (native)');
-        }, 1500);
       }
     });
     
