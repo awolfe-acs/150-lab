@@ -204,6 +204,26 @@ body.timeline-resizing {
       }
     }
   }
+
+  &:not(.timeline-cover) {
+    .event-date {
+      .event-value {
+        font-size: clamp(48px, 4vw, 12vw);
+        position:fixed;
+        left:8vw;
+        bottom:16vw;
+        font-weight:800;
+        mix-blend-mode:overlay;
+        opacity:0.2;
+        //color: transparent;
+        //-webkit-text-stroke: 1px white;   /* WebKit/Blink */
+        //text-stroke: 1px white;           /* Future standard */
+        text-shadow:none;
+        transform:scale(2);
+        transform-origin:bottom left;
+      }
+    }
+  }
 }
 
 // Event date display (left side)
@@ -235,6 +255,7 @@ body.timeline-resizing {
   //border: 1px solid rgba(255, 255, 255, 0.2);
   //border-radius: 24px;
   padding: 48px;
+  min-height:80vh;
   color: white;
 
   .event-year {

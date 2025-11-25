@@ -433,7 +433,27 @@ export function initTimelineAnimation() {
         
         const styleEl = document.getElementById('timeline-window-start-bg-style');
         
-        // CRITICAL SAFETY CHECK: If pseudo-element has ANY opacity, BG MUST be 0
+        // CRITICAL SAFETY CHECK 1: If BG is full viewport size, FORCE opacity to 1.0
+        const bgRect = timelineWindowBg.getBoundingClientRect();
+        const isFullViewport = (
+          Math.abs(bgRect.width - window.innerWidth) < 10 &&
+          Math.abs(bgRect.height - window.innerHeight) < 10 &&
+          Math.abs(bgRect.top) < 10 &&
+          Math.abs(bgRect.left) < 10
+        );
+        
+        if (isFullViewport) {
+          // BG is full viewport - MUST be opacity 1.0
+          const currentOpacity = parseFloat(timelineWindowBg.style.opacity || '0');
+          if (Math.abs(currentOpacity - 1.0) > 0.01) {
+            timelineWindowBg.style.opacity = '1';
+            timelineWindowBg.style.visibility = 'visible';
+            console.log('Timeline: SAFETY - BG is full viewport, forcing opacity to 1.0 from', currentOpacity.toFixed(3));
+          }
+          return; // Skip other checks when BG is full viewport
+        }
+        
+        // CRITICAL SAFETY CHECK 2: If pseudo-element has ANY opacity, BG MUST be 0
         // This is the ultimate protection when scrolling back up
         const pseudoComputedStyle = window.getComputedStyle(timelineWindowStart, '::before');
         const pseudoOpacity = parseFloat(pseudoComputedStyle.opacity || '0');
