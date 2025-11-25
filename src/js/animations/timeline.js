@@ -65,85 +65,155 @@ export function initTimelineAnimation() {
     // Continue without Three.js visuals
   }
 
+  // Cache for position with interpolation to prevent jitter
+  let lastPosition = { top: 0, left: 0, width: 0, height: 0 };
+  let targetPosition = { top: 0, left: 0, width: 0, height: 0 };
+  
+  // Lerp (linear interpolation) for smooth transitions
+  const lerp = (start, end, factor) => start + (end - start) * factor;
+  
   // Function to position background to match the span (like a highlight box)
   const positionBgToSpan = () => {
+    // Check if elements still exist
+    if (!timelineWindowStart || !timelineWindowBg) return;
+    
     const rect = timelineWindowStart.getBoundingClientRect();
+    
+    // Get the computed transform to account for any GSAP animations
     const computedStyle = window.getComputedStyle(timelineWindowStart);
+    const transform = computedStyle.transform;
     
-    // Calculate actual text height accounting for line-height
-    const fontSize = parseFloat(computedStyle.fontSize);
+    // Extract translate values from transform matrix if present
+    let translateY = 0;
+    if (transform && transform !== 'none') {
+      const matrix = new DOMMatrix(transform);
+      translateY = matrix.m42; // Y translation from matrix
+    }
     
-    // Center the background within the span's bounding box
+    // Adjust rect.top to compensate for any Y transforms
+    // This helps maintain accurate positioning during scroll reveals
+    const adjustedTop = rect.top - translateY;
+    
+    // Use tighter threshold for Y-axis (more sensitive to vertical changes)
+    // Use looser threshold for X-axis (less critical)
+    const yThreshold = 0.1; // Very sensitive to Y changes
+    const xThreshold = 0.5; // Standard for X changes
+    const sizeThreshold = 0.5; // Standard for size changes
+    
+    // Check if position actually changed
+    const positionChanged = 
+      Math.abs(adjustedTop - targetPosition.top) > yThreshold ||
+      Math.abs(rect.left - targetPosition.left) > xThreshold ||
+      Math.abs(rect.width - targetPosition.width) > sizeThreshold ||
+      Math.abs(rect.height - targetPosition.height) > sizeThreshold;
+    
+    if (!positionChanged && targetPosition.top !== 0) {
+      return; // Skip update if position hasn't changed significantly
+    }
+    
+    // Update target position
+    targetPosition = {
+      top: adjustedTop,
+      left: rect.left,
+      width: rect.width,
+      height: rect.height
+    };
+    
+    // Smooth interpolation to prevent jitter (especially on Y-axis)
+    // Use faster lerp for first-time positioning
+    const lerpFactor = lastPosition.top === 0 ? 1 : 0.6;
+    
+    lastPosition = {
+      top: lerp(lastPosition.top || adjustedTop, adjustedTop, lerpFactor),
+      left: lerp(lastPosition.left || rect.left, rect.left, lerpFactor),
+      width: lerp(lastPosition.width || rect.width, rect.width, lerpFactor),
+      height: lerp(lastPosition.height || rect.height, rect.height, lerpFactor)
+    };
     
     // Get current opacity (preserve during tracking)
     const currentOpacity = timelineWindowBg.style.opacity || '0';
     
-    gsap.set(timelineWindowBg, {
-      position: 'fixed',
-      top: `${rect.top}px`,
-      left: `${rect.left}px`,
-      width: `${rect.width}px`,
-      height: `${rect.height}px`,
-      backgroundImage: 'linear-gradient(to bottom, #0493E2, #0493E2)',
-      zIndex: 0,
-      opacity: currentOpacity, // Preserve current opacity
-      borderRadius: '4px'
-    });
+    // Use direct style manipulation for instant updates (no GSAP delay)
+    // Use sub-pixel precision with transform for smoother Y-axis tracking
+    timelineWindowBg.style.position = 'fixed';
+    timelineWindowBg.style.top = `${lastPosition.top}px`;
+    timelineWindowBg.style.left = `${lastPosition.left}px`;
+    timelineWindowBg.style.width = `${lastPosition.width}px`;
+    timelineWindowBg.style.height = `${lastPosition.height}px`;
+    timelineWindowBg.style.backgroundImage = 'linear-gradient(to bottom, #0493E2, #0493E2)';
+    timelineWindowBg.style.zIndex = '0';
+    timelineWindowBg.style.opacity = currentOpacity;
+    timelineWindowBg.style.borderRadius = '4px';
+    
+    // Enable GPU acceleration for smoother rendering
+    timelineWindowBg.style.willChange = 'top, left, width, height, opacity';
   };
 
-  // Set initial state - completely transparent
+  // MAGIC TRICK: Use pseudo-element for span background to avoid affecting text opacity
+  
+  // Set timeline window BG to invisible initially
   gsap.set(timelineWindowBg, {
     opacity: 0
   });
+  
+  // Create a style element for the pseudo-element background
+  const styleEl = document.createElement('style');
+  styleEl.id = 'timeline-window-start-bg-style';
+  styleEl.textContent = `
+    #timeline-window-start::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -6px;
+      right: -6px;
+      bottom: -2px;
+      background: linear-gradient(to bottom, #0493E2, #0493E2);
+      border-radius: 4px;
+      opacity: 0;
+      z-index: -1;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+  `;
+  document.head.appendChild(styleEl);
+  
+  // Setup span for pseudo-element
+  timelineWindowStart.style.position = 'relative';
+  timelineWindowStart.style.zIndex = '1';
 
-  // Wait for SplitType to initialize, then position
-  // Use requestAnimationFrame to ensure DOM is fully rendered
+  // Position the BG element once, but keep it invisible
   requestAnimationFrame(() => {
     setTimeout(() => {
       positionBgToSpan();
     }, 100);
   });
 
-  // Continuously update position on resize
+  // Update position only on resize (no continuous tracking needed with magic trick)
   const resizeObserver = new ResizeObserver(() => {
     positionBgToSpan();
   });
   resizeObserver.observe(document.body);
 
-  // Track scroll position and reposition until trigger activates
-  // Always track the span position, regardless of scroll direction
-  let isTracking = true;
-  
-  // Use Lenis's scroll event for smoother tracking with smooth scrolling
-  const trackWithLenis = () => {
-    if (isTracking && window.lenis) {
-      positionBgToSpan();
-    }
-  };
-  
-  // Hook into Lenis scroll updates if available
-  if (window.lenis) {
-    window.lenis.on('scroll', trackWithLenis);
-  }
-  
-  // Fallback to setInterval if Lenis isn't available or as additional safety
-  let trackingInterval = setInterval(() => {
-    if (isTracking) {
-      positionBgToSpan();
-    }
-  }, 16); // ~60fps
+  // No continuous tracking needed - the span's own background handles the visual
+  // We only position the BG element once for the handoff moment
+  let rafId = null;
+  const trackWithLenis = () => {}; // Keep for cleanup reference
+  const trackWithScroll = () => {}; // Keep for cleanup reference
 
   // Calculate total horizontal scroll distance
   const events = gsap.utils.toArray('.timeline-event');
   const decades = gsap.utils.toArray('.timeline-decade');
   const remainingEventsCount = events.length - 1;
   
-  // Define scroll durations (in viewport heights)
-  // Much larger scroll area to accommodate pause/hold
-  const initialPhaseDuration = window.innerHeight * 1.0; // Phase A - giving it a full hold duration
-  const scrollPerEvent = window.innerHeight * 2.0; // Move + Hold per event
+  // Define scroll durations as functions to get current viewport size on resize
+  const getInitialPhaseDuration = () => window.innerHeight * 1.0;
+  const getScrollPerEvent = () => window.innerHeight * 2.0;
+  const getTotalScrollDistance = () => getInitialPhaseDuration() + (remainingEventsCount * getScrollPerEvent());
   
-  const totalScrollDistance = initialPhaseDuration + (remainingEventsCount * scrollPerEvent);
+  // Initial values
+  const initialPhaseDuration = getInitialPhaseDuration();
+  const scrollPerEvent = getScrollPerEvent();
+  const totalScrollDistance = getTotalScrollDistance();
   
   // Adjust animation durations (relative timeline units)
   const moveDuration = 1.0;
@@ -156,11 +226,12 @@ export function initTimelineAnimation() {
   const phaseBDuration = remainingEventsCount * totalCycleDuration;
   const timelineTotalDuration = phaseADuration + phaseBDuration;
 
-  // Lock to prevent updateScrubber from overriding clicked marker
-  let markerClickLock = {
+  // Lock to prevent updateScrubber from overriding clicked/resized marker
+  let markerLock = {
     isLocked: false,
     targetIndex: -1,
-    unlockTimer: null
+    unlockTimer: null,
+    reason: '' // 'click' or 'resize'
   };
 
   // Helper to update scrubber based on decades (not individual events)
@@ -174,9 +245,9 @@ export function initTimelineAnimation() {
     let activeMarkerIndex = 0;
     let scrubberProgressValue = 0;
     
-    // If marker click is in progress, use the locked target index
-    if (markerClickLock.isLocked && markerClickLock.targetIndex >= 0) {
-      activeMarkerIndex = markerClickLock.targetIndex;
+    // If marker is locked (click or resize), use the locked target index
+    if (markerLock.isLocked && markerLock.targetIndex >= 0) {
+      activeMarkerIndex = markerLock.targetIndex;
       scrubberProgressValue = (2 * activeMarkerIndex + 1) / (2 * totalMarkers);
     } else {
       // Calculate threshold based on timeline duration ratios
@@ -298,23 +369,49 @@ export function initTimelineAnimation() {
   };
 
   // Phase 0: Fade in background highlight after get-involved-message text is visible
-  gsap.timeline({
+  // Store reference to kill it during handoff
+  const pseudoFadeTl = gsap.timeline({
     scrollTrigger: {
       trigger: timelineWindowStart,
       start: 'top 90%', // Start fade when span itself enters viewport
       end: 'top 70%',   // Complete fade quickly once visible
       scrub: 1,
       onLeaveBack: () => {
-        // Fade back out when scrolling up
-        gsap.to(timelineWindowBg, {
-          opacity: 0,
-          duration: 0.3
-        });
+        // Fade back out the pseudo-element when scrolling up
+        const styleEl = document.getElementById('timeline-window-start-bg-style');
+        if (styleEl) {
+          styleEl.textContent = styleEl.textContent.replace(/opacity: [0-9.]+/, 'opacity: 0');
+        }
       }
     }
-  }).to(timelineWindowBg, {
-    opacity: 0.5,
-    ease: 'power2.out'
+  }).to({}, {
+    // Fade in the span's pseudo-element background
+    duration: 1,
+    ease: 'power2.out',
+    onUpdate: function() {
+      const progress = this.progress();
+      const opacity = progress * 0.5; // 0 to 0.5
+      
+      // Update pseudo-element opacity via style element
+      const styleEl = document.getElementById('timeline-window-start-bg-style');
+      if (styleEl) {
+        styleEl.textContent = `
+          #timeline-window-start::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -6px;
+            right: -6px;
+            bottom: -2px;
+            background: linear-gradient(to bottom, #0493E2, #0493E2);
+            border-radius: 4px;
+            opacity: ${opacity};
+            z-index: -1;
+            pointer-events: none;
+          }
+        `;
+      }
+    }
   });
 
   // Capture the background's position state before pin
@@ -330,8 +427,81 @@ export function initTimelineAnimation() {
       scrub: 1,
       anticipatePin: 1,
       onUpdate: (self) => {
+        // REAL-TIME visibility management - runs EVERY FRAME for instant response
+        const progress = self.progress;
+        const handoffThreshold = 0.01; // 1% - very tight threshold
+        
+        const styleEl = document.getElementById('timeline-window-start-bg-style');
+        
+        // CRITICAL SAFETY CHECK: If pseudo-element has ANY opacity, BG MUST be 0
+        // This is the ultimate protection when scrolling back up
+        const pseudoComputedStyle = window.getComputedStyle(timelineWindowStart, '::before');
+        const pseudoOpacity = parseFloat(pseudoComputedStyle.opacity || '0');
+        
+        if (pseudoOpacity > 0) {
+          // Pseudo-element is visible - BG MUST be hidden
+          const currentBgOpacity = parseFloat(timelineWindowBg.style.opacity || '1');
+          if (currentBgOpacity > 0) {
+            timelineWindowBg.style.opacity = '0';
+            timelineWindowBg.style.visibility = 'hidden'; // Extra safety
+            console.log('Timeline: SAFETY - Pseudo visible, forcing BG to 0. Pseudo opacity:', pseudoOpacity.toFixed(3));
+          }
+        }
+        
+        if (progress < handoffThreshold) {
+          // BEFORE handoff: Pseudo visible, BG hidden
+          // Force update EVERY frame to ensure it sticks
+          timelineWindowBg.style.opacity = '0';
+          timelineWindowBg.style.visibility = 'hidden';
+          
+          if (styleEl) {
+            styleEl.textContent = `
+              #timeline-window-start::before {
+                content: '';
+                position: absolute;
+                top: -2px;
+                left: -6px;
+                right: -6px;
+                bottom: -2px;
+                background: linear-gradient(to bottom, #0493E2, #0493E2);
+                border-radius: 4px;
+                opacity: 0.5 !important;
+                z-index: -1;
+                pointer-events: none;
+                transition: none !important;
+              }
+            `;
+          }
+        } else {
+          // AFTER handoff: BG visible, Pseudo hidden
+          // Only make BG visible if pseudo is confirmed at 0
+          if (pseudoOpacity < 0.01) {
+            timelineWindowBg.style.opacity = '0.5';
+            timelineWindowBg.style.visibility = 'visible';
+          }
+          
+          if (styleEl) {
+            styleEl.textContent = `
+              #timeline-window-start::before {
+                content: '';
+                position: absolute;
+                top: -2px;
+                left: -6px;
+                right: -6px;
+                bottom: -2px;
+                background: linear-gradient(to bottom, #0493E2, #0493E2);
+                border-radius: 4px;
+                opacity: 0 !important;
+                z-index: -1;
+                pointer-events: none;
+                transition: none !important;
+              }
+            `;
+          }
+        }
+        
         // Capture position right before pin activates (at start)
-        if (self.progress < 0.01 && !capturedPosition) {
+        if (progress < 0.01 && !capturedPosition) {
           const rect = timelineWindowStart.getBoundingClientRect();
           capturedPosition = {
             top: rect.top,
@@ -342,34 +512,98 @@ export function initTimelineAnimation() {
         }
       },
       onEnter: () => {
-        isTracking = false; // Stop continuous repositioning
-        // Lock the background to its captured position while preserving other styles
-        if (capturedPosition) {
-          gsap.set(timelineWindowBg, {
-            top: `${capturedPosition.top}px`,
-            left: `${capturedPosition.left}px`,
-            width: `${capturedPosition.width}px`,
-            height: `${capturedPosition.height}px`,
-            backgroundImage: 'linear-gradient(to bottom, #0493E2, #0493E2)',
-            borderRadius: '4px'
-          });
+        console.log('Timeline: INSTANT handoff from span to BG element');
+        
+        // CRITICAL: Kill the pseudo fade timeline to prevent it from overriding our opacity
+        if (pseudoFadeTl) {
+          pseudoFadeTl.kill();
+          console.log('Timeline: Killed pseudo fade timeline');
         }
-        console.log('Timeline: Pinning get-involved-message and expanding background', capturedPosition);
+        
+        // INSTANT HANDOFF: Transfer from span pseudo-element to BG element
+        // 1. Get the EXACT current position of the span (including padding from pseudo)
+        const rect = timelineWindowStart.getBoundingClientRect();
+        
+        // Account for pseudo-element padding (-6px left/right, -2px top/bottom)
+        const adjustedTop = rect.top - 2;
+        const adjustedLeft = rect.left - 6;
+        const adjustedWidth = rect.width + 12; // +6px on each side
+        const adjustedHeight = rect.height + 4; // +2px on each side
+        
+        // 2. INSTANTLY hide the pseudo-element background (force to 0)
+        const styleEl = document.getElementById('timeline-window-start-bg-style');
+        if (styleEl) {
+          styleEl.textContent = `
+            #timeline-window-start::before {
+              content: '';
+              position: absolute;
+              top: -2px;
+              left: -6px;
+              right: -6px;
+              bottom: -2px;
+              background: linear-gradient(to bottom, #0493E2, #0493E2);
+              border-radius: 4px;
+              opacity: 0 !important;
+              z-index: -1;
+              pointer-events: none;
+              transition: none !important;
+            }
+          `;
+        }
+        
+        // 3. INSTANTLY position BG element exactly where pseudo-element was (using direct style for zero delay)
+        timelineWindowBg.style.position = 'fixed';
+        timelineWindowBg.style.top = `${adjustedTop}px`;
+        timelineWindowBg.style.left = `${adjustedLeft}px`;
+        timelineWindowBg.style.width = `${adjustedWidth}px`;
+        timelineWindowBg.style.height = `${adjustedHeight}px`;
+        timelineWindowBg.style.backgroundImage = 'linear-gradient(to bottom, #0493E2, #0493E2)';
+        timelineWindowBg.style.borderRadius = '4px';
+        timelineWindowBg.style.zIndex = '0';
+        timelineWindowBg.style.opacity = '0.5'; // Match pseudo-element opacity
+        
+        // 4. Store this position for expansion animation
+        capturedPosition = {
+          top: adjustedTop,
+          left: adjustedLeft,
+          width: adjustedWidth,
+          height: adjustedHeight
+        };
+        
+        console.log('Timeline: INSTANT handoff complete, BG element now visible at', capturedPosition);
       },
       onLeaveBack: () => {
-        isTracking = true; // Resume tracking if scrolling back up
-        capturedPosition = null; // Reset captured position
-        // Immediately reposition multiple times to sync with Lenis
-        requestAnimationFrame(() => {
-          positionBgToSpan();
-          requestAnimationFrame(() => {
-            positionBgToSpan();
-            setTimeout(() => {
-              positionBgToSpan();
-            }, 50);
-          });
-        });
-        console.log('Timeline: Resuming background tracking');
+        console.log('Timeline: INSTANT reverse handoff from BG element to span');
+        
+        // INSTANT REVERSE HANDOFF: Transfer back from BG element to pseudo-element
+        // 1. INSTANTLY hide the BG element
+        timelineWindowBg.style.opacity = '0';
+        
+        // 2. INSTANTLY restore the pseudo-element background
+        const styleEl = document.getElementById('timeline-window-start-bg-style');
+        if (styleEl) {
+          styleEl.textContent = `
+            #timeline-window-start::before {
+              content: '';
+              position: absolute;
+              top: -2px;
+              left: -6px;
+              right: -6px;
+              bottom: -2px;
+              background: linear-gradient(to bottom, #0493E2, #0493E2);
+              border-radius: 4px;
+              opacity: 0.5;
+              z-index: -1;
+              pointer-events: none;
+              transition: opacity 0.3s ease;
+            }
+          `;
+        }
+        
+        // 3. Reset captured position
+        capturedPosition = null;
+        
+        console.log('Timeline: INSTANT reverse handoff complete, pseudo-element restored');
       }
     }
   });
@@ -387,7 +621,8 @@ export function initTimelineAnimation() {
           top: `${capturedPosition.top}px`,
           left: `${capturedPosition.left}px`,
           width: `${capturedPosition.width}px`,
-          height: `${capturedPosition.height}px`
+          height: `${capturedPosition.height}px`,
+          opacity: 0.5 // Start from handoff opacity
         };
       }
       const rect = timelineWindowStart.getBoundingClientRect();
@@ -395,7 +630,8 @@ export function initTimelineAnimation() {
         top: `${rect.top}px`,
         left: `${rect.left}px`,
         width: `${rect.width}px`,
-        height: `${rect.height}px`
+        height: `${rect.height}px`,
+        opacity: 0.5 // Start from handoff opacity
       };
     },
     {
@@ -406,7 +642,12 @@ export function initTimelineAnimation() {
       opacity: 1,
       borderRadius: '0px',
       ease: 'power2.inOut',
-      duration: 0.7
+      duration: 0.7,
+      onReverseComplete: () => {
+        // When reversing (scrolling back), set opacity back to 0 after reaching start
+        timelineWindowBg.style.opacity = '0';
+        console.log('Timeline: BG element hidden on reverse');
+      }
     }, 
     0
   );
@@ -437,11 +678,21 @@ export function initTimelineAnimation() {
     scrollTrigger: {
       trigger: timeline,
       start: 'top top',
-      end: `+=${totalScrollDistance}`,
+      end: () => `+=${getTotalScrollDistance()}`, // Function to recalculate on resize
       pin: timelineContainer,
       scrub: 1, // smooth scrubbing
       anticipatePin: 1,
       invalidateOnRefresh: true,
+      onRefresh: (self) => {
+        // Called after refresh/resize - ensure animations are in correct state
+        console.log('Timeline: ScrollTrigger refreshed, progress:', self.progress.toFixed(3));
+        
+        // Update scrubber and background state immediately
+        if (self.animation) {
+          updateScrubber(self.animation.progress());
+          manageBackgroundPause(self.progress);
+        }
+      },
       onUpdate: (self) => {
         // Use animation progress to account for scrub lag (visual position)
         updateScrubber(self.animation.progress());
@@ -553,13 +804,14 @@ export function initTimelineAnimation() {
       // Calculate target X to center this event
       // Event 1 is at 100vw, needs to move to 0 -> x: -100vw
       // Event 2 is at 200vw, needs to move to 0 -> x: -200vw
-      const targetX = -(index + 1) * window.innerWidth;
+      // Use function to get current width on invalidate
+      const getTargetX = () => -(index + 1) * window.innerWidth;
       
       const eventLabel = `event-${index}`;
       
       // 1. Move Track
       tl.to(timelineTrack, {
-        x: targetX,
+        x: getTargetX,
         duration: moveDuration,
         ease: 'power1.inOut'
       }, eventLabel);
@@ -618,12 +870,13 @@ export function initTimelineAnimation() {
   markers.forEach((marker, index) => {
     marker.addEventListener('click', () => {
       // Lock the marker to prevent updateScrubber from changing it during scroll
-      markerClickLock.isLocked = true;
-      markerClickLock.targetIndex = index;
+      markerLock.isLocked = true;
+      markerLock.targetIndex = index;
+      markerLock.reason = 'click';
       
       // Clear any existing unlock timer
-      if (markerClickLock.unlockTimer) {
-        clearTimeout(markerClickLock.unlockTimer);
+      if (markerLock.unlockTimer) {
+        clearTimeout(markerLock.unlockTimer);
       }
       
       // Immediately set the clicked marker as active
@@ -658,9 +911,10 @@ export function initTimelineAnimation() {
           easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // easeOutExpo
           onComplete: () => {
             // Unlock after scroll completes, with a small delay for scrub to settle
-            markerClickLock.unlockTimer = setTimeout(() => {
-              markerClickLock.isLocked = false;
-              markerClickLock.targetIndex = -1;
+            markerLock.unlockTimer = setTimeout(() => {
+              markerLock.isLocked = false;
+              markerLock.targetIndex = -1;
+              markerLock.reason = '';
               console.log('Marker Click: Unlocked after scroll complete');
             }, 500);
           }
@@ -672,9 +926,10 @@ export function initTimelineAnimation() {
         });
         
         // Fallback unlock timer for native scroll
-        markerClickLock.unlockTimer = setTimeout(() => {
-          markerClickLock.isLocked = false;
-          markerClickLock.targetIndex = -1;
+        markerLock.unlockTimer = setTimeout(() => {
+          markerLock.isLocked = false;
+          markerLock.targetIndex = -1;
+          markerLock.reason = '';
           console.log('Marker Click: Unlocked after scroll complete (native)');
         }, 1500);
       }
@@ -706,15 +961,17 @@ export function initTimelineAnimation() {
 
   // Store cleanup references
   window._timelineCleanup = {
-    interval: trackingInterval,
+    rafId: rafId,
     resizeObserver: resizeObserver,
-    lenisCallback: trackWithLenis
+    lenisCallback: trackWithLenis,
+    scrollCallback: trackWithScroll
   };
 
-  // Store ScrollTrigger reference for resize handling
+  // Store ScrollTrigger and markerLock references for resize handling
   if (tl.scrollTrigger) {
     resizeState.timelineScrollTrigger = tl.scrollTrigger;
   }
+  resizeState.markerLockRef = markerLock; // Store reference to markerLock for resize handlers
 
   // Force a refresh to ensure subsequent ScrollTriggers (like sliding cards) 
   // recalculate their positions after the timeline pin is set up
@@ -731,7 +988,8 @@ let resizeState = {
   savedProgress: null,
   savedActiveEvent: null,
   savedActiveDecade: null,
-  timelineScrollTrigger: null
+  timelineScrollTrigger: null,
+  markerLockRef: null // Reference to the markerLock object from initTimelineAnimation
 };
 
 function captureTimelineState() {
@@ -746,9 +1004,18 @@ function captureTimelineState() {
   // Find which event is currently visible/active
   const events = gsap.utils.toArray('.timeline-event');
   const decades = gsap.utils.toArray('.timeline-decade');
+  const markers = gsap.utils.toArray('.marker');
   
   let activeEventIndex = 0;
   let activeDecadeIndex = 0;
+  let activeMarkerIndex = -1;
+  
+  // Capture the currently active marker from the DOM (most accurate)
+  markers.forEach((marker, index) => {
+    if (marker.classList.contains('active')) {
+      activeMarkerIndex = index;
+    }
+  });
   
   // Use the same logic as updateScrubber to determine active event
   const totalEvents = events.length;
@@ -771,10 +1038,18 @@ function captureTimelineState() {
     }
   }
   
+  // If we captured an active marker, use that as the authoritative decade index
+  if (activeMarkerIndex >= 0) {
+    activeDecadeIndex = activeMarkerIndex;
+  }
+  
+  console.log('Timeline Resize: Captured state - marker:', activeMarkerIndex, 'decade:', activeDecadeIndex, 'progress:', progress.toFixed(3));
+  
   return {
     progress,
     activeEventIndex,
     activeDecadeIndex,
+    activeMarkerIndex, // Store the actual marker that was active
     scrollPosition: window.pageYOffset || document.documentElement.scrollTop
   };
 }
@@ -793,7 +1068,7 @@ function restoreTimelinePosition(state) {
   // Use the saved progress to calculate new scroll position
   const targetScroll = start + (scrollDistance * state.progress);
   
-  console.log(`Timeline Resize: Restoring to event ${state.activeEventIndex}, decade ${state.activeDecadeIndex}, progress ${state.progress.toFixed(3)}`);
+  console.log(`Timeline Resize: Restoring to event ${state.activeEventIndex}, decade ${state.activeDecadeIndex}, marker ${state.activeMarkerIndex}, progress ${state.progress.toFixed(3)}`);
   
   // Immediately jump to position (no smooth scroll during resize)
   if (window.lenis) {
@@ -807,6 +1082,20 @@ function restoreTimelinePosition(state) {
       top: targetScroll,
       behavior: 'auto' // Instant, no smooth
     });
+  }
+  
+  // Restore the marker state explicitly
+  if (state.activeMarkerIndex >= 0) {
+    const markers = gsap.utils.toArray('.marker');
+    markers.forEach((marker, index) => {
+      marker.classList.remove('active', 'complete');
+      if (index === state.activeMarkerIndex) {
+        marker.classList.add('active');
+      } else if (index < state.activeMarkerIndex) {
+        marker.classList.add('complete');
+      }
+    });
+    console.log(`Timeline Resize: Restored marker ${state.activeMarkerIndex} as active`);
   }
 }
 
@@ -828,23 +1117,98 @@ function handleResizeStart() {
 }
 
 function handleResizeEnd() {
-  // Refresh ScrollTrigger calculations
-  ScrollTrigger.refresh();
+  console.log('Timeline Resize: Starting resize end handler');
   
-  // Wait a bit for ScrollTrigger to recalculate, then restore position
+  // First, refresh ScrollTrigger with invalidation to recalculate everything
+  ScrollTrigger.refresh(true); // true = invalidate all on refresh
+  
+  // Wait for ScrollTrigger to fully recalculate
   requestAnimationFrame(() => {
-    setTimeout(() => {
-      if (resizeState.savedProgress) {
-        restoreTimelinePosition(resizeState.savedProgress);
-      }
+    requestAnimationFrame(() => {
+      // Force ScrollTrigger update to apply current scroll position
+      ScrollTrigger.update();
       
-      // Remove resizing class and clear resize state after a brief delay
-      setTimeout(() => {
+      // If we have saved progress, restore it
+      if (resizeState.savedProgress && resizeState.timelineScrollTrigger) {
+        const scrollTrigger = resizeState.timelineScrollTrigger;
+        
+        // Calculate new scroll position
+        const start = scrollTrigger.start;
+        const end = scrollTrigger.end;
+        const scrollDistance = end - start;
+        const targetScroll = start + (scrollDistance * resizeState.savedProgress.progress);
+        
+        console.log('Timeline Resize: Restoring to progress', resizeState.savedProgress.progress.toFixed(3));
+        
+        // Use Lenis or native scroll to restore position
+        if (window.lenis) {
+          window.lenis.scrollTo(targetScroll, { 
+            immediate: true,
+            force: true
+          });
+        } else {
+          window.scrollTo({
+            top: targetScroll,
+            behavior: 'auto'
+          });
+        }
+        
+        // Lock the marker to the saved state during resize restoration
+        if (resizeState.savedProgress.activeMarkerIndex >= 0 && resizeState.markerLockRef) {
+          resizeState.markerLockRef.isLocked = true;
+          resizeState.markerLockRef.targetIndex = resizeState.savedProgress.activeMarkerIndex;
+          resizeState.markerLockRef.reason = 'resize';
+          
+          // Immediately restore marker classes
+          const markers = gsap.utils.toArray('.marker');
+          markers.forEach((marker, index) => {
+            marker.classList.remove('active', 'complete');
+            if (index === resizeState.savedProgress.activeMarkerIndex) {
+              marker.classList.add('active');
+            } else if (index < resizeState.savedProgress.activeMarkerIndex) {
+              marker.classList.add('complete');
+            }
+          });
+        }
+        
+        // Force another update after scroll restoration and ensure animations are in correct state
+        setTimeout(() => {
+          ScrollTrigger.update();
+          
+          // Force the timeline to update its animation state
+          if (scrollTrigger.animation) {
+            scrollTrigger.animation.invalidate();
+            scrollTrigger.animation.progress(scrollTrigger.animation.progress());
+          }
+          
+          // Additional safety: trigger a scroll event to ensure everything updates
+          window.dispatchEvent(new Event('scroll'));
+          
+          // Unlock marker after everything has settled
+          setTimeout(() => {
+            if (resizeState.markerLockRef && resizeState.markerLockRef.reason === 'resize') {
+              resizeState.markerLockRef.isLocked = false;
+              resizeState.markerLockRef.targetIndex = -1;
+              resizeState.markerLockRef.reason = '';
+              console.log('Timeline Resize: Marker unlocked');
+            }
+          }, 500);
+          
+          // Remove resizing class
+          document.body.classList.remove('timeline-resizing');
+          resizeState.isResizing = false;
+          resizeState.savedProgress = null;
+          
+          console.log('Timeline Resize: Complete');
+        }, 150); // Increased timeout for animation to settle
+      } else {
+        // No saved progress, just clean up
         document.body.classList.remove('timeline-resizing');
         resizeState.isResizing = false;
         resizeState.savedProgress = null;
-      }, 150);
-    }, 50);
+        console.log('Timeline Resize: Complete (no saved state)');
+      }
+    });
   });
 }
 
@@ -903,16 +1267,19 @@ export function disposeTimeline() {
     timelineScene.dispose();
   }
   
-  // Clean up interval, resize observer, and Lenis listener
+  // Clean up RAF, resize observer, and scroll listeners
   if (window._timelineCleanup) {
-    if (window._timelineCleanup.interval) {
-      clearInterval(window._timelineCleanup.interval);
+    if (window._timelineCleanup.rafId) {
+      cancelAnimationFrame(window._timelineCleanup.rafId);
     }
     if (window._timelineCleanup.resizeObserver) {
       window._timelineCleanup.resizeObserver.disconnect();
     }
     if (window._timelineCleanup.lenisCallback && window.lenis) {
       window.lenis.off('scroll', window._timelineCleanup.lenisCallback);
+    }
+    if (window._timelineCleanup.scrollCallback) {
+      window.removeEventListener('scroll', window._timelineCleanup.scrollCallback);
     }
     window._timelineCleanup = null;
   }
