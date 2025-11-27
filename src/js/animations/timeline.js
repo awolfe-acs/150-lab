@@ -161,8 +161,8 @@ export function initTimelineAnimation() {
     timelineWindowBg.style.opacity = currentOpacity;
     timelineWindowBg.style.borderRadius = '4px';
     
-    // Enable GPU acceleration for smoother rendering
-    timelineWindowBg.style.willChange = 'top, left, width, height, opacity';
+    // Removed will-change to prevent compositing layer blocking backdrop-filter
+    // timelineWindowBg.style.willChange = 'top, left, width, height, opacity';
   };
 
   // MAGIC TRICK: Use pseudo-element for span background to avoid affecting text opacity
@@ -258,6 +258,58 @@ export function initTimelineAnimation() {
   let currentYearSplit = null;
   let lastDisplayedYear = null;
   let isAnimatingYear = false; // Flag to prevent double animations
+  
+  // Track active event index for resize handling
+  let currentActiveEventIndex = 0;
+
+  // Helper function to show the new year with animation
+  const showNewYear = (year) => {
+    if (!currentYearElement) {
+      currentYearElement = document.querySelector('#current-timeline-year');
+    }
+    
+    if (!currentYearElement) {
+      isAnimatingYear = false;
+      return;
+    }
+    
+    // Ensure the container is visible
+    gsap.set(currentYearElement, { opacity: 1 });
+    
+    // Update the text content
+    currentYearElement.textContent = year;
+    lastDisplayedYear = year;
+    
+    // Apply SplitType for character animation
+    currentYearSplit = new SplitType(currentYearElement, {
+      types: 'chars',
+      charClass: 'split-char'
+    });
+    
+    // Animate characters in
+    if (currentYearSplit.chars && currentYearSplit.chars.length > 0) {
+      gsap.set(currentYearSplit.chars, {
+        opacity: 0,
+        y: 20,
+        display: 'inline-block'
+      });
+      
+      gsap.to(currentYearSplit.chars, {
+        opacity: 1,
+        y: 0,
+        duration: 0.4,
+        stagger: 0.03,
+        ease: 'power2.out',
+        overwrite: true,
+        onComplete: () => {
+          // Reset flag when animation completes
+          isAnimatingYear = false;
+        }
+      });
+    } else {
+      isAnimatingYear = false;
+    }
+  };
 
   // Helper to update the current year display with split text animation
   const updateCurrentYear = (year) => {
@@ -295,48 +347,6 @@ export function initTimelineAnimation() {
     } else {
       // No old year to fade out, show new year immediately
       showNewYear(year);
-    }
-  };
-  
-  // Helper function to show the new year with animation
-  const showNewYear = (year) => {
-    if (!currentYearElement) {
-      isAnimatingYear = false;
-      return;
-    }
-    
-    // Update the text content
-    currentYearElement.textContent = year;
-    lastDisplayedYear = year;
-    
-    // Apply SplitType for character animation
-    currentYearSplit = new SplitType(currentYearElement, {
-      types: 'chars',
-      charClass: 'split-char'
-    });
-    
-    // Animate characters in
-    if (currentYearSplit.chars && currentYearSplit.chars.length > 0) {
-      gsap.set(currentYearSplit.chars, {
-        opacity: 0,
-        y: 20,
-        display: 'inline-block'
-      });
-      
-      gsap.to(currentYearSplit.chars, {
-        opacity: 1,
-        y: 0,
-        duration: 0.4,
-        stagger: 0.03,
-        ease: 'power2.out',
-        overwrite: true,
-        onComplete: () => {
-          // Reset flag when animation completes
-          isAnimatingYear = false;
-        }
-      });
-    } else {
-      isAnimatingYear = false;
     }
   };
   
@@ -423,6 +433,11 @@ export function initTimelineAnimation() {
           closestEventGlobalIndex = globalIndex;
         }
       });
+      
+      // Update the tracked active index
+      if (closestEventGlobalIndex !== -1) {
+        currentActiveEventIndex = closestEventGlobalIndex;
+      }
       
       // Determine if the closest event is the cover event or a regular event
       if (closestEvent && closestEvent.classList.contains('timeline-cover')) {
@@ -1035,6 +1050,35 @@ export function initTimelineAnimation() {
             console.log('Timeline: Initialized first minor node as active, scrubber progress:', scrubberProgressValue.toFixed(3));
           }
         }
+        
+        // Reset and hide the year display completely when entering timeline
+        // The year will only show when scrolling to the first actual event after the cover
+        console.log('Timeline: Resetting and hiding year display on entry');
+        
+        // Get the year element
+        if (!currentYearElement) {
+          currentYearElement = document.querySelector('#current-timeline-year');
+        }
+        
+        if (currentYearElement) {
+          // Immediately hide and clear the year element
+          gsap.set(currentYearElement, { opacity: 0 });
+          
+          // Clear the text content to prevent old year from showing
+          currentYearElement.textContent = '';
+          
+          // Clean up any existing split
+          if (currentYearSplit && typeof currentYearSplit.revert === 'function') {
+            currentYearSplit.revert();
+            currentYearSplit = null;
+          }
+          
+          // Reset the state variables so updateScrubber will show the year when appropriate
+          lastDisplayedYear = null;
+          isAnimatingYear = false;
+          
+          console.log('Timeline: Year display cleared and hidden');
+        }
       },
       onLeave: () => {
         console.log('Timeline: Leaving timeline section');
@@ -1054,6 +1098,32 @@ export function initTimelineAnimation() {
             htmlElement.style.background = '';
           }
         });
+      },
+      onLeaveBack: () => {
+        console.log('Timeline: Leaving timeline section (scrolling back up)');
+        
+        // Reset and hide the year display completely when leaving timeline upward
+        if (!currentYearElement) {
+          currentYearElement = document.querySelector('#current-timeline-year');
+        }
+        
+        if (currentYearElement) {
+          // Immediately hide and clear the year element
+          gsap.set(currentYearElement, { opacity: 0 });
+          currentYearElement.textContent = '';
+          
+          // Clean up any existing split
+          if (currentYearSplit && typeof currentYearSplit.revert === 'function') {
+            currentYearSplit.revert();
+            currentYearSplit = null;
+          }
+          
+          // Reset the state variables
+          lastDisplayedYear = null;
+          isAnimatingYear = false;
+          
+          console.log('Timeline: Year display reset on leave back');
+        }
       }
     }
   });
@@ -1102,11 +1172,20 @@ export function initTimelineAnimation() {
     const remainingEvents = events.slice(1);
     
     // Phase A: First event (1876) - Pinned in center
-    // Ensure first event is visible immediately (no fade in)
-    gsap.set(firstEvent, { 
-      opacity: 1, 
-      scale: 1 
-    });
+    // Start hidden and fade in "in place" as user scrolls
+    tl.fromTo(firstEvent, 
+      { 
+        opacity: 0, 
+        scale: 0.95 
+      },
+      { 
+        opacity: 1, 
+        scale: 1,
+        duration: 0.3, // Slower fade in for "in place" feel
+        ease: 'power2.out'
+      },
+      0 // Start immediately at the beginning of the pinned section
+    );
     
     // Hold first event visible
     tl.to({}, { duration: holdDuration }, '>');
@@ -1678,6 +1757,42 @@ export function initTimelineAnimation() {
   }).to([timelineWindowBg, timeline], {
     opacity: 0,
     ease: 'power2.in'
+  });
+
+  // Handle resize to keep user on the same event
+  ScrollTrigger.addEventListener('refreshInit', () => {
+    // Store the current active event index before refresh
+    console.log('Timeline: Refresh Init - Active Event Index:', currentActiveEventIndex);
+  });
+
+  ScrollTrigger.addEventListener('refresh', () => {
+    // Restore position to the active event
+    console.log('Timeline: Refresh Complete - Restoring to Event Index:', currentActiveEventIndex);
+    
+    if (currentActiveEventIndex > 0) {
+        // Calculate scroll position for this event
+        // We use the label associated with the event move
+        // The label is 'event-{index-1}' because remainingEvents starts at global index 1
+        const labelIndex = currentActiveEventIndex - 1;
+        const label = `event-${labelIndex}`;
+        
+        if (tl.labels[label] !== undefined) {
+             const labelTime = tl.labels[label];
+             // Target the end of the move (start of hold) to center the event
+             const targetTime = labelTime + moveDuration;
+             const progress = targetTime / tl.duration();
+             
+             // Calculate scroll position
+             const st = tl.scrollTrigger;
+             if (st) {
+               const scrollPos = st.start + progress * (st.end - st.start);
+               
+               // Scroll there immediately
+               window.scrollTo(0, scrollPos);
+               console.log('Timeline: Restored scroll position to event', currentActiveEventIndex);
+             }
+        }
+    }
   });
 
   // Store cleanup references

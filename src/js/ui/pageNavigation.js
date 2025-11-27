@@ -5,17 +5,18 @@ import gsap from "gsap";
 import debounce from "../utils/debounce.js";
 
 export function updatePageNavigation() {
-  const heroTravelArea = document.querySelector("#hero-travel-area");
-  const getInvolvedSection = document.querySelector("#get-involved");
-  const eventsSection = document.querySelector("#events");
-  const videoTravelArea = document.querySelector("#video-travel-area");
   const pageNav = document.querySelector(".page-nav");
   const activeTitle = document.querySelector(".section-timeline .indicator .active-title");
   const sectionTimeline = document.querySelector(".section-timeline");
   const formPanel = document.querySelector(".form-panel");
   const timelineNavWrapper = document.querySelector(".timeline-nav-wrapper");
 
-  if (!heroTravelArea || !getInvolvedSection || !pageNav || !activeTitle || !sectionTimeline) return;
+  // Target sections
+  const getInvolvedMessage = document.querySelector(".get-involved-message") || document.querySelector("#acs-timeline"); // Fallback to timeline if message missing
+  const signupForm = document.querySelector("#signup-form");
+  const eventsSection = document.querySelector("#events");
+  
+  if (!pageNav || !activeTitle || !sectionTimeline) return;
 
   // Initially hide the page navigation
   gsap.set(pageNav, { opacity: 0, pointerEvents: "none" });
@@ -71,7 +72,8 @@ export function updatePageNavigation() {
     });
   }
 
-  const heroYearsLink = pageNav.querySelector(".anniversary");
+  const introLink = pageNav.querySelector(".intro");
+  const anniversaryLink = pageNav.querySelector(".anniversary");
   const getInvolvedLink = pageNav.querySelector(".get-involved");
   const eventsLink = pageNav.querySelector(".events");
 
@@ -120,74 +122,62 @@ export function updatePageNavigation() {
     return offsetTop;
   };
 
-  // Click handlers with immediate title updates and fresh position calculations
-  heroYearsLink.addEventListener("click", (e) => {
+  // Helper to handle click navigation
+  const handleNavClick = (e, link, title, targetElement, isTop = false) => {
     e.preventDefault();
 
     // Immediately update active title and links
-    pageNav.querySelectorAll("a").forEach((link) => link.classList.remove("active"));
-    heroYearsLink.classList.add("active");
-    updateActiveTitle("150 Years of ACS");
+    pageNav.querySelectorAll("a").forEach((l) => l.classList.remove("active"));
+    if (link) link.classList.add("active");
+    updateActiveTitle(title);
 
     // Hide navigation and mark as clicked
     gsap.to(pageNav, { opacity: 0, pointerEvents: "none", duration: 0.2, ease: "power2.out" });
     navClickedAndHidden = true;
 
-    // Always scroll to top for hero section
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  });
-
-  getInvolvedLink.addEventListener("click", (e) => {
-    e.preventDefault();
-
-    // Immediately update active title and links
-    pageNav.querySelectorAll("a").forEach((link) => link.classList.remove("active"));
-    getInvolvedLink.classList.add("active");
-    updateActiveTitle("Get Involved");
-
-    // Hide navigation and mark as clicked
-    gsap.to(pageNav, { opacity: 0, pointerEvents: "none", duration: 0.2, ease: "power2.out" });
-    navClickedAndHidden = true;
-
-    // Calculate fresh scroll position for get-involved section
-    if (getInvolvedSection) {
-      // Add a small delay to ensure any ongoing animations have settled
-      setTimeout(() => {
-        const targetOffset = getElementScrollPosition(getInvolvedSection);
-        window.scrollTo({
-          top: targetOffset,
-          behavior: "smooth",
+    if (isTop) {
+      if (window.lenis) {
+        window.lenis.scrollTo(0, { duration: 1.5 });
+      } else {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    } else if (targetElement) {
+      // Use Lenis for scrolling if available, as it handles the large timeline distance better
+      if (window.lenis) {
+        // Add a small offset to ensure we land exactly where intended
+        window.lenis.scrollTo(targetElement, { 
+          offset: 0, 
+          duration: 2.0, // Longer duration for long scrolls
+          easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) // Custom easing
         });
-      }, 50);
+      } else {
+        setTimeout(() => {
+          const targetOffset = getElementScrollPosition(targetElement);
+          window.scrollTo({
+            top: targetOffset,
+            behavior: "smooth",
+          });
+        }, 50);
+      }
     }
-  });
+  };
 
-  eventsLink.addEventListener("click", (e) => {
-    e.preventDefault();
+  // Click handlers
+  if (introLink) {
+    introLink.addEventListener("click", (e) => handleNavClick(e, introLink, "Intro", null, true));
+  }
 
-    // Immediately update active title and links
-    pageNav.querySelectorAll("a").forEach((link) => link.classList.remove("active"));
-    eventsLink.classList.add("active");
-    updateActiveTitle("Events");
+  if (anniversaryLink) {
+    anniversaryLink.addEventListener("click", (e) => handleNavClick(e, anniversaryLink, "150 Years of ACS", getInvolvedMessage));
+  }
 
-    // Hide navigation and mark as clicked
-    gsap.to(pageNav, { opacity: 0, pointerEvents: "none", duration: 0.2, ease: "power2.out" });
-    navClickedAndHidden = true;
+  if (getInvolvedLink) {
+    getInvolvedLink.addEventListener("click", (e) => handleNavClick(e, getInvolvedLink, "Get Involved", signupForm));
+  }
 
-    // Calculate fresh scroll position for events section
-    if (eventsSection) {
-      setTimeout(() => {
-        const targetOffset = getElementScrollPosition(eventsSection);
-        window.scrollTo({
-          top: targetOffset,
-          behavior: "smooth",
-        });
-      }, 50);
-    }
-  });
+  if (eventsLink) {
+    eventsLink.addEventListener("click", (e) => handleNavClick(e, eventsLink, "Events", eventsSection));
+  }
 
   // -------------------------
   // Scroll-based detection with improved performance
@@ -196,16 +186,24 @@ export function updatePageNavigation() {
   // Calculate section boundaries once, storing their ranges
   const sections = [
     {
-      id: "hero",
-      element: heroTravelArea,
+      id: "intro",
+      element: document.body, // Intro is basically top/body
+      title: "Intro",
+      link: introLink,
+      top: 0,
+      bottom: 0,
+    },
+    {
+      id: "anniversary",
+      element: getInvolvedMessage,
       title: "150 Years of ACS",
-      link: heroYearsLink,
+      link: anniversaryLink,
       top: 0,
       bottom: 0,
     },
     {
       id: "getinvolved",
-      element: getInvolvedSection,
+      element: signupForm,
       title: "Get Involved",
       link: getInvolvedLink,
       top: 0,
@@ -223,26 +221,35 @@ export function updatePageNavigation() {
 
   // Calculate section boundaries using more reliable positioning
   function updateSectionBoundaries() {
-    sections.forEach((section) => {
+    sections.forEach((section, index) => {
       if (section.element) {
-        // Use offsetTop for more reliable positioning
         section.top = getElementScrollPosition(section.element);
+        // Default bottom is top + height, but we'll adjust based on next section
         section.bottom = section.top + section.element.offsetHeight;
       }
     });
 
-    // Special adjustment: Hero section ends at the start of get-involved section
-    if (sections[0].element && getInvolvedSection) {
-      sections[0].bottom = getElementScrollPosition(getInvolvedSection);
+    // Adjust boundaries to be contiguous
+    // Intro ends where Anniversary starts
+    if (sections[1].element) {
+      sections[0].bottom = sections[1].top;
+    } else {
+      sections[0].bottom = window.innerHeight; // Fallback
     }
 
-    // Get-involved section spans from its start to events section
-    if (getInvolvedSection && eventsSection) {
-      const getInvolvedSectionObj = sections.find((s) => s.id === "getinvolved");
-      if (getInvolvedSectionObj) {
-        getInvolvedSectionObj.top = getElementScrollPosition(getInvolvedSection);
-        getInvolvedSectionObj.bottom = getElementScrollPosition(eventsSection);
-      }
+    // Anniversary ends where Get Involved starts
+    if (sections[2].element) {
+      sections[1].bottom = sections[2].top;
+    }
+
+    // Get Involved ends where Events starts (if events exists)
+    if (sections[3].element) {
+      sections[2].bottom = sections[3].top;
+      // Events ends at bottom of page
+      sections[3].bottom = document.body.scrollHeight;
+    } else {
+      // If no events section, Get Involved goes to bottom
+      sections[2].bottom = document.body.scrollHeight;
     }
   }
 
@@ -254,19 +261,16 @@ export function updatePageNavigation() {
 
   // Fast scroll handler with minimal processing
   function handleScroll() {
-    // We'll use requestAnimationFrame to limit how often we calculate
-    // This will naturally throttle during rapid scrolling
     requestAnimationFrame(() => {
       // Get current scroll position using viewport midpoint
       const scrollPosition = window.pageYOffset + window.innerHeight / 2;
 
-      // Find the active section using a reverse loop for efficiency
-      // (most likely to be in later sections when scrolling down)
-      let activeSection = sections[0]; // Default to hero
+      // Find the active section
+      let activeSection = sections[0]; // Default to intro
 
       for (let i = sections.length - 1; i >= 0; i--) {
         const section = sections[i];
-        if (!section.element) continue;
+        if (!section.element && section.id !== 'intro') continue; // Skip missing sections (except intro which is always valid)
 
         // Check if we're within this section's boundaries
         if (scrollPosition >= section.top && scrollPosition < section.bottom) {
@@ -297,47 +301,34 @@ export function updatePageNavigation() {
 
   // Update boundaries on resize with more aggressive recalculation
   const handleResize = debounce(() => {
-    // Force a layout recalculation
-    document.body.offsetHeight;
-
-    // Update boundaries multiple times to ensure they're correct
+    document.body.offsetHeight; // Force reflow
     updateSectionBoundaries();
-
-    // Use requestAnimationFrame to ensure DOM has settled
     requestAnimationFrame(() => {
-      updateSectionBoundaries(); // Update again after layout settles
-      handleScroll(); // Check current position after resize
+      updateSectionBoundaries();
+      handleScroll();
     });
   }, 150);
 
   window.addEventListener("resize", handleResize);
 
-  // Also handle orientation changes which might not trigger resize on all devices
   window.addEventListener("orientationchange", () => {
     setTimeout(() => {
       handleResize();
-    }, 300); // Give more time for orientation change to complete
+    }, 300);
   });
 
-  // Ensure proper initialization with multiple attempts
   const initializeNavigation = () => {
     updateSectionBoundaries();
     handleScroll();
   };
 
-  // Initial call to set correct state
   initializeNavigation();
-
-  // Also ensure proper initialization after a short delay to handle any late-loading content
   setTimeout(initializeNavigation, 500);
 
-  // And after fonts are fully loaded (which can affect layout)
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(initializeNavigation);
   }
 
-  // Add a one-time scroll event listener to recalculate on first scroll
-  // (in case initial calculations were off due to loading states)
   let hasScrolled = false;
   const oneTimeScrollHandler = () => {
     if (!hasScrolled) {

@@ -18,6 +18,8 @@ $timeline-scrubber-height: 80px;
   opacity: 0; // Will fade in with ScrollTrigger
   pointer-events: none;
   overflow: visible;
+  transform-style: preserve-3d; // Critical: ensure 3D rendering context for backdrop-filter
+  will-change: opacity, transform; // Hint for compositing layer
 }
 
 // Scrollable wrapper for scrubber content
@@ -31,6 +33,7 @@ $timeline-scrubber-height: 80px;
   -ms-overflow-style: none; // IE/Edge
   scroll-behavior: smooth;
   pointer-events: all;
+  // Removed isolation: isolate - it creates compositing barrier blocking backdrop-filter
   
   &::-webkit-scrollbar {
     display: none; // Chrome/Safari
@@ -40,11 +43,10 @@ $timeline-scrubber-height: 80px;
 // Navigation arrows
 .scrubber-nav {
   position: absolute;
-  top: -24px;
-  transform: translateY(-50%);
+  top: 40px;
+  transform: translateY(-50%) translateZ(0);
   width: 40px;
   height: 40px;
-  background: rgba(0, 0, 0, 0.04);
   border:1px solid rgba(255,255,255,0.3);
   border-radius: 50%;
   display: flex;
@@ -53,11 +55,19 @@ $timeline-scrubber-height: 80px;
   cursor: pointer;
   z-index: 110;
   pointer-events: all;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(4px);
+  transition: background 0.3s ease, border-color 0.3s ease;
+  isolation: isolate; // Create explicit stacking context
+  will-change: backdrop-filter; // Hint browser for layer creation (simplified)
+  contain: layout; // Help browser optimize rendering
+  backface-visibility: hidden; // Force hardware acceleration
+  
+  // Direct application (no pseudo-element)
+  background: rgba(0, 0, 0, 0.3);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  backdrop-filter: blur(16px) saturate(180%);
   
   &:hover {
-    background: rgba(0, 0, 0, 0.12);
+    background: rgba(0, 0, 0, 0.5);
     border:1px solid rgba(255,255,255,0.66);
   }
   
@@ -83,10 +93,16 @@ $timeline-scrubber-height: 80px;
 
 .scrubber-nav-prev {
   left: 64px;
+  svg {
+    transform: translateX(-1px);
+  }
 }
 
 .scrubber-nav-next {
   right: 20px;
+  svg {
+    transform: translateX(1px);
+  }
 }
 
 // Content container for line and markers
@@ -103,7 +119,7 @@ $timeline-scrubber-height: 80px;
   position: absolute;
   top: 50%;
   left: 65px;
-  right: 65px;
+  right: -65px;
   transform: translateY(-50%);
   height: 3px;
   background: $timeline-inactive;
