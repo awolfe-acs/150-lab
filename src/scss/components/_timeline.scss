@@ -185,6 +185,7 @@ body.timeline-resizing {
   // First event (1876) - centered and doesn't move horizontally
   &.timeline-cover {
     position: absolute;
+    top: 0; // Ensure it's anchored to top
     left: 0;
     right: 0;
     
@@ -219,22 +220,6 @@ body.timeline-resizing {
   &:not(.timeline-cover) {
     .event-date {
       .event-value {
-        //font-size: clamp(48px, 4vw, 12vw);
-        //position:fixed;
-        //left:8vw;
-        //bottom:16vw;
-        //font-weight:800;
-        //mix-blend-mode:overlay;
-        //opacity:0.2;
-        ////color: transparent;
-        ////-webkit-text-stroke: 1px white;   /* WebKit/Blink */
-        ////text-stroke: 1px white;           /* Future standard */
-        //text-shadow:none;
-        //transform:scale(2);
-        //transform-origin:bottom left;
-        //@media (min-width:1600px) {
-        //  bottom:12vw;
-        //}
         display:none;
       }
     }
@@ -265,10 +250,6 @@ body.timeline-resizing {
 
 // Event panel (right side)
 .event-panel {
-  //background: rgba(255, 255, 255, 0.1);
-  //backdrop-filter: blur(20px);
-  //border: 1px solid rgba(255, 255, 255, 0.2);
-  //border-radius: 24px;
   padding: 48px;
   min-height:80vh;
   color: white;
@@ -276,13 +257,13 @@ body.timeline-resizing {
   .event-year {
     font-size: 24px;
     font-weight: 700;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
     color: #fff;
   }
 
   .event-description {
     p {
-      font-size: 20px;
+      font-size: 18px;
       line-height: 1.6;
       opacity: 0.95;
       margin: 0 0 16px 0;
@@ -295,14 +276,16 @@ body.timeline-resizing {
 
   .event-image {
     margin-top: 32px;
-    border-radius: 20px;
-    overflow: hidden;
-    //box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-
+    @media (max-width:1024px) {
+      margin-top: 20px;
+    }
     img {
-      width: 100%;
+      width: auto;
       height: auto;
+      max-height:400px;
       display: block;
+      border-radius: 20px;
+      overflow: hidden;
     }
   }
 }
@@ -313,29 +296,59 @@ body.timeline-resizing {
   position:fixed;
   z-index:1;
   left:8vw;
-  bottom:50vw;
+  bottom:160px;
   font-weight:800;
   mix-blend-mode:overlay;
   filter:opacity(0.2);
-  //color: transparent;
-  //-webkit-text-stroke: 1px white;   /* WebKit/Blink */
-  //text-stroke: 1px white;           /* Future standard */
   text-shadow:none;
   transform:scale(2);
   transform-origin:bottom left;
+  letter-spacing:-4px;
+  @media (min-width:1025px) and (max-width:1599px) {
+    font-size: clamp(88px, 4vw, 16vw);
+  }
   @media (min-width:1600px) {
-    bottom:12vw;
+    bottom:8.5vw;
+  }
+  @media (min-width:2000px) {
+    bottom:6vw;
+  }
+  @media (max-width:1024px) {
+    //font-size:54px;
+    //left:36px;
+    //bottom:152px;
+    font-size:28px;
+    left:calc(50% - 16px);
+    bottom:160px;
+    transform:translateX(-50%) scale(4);
+    transform-origin:center center;
+    letter-spacing:-2px;
   }
 }
 
 // Responsive adjustments
 @media (max-width: 1024px) {
+  .timeline-track {
+    flex-direction: column;
+    padding-left: 0;
+    padding-top: 0;
+    height: auto; // Allow height to grow
+    min-height: 100vh;
+  }
+
+  // Push the first regular event down to make room for the cover
+  .timeline-decade:first-of-type .timeline-event:nth-child(2) {
+    margin-top: 100vh;
+  }
+
   .timeline-event {
+    width: 100%;
+    height: 100vh;
     padding: 0 40px;
 
     .event-content-wrapper {
       grid-template-columns: 1fr;
-      gap: 40px;
+      gap: 0;
     }
   }
 
@@ -344,7 +357,7 @@ body.timeline-resizing {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .timeline-close {
     top: 16px;
     right: 16px;
@@ -353,7 +366,7 @@ body.timeline-resizing {
   }
 
   .timeline-event {
-    padding: 0 24px;
+    padding: 0 16px;
   }
 
   .event-date {
@@ -363,7 +376,7 @@ body.timeline-resizing {
   }
 
   .event-panel {
-    padding: 24px;
+    padding: 0 8px;
   }
 }
 

@@ -7,7 +7,7 @@ $timeline-scrubber-height: 80px;
 
 .timeline-scrubber {
   position: fixed;
-  bottom: 80px; // 80px from bottom of viewport
+  bottom: 64px;
   left: 0;
   right: 0;
   height: $timeline-scrubber-height;

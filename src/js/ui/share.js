@@ -7,27 +7,48 @@ import gsap from "gsap";
 export function initShareButtonOverlapDetection() {
   const shareButton = document.querySelector(".share-button-pinned");
   const eventsPanel = document.querySelector(".events-panel");
+  const timelineSection = document.querySelector("#acs-timeline");
 
-  if (!shareButton || !eventsPanel) {
-    console.warn("Share button or events panel not found for overlap detection");
+  if (!shareButton) {
+    console.warn("Share button not found for overlap detection");
     return;
   }
 
   // Function to check if elements overlap
   const checkOverlap = () => {
     const shareRect = shareButton.getBoundingClientRect();
-    const eventsRect = eventsPanel.getBoundingClientRect();
+    let overlapType = null;
 
-    // Check if rectangles overlap
-    const isOverlapping = !(
-      shareRect.right < eventsRect.left ||
-      shareRect.left > eventsRect.right ||
-      shareRect.bottom < eventsRect.top ||
-      shareRect.top > eventsRect.bottom
-    );
+    // Check overlap with events panel
+    if (eventsPanel) {
+      const eventsRect = eventsPanel.getBoundingClientRect();
+      const overlapsEvents = !(
+        shareRect.right < eventsRect.left ||
+        shareRect.left > eventsRect.right ||
+        shareRect.bottom < eventsRect.top ||
+        shareRect.top > eventsRect.bottom
+      );
+      if (overlapsEvents) overlapType = 'events';
+    }
 
-    // Update background color based on overlap
-    if (isOverlapping) {
+    // Check overlap with timeline section
+    // If we're already overlapping events, we might want to keep that or override.
+    // Assuming sections don't overlap significantly, checking timeline second will override if both overlap.
+    if (timelineSection) {
+      const timelineRect = timelineSection.getBoundingClientRect();
+      const overlapsTimeline = !(
+        shareRect.right < timelineRect.left ||
+        shareRect.left > timelineRect.right ||
+        shareRect.bottom < timelineRect.top ||
+        shareRect.top > timelineRect.bottom
+      );
+      if (overlapsTimeline) overlapType = 'timeline';
+    }
+
+    // Update background color based on overlap type
+    if (overlapType === 'timeline') {
+      shareButton.style.backgroundColor = "rgba(255,103,0,0.75)";
+    } else if (overlapType === 'events') {
       shareButton.style.backgroundColor = "rgba(20,181,0,0.75)";
     } else {
       shareButton.style.backgroundColor = ""; // Reset to default

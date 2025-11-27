@@ -79,6 +79,9 @@ export function initTimelineAnimation() {
   let lastPosition = { top: 0, left: 0, width: 0, height: 0 };
   let targetPosition = { top: 0, left: 0, width: 0, height: 0 };
   
+  // Flag to track if we should be updating the BG position to match the span
+  let isTrackingSpan = true;
+  
   // Lerp (linear interpolation) for smooth transitions
   const lerp = (start, end, factor) => start + (end - start) * factor;
   
@@ -86,6 +89,9 @@ export function initTimelineAnimation() {
   const positionBgToSpan = () => {
     // Check if elements still exist
     if (!timelineWindowStart || !timelineWindowBg) return;
+    
+    // If we're not tracking the span (e.g. during expansion or timeline view), don't update
+    if (!isTrackingSpan) return;
     
     const rect = timelineWindowStart.getBoundingClientRect();
     
@@ -399,15 +405,16 @@ export function initTimelineAnimation() {
       // This provides accurate synchronization with what's actually on screen
       
       // Find the event that's most centered in the viewport
-      const viewportCenterX = window.innerWidth / 2;
+      const isMobile = window.innerWidth <= 1024;
+      const viewportCenter = isMobile ? window.innerHeight / 2 : window.innerWidth / 2;
       let closestEvent = null;
       let closestDistance = Infinity;
       let closestEventGlobalIndex = -1;
       
       events.forEach((event, globalIndex) => {
         const rect = event.getBoundingClientRect();
-        const eventCenterX = rect.left + (rect.width / 2);
-        const distanceFromCenter = Math.abs(eventCenterX - viewportCenterX);
+        const eventCenter = isMobile ? rect.top + (rect.height / 2) : rect.left + (rect.width / 2);
+        const distanceFromCenter = Math.abs(eventCenter - viewportCenter);
         
         // Check if this event is closer to center than previous closest
         if (distanceFromCenter < closestDistance) {
@@ -765,6 +772,9 @@ export function initTimelineAnimation() {
       onEnter: () => {
         console.log('Timeline: INSTANT handoff from span to BG element');
         
+        // Stop tracking span position updates
+        isTrackingSpan = false;
+        
         // CRITICAL: Kill the pseudo fade timeline to prevent it from overriding our opacity
         if (pseudoFadeTl) {
           pseudoFadeTl.kill();
@@ -825,6 +835,10 @@ export function initTimelineAnimation() {
       },
       onLeaveBack: () => {
         console.log('Timeline: INSTANT reverse handoff from BG element to span');
+        
+        // Resume tracking span position updates
+        isTrackingSpan = true;
+        positionBgToSpan();
         
         // INSTANT REVERSE HANDOFF: Transfer back from BG element to pseudo-element
         // 1. INSTANTLY hide the BG element
@@ -1087,22 +1101,12 @@ export function initTimelineAnimation() {
     const firstEvent = events[0];
     const remainingEvents = events.slice(1);
     
-    // Phase A: First event (1876) - Pinned in center, fades in then out
-    // Fade in first event
-    tl.fromTo(
-      firstEvent,
-      {
-        opacity: 0,
-        scale: 0.98
-      },
-      {
-        opacity: 1,
-        scale: 1,
-        duration: 0.05,
-        ease: 'power1.out'
-      },
-      0.04
-    );
+    // Phase A: First event (1876) - Pinned in center
+    // Ensure first event is visible immediately (no fade in)
+    gsap.set(firstEvent, { 
+      opacity: 1, 
+      scale: 1 
+    });
     
     // Hold first event visible
     tl.to({}, { duration: holdDuration }, '>');
@@ -1129,17 +1133,18 @@ export function initTimelineAnimation() {
     // GSAP timelines append automatically, so we just add to the timeline
     
     remainingEvents.forEach((event, index) => {
-      // Calculate target X to center this event
-      // Event 1 is at 100vw, needs to move to 0 -> x: -100vw
-      // Event 2 is at 200vw, needs to move to 0 -> x: -200vw
-      // Use function to get current width on invalidate
-      const getTargetX = () => -(index + 1) * window.innerWidth;
+      // Calculate target position to center this event
+      // Desktop: Move X (horizontal)
+      // Mobile: Move Y (vertical)
+      const getTargetX = () => window.innerWidth > 1024 ? -(index + 1) * window.innerWidth : 0;
+      const getTargetY = () => window.innerWidth <= 1024 ? -(index + 1) * window.innerHeight : 0;
       
       const eventLabel = `event-${index}`;
       
       // 1. Move Track
       tl.to(timelineTrack, {
         x: getTargetX,
+        y: getTargetY,
         duration: moveDuration,
         ease: 'power1.inOut'
       }, eventLabel);

@@ -302,12 +302,28 @@ export function initCoverOrb() {
   const handleResize = () => {
     if (!canvas) return;
     
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    const aspect = width / height;
+    
     // Update camera
-    camera.aspect = canvas.clientWidth / canvas.clientHeight;
+    camera.aspect = aspect;
     camera.updateProjectionMatrix();
     
+    // Adjust camera distance to ensure orb fits within 90% of viewport width
+    // Sphere radius = 1, Diameter = 2
+    // We want diameter to be max 90% of visible width
+    // Visible Width = 2 * dist * tan(FOV/2) * aspect
+    // FOV is 45 degrees
+    // dist >= 2.68 / aspect
+    
+    const minZ = 3.5;
+    const requiredZ = 2.7 / aspect; 
+    
+    camera.position.z = Math.max(minZ, requiredZ);
+    
     // Update renderer
-    renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+    renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   };
 
