@@ -23,6 +23,8 @@ export function updatePageNavigation() {
 
   // Track if navigation was clicked and should stay hidden
   let navClickedAndHidden = false;
+  // Track if we are currently navigating via click to avoid scroll updates overriding the title
+  let isNavigating = false;
 
   // Helper function to check if mouse is within form panel boundaries
   const isMouseInFormPanel = (event) => {
@@ -123,7 +125,7 @@ export function updatePageNavigation() {
   };
 
   // Helper to handle click navigation
-  const handleNavClick = (e, link, title, targetElement, isTop = false) => {
+  const handleNavClick = (e, link, title, targetElement, isTop = false, offset = 0) => {
     e.preventDefault();
 
     // Immediately update active title and links
@@ -134,29 +136,43 @@ export function updatePageNavigation() {
     // Hide navigation and mark as clicked
     gsap.to(pageNav, { opacity: 0, pointerEvents: "none", duration: 0.2, ease: "power2.out" });
     navClickedAndHidden = true;
+    isNavigating = true;
+
+    // Reset navigating state after scroll finishes
+    const resetNavigating = (delay) => {
+      setTimeout(() => {
+        isNavigating = false;
+        // Force one final check to ensure everything is synced
+        handleScroll();
+      }, delay);
+    };
 
     if (isTop) {
       if (window.lenis) {
         window.lenis.scrollTo(0, { duration: 1.5 });
+        resetNavigating(1500);
       } else {
         window.scrollTo({ top: 0, behavior: "smooth" });
+        resetNavigating(1000);
       }
     } else if (targetElement) {
       // Use Lenis for scrolling if available, as it handles the large timeline distance better
       if (window.lenis) {
         // Add a small offset to ensure we land exactly where intended
         window.lenis.scrollTo(targetElement, { 
-          offset: 0, 
+          offset: offset, 
           duration: 2.0, // Longer duration for long scrolls
           easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) // Custom easing
         });
+        resetNavigating(2000);
       } else {
         setTimeout(() => {
           const targetOffset = getElementScrollPosition(targetElement);
           window.scrollTo({
-            top: targetOffset,
+            top: targetOffset + offset,
             behavior: "smooth",
           });
+          resetNavigating(1000);
         }, 50);
       }
     }
@@ -172,7 +188,7 @@ export function updatePageNavigation() {
   }
 
   if (getInvolvedLink) {
-    getInvolvedLink.addEventListener("click", (e) => handleNavClick(e, getInvolvedLink, "Get Involved", signupForm));
+    getInvolvedLink.addEventListener("click", (e) => handleNavClick(e, getInvolvedLink, "Get Involved", signupForm, false, -48));
   }
 
   if (eventsLink) {
@@ -261,6 +277,8 @@ export function updatePageNavigation() {
 
   // Fast scroll handler with minimal processing
   function handleScroll() {
+    if (isNavigating) return;
+
     requestAnimationFrame(() => {
       // Get current scroll position using viewport midpoint
       const scrollPosition = window.pageYOffset + window.innerHeight / 2;
