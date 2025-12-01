@@ -44,6 +44,25 @@ export function initTimelineAnimation() {
     console.warn('Timeline: Required elements not found. Skipping timeline initialization.');
     return;
   }
+  
+  // Check if timeline has been dismissed in this session
+  // COMMENTED OUT: Allow timeline to be re-entered on page refresh
+  /*
+  const isTimelineDismissed = sessionStorage.getItem('timelineDismissed') === 'true';
+  
+  if (isTimelineDismissed) {
+    console.log('Timeline: Previously dismissed, collapsing section');
+    // Immediately collapse the timeline section
+    gsap.set(timeline, {
+      opacity: 0,
+      height: 0,
+      overflow: 'hidden',
+      pointerEvents: 'none'
+    });
+    // Don't initialize any animations
+    return;
+  }
+  */
 
   const timelineContainer = timeline.querySelector('.timeline-container');
   const timelineTrack = timeline.querySelector('.timeline-track');
@@ -670,6 +689,188 @@ export function initTimelineAnimation() {
   // Capture the background's position state before pin
   let capturedPosition = null;
   
+  // Store ScrollTrigger instances for potential cleanup
+  const scrollTriggers = [];
+  
+  // Track if timeline has been dismissed
+  let isTimelineDismissed = false;
+  // Track if timeline is currently in the process of being dismissed
+  let isDismissing = false;
+  
+  function hideTimelineContainer() {
+    console.log('Timeline: Dismissing timeline section');
+
+    // NEW: Fade out timeline-container first (360ms)
+    gsap.to(timelineContainer, {
+      opacity: 0,
+      duration: 0.36,
+      ease: 'power2.out',
+      onComplete: () => {
+        // Once the container is faded, run the rest of the dismissal
+        dismissTimeline();
+      }
+    });
+  }
+  // Function to dismiss timeline and clean up
+  function dismissTimeline() {
+    console.log('Timeline: Dismissing timeline section');
+    
+    // Set dismissing flag to lock background updates
+    isDismissing = true;
+    
+    // Mark as dismissed (in memory, not session storage)
+    isTimelineDismissed = true;
+    
+    // Remove .in-timeline class from body immediately
+    document.body.classList.remove('in-timeline');
+    
+    // Mark as dismissed in session storage
+    // COMMENTED OUT: Allow timeline to be re-entered on page refresh
+    // sessionStorage.setItem('timelineDismissed', 'true');
+    
+    // Immediately fade out the current timeline year
+    const currentYearElement = document.querySelector('#current-timeline-year');
+    if (currentYearElement) {
+      gsap.to(currentYearElement, {
+        opacity: 0,
+        duration: 0.3,
+        ease: 'power2.out'
+      });
+    }
+    
+    // Restore the #timeline-window-start::before pseudo-element (like when scrolling back)
+    const styleEl = document.getElementById('timeline-window-start-bg-style');
+    if (styleEl) {
+      styleEl.textContent = `
+        #timeline-window-start::before {
+          content: '';
+          position: absolute;
+          top: -2px;
+          left: -6px;
+          right: -6px;
+          bottom: -2px;
+          background: linear-gradient(to bottom, #0493E2, #0493E2);
+          border-radius: 4px;
+          opacity: 0.5;
+          z-index: -1;
+          pointer-events: none;
+          transition: opacity 0.3s ease;
+        }
+      `;
+    }
+    
+    // Kill all ScrollTriggers to prevent interference
+    scrollTriggers.forEach(trigger => {
+      if (trigger && trigger.kill) {
+        trigger.kill();
+      }
+    });
+    ScrollTrigger.getAll().forEach(trigger => {
+      if (trigger.vars.trigger === timeline || 
+          trigger.vars.trigger === getInvolvedMessage ||
+          trigger.vars.pin === timelineContainer) {
+        trigger.kill();
+      }
+    });
+    
+    // Calculate the position where get-involved-message is centered
+    const messageRect = getInvolvedMessage.getBoundingClientRect();
+    const messageTop = messageRect.top + window.scrollY;
+    const viewportHeight = window.innerHeight;
+    const targetScroll = messageTop - (viewportHeight / 2) + (messageRect.height / 2);
+    
+    // Resume background animations immediately
+    if (window.backgroundPaused) {
+      window.backgroundPaused = false;
+      console.log('[Timeline] Dismissal: Resuming background shader');
+      window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: false } }));
+    }
+
+    // Ensure background is fixed and visible (behind container initially)
+    // Use cssText with !important to override ANY other styles or GSAP sets
+    timelineWindowBg.style.cssText = `
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      opacity: 1 !important;
+      z-index: 5 !important; /* Behind container (z-index 10) but above other content */
+      background-image: linear-gradient(to bottom, #0493AB, #0657A4) !important;
+      background-color: #0493AB !important; /* Fallback */
+      pointer-events: none !important;
+      visibility: visible !important;
+      transform: none !important;
+      transition: none !important;
+    `;
+    
+    // Force timeline to be visible and ready for fade
+    timeline.style.opacity = '1';
+    timeline.style.transition = 'none';
+
+    // 1. Fade out timeline section (350ms)
+    // Use opacity to handle visibility
+    gsap.to(timeline, {
+      opacity: 0,
+      duration: 0.35,
+      ease: 'power2.inOut',
+      onComplete: () => {
+        console.log('Timeline: Section faded out, performing instant jump');
+        
+        // 2. Bring background to front to mask the jump
+        timelineWindowBg.style.zIndex = '9999';
+        
+        // 3. Instant scroll to target
+        if (window.lenis) {
+            window.lenis.scrollTo(targetScroll, { immediate: true, force: true, lock: true });
+        } else {
+            window.scrollTo(0, targetScroll);
+        }
+        
+        // 4. Collapse timeline
+        timeline.classList.add('closed');
+        
+        // 5. Safety scroll (ensure we are still at target after layout shift)
+        if (window.lenis) {
+            window.lenis.scrollTo(targetScroll, { immediate: true, force: true, lock: true });
+        } else {
+            window.scrollTo(0, targetScroll);
+        }
+        
+        // 6. Refresh ScrollTrigger
+        ScrollTrigger.refresh();
+        
+        // 7. Fade out background (350ms)
+        gsap.to(timelineWindowBg, {
+          opacity: 0,
+          duration: 0.35,
+          ease: 'power2.inOut',
+          onComplete: () => {
+            // Reset background styles
+            timelineWindowBg.style.cssText = '';
+            timelineWindowBg.style.position = '';
+            timelineWindowBg.style.top = '';
+            timelineWindowBg.style.left = '';
+            timelineWindowBg.style.width = '';
+            timelineWindowBg.style.height = '';
+            timelineWindowBg.style.zIndex = '';
+            
+            // Disable pointer events on timeline
+            timeline.style.pointerEvents = 'none';
+            
+            // Remove .in-timeline class from body LAST
+            document.body.classList.remove('in-timeline');
+            
+            console.log('Timeline: Dismissal complete');
+            
+            // Reset dismissing flag
+            isDismissing = false;
+          }
+        });
+      }
+    });
+  }
+  
   // Phase 1: Pin #get-involved-message and expand background when it reaches center
   const expansionTl = gsap.timeline({
     scrollTrigger: {
@@ -680,6 +881,9 @@ export function initTimelineAnimation() {
       scrub: 1,
       anticipatePin: 1,
       onUpdate: (self) => {
+        // If dismissing, DO NOT touch the background
+        if (isDismissing) return;
+        
         // REAL-TIME visibility management - runs EVERY FRAME for instant response
         const progress = self.progress;
         const handoffThreshold = 0.01; // 1% - very tight threshold
@@ -887,6 +1091,9 @@ export function initTimelineAnimation() {
       }
     }
   });
+  
+  // Store this ScrollTrigger for cleanup
+  scrollTriggers.push(expansionTl.scrollTrigger);
 
   // Create a gradient animation object to tween between color states
   const gradientState = { progress: 0 };
@@ -964,6 +1171,9 @@ export function initTimelineAnimation() {
       anticipatePin: 1,
       invalidateOnRefresh: true,
       onRefresh: (self) => {
+        // If dismissing, DO NOT touch the background
+        if (isDismissing) return;
+        
         // Called after refresh/resize - ensure animations are in correct state
         console.log('Timeline: ScrollTrigger refreshed, progress:', self.progress.toFixed(3));
         
@@ -974,6 +1184,9 @@ export function initTimelineAnimation() {
         }
       },
       onUpdate: (self) => {
+        // If dismissing, DO NOT touch the background
+        if (isDismissing) return;
+        
         // Use animation progress to account for scrub lag (visual position)
         updateScrubber(self.animation.progress());
         manageBackgroundPause(self.progress);
@@ -987,6 +1200,12 @@ export function initTimelineAnimation() {
       },
       onEnter: () => {
         console.log('Timeline: Entering timeline section');
+        
+        // Add .in-timeline class to body (only if not dismissed)
+        if (!isTimelineDismissed) {
+          document.body.classList.add('in-timeline');
+        }
+        
         // Ensure background is fully visible when entering timeline proper
         gsap.to(timelineWindowBg, { opacity: 1, duration: 0.2, overwrite: 'auto' });
         
@@ -1083,6 +1302,9 @@ export function initTimelineAnimation() {
       onLeave: () => {
         console.log('Timeline: Leaving timeline section');
         
+        // Remove .in-timeline class from body
+        document.body.classList.remove('in-timeline');
+        
         // Fade canvas back in
         const canvas = document.querySelector('#background-canvas');
         if (canvas) {
@@ -1101,6 +1323,9 @@ export function initTimelineAnimation() {
       },
       onLeaveBack: () => {
         console.log('Timeline: Leaving timeline section (scrolling back up)');
+        
+        // Remove .in-timeline class from body
+        document.body.classList.remove('in-timeline');
         
         // Reset and hide the year display completely when leaving timeline upward
         if (!currentYearElement) {
@@ -1127,6 +1352,9 @@ export function initTimelineAnimation() {
       }
     }
   });
+  
+  // Store this ScrollTrigger for cleanup
+  scrollTriggers.push(tl.scrollTrigger);
 
   // Fade in visual elements (start of pinned timeline)
   tl.fromTo(
@@ -1155,17 +1383,6 @@ export function initTimelineAnimation() {
     0.01
   );
 
-  // Fade in close button
-  tl.from(
-    '.timeline-close',
-    {
-      opacity: 0,
-      scale: 0.8,
-      duration: 0.03
-    },
-    0.02
-  );
-
   // Handle timeline events
   if (events.length > 0) {
     const firstEvent = events[0];
@@ -1190,17 +1407,7 @@ export function initTimelineAnimation() {
     // Hold first event visible
     tl.to({}, { duration: holdDuration }, '>');
     
-    // Fade in the background decal image during the hold
-    tl.to(timelineWindowBg, {
-      '--decal-opacity': 1,
-      duration: holdDuration * 0.6,
-      ease: 'power2.out',
-      onUpdate: function() {
-        // Update the ::after pseudo-element opacity via custom property
-        const opacityValue = gsap.getProperty(timelineWindowBg, '--decal-opacity') || 0;
-        timelineWindowBg.style.setProperty('--decal-opacity', opacityValue);
-      }
-    }, `<+=${holdDuration * 0.2}`); // Start 20% into the hold
+    // Background decal will fade in after timeline cover (moved below)
     
     // NOTE: We don't fade out first event here anymore, 
     // it will fade out as part of the main loop transition
@@ -1255,6 +1462,31 @@ export function initTimelineAnimation() {
         ease: 'power1.out'
       }, `${eventLabel}+=${moveDuration * 0.3}`);
       
+      // When transitioning from cover (first event) to first remaining event,
+      // fade in the close button and background decal simultaneously
+      if (index === 0) {
+        // Fade in close button as we move past the cover
+        tl.fromTo('.timeline-close', {
+          opacity: 0
+        }, {
+          opacity: 1,
+          duration: moveDuration * 0.5,
+          ease: 'power2.out'
+        }, `${eventLabel}+=${moveDuration * 0.3}`);
+        
+        // Fade in the background decal image at the same time
+        tl.to(timelineWindowBg, {
+          '--decal-opacity': 1,
+          duration: moveDuration * 0.5,
+          ease: 'power2.out',
+          onUpdate: function() {
+            // Update the ::after pseudo-element opacity via custom property
+            const opacityValue = gsap.getProperty(timelineWindowBg, '--decal-opacity') || 0;
+            timelineWindowBg.style.setProperty('--decal-opacity', opacityValue);
+          }
+        }, `${eventLabel}+=${moveDuration * 0.3}`);
+      }
+      
       // 3. Hold
       tl.to({}, { duration: holdDuration });
       
@@ -1271,9 +1503,8 @@ export function initTimelineAnimation() {
   const closeButton = timeline.querySelector('.timeline-close');
   if (closeButton) {
     closeButton.addEventListener('click', () => {
-      // Scroll to the end of the timeline section
-      const endPosition = timeline.offsetTop + timeline.offsetHeight;
-      window.lenis?.scrollTo(endPosition, { duration: 1.5 });
+      console.log('Timeline: Close button clicked, dismissing timeline');
+      hideTimelineContainer();
     });
   }
 

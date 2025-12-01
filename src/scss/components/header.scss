@@ -1,6 +1,14 @@
 @use '../animation' as *;
 @use '../utilities' as *;
 
+body.in-timeline {
+    header.anniversary {
+        padding-right:8vw;
+        @media (max-width:$mobile-viewport) {
+            padding-right: 64px;
+        }
+    }
+}
 header.anniversary {
     //position: absolute;
     z-index: 2500;
