@@ -1655,11 +1655,14 @@ export function initTimelineAnimation() {
     // Initial accumulated duration (after Phase A)
     // GSAP timelines append automatically, so we just add to the timeline
     
-    remainingEvents.forEach((event, index) => {
+      remainingEvents.forEach((event, index) => {
       // Calculate target position to center this event
-      // Desktop: Move X (horizontal)
+      // Desktop: Move X (horizontal) - events are 50vw wide
+      // With 100vw padding and 50vw event width:
+      // Event i starts at (100vw + i*50vw), center at (125vw + i*50vw)
+      // To center at viewport center (50vw): move by -(75vw + i*50vw) = -((i+1.5)*50vw)
       // Mobile: Move Y (vertical)
-      const getTargetX = () => window.innerWidth > 1024 ? -(index + 1) * window.innerWidth : 0;
+      const getTargetX = () => window.innerWidth > 1024 ? -((index + 1.5) * window.innerWidth * 0.5) : 0;
       const getTargetY = () => window.innerWidth <= 1024 ? -(index + 1) * window.innerHeight : 0;
       
       const eventLabel = `event-${index}`;
@@ -1678,26 +1681,27 @@ export function initTimelineAnimation() {
       const prevEvent = index === 0 ? firstEvent : remainingEvents[index - 1];
       
       // Fade out LATE in the movement (so it stays visible longer)
-      // Start fading out at 40% of movement, end at 90%
+      // Start fading out at 50% of movement, end at 95%
       tl.to(prevEvent, {
         opacity: 0,
         scale: 1.02,
-        duration: moveDuration * 0.5,
+        duration: moveDuration * 0.45,
         ease: 'power1.in'
-      }, `${eventLabel}+=${moveDuration * 0.4}`);
+      }, `${eventLabel}+=${moveDuration * 0.5}`);
       
       // Fade In Current Event
-      // Fade in EARLY in the movement (but not too early)
-      // Start fading in at 30% of movement, end at 80%
+      // With 50vw events, start fading in as soon as movement begins (when entering viewport)
+      // Start fading in at 0% of movement (immediately), end at 70%
+      // This creates overlap where both events are visible as we transition
       tl.fromTo(event, {
         opacity: 0,
         scale: 0.98
       }, {
         opacity: 1,
         scale: 1,
-        duration: moveDuration * 0.5,
-        ease: 'power1.out'
-      }, `${eventLabel}+=${moveDuration * 0.3}`);
+        duration: moveDuration * 0.7,
+        ease: 'power2.out'
+      }, `${eventLabel}+=${moveDuration * 0.0}`);
       
       // When transitioning from cover (first event) to first remaining event,
       // fade in the close button and background decal simultaneously
