@@ -117,6 +117,10 @@ export function initTimelineShader() {
   });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  
+  // Set initial canvas element dimensions to match viewport
+  canvas.style.width = `${window.innerWidth}px`;
+  canvas.style.height = `${window.innerHeight}px`;
 
   // Geometry - Grid of Points
   const geometry = new THREE.BufferGeometry();
@@ -267,6 +271,10 @@ export function initTimelineShader() {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
     material.uniforms.uSize.value = params.dotSize * renderer.getPixelRatio();
+    
+    // Update canvas element dimensions to match full viewport
+    canvas.style.width = `${window.innerWidth}px`;
+    canvas.style.height = `${window.innerHeight}px`;
   }
 
   window.addEventListener('resize', onWindowResize);

@@ -1619,7 +1619,7 @@ export async function initShaderBackground() {
     bottomWaveSpeed: { value: 0.0 }, // Controls the speed of the bottom wave animation
     bottomWaveOffset: { value: -2.207 }, // Controls the horizontal offset of the bottom wave
     // Film noise parameters
-    filmNoiseIntensity: { value: 0.088 }, // Controls the intensity of the film noise
+    filmNoiseIntensity: { value: 0.06 }, // Controls the intensity of the film noise
     filmNoiseSpeed: { value: 0.00001 }, // Controls the speed of the film noise animation
     filmGrainSize: { value: 10.0 }, // Controls the size of the film grain
     filmScratchIntensity: { value: 0.0 }, // Controls the intensity of film scratches

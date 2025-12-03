@@ -2449,6 +2449,13 @@ function handleResizeStart() {
 function handleResizeEnd() {
   console.log('Timeline Resize: Starting resize end handler');
   
+  // Update timeline shader canvas dimensions to match viewport
+  const timelineShaderCanvas = document.querySelector('#timeline-shader-bg');
+  if (timelineShaderCanvas) {
+    timelineShaderCanvas.style.width = `${window.innerWidth}px`;
+    timelineShaderCanvas.style.height = `${window.innerHeight}px`;
+  }
+  
   // First, refresh ScrollTrigger with invalidation to recalculate everything
   ScrollTrigger.refresh(true); // true = invalidate all on refresh
   
