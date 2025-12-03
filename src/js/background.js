@@ -652,8 +652,8 @@ export async function initShaderBackground() {
           // When events section starts entering viewport, transition to phase three
           if (progress > 0.1) {
             // Set phase three colors
-            uniforms.color1.value.set("#dcfff6");
-            uniforms.color2.value.set("#5dff9d");
+            uniforms.color1.value.set("#8300ff");
+            uniforms.color2.value.set("#14d15f");
 
             // Set the yOffset to -0.05 for phase three
             if (uniforms.yOffset) {
@@ -866,38 +866,51 @@ export async function initShaderBackground() {
       return;
     }
 
+    const p3_from = new THREE.Color("#8300ff");
+    const p3_to   = new THREE.Color("#dcfff6");
+
     // Create a second ScrollTrigger to animate colorDarkness back to 0 when scrolling through #events
     gsap.timeline({
       scrollTrigger: {
-        trigger: "#events",
-        start: "top 110%", // Start when center of #events reaches center of viewport
-        end: "top 50%", // Complete when top of #events reaches top of viewport
+        trigger: "#get-involved-cards",
+        start: "top 50%", // Start when center of #events reaches center of viewport
+        end: "top -175%", // Complete when top of #events reaches top of viewport
         scrub: true, // Smooth scrubbing effect, tied to scroll position
         markers: false, // Set to true for debugging
         onUpdate: (self) => {
           // Update the colorDarkness value based on progress
           if (uniforms && uniforms.colorDarkness) {
             // Map progress (0-1) to colorDarkness (2-0), starting at 2 and going to 0
-            uniforms.colorDarkness.value = 2.0 - self.progress * 2.0;
+            uniforms.colorDarkness.value = 1.5 - self.progress * 2.0;
 
             // Maintain colors based on the current phase, but respect scroll direction
             if (window.colorPhase === 3) {
-              // We're in phase three, maintain the phase three colors only if we're scrolling within the events section
-              if (uniforms.color1) uniforms.color1.value.set("#dcfff6");
-              if (uniforms.color2) uniforms.color2.value.set("#5dff9d");
-              // Set phase three lighting values
-              if (uniforms.ambientLight) uniforms.ambientLight.value = 0.4;
-              if (uniforms.directionalLight) uniforms.directionalLight.value = 0.4;
-              // Maintain phase three wave settings
-              if (uniforms.waveSpeed) uniforms.waveSpeed.value = 0.9;
-              if (uniforms.waveAmplitude) uniforms.waveAmplitude.value = 1.2;
-              window.specialColorsActive = true;
+  const t = self.progress;
 
-              // Update the GUI to reflect the phase three colors
-              updateColorGUI();
-              updateLightingGUI();
-              updateWaveGUI();
-            } else if (window.colorPhase === 2) {
+  if (uniforms.color1) {
+    uniforms.color1.value.r = p3_from.r + (p3_to.r - p3_from.r) * t;
+    uniforms.color1.value.g = p3_from.g + (p3_to.g - p3_from.g) * t;
+    uniforms.color1.value.b = p3_from.b + (p3_to.b - p3_from.b) * t;
+  }
+
+                if (uniforms.color2) {
+                  // if you want color2 to remain fixed:
+                  uniforms.color2.value.set("#14d15f");
+
+                  // OR: add another lerp here if you want color2 animated too
+                }
+
+                uniforms.ambientLight.value = 0.4;
+                uniforms.directionalLight.value = 0.4;
+                uniforms.waveSpeed.value = 0.9;
+                uniforms.waveAmplitude.value = 1.2;
+
+                window.specialColorsActive = true;
+
+                updateColorGUI();
+                updateLightingGUI();
+                updateWaveGUI();
+              } else if (window.colorPhase === 2) {
               // We're in phase two, maintain phase two special colors
               // Use the phase 2 colors (red and purple)
               if (uniforms.color1) uniforms.color1.value.set("#da281c");
@@ -942,6 +955,8 @@ export async function initShaderBackground() {
         },
       },
     });
+
+
   }
 
   // Helper function to update the GUI control for colorDarkness if it exists
