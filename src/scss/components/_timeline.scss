@@ -62,6 +62,7 @@ body.timeline-resizing {
     pointer-events: none;
     will-change: opacity;
     mix-blend-mode:screen;
+    min-width:100vw;
   }
 }
 

@@ -872,9 +872,9 @@ export async function initShaderBackground() {
     // Create a second ScrollTrigger to animate colorDarkness back to 0 when scrolling through #events
     gsap.timeline({
       scrollTrigger: {
-        trigger: "#get-involved-cards",
-        start: "top 50%", // Start when center of #events reaches center of viewport
-        end: "top -175%", // Complete when top of #events reaches top of viewport
+        trigger: "#events",
+        start: "top 175%",
+        end: "top 20%",
         scrub: true, // Smooth scrubbing effect, tied to scroll position
         markers: false, // Set to true for debugging
         onUpdate: (self) => {

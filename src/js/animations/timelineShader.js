@@ -18,7 +18,7 @@ export function initTimelineShader() {
     waveFrequencyY: 0.32,
     waveAmplitude: 1.9,
     color: '#4fb3d9', // Timeline blue light
-    opacity: 0.7,
+    opacity: 0.58,
     rotationX: -1.7, // Angled plane
     rotationY: 0,
     rotationZ: 0.26,

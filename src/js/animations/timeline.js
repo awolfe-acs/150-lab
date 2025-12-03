@@ -43,6 +43,21 @@ export function initTimelineAnimation() {
   // Initialize Shader Background
   if (document.querySelector('#timeline-shader-bg') && !window.timelineShaderControls) {
     window.timelineShaderControls = initTimelineShader();
+    // Start paused since we're not in timeline initially
+    if (window.timelineShaderControls && window.timelineShaderControls.stop) {
+      window.timelineShaderControls.stop();
+      console.log('[Timeline] Timeline shader initialized and paused');
+    }
+  }
+  
+  // Initialize Cover Orb
+  if (document.querySelector('#timeline-cover-canvas') && !window.coverOrbControls) {
+    window.coverOrbControls = initCoverOrb();
+    // Start paused since we're not in timeline initially
+    if (window.coverOrbControls && window.coverOrbControls.pause) {
+      window.coverOrbControls.pause();
+      console.log('[Timeline] Cover orb initialized and paused');
+    }
   }
   
   // Check if required elements exist
@@ -843,10 +858,10 @@ export function initTimelineAnimation() {
   function hideTimelineContainer() {
     console.log('Timeline: Dismissing timeline section');
 
-    // NEW: Fade out timeline-container first (360ms)
+    // NEW: Fade out timeline-container first (440ms)
     gsap.to(timelineContainer, {
       opacity: 0,
-      duration: 0.36,
+      duration: 0.44,
       ease: 'power2.out',
       onComplete: () => {
         // Once the container is faded, run the rest of the dismissal
@@ -876,7 +891,7 @@ export function initTimelineAnimation() {
     if (currentYearElement) {
       gsap.to(currentYearElement, {
         opacity: 0,
-        duration: 0.3,
+        duration: 0.44,
         ease: 'power2.out'
       });
     }
@@ -955,7 +970,7 @@ export function initTimelineAnimation() {
     // Use opacity to handle visibility
     gsap.to(timeline, {
       opacity: 0,
-      duration: 0.35,
+      duration: 0.44,
       ease: 'power2.inOut',
       onComplete: () => {
         console.log('Timeline: Section faded out, performing instant jump');
@@ -1001,7 +1016,7 @@ export function initTimelineAnimation() {
           
           gsap.to(timelineWindowBg, {
           opacity: 0,
-          duration: 0.2, // Faster fade (200ms instead of 350ms)
+          duration: 0.44, // Faster fade (200ms instead of 350ms)
           ease: 'power2.inOut',
           onComplete: () => {
             // Reset background styles
@@ -1371,6 +1386,16 @@ export function initTimelineAnimation() {
             console.log('[Timeline] Pausing background shader for performance');
             window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: true } }));
           }
+          
+          // Resume timeline canvases (coverOrb and shader)
+          if (window.coverOrbControls && window.coverOrbControls.resume) {
+            window.coverOrbControls.resume();
+            console.log('[Timeline] Resuming cover orb rendering');
+          }
+          if (window.timelineShaderControls && window.timelineShaderControls.resume) {
+            window.timelineShaderControls.resume();
+            console.log('[Timeline] Resuming timeline shader rendering');
+          }
         }
         
         // Ensure background is fully visible when entering timeline proper
@@ -1479,6 +1504,16 @@ export function initTimelineAnimation() {
           window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: false } }));
         }
         
+        // Pause timeline canvases to save performance
+        if (window.coverOrbControls && window.coverOrbControls.pause) {
+          window.coverOrbControls.pause();
+          console.log('[Timeline] Pausing cover orb rendering');
+        }
+        if (window.timelineShaderControls && window.timelineShaderControls.stop) {
+          window.timelineShaderControls.stop();
+          console.log('[Timeline] Pausing timeline shader rendering');
+        }
+        
         // Fade canvas back in
         const canvas = document.querySelector('#background-canvas');
         if (canvas) {
@@ -1506,6 +1541,16 @@ export function initTimelineAnimation() {
           window.backgroundPaused = false;
           console.log('[Timeline] Resuming background shader');
           window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: false } }));
+        }
+        
+        // Pause timeline canvases to save performance
+        if (window.coverOrbControls && window.coverOrbControls.pause) {
+          window.coverOrbControls.pause();
+          console.log('[Timeline] Pausing cover orb rendering');
+        }
+        if (window.timelineShaderControls && window.timelineShaderControls.stop) {
+          window.timelineShaderControls.stop();
+          console.log('[Timeline] Pausing timeline shader rendering');
         }
         
         // Reset and hide the year display completely when leaving timeline upward

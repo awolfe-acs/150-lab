@@ -283,8 +283,14 @@ export function initCoverOrb() {
 
   // Animation Loop
   const clock = new THREE.Clock();
+  let animationId;
+  let isPaused = false;
   
   const animate = () => {
+    if (isPaused) return;
+    
+    animationId = requestAnimationFrame(animate);
+    
     const elapsedTime = clock.getElapsedTime();
     material.uniforms.uTime.value = elapsedTime;
     
@@ -293,7 +299,6 @@ export function initCoverOrb() {
     orb.rotation.z = elapsedTime * (params.rotationSpeed * 0.5);
     
     renderer.render(scene, camera);
-    requestAnimationFrame(animate);
   };
   
   animate();
@@ -333,7 +338,23 @@ export function initCoverOrb() {
   handleResize();
 
   return {
+    pause: () => {
+      isPaused = true;
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+    },
+    resume: () => {
+      if (isPaused) {
+        isPaused = false;
+        animate();
+      }
+    },
     cleanup: () => {
+      isPaused = true;
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
       window.removeEventListener('resize', handleResize);
       renderer.dispose();
       geometry.dispose();
