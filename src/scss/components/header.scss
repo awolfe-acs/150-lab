@@ -65,7 +65,9 @@ header.anniversary {
             @media (max-width:$mobile-viewport) {
                 width: 132px;
             }
-
+            @media (max-width:$small-mobile-viewport) {
+                width: 108px;
+            }
             &:not(.main-logo) {
                 opacity: 1;
             }
@@ -111,7 +113,10 @@ header.anniversary {
         box-shadow: none !important;
         outline-offset: 8px !important;
         border-radius: 4px !important;
-
+        @media (max-width:$small-mobile-viewport) {
+            font-size:11px;
+            letter-spacing:2px;
+        }
         span {
             font-weight: 400;
             transform: translateY(1px);
@@ -128,6 +133,9 @@ header.anniversary {
             transition: all 0.3s ease;
             transform: translateY(-50%) scaleY(1.01);
             right: 0;
+            @media (max-width:$small-mobile-viewport) {
+                transform:translateY(-50%) scaleY(1.01) scale(0.8);
+            }
         }
 
         &:before {
@@ -157,7 +165,10 @@ button.sound-toggle {
     @media (max-width:$mobile-viewport) {
         margin: 0 auto;
     }
-
+    @media (max-width:$small-mobile-viewport) {
+        font-size:12px;
+        gap:6px;
+    }
     &:not(.active) {
         opacity: 0;
         pointer-events: none;
@@ -180,7 +191,10 @@ button.sound-toggle {
         width: 20px;
         height: 20px;
         overflow: hidden;
-        transform: scaleX(1.2);
+        transform: scaleX(1.2); 
+        @media (max-width:$small-mobile-viewport) {
+            transform: scaleX(1.2) scale(0.8);
+        }
     }
 
     path {

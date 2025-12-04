@@ -107,13 +107,8 @@ export function initTimelineAnimation() {
     // Continue without Three.js visuals
   }
 
-  // Initialize Cover Orb (Morphing Sphere)
-  try {
-    initCoverOrb();
-    console.log('Timeline: Cover orb initialized');
-  } catch (error) {
-    console.error('Timeline: Failed to initialize cover orb:', error);
-  }
+  // Cover Orb is already initialized at the top of this function (line ~55)
+  // No need to call initCoverOrb() again here
 
   // Cache for position with interpolation to prevent jitter
   let lastPosition = { top: 0, left: 0, width: 0, height: 0 };
@@ -263,7 +258,7 @@ export function initTimelineAnimation() {
   
   // Define scroll durations as functions to get current viewport size on resize
   const getInitialPhaseDuration = () => window.innerHeight * 1.0;
-  const getScrollPerEvent = () => window.innerHeight * 2.0;
+  const getScrollPerEvent = () => window.innerHeight * 1.4; // Reduced from 2.0 to 1.4 (30% faster)
   const getTotalScrollDistance = () => getInitialPhaseDuration() + (remainingEventsCount * getScrollPerEvent());
   
   // Initial values
@@ -272,8 +267,8 @@ export function initTimelineAnimation() {
   const totalScrollDistance = getTotalScrollDistance();
   
   // Adjust animation durations (relative timeline units)
-  const moveDuration = 1.0;
-  const holdDuration = 0.2; // Reduced by 80% for faster scroll transitions
+  const moveDuration = 0.75; // Reduced from 1.0 to 0.75 (25% faster transitions)
+  const holdDuration = 0.15; // Reduced from 0.2 to 0.15 (25% faster)
   const totalCycleDuration = moveDuration + holdDuration;
   
   // Calculate theoretical total duration of the timeline for accurate scrubbing
@@ -541,15 +536,29 @@ export function initTimelineAnimation() {
     }
   }
   
-  // Add click listener to #timeline-window-start for re-entry
+  // Add click/touch listener to #timeline-window-start for re-entry
   if (timelineWindowStart) {
-    timelineWindowStart.addEventListener('click', (e) => {
+    const handleReEntry = (e) => {
+      console.log('Timeline: Window start tapped/clicked, dismissed:', isTimelineDismissed);
+      
       // Only handle re-entry if timeline has been dismissed
       if (isTimelineDismissed) {
         e.preventDefault();
+        e.stopPropagation();
+        console.log('Timeline: Re-entering timeline from window start');
         reEnterTimeline();
       }
-    });
+    };
+    
+    // Add both click and touchend for mobile support
+    // Use capture phase to ensure we catch the event
+    timelineWindowStart.addEventListener('click', handleReEntry, { capture: true });
+    timelineWindowStart.addEventListener('touchend', handleReEntry, { passive: false, capture: true });
+    
+    // Also ensure the element is always interactive
+    timelineWindowStart.style.pointerEvents = 'auto';
+    
+    console.log('Timeline: Re-entry listeners attached to #timeline-window-start');
   }
   
   // Helper function to show the year element (ensure it's visible)
@@ -1635,7 +1644,7 @@ export function initTimelineAnimation() {
       { 
         opacity: 1, 
         scale: 1,
-        duration: 0.3, // Slower fade in for "in place" feel
+        duration: 0.25, // Quicker fade in for snappier feel
         ease: 'power2.out'
       },
       0 // Start immediately at the beginning of the pinned section
@@ -1680,14 +1689,14 @@ export function initTimelineAnimation() {
       // Fade Out Previous Event (or Cover Event if index is 0)
       const prevEvent = index === 0 ? firstEvent : remainingEvents[index - 1];
       
-      // Fade out LATE in the movement (so it stays visible longer)
-      // Start fading out at 50% of movement, end at 95%
+      // Fade out starting a bit earlier to give more transition time with 50vw events
+      // Start fading out at 40% of movement, end at 85%
       tl.to(prevEvent, {
         opacity: 0,
-        scale: 1.02,
-        duration: moveDuration * 0.45,
+        scale: 0.94,
+        duration: moveDuration * 0.28,
         ease: 'power1.in'
-      }, `${eventLabel}+=${moveDuration * 0.5}`);
+      }, `${eventLabel}+=${moveDuration * 0.34}`);
       
       // Fade In Current Event
       // With 50vw events, start fading in as soon as movement begins (when entering viewport)
@@ -1695,13 +1704,13 @@ export function initTimelineAnimation() {
       // This creates overlap where both events are visible as we transition
       tl.fromTo(event, {
         opacity: 0,
-        scale: 0.98
+        scale: 0.9
       }, {
         opacity: 1,
         scale: 1,
-        duration: moveDuration * 0.7,
+        duration: moveDuration * 1.15,
         ease: 'power2.out'
-      }, `${eventLabel}+=${moveDuration * 0.0}`);
+      }, `${eventLabel}+=${moveDuration * 0.1}`);
       
       // When transitioning from cover (first event) to first remaining event,
       // fade in the close button and background decal simultaneously

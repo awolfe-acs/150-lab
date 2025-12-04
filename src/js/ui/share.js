@@ -34,7 +34,7 @@ export function initShareButtonOverlapDetection() {
     // Check overlap with timeline section
     // If we're already overlapping events, we might want to keep that or override.
     // Assuming sections don't overlap significantly, checking timeline second will override if both overlap.
-    if (timelineSection) {
+    if (timelineSection && !timelineSection.classList.contains("closed")) {
       const timelineRect = timelineSection.getBoundingClientRect();
       const overlapsTimeline = !(
         shareRect.right < timelineRect.left ||
@@ -44,6 +44,7 @@ export function initShareButtonOverlapDetection() {
       );
       if (overlapsTimeline) overlapType = 'timeline';
     }
+    
 
     // Update background color based on overlap type
     if (overlapType === 'timeline') {

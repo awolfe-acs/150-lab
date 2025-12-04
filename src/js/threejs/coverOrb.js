@@ -6,6 +6,15 @@ export function initCoverOrb() {
     console.warn('Cover orb canvas not found');
     return;
   }
+  
+  // Prevent double initialization
+  if (window.coverOrbInitialized) {
+    console.warn('Cover orb already initialized, skipping duplicate call');
+    return window.coverOrbControls;
+  }
+  
+  window.coverOrbInitialized = true;
+  console.log('Cover Orb: Initializing...');
 
   // Scene setup
   const scene = new THREE.Scene();
@@ -30,7 +39,7 @@ export function initCoverOrb() {
     noiseDensity: 0.73,
     colorDeep: '#9b7bff', // Darker blue/purple
     colorLight: '#0063d8', // Teal
-    colorHighlight: '#00d3c0', // Turquoise highlight
+    colorHighlight: '#00a4af', // Turquoise highlight was 00d3c0
     fresnelPower: 1.3,
     fresnelIntensity: 0.33,
     pulseSpeed: 0.68,
@@ -241,45 +250,58 @@ export function initCoverOrb() {
   const orb = new THREE.Mesh(geometry, material);
   scene.add(orb);
 
+  // Expose params, uniforms, and material for debugging/console access
+  window.coverOrbParams = params;
+  window.coverOrbUniforms = material.uniforms;
+  window.coverOrbMaterial = material;
+  window.coverOrbOrb = orb;
+  console.log('Cover Orb: Exposed to window - params, uniforms, material, orb');
+
   // Setup DAT.GUI
   const setupGUI = () => {
     if (window.gui) {
       // Check if folder already exists to prevent duplicates
-      if (window.gui.__folders["Cover Orb"]) return;
+      if (window.gui.__folders && window.gui.__folders["Cover Orb"]) {
+        console.log('Cover Orb GUI folder already exists');
+        return;
+      }
 
       const folder = window.gui.addFolder('Cover Orb');
       
-      folder.add(params, 'noiseStrength', 0, 2).onChange(v => material.uniforms.uNoiseStrength.value = v);
-      folder.add(params, 'noiseSpeed', 0, 2).onChange(v => material.uniforms.uNoiseSpeed.value = v);
-      folder.add(params, 'noiseDensity', 0, 5).onChange(v => material.uniforms.uNoiseDensity.value = v);
+      // Bind to params (will sync to uniforms in animate loop)
+      folder.add(params, 'noiseStrength', 0, 2).name('Noise Strength');
+      folder.add(params, 'noiseSpeed', 0, 2).name('Noise Speed');
+      folder.add(params, 'noiseDensity', 0, 5).name('Noise Density');
       
-      folder.addColor(params, 'colorDeep').onChange(v => material.uniforms.uColorDeep.value.set(v));
-      folder.addColor(params, 'colorLight').onChange(v => material.uniforms.uColorLight.value.set(v));
-      folder.addColor(params, 'colorHighlight').onChange(v => material.uniforms.uColorHighlight.value.set(v));
+      folder.addColor(params, 'colorDeep').name('Color Deep');
+      folder.addColor(params, 'colorLight').name('Color Light');
+      folder.addColor(params, 'colorHighlight').name('Color Highlight');
       
-      folder.add(params, 'fresnelPower', 0, 5).onChange(v => material.uniforms.uFresnelPower.value = v);
-      folder.add(params, 'fresnelIntensity', 0, 5).onChange(v => material.uniforms.uFresnelIntensity.value = v);
+      folder.add(params, 'fresnelPower', 0, 5).name('Fresnel Power');
+      folder.add(params, 'fresnelIntensity', 0, 5).name('Fresnel Intensity');
       
-      folder.add(params, 'specularStrength', 0, 2).name('Spec Strength').onChange(v => material.uniforms.uSpecularStrength.value = v);
-      folder.add(params, 'glossiness', 1, 100).name('Glossiness').onChange(v => material.uniforms.uGlossiness.value = v);
+      folder.add(params, 'specularStrength', 0, 2).name('Spec Strength');
+      folder.add(params, 'glossiness', 1, 100).name('Glossiness');
       
-      folder.add(params, 'glitterStrength', 0, 2).name('Glitter Str').onChange(v => material.uniforms.uGlitterStrength.value = v);
-      folder.add(params, 'glitterDensity', 1, 200).name('Glitter Dens').onChange(v => material.uniforms.uGlitterDensity.value = v);
+      folder.add(params, 'glitterStrength', 0, 2).name('Glitter Str');
+      folder.add(params, 'glitterDensity', 1, 200).name('Glitter Dens');
       
-      folder.add(params, 'pulseSpeed', 0, 5).onChange(v => material.uniforms.uPulseSpeed.value = v);
-      folder.add(params, 'pulseIntensity', 0, 1).onChange(v => material.uniforms.uPulseIntensity.value = v);
+      folder.add(params, 'pulseSpeed', 0, 5).name('Pulse Speed');
+      folder.add(params, 'pulseIntensity', 0, 1).name('Pulse Intensity');
       
-      folder.add(params, 'rotationSpeed', 0, 1);
+      folder.add(params, 'rotationSpeed', 0, 1).name('Rotation Speed');
       
       folder.open();
+      console.log('Cover Orb: GUI folder created and opened successfully');
     } else {
       // Retry if GUI isn't ready yet
-      setTimeout(setupGUI, 500);
+      console.log('Cover Orb: GUI not ready, retrying setup in 1500ms');
+      setTimeout(setupGUI, 1500);
     }
   };
   
-  // Start checking for GUI
-  setupGUI();
+  // Start checking for GUI after a delay to ensure main GUI is initialized
+  setTimeout(setupGUI, 1500);
 
   // Animation Loop
   const clock = new THREE.Clock();
@@ -293,6 +315,22 @@ export function initCoverOrb() {
     
     const elapsedTime = clock.getElapsedTime();
     material.uniforms.uTime.value = elapsedTime;
+    
+    // Update uniforms from params (syncs GUI changes to shader)
+    material.uniforms.uNoiseStrength.value = params.noiseStrength;
+    material.uniforms.uNoiseSpeed.value = params.noiseSpeed;
+    material.uniforms.uNoiseDensity.value = params.noiseDensity;
+    material.uniforms.uColorDeep.value.set(params.colorDeep);
+    material.uniforms.uColorLight.value.set(params.colorLight);
+    material.uniforms.uColorHighlight.value.set(params.colorHighlight);
+    material.uniforms.uFresnelPower.value = params.fresnelPower;
+    material.uniforms.uFresnelIntensity.value = params.fresnelIntensity;
+    material.uniforms.uPulseSpeed.value = params.pulseSpeed;
+    material.uniforms.uPulseIntensity.value = params.pulseIntensity;
+    material.uniforms.uGlitterStrength.value = params.glitterStrength;
+    material.uniforms.uGlitterDensity.value = params.glitterDensity;
+    material.uniforms.uSpecularStrength.value = params.specularStrength;
+    material.uniforms.uGlossiness.value = params.glossiness;
     
     // Rotation
     orb.rotation.y = elapsedTime * params.rotationSpeed;
@@ -337,17 +375,19 @@ export function initCoverOrb() {
   // Initial resize check
   handleResize();
 
-  return {
+  const controls = {
     pause: () => {
       isPaused = true;
       if (animationId) {
         cancelAnimationFrame(animationId);
       }
+      console.log('Cover Orb: Paused');
     },
     resume: () => {
       if (isPaused) {
         isPaused = false;
         animate();
+        console.log('Cover Orb: Resumed');
       }
     },
     cleanup: () => {
@@ -359,9 +399,13 @@ export function initCoverOrb() {
       renderer.dispose();
       geometry.dispose();
       material.dispose();
-      // Clean up GUI folder if needed? 
-      // dat.gui doesn't have a simple "removeFolder" that cleans up everything perfectly without reference, 
-      // but usually for dev mode it's fine.
+      window.coverOrbInitialized = false;
+      console.log('Cover Orb: Cleaned up');
     }
   };
+  
+  // Store controls reference globally
+  window.coverOrbControls = controls;
+  
+  return controls;
 }
