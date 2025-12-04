@@ -268,7 +268,7 @@ export function initTimelineAnimation() {
   
   // Adjust animation durations (relative timeline units)
   const moveDuration = 0.75; // Reduced from 1.0 to 0.75 (25% faster transitions)
-  const holdDuration = 0.15; // Reduced from 0.2 to 0.15 (25% faster)
+  const holdDuration = 0.08; // Reduced from 0.15 to 0.08 (~50% less hold time)
   const totalCycleDuration = moveDuration + holdDuration;
   
   // Calculate theoretical total duration of the timeline for accurate scrubbing
