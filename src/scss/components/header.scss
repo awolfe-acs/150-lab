@@ -7,6 +7,11 @@ body.in-timeline {
         @media (max-width:$mobile-viewport) {
             padding-right: 64px;
         }
+        .toggle-menu {
+            @media (max-width:$small-mobile-viewport) {
+                display:none;
+            }
+        }
     }
 }
 header.anniversary {
@@ -118,7 +123,7 @@ header.anniversary {
             letter-spacing:2px;
         }
         span {
-            font-weight: 400;
+            font-weight: 450;
             transform: translateY(1px);
             display: block;
         }
@@ -144,6 +149,9 @@ header.anniversary {
 
         &:after {
             top: calc(50% + 5px);
+            @media (max-width:$small-mobile-viewport) {
+                top: calc(50% + 3px);
+            }
         }
 
     }

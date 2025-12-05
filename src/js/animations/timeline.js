@@ -2014,7 +2014,8 @@ export function initTimelineAnimation() {
             // Last decade - position based on percentage of expected gap
             const viewportWidth = window.innerWidth;
             const padding = viewportWidth > 768 ? 120 : 100;
-            const markersPerView = viewportWidth > 768 ? 5 : 4;
+            // Adjust markers per view: 5 on desktop, 4 on tablet, 2 on small mobile (< 640px)
+            const markersPerView = viewportWidth > 768 ? 5 : (viewportWidth < 640 ? 2 : 4);
             const estimatedGap = (viewportWidth - padding) / markersPerView;
             
             const offsetFromMarker = 30;
@@ -2193,7 +2194,9 @@ export function initTimelineAnimation() {
       // Calculate dynamic gap based on viewport (matches CSS calculation)
       const viewportWidth = window.innerWidth;
       const padding = viewportWidth > 768 ? 120 : 100; // Match CSS padding
-      const dynamicGap = (viewportWidth - padding) / (viewportWidth > 768 ? 5 : 4); // 5 markers on desktop, 4 on mobile
+      // Adjust markers per view: 5 on desktop, 4 on tablet, 2 on small mobile (< 640px)
+      const markersPerView = viewportWidth > 768 ? 5 : (viewportWidth < 640 ? 2 : 4);
+      const dynamicGap = (viewportWidth - padding) / markersPerView;
       
       // Scroll amount = (gap + approximate marker width) * 3 for faster navigation
       const scrollAmount = (dynamicGap + 60) * 3;

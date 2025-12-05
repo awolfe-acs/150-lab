@@ -23,7 +23,7 @@ $timeline-scrubber-height: 80px;
   transform-style: preserve-3d; // Critical: ensure 3D rendering context for backdrop-filter
   will-change: opacity, transform; // Hint for compositing layer
   @media (max-width: $mobile-viewport) {
-    bottom: calc(80px + env(safe-area-inset-bottom));
+    bottom: calc(60px + env(safe-area-inset-bottom));
   }
 }
 
@@ -199,7 +199,7 @@ $timeline-scrubber-height: 80px;
     .marker-label {
       opacity: 1 !important;
       color: $timeline-active;
-      font-weight: 700;
+      font-weight: 500;
     }
   }
   &[data-decade="2026"] {
@@ -235,7 +235,7 @@ $timeline-scrubber-height: 80px;
   position: absolute;
   top: -32px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 450;
   color: $timeline-inactive;
   opacity: 0.9; // More visible
   white-space: nowrap;
@@ -323,7 +323,7 @@ $timeline-scrubber-height: 80px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 450;
   color: rgba(255, 255, 255, 0.9);
   opacity: 0;
   white-space: nowrap;
@@ -397,6 +397,9 @@ $timeline-scrubber-height: 80px;
 
   .scrubber-markers {
     gap: calc((100vw - 100px) / 4); // Show 4 markers per viewport on mobile (more space per marker)
+    @media (max-width: 640px) {
+      gap: calc((100vw - 100px) / 2); // Show 2 markers per viewport on small mobile
+    }
   }
 
   .scrubber-nav {
