@@ -359,7 +359,6 @@
 
 .share-button-container {
     position: fixed;
-    bottom: 24px;
     right: 24px;
     z-index: 99999;
     width: 52px;
@@ -367,18 +366,25 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: bottom 0.24s ease-in-out;
+    transform: none !important;
+    will-change: auto !important;
+    @media (min-width:1025px) {
+        bottom:24px;
+    }
     @media (max-width:$desktop-viewport) {
-
-        bottom:calc(8px + env(safe-area-inset-bottom));
+        //bottom:calc(8px + max(env(safe-area-inset-bottom), var(--js-detected-nav-height, 0px)));
+        //bottom:calc(8px + (var(--js-detected-nav-height) * 1));
         right:8px;
+        bottom:8px;
     }
 }
 
 body.in-timeline {
     .share-button-container {
         @media (max-width:$desktop-viewport) {
-            bottom:10px;
-            bottom:calc(70px + env(safe-area-inset-bottom));
+            bottom:72px;
+            //bottom:calc(64px + max(env(safe-area-inset-bottom), var(--js-detected-nav-height, 0px)));
             right:8px;
         }
     }

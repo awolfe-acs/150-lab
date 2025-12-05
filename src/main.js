@@ -38,6 +38,7 @@ import { initEventListItemHover } from "./js/ui/eventListHover.js";
 // Import utilities
 import { initSplitLinesAnimation, initSplitCharsAnimation } from "./js/utils/splitText.js";
 import { initGlobalResizeHandler } from "./js/utils/globalHandlers.js";
+import { initAndroidNavAdjustments } from "./js/utils/android-nav.js";
 import aemModeDetector from "./js/utils/aemModeDetector.js";
 
 // Import config
@@ -130,6 +131,9 @@ function initAnimations() {
 
   // Initialize global resize handler
   initGlobalResizeHandler();
+  
+  // Initialize Android navigation bar adjustment
+  initAndroidNavAdjustments();
 
   // Add menu button click handler
   const menuButton = document.querySelector("button.toggle-menu");
