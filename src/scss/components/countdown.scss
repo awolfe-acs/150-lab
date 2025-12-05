@@ -24,13 +24,16 @@
         margin-top: 48px;
         text-transform: uppercase;
         letter-spacing: 2px;
+        @media (max-width:$mobile-viewport) {
+            font-size:12px;
+        }
     }
     > div {
         display: flex;
         align-items: center; 
-        gap: 24px;  
+        gap: 16px;  
         @media (max-width:1024px) {
-            gap: 16px;
+            gap: 12px;
         }
     }
     .time-unit {
@@ -70,8 +73,15 @@
         font-weight: 900;
         white-space: nowrap;
         user-select: none;
+        min-width:120px;
         @media (max-height:$short-viewport-height) {
             font-size: 48px;
+        }
+        @media (max-width:$desktop-viewport) {
+            min-width:80px;
+        }
+        @media (max-width:$mobile-viewport) {
+            min-width:40px;
         }
         .char {
             display: inline-block;

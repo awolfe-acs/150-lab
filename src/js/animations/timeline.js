@@ -1372,7 +1372,8 @@ export function initTimelineAnimation() {
         if (isDismissing) return;
         
         // Use animation progress to account for scrub lag (visual position)
-        updateScrubber(self.animation.progress());
+        const progress = self.animation.progress();
+        updateScrubber(progress);
         // manageBackgroundPause(self.progress); // Removed to use strict onEnter/onLeave logic
         
         // Ensure background stays opaque during timeline scrub
@@ -1380,6 +1381,83 @@ export function initTimelineAnimation() {
           if (timelineWindowBg.style.opacity !== '1') {
             timelineWindowBg.style.opacity = '1';
           }
+        }
+
+        // --- Timeline Shader Interpolation ---
+        // Interpolate shader parameters as we approach the 2000s and finale
+        // We'll start interpolating from around 80% progress (approx 1990s) to 100%
+        
+        if (window.timelineShaderControls && window.timelineShaderControls.updateParams) {
+          // Define start (default) and end (finale) parameters
+          const startParams = {
+            waveSpeed: 0.32,
+            waveAmplitude: 1.9,
+            waveFrequencyX: 0.16,
+            waveFrequencyY: 0.32,
+            bobbingAmplitude: 1.4,
+            bobbingSpeed: 0.22,
+            fadeIntensity: 0.86,
+            opacity: 0.58,
+            scale: 3.4,
+            rotationX: -1.7,
+            rotationZ: 0.26,
+            positionY: -30.0,
+            positionZ: -16.0
+          };
+          
+          const endParams = {
+            waveSpeed: 0.2,
+            waveAmplitude: 5.0,
+            waveFrequencyX: 0.6,
+            waveFrequencyY: 1.0,
+            bobbingAmplitude: 2.2,
+            bobbingSpeed: 0.24,
+            fadeIntensity: 0.39,
+            opacity: 1.0,
+            scale: 3.3,
+            rotationX: -1.6,
+            rotationZ: -1.44,
+            positionY: -20.0,
+            positionZ: -20.0
+          };
+          
+          // Determine interpolation factor
+          // Start interpolating at 75% progress (approx 1990s)
+          const interpolationStart = 0.75;
+          let t = 0;
+          
+          if (progress > interpolationStart) {
+            // Normalize t from 0 to 1 over the range [interpolationStart, 1.0]
+            t = (progress - interpolationStart) / (1.0 - interpolationStart);
+            // Clamp t to [0, 1]
+            t = Math.max(0, Math.min(1, t));
+            
+            // Apply easing (optional, e.g., smoothstep)
+            // t = t * t * (3 - 2 * t); 
+          }
+          
+          // Helper to interpolate values
+          const lerp = (start, end, t) => start + (end - start) * t;
+          
+          // Calculate current params
+          const currentParams = {
+            waveSpeed: lerp(startParams.waveSpeed, endParams.waveSpeed, t),
+            waveAmplitude: lerp(startParams.waveAmplitude, endParams.waveAmplitude, t),
+            waveFrequencyX: lerp(startParams.waveFrequencyX, endParams.waveFrequencyX, t),
+            waveFrequencyY: lerp(startParams.waveFrequencyY, endParams.waveFrequencyY, t),
+            bobbingAmplitude: lerp(startParams.bobbingAmplitude, endParams.bobbingAmplitude, t),
+            bobbingSpeed: lerp(startParams.bobbingSpeed, endParams.bobbingSpeed, t),
+            fadeIntensity: lerp(startParams.fadeIntensity, endParams.fadeIntensity, t),
+            opacity: lerp(startParams.opacity, endParams.opacity, t),
+            scale: lerp(startParams.scale, endParams.scale, t),
+            rotationX: lerp(startParams.rotationX, endParams.rotationX, t),
+            rotationZ: lerp(startParams.rotationZ, endParams.rotationZ, t),
+            positionY: lerp(startParams.positionY, endParams.positionY, t),
+            positionZ: lerp(startParams.positionZ, endParams.positionZ, t)
+          };
+          
+          // Update shader
+          window.timelineShaderControls.updateParams(currentParams);
         }
       },
       onEnter: () => {
@@ -1584,6 +1662,52 @@ export function initTimelineAnimation() {
           
           console.log('Timeline: Year display reset on leave back');
         }
+      },
+      onEnterBack: () => {
+        console.log('Timeline: Re-entering timeline section from below (scrolling back up)');
+        
+        // Add .in-timeline class to body (only if not dismissed)
+        if (!isTimelineDismissed) {
+          document.body.classList.add('in-timeline');
+          
+          // Pause regular background shader when re-entering timeline
+          if (!window.backgroundPaused) {
+            window.backgroundPaused = true;
+            console.log('[Timeline] Pausing background shader for performance');
+            window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: true } }));
+          }
+          
+          // Resume timeline canvases (coverOrb and shader)
+          if (window.coverOrbControls && window.coverOrbControls.resume) {
+            window.coverOrbControls.resume();
+            console.log('[Timeline] Resuming cover orb rendering');
+          }
+          if (window.timelineShaderControls && window.timelineShaderControls.resume) {
+            window.timelineShaderControls.resume();
+            console.log('[Timeline] Resuming timeline shader rendering');
+          }
+        }
+        
+        // Ensure background is visible when re-entering timeline from below
+        gsap.to(timelineWindowBg, { opacity: 1, duration: 0.2, overwrite: 'auto' });
+        
+        // Fade out the canvas
+        const canvas = document.querySelector('#background-canvas');
+        if (canvas) {
+          gsap.to(canvas, { opacity: 0, duration: 0.5, ease: 'power2.inOut' });
+        }
+        
+        // Set HTML background to timeline gradient
+        const htmlElement = document.documentElement;
+        gsap.to(htmlElement, {
+          duration: 0.5,
+          ease: 'power2.inOut',
+          onUpdate: function() {
+            const progress = this.progress();
+            // Interpolate to timeline gradient
+            htmlElement.style.background = `linear-gradient(to bottom, #0493AB, #0657A4)`;
+          }
+        });
       }
     }
   });
@@ -1671,8 +1795,9 @@ export function initTimelineAnimation() {
       // Event i starts at (100vw + i*50vw), center at (125vw + i*50vw)
       // To center at viewport center (50vw): move by -(75vw + i*50vw) = -((i+1.5)*50vw)
       // Mobile: Move Y (vertical)
-      const getTargetX = () => window.innerWidth > 1024 ? -((index + 1.5) * window.innerWidth * 0.5) : 0;
-      const getTargetY = () => window.innerWidth <= 1024 ? -(index + 1) * window.innerHeight : 0;
+      const isMobile = () => window.innerWidth <= 1024;
+      const getTargetX = () => isMobile() ? 0 : -((index + 1.5) * window.innerWidth * 0.5);
+      const getTargetY = () => isMobile() ? -(index + 1) * window.innerHeight : 0;
       
       const eventLabel = `event-${index}`;
       

@@ -22,6 +22,9 @@ $timeline-scrubber-height: 80px;
   overflow: visible;
   transform-style: preserve-3d; // Critical: ensure 3D rendering context for backdrop-filter
   will-change: opacity, transform; // Hint for compositing layer
+  @media (max-width: $mobile-viewport) {
+    bottom: 80px;
+  }
 }
 
 // Scrollable wrapper for scrubber content

@@ -1,3 +1,5 @@
+@use "../utilities" as *;
+
 // Timeline Section Styles
 
 // Timeline colors
@@ -183,6 +185,12 @@ body.timeline-resizing {
   opacity: 0; // Will be animated by GSAP
   position: relative;
   z-index: 20;
+  @media (max-width:$desktop-viewport) {
+    width: 100vw;
+    height: 100vh;
+    padding: 0 16px;
+    margin: 0;
+  }
   @media (min-width:1025px) {
     padding: 0 0 0 12vw;
   }
@@ -196,6 +204,13 @@ body.timeline-resizing {
     align-items: center;
     position: relative;
     z-index: 20;
+    @media (max-width:$desktop-viewport) {
+      justify-content: flex-start;
+      flex-direction: column;
+      padding: 12vh 0;
+      width: 100%;
+      height: 100%;
+    }
   }
   
   // First event (1876) - centered and doesn't move horizontally
@@ -271,7 +286,7 @@ body.timeline-resizing {
 
 // Event panel (right side)
 .event-panel {
-  padding: 48px;
+  padding: 16px 48px;
   min-height:80vh;
   color: white;
 
@@ -288,7 +303,11 @@ body.timeline-resizing {
       line-height: 1.6;
       opacity: 0.95;
       margin: 0 0 16px 0;
-
+      width:560px;
+      max-width:100%;
+      @media (max-width:$mobile-viewport) {
+        font-size:14px;
+      }
       &:last-child {
         margin-bottom: 0;
       }
@@ -313,7 +332,7 @@ body.timeline-resizing {
 
 
 #current-timeline-year {
-  font-size: clamp(128px, 4vw, 16vw);
+  font-size: clamp(112px, 4vw, 16vw);
   position:fixed;
   z-index:1;
   left:8vw;
@@ -325,6 +344,7 @@ body.timeline-resizing {
   transform:scale(2);
   transform-origin:bottom left;
   letter-spacing:-4px;
+  white-space: nowrap;
   @media (min-width:1025px) and (max-width:1599px) {
     font-size: clamp(88px, 4vw, 16vw);
   }
@@ -338,12 +358,12 @@ body.timeline-resizing {
     //font-size:54px;
     //left:36px;
     //bottom:152px;
-    font-size:28px;
-    left:calc(50% - 16px);
-    bottom:160px;
-    transform:translateX(-50%) scale(4);
+    font-size:64px;
+    left:calc(50% - 4px);
+    bottom:150px;
+    transform:translateX(-50%) scale(1);
     transform-origin:center center;
-    letter-spacing:-2px;
+    letter-spacing:-1px;
   }
 }
 
@@ -355,6 +375,7 @@ body.timeline-resizing {
     padding-top: 0;
     height: auto; // Allow height to grow
     min-height: 100vh;
+    width: 100vw;
   }
 
   // Push the first regular event down to make room for the cover
@@ -362,19 +383,25 @@ body.timeline-resizing {
     margin-top: 100vh;
   }
 
-  .timeline-event {
-    width: 100%;
+  // Ensure cover is also 100vh and properly positioned
+  .timeline-event.timeline-cover {
     height: 100vh;
-    padding: 0 40px;
-
-    .event-content-wrapper {
-      grid-template-columns: 1fr;
-      gap: 0;
-    }
+    width: 100vw;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 0 !important;
   }
 
   .event-panel {
     padding: 32px;
+    height: auto;
+    min-height: 0; // Allow it to shrink if needed
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-width:100%;
   }
 }
 

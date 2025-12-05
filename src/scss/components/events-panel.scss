@@ -73,7 +73,7 @@
         }
 
         @media (max-width:$mobile-viewport) {
-            padding: 0 24px;
+            padding: 0 16px;
             max-width: calc(100% - 32px);
         }
 
@@ -134,13 +134,13 @@
                 }
 
                 @media (max-width:$mobile-viewport) {
-                    font-size: 16px;
+                    font-size: 12px;
                     flex: 1;
                 }
             }
 
             .event-title {
-                font-weight: 700;
+                font-weight: 400;
                 width: 53%;
                 margin-left: 0;
                 margin-right: 48px;
@@ -175,7 +175,7 @@
             }
 
             .event-date {
-                font-weight: 400;
+                font-weight: 450;
                 margin-left: 0;
                 margin-right: auto;
 

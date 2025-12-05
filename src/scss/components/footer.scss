@@ -85,6 +85,7 @@
         padding: 15px 0 1.32em 25px;
         text-align: center;
         font-size: 12.825px !important;
+        font-weight:450;
     }
 
     ul {
@@ -108,7 +109,7 @@
     a {
         color: #fff !important;
         text-decoration: none;
-
+        font-weight:450;
         &:not(.social-icon):hover {
             text-decoration: underline !important;
         }

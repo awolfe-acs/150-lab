@@ -9,8 +9,8 @@ export function initTimelineShader() {
 
   // Configuration Parameters
   const params = {
-    dotCountX: 150, // Number of dots along X
-    dotCountY: 80,  // Number of dots along Y
+    dotCountX: 98, // Number of dots along X
+    dotCountY: 54,  // Number of dots along Y
     spacing: 0.8,   // Spacing between dots
     dotSize: 10.0,   // Size of each dot
     waveSpeed: 0.32,
@@ -116,7 +116,7 @@ export function initTimelineShader() {
     antialias: true
   });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   
   // Set initial canvas element dimensions to match viewport
   canvas.style.width = `${window.innerWidth}px`;
@@ -262,6 +262,9 @@ export function initTimelineShader() {
     points.rotation.y = params.rotationY;
     points.rotation.z = params.rotationZ;
     
+    // Update scale dynamically
+    points.scale.set(params.scale, params.scale, params.scale);
+    
     renderer.render(scene, camera);
   }
 
@@ -292,6 +295,11 @@ export function initTimelineShader() {
     resume: () => {
       if (isPaused) {
         isPaused = false;
+        // Re-add resize listener
+        window.addEventListener('resize', onWindowResize);
+        // Force resize update to ensure proportionality
+        onWindowResize();
+        
         clock.start(); // Reset or resume clock? Resume is better but Clock doesn't have resume. 
         // Just continue animate
         animate();

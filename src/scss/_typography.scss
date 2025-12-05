@@ -1,5 +1,55 @@
 @use './utilities' as *;
 
+@font-face {
+    font-family: 'stolzl';
+    font-weight: 100 300;
+    font-style: normal;
+    font-display: swap;
+    src: url('/fonts/Stolzl-Light.woff2') format('woff2'),
+         url('/fonts/Stolzl-Light.woff') format('woff');
+}
+
+@font-face {
+    font-family: 'stolzl';
+    font-weight: 450;
+    font-style: normal;
+    font-display: swap;
+    src: url('/fonts/Stolzl-Book.woff2') format('woff2'),
+         url('/fonts/Stolzl-Book.woff') format('woff');
+}
+
+@font-face {
+    font-family: 'stolzl';
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+    src: url('/fonts/Stolzl-Regular.woff2') format('woff2'),
+         url('/fonts/Stolzl-Regular.woff') format('woff');
+}
+
+@font-face {
+    font-family: 'stolzl';
+    font-weight: 500 600; //tells browser to use Medium for 500+ without artificial bold
+    font-style: normal;
+    font-display: swap;
+    src: url('/fonts/Stolzl-Medium.woff2') format('woff2'),
+         url('/fonts/Stolzl-Medium.woff') format('woff');
+}
+
+@font-face {
+    font-family: 'stolzl';
+    font-weight: 700 900; //tells browser to use Medium for 500+ without artificial bold
+    font-style: normal;
+    font-display: swap;
+    src: url('/fonts/Stolzl-Bold.woff2') format('woff2'),
+         url('/fonts/Stolzl-Bold.woff') format('woff');
+}
+
+body {
+    font-family: "stolzl", Arial, sans-serif;
+}
+
+
 h1 {
     font-family: $font-family;
     font-size: 10vw;
@@ -7,7 +57,7 @@ h1 {
     line-height: 1;
     letter-spacing: -0.05em;
     //margin: 24px 0 0 !important;
-    margin: 8px 0 0 !important;
+    margin: 2px 0 0 !important;
     text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.242), 0px 1px 8px rgba(0, 0, 0, 0.12);
 
     @media (min-width:1600px) {
@@ -80,7 +130,7 @@ h3 {
 h4 {
     font-family: $font-family;
     font-size: 3vw;
-    font-weight: 150;
+    font-weight: 300;
     line-height: 1.2;
     letter-spacing: -0.05em;
     letter-spacing: -0.25px;
@@ -95,7 +145,7 @@ h4 {
     }
 
     @media (min-width:1441px) {
-        font-size: 43.2px;
+        font-size: 40px;
     }
 
     @media (max-width:$desktop-viewport) {
@@ -104,10 +154,14 @@ h4 {
     }
 
     @media (max-width:$mobile-viewport) {
-        font-size: 24px;
+        font-size: 18px;
     }
 }
 
+h5 {
+    font-family: $font-family;
+    font-weight:450;
+}
 p {
     font-family: $font-family;
     font-size: 16px;

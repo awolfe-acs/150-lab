@@ -53,7 +53,7 @@ export function createScrollDownIcon(referenceElement) {
     scrollText.style.cssText = `
       color: #F7F7F7;
       font-size: 12px;
-      font-weight: 500;
+      font-weight: 400;
       letter-spacing: 2px;
       text-align: center;
       line-height: 1;
