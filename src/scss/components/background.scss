@@ -1,3 +1,5 @@
+@use '../utilities' as *;
+
 #shaderBackground {
     position: fixed;
     top: 0;
@@ -15,6 +17,9 @@
     /* Ensure touch events pass through to elements below */
     touch-action: none; // This element should not respond to touch at all
     background: #060E15;
+    @media (max-width:$desktop-viewport) {
+        min-width:calc(100vw + 1px);
+    }
 }
 
 /* Add a media query for mobile devices */
