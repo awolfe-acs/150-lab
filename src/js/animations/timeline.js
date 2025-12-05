@@ -1129,22 +1129,36 @@ export function initTimelineAnimation() {
         const progress = self.progress;
         const handoffThreshold = 0.01; // 1% - very tight threshold
         
-        // CRITICAL: Resume timeline visuals EARLY (at first sign of scroll)
+        // CRITICAL: Resume timeline visuals EARLY AND AGGRESSIVELY
         // This ensures they're playing even during very slow scrolling
-        // Uses a closure variable to track state
-        if (!self._hasResumedVisuals && progress > 0.001) {
-          self._hasResumedVisuals = true;
-          
-          // Resume timeline shader
+        // We check EVERY frame during early progress to ensure they start
+        if (progress > 0.0001 && progress < 0.1) {
+          // Check timeline shader
           if (window.timelineShaderControls && window.timelineShaderControls.resume) {
+            // Try to detect if it's actually paused by checking if a resume is needed
+            // The shader doesn't expose isPaused, so we just call resume (it's idempotent)
             window.timelineShaderControls.resume();
-            console.log('[Timeline] Resuming timeline shader (Early via onUpdate)');
+            
+            if (!self._loggedShaderResume) {
+              self._loggedShaderResume = true;
+              console.log('[Timeline] Resuming timeline shader (Early via onUpdate, progress:', progress.toFixed(4), ')');
+            }
+          } else if (!self._loggedShaderMissing) {
+            self._loggedShaderMissing = true;
+            console.warn('[Timeline] Timeline shader controls not available at progress:', progress.toFixed(4));
           }
           
-          // Resume cover orb
+          // Check cover orb
           if (window.coverOrbControls && window.coverOrbControls.resume) {
             window.coverOrbControls.resume();
-            console.log('[Timeline] Resuming cover orb (Early via onUpdate)');
+            
+            if (!self._loggedOrbResume) {
+              self._loggedOrbResume = true;
+              console.log('[Timeline] Resuming cover orb (Early via onUpdate, progress:', progress.toFixed(4), ')');
+            }
+          } else if (!self._loggedOrbMissing) {
+            self._loggedOrbMissing = true;
+            console.warn('[Timeline] Cover orb controls not available at progress:', progress.toFixed(4));
           }
         }
         

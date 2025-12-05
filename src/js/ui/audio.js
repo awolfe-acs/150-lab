@@ -20,6 +20,8 @@ let wasPlayingBeforeHidden = false;
 
 // UI click sound instance
 let uiClickSound = null;
+let lastClickTime = 0;
+const clickDebounceMs = 50; // Prevent multiple clicks within 50ms
 
 // Initialize UI click sound
 function initializeUIClickSound() {
@@ -30,9 +32,16 @@ function initializeUIClickSound() {
   }
 }
 
-// Play UI click sound
+// Play UI click sound with debouncing to prevent multiple simultaneous plays
 const playUIClickSound = () => {
   if (audioMuted) return;
+
+  // Debounce: prevent multiple sounds within clickDebounceMs
+  const now = Date.now();
+  if (now - lastClickTime < clickDebounceMs) {
+    return; // Skip this click, too soon after last one
+  }
+  lastClickTime = now;
 
   try {
     // Initialize if needed
@@ -40,7 +49,7 @@ const playUIClickSound = () => {
       initializeUIClickSound();
     }
 
-    // Clone the audio to allow multiple overlapping sounds
+    // Clone the audio to allow multiple overlapping sounds (but debounced)
     const clickSound = uiClickSound.cloneNode();
     clickSound.volume = 0.35;
     clickSound.play().catch((error) => {
@@ -375,9 +384,9 @@ export const setupUIClickSounds = () => {
   // Initialize UI click sound
   initializeUIClickSound();
 
-  // Select all interactive elements
+  // Select all interactive elements including timeline scrubber markers
   const interactiveElements = document.querySelectorAll(
-    'a, button, input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"]'
+    'a, button, input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"], .marker, .minor-node'
   );
 
   // Add click event listeners to play sound
@@ -410,7 +419,7 @@ export const setupUIClickSounds = () => {
             // Check if the node itself is an interactive element
             if (
               node.matches(
-                'a, button, input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"]'
+                'a, button, input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"], .marker, .minor-node'
               )
             ) {
               node.addEventListener("click", (event) => {
@@ -433,7 +442,7 @@ export const setupUIClickSounds = () => {
 
             // Check for interactive elements within the added node
             const childInteractiveElements = node.querySelectorAll(
-              'a, button, input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"]'
+              'a, button, input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"], .marker, .minor-node'
             );
             childInteractiveElements.forEach((element) => {
               element.addEventListener("click", (event) => {
