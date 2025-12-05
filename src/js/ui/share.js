@@ -290,7 +290,7 @@ function initSharePanelBehavior(shareButton, sharePanel) {
         text-align: center;
         color: white;
         font-size: 16px;
-        font-weight: 400;
+        font-weight: 450;
         margin-bottom: 8px;
         letter-spacing: 1px;
         font-style: italic;
@@ -306,7 +306,7 @@ function initSharePanelBehavior(shareButton, sharePanel) {
         transition: all 0.3s ease;
         color: white;
         font-size: 14px;
-        font-weight: 500;
+        font-weight: 450;
         margin-bottom: 8px;
         border: none;
         background: transparent;

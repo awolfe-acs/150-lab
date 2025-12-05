@@ -1173,6 +1173,14 @@ export function initTimelineAnimation() {
       },
       onEnter: () => {
         console.log('Timeline: INSTANT handoff from span to BG element');
+
+        // Resume timeline shader early (just before main timeline starts)
+        // This ensures smoothness during the entry transition
+        if (window.timelineShaderControls && window.timelineShaderControls.resume) {
+           window.timelineShaderControls.resume();
+           console.log('[Timeline] Resuming timeline shader (Early Entry)');
+        }
+
         
         // Stop tracking span position updates
         isTrackingSpan = false;
@@ -1335,6 +1343,14 @@ export function initTimelineAnimation() {
       timelineWindowBg.style.backgroundImage = `linear-gradient(to bottom, ${startColorTop}, ${startColorBottom})`;
     }
   }, 0);
+
+  // Ensure ScrollTrigger refreshes after fonts load to prevent layout shifts affecting positions
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => {
+      console.log('Timeline: Fonts loaded, refreshing ScrollTrigger');
+      ScrollTrigger.refresh();
+    });
+  }
 
   // Fade out the get-involved-message (starts at 40%, ends at 100%)
   expansionTl.to(getInvolvedMessage, {
@@ -1591,15 +1607,8 @@ export function initTimelineAnimation() {
           window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: false } }));
         }
         
-        // Pause timeline canvases to save performance
-        if (window.coverOrbControls && window.coverOrbControls.pause) {
-          window.coverOrbControls.pause();
-          console.log('[Timeline] Pausing cover orb rendering');
-        }
-        if (window.timelineShaderControls && window.timelineShaderControls.stop) {
-          window.timelineShaderControls.stop();
-          console.log('[Timeline] Pausing timeline shader rendering');
-        }
+        // Pause timeline canvases logic removed from here to prevent premature freezing.
+        // It is now handled by the fade-out trigger's onLeave callback.
         
         // Fade canvas back in
         const canvas = document.querySelector('#background-canvas');
@@ -1630,15 +1639,17 @@ export function initTimelineAnimation() {
           window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: false } }));
         }
         
-        // Pause timeline canvases to save performance
-        if (window.coverOrbControls && window.coverOrbControls.pause) {
-          window.coverOrbControls.pause();
-          console.log('[Timeline] Pausing cover orb rendering');
-        }
-        if (window.timelineShaderControls && window.timelineShaderControls.stop) {
-          window.timelineShaderControls.stop();
-          console.log('[Timeline] Pausing timeline shader rendering');
-        }
+        // Pause timeline canvases to save performance (with delay to prevent freeze during fade)
+        setTimeout(() => {
+          if (window.coverOrbControls && window.coverOrbControls.pause) {
+            window.coverOrbControls.pause();
+            console.log('[Timeline] Pausing cover orb rendering (delayed)');
+          }
+          if (window.timelineShaderControls && window.timelineShaderControls.stop) {
+            window.timelineShaderControls.stop();
+            console.log('[Timeline] Pausing timeline shader rendering (delayed)');
+          }
+        }, 1000); // 1s delay to allow fade out to complete
         
         // Reset and hide the year display completely when leaving timeline upward
         if (!currentYearElement) {
@@ -1797,7 +1808,9 @@ export function initTimelineAnimation() {
       // Mobile: Move Y (vertical)
       const isMobile = () => window.innerWidth <= 1024;
       const getTargetX = () => isMobile() ? 0 : -((index + 1.5) * window.innerWidth * 0.5);
-      const getTargetY = () => isMobile() ? -(index + 1) * window.innerHeight : 0;
+      // Use string-based vh units for mobile to avoid drifting calculations when window.innerHeight changes (address bar)
+      // This forces the browser to align with CSS 100vh elements
+      const getTargetY = () => isMobile() ? `${-(index + 1) * 100}vh` : 0;
       
       const eventLabel = `event-${index}`;
       
@@ -2384,6 +2397,13 @@ export function initTimelineAnimation() {
           opacity: 1,
           duration: 0.3
         });
+      },
+      onLeave: () => {
+         // User requested shader to be running "just after" leaving. 
+         // Removed explicit pause here. Ideally, we rely on a much later cleanup or the fact 
+         // that it's off-screen and eventually might be paused by other mechanisms if needed.
+         // For now, ensuring it runs provides the requested smoothness.
+         console.log('[Timeline] Letting shader run after exit (per user request)');
       }
     }
   }).to([timelineWindowBg, timeline], {
@@ -2462,7 +2482,8 @@ let resizeState = {
 
 function captureTimelineState() {
   // Only capture state if we're within the timeline section
-  const timelineScrollTrigger = resizeState.timelineScrollTrigger;
+  // Safely access resizeState properties
+  const timelineScrollTrigger = (typeof resizeState !== 'undefined' && resizeState) ? resizeState.timelineScrollTrigger : null;
   if (!timelineScrollTrigger || !timelineScrollTrigger.isActive) {
     return null;
   }

@@ -360,7 +360,7 @@ body.timeline-resizing {
     //bottom:152px;
     font-size:64px;
     left:calc(50% - 4px);
-    bottom:150px;
+    bottom: calc(150px + env(safe-area-inset-bottom));
     transform:translateX(-50%) scale(1);
     transform-origin:center center;
     letter-spacing:-1px;

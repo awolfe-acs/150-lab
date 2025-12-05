@@ -9,7 +9,7 @@ $timeline-scrubber-height: 80px;
 
 .timeline-scrubber {
   position: fixed;
-  bottom: 64px;
+  bottom: calc(64px + env(safe-area-inset-bottom));
   left: 0;
   right: 0;
   height: $timeline-scrubber-height;
@@ -23,7 +23,7 @@ $timeline-scrubber-height: 80px;
   transform-style: preserve-3d; // Critical: ensure 3D rendering context for backdrop-filter
   will-change: opacity, transform; // Hint for compositing layer
   @media (max-width: $mobile-viewport) {
-    bottom: 80px;
+    bottom: calc(80px + env(safe-area-inset-bottom));
   }
 }
 
