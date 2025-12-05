@@ -46,7 +46,6 @@ export function initTimelineAnimation() {
     // Start paused since we're not in timeline initially
     if (window.timelineShaderControls && window.timelineShaderControls.stop) {
       window.timelineShaderControls.stop();
-      console.log('[Timeline] Timeline shader initialized and paused');
     }
   }
   
@@ -56,7 +55,6 @@ export function initTimelineAnimation() {
     // Start paused since we're not in timeline initially
     if (window.coverOrbControls && window.coverOrbControls.pause) {
       window.coverOrbControls.pause();
-      console.log('[Timeline] Cover orb initialized and paused');
     }
   }
   
@@ -72,7 +70,6 @@ export function initTimelineAnimation() {
   const isTimelineDismissed = sessionStorage.getItem('timelineDismissed') === 'true';
   
   if (isTimelineDismissed) {
-    console.log('Timeline: Previously dismissed, collapsing section');
     // Immediately collapse the timeline section
     gsap.set(timeline, {
       opacity: 0,
@@ -101,7 +98,6 @@ export function initTimelineAnimation() {
   // Initialize Three.js scene for timeline visuals
   try {
     timelineScene = initTimelineScene();
-    console.log('Timeline: Three.js scene initialized');
   } catch (error) {
     console.error('Timeline: Failed to initialize Three.js scene:', error);
     // Continue without Three.js visuals
@@ -128,22 +124,9 @@ export function initTimelineAnimation() {
     // If we're not tracking the span (e.g. during expansion or timeline view), don't update
     if (!isTrackingSpan) return;
     
+    // PERFORMANCE: Only getBoundingClientRect, skip expensive getComputedStyle
+    // During tracking phase, the element isn't being transformed
     const rect = timelineWindowStart.getBoundingClientRect();
-    
-    // Get the computed transform to account for any GSAP animations
-    const computedStyle = window.getComputedStyle(timelineWindowStart);
-    const transform = computedStyle.transform;
-    
-    // Extract translate values from transform matrix if present
-    let translateY = 0;
-    if (transform && transform !== 'none') {
-      const matrix = new DOMMatrix(transform);
-      translateY = matrix.m42; // Y translation from matrix
-    }
-    
-    // Adjust rect.top to compensate for any Y transforms
-    // This helps maintain accurate positioning during scroll reveals
-    const adjustedTop = rect.top - translateY;
     
     // Use tighter threshold for Y-axis (more sensitive to vertical changes)
     // Use looser threshold for X-axis (less critical)
@@ -153,7 +136,7 @@ export function initTimelineAnimation() {
     
     // Check if position actually changed
     const positionChanged = 
-      Math.abs(adjustedTop - targetPosition.top) > yThreshold ||
+      Math.abs(rect.top - targetPosition.top) > yThreshold ||
       Math.abs(rect.left - targetPosition.left) > xThreshold ||
       Math.abs(rect.width - targetPosition.width) > sizeThreshold ||
       Math.abs(rect.height - targetPosition.height) > sizeThreshold;
@@ -169,7 +152,7 @@ export function initTimelineAnimation() {
     
     // Update target position
     targetPosition = {
-      top: adjustedTop,
+      top: rect.top,
       left: rect.left,
       width: rect.width,
       height: rect.height
@@ -180,7 +163,7 @@ export function initTimelineAnimation() {
     const lerpFactor = lastPosition.top === 0 ? 1 : 0.6;
     
     lastPosition = {
-      top: lerp(lastPosition.top || adjustedTop, adjustedTop, lerpFactor),
+      top: lerp(lastPosition.top || rect.top, rect.top, lerpFactor),
       left: lerp(lastPosition.left || rect.left, rect.left, lerpFactor),
       width: lerp(lastPosition.width || rect.width, rect.width, lerpFactor),
       height: lerp(lastPosition.height || rect.height, rect.height, lerpFactor)
@@ -252,18 +235,23 @@ export function initTimelineAnimation() {
   // Continuous tracking system for perfect sync during critical scroll phase
   let rafId = null;
   let isContinuouslyTracking = false;
+  let trackingFrameCount = 0; // Frame counter for throttling
   
   const startContinuousTracking = () => {
     if (isContinuouslyTracking) return; // Already tracking
     
     isContinuouslyTracking = true;
-    console.log('Timeline: Starting continuous position tracking');
+    trackingFrameCount = 0; // Reset frame counter
     
     const trackLoop = () => {
       if (!isContinuouslyTracking) return;
       
-      // Update position every frame during critical phase
-      positionBgToSpan();
+      // Throttle: Only update every 3rd frame to reduce layout thrashing
+      // This still provides smooth tracking (20fps at 60fps) but significantly reduces performance impact
+      trackingFrameCount++;
+      if (trackingFrameCount % 3 === 0) {
+        positionBgToSpan();
+      }
       
       // Continue loop
       rafId = requestAnimationFrame(trackLoop);
@@ -277,12 +265,13 @@ export function initTimelineAnimation() {
     if (!isContinuouslyTracking) return;
     
     isContinuouslyTracking = false;
-    console.log('Timeline: Stopping continuous position tracking');
     
     if (rafId !== null) {
       cancelAnimationFrame(rafId);
       rafId = null;
     }
+    
+    trackingFrameCount = 0; // Reset counter
   };
   
   // Set up ScrollTrigger to start aggressive tracking when .get-involved-message enters viewport
@@ -291,19 +280,15 @@ export function initTimelineAnimation() {
     start: 'top bottom', // When message enters bottom of viewport
     end: 'bottom top', // When message exits top of viewport
     onEnter: () => {
-      console.log('Timeline: Get-involved message entering viewport - starting continuous tracking');
       startContinuousTracking();
     },
     onLeave: () => {
       // Don't stop tracking when leaving downward - we need it for the handoff
-      console.log('Timeline: Get-involved message left viewport (downward)');
     },
     onEnterBack: () => {
-      console.log('Timeline: Get-involved message re-entering viewport - starting continuous tracking');
       startContinuousTracking();
     },
     onLeaveBack: () => {
-      console.log('Timeline: Get-involved message left viewport (upward) - stopping continuous tracking');
       stopContinuousTracking();
     }
   });
@@ -473,8 +458,6 @@ export function initTimelineAnimation() {
   
   // Function to re-enter timeline after dismissal
   function reEnterTimeline() {
-    console.log('Timeline: Re-entering timeline from dismissed state');
-    
     // Reset dismissed flags
     isTimelineDismissed = false;
     isDismissing = false;
@@ -579,7 +562,6 @@ export function initTimelineAnimation() {
           // Pause background shader
           if (!window.backgroundPaused) {
             window.backgroundPaused = true;
-            console.log('[Timeline] Re-entry: Pausing background shader');
             window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: true } }));
           }
           
@@ -587,8 +569,6 @@ export function initTimelineAnimation() {
           if (tl && tl.scrollTrigger) {
             tl.progress(0);
           }
-          
-          console.log('Timeline: Re-entry complete');
         }
       });
     }
@@ -597,13 +577,10 @@ export function initTimelineAnimation() {
   // Add click/touch listener to #timeline-window-start for re-entry
   if (timelineWindowStart) {
     const handleReEntry = (e) => {
-      console.log('Timeline: Window start tapped/clicked, dismissed:', isTimelineDismissed);
-      
       // Only handle re-entry if timeline has been dismissed
       if (isTimelineDismissed) {
         e.preventDefault();
         e.stopPropagation();
-        console.log('Timeline: Re-entering timeline from window start');
         reEnterTimeline();
       }
     };
@@ -615,8 +592,6 @@ export function initTimelineAnimation() {
     
     // Also ensure the element is always interactive
     timelineWindowStart.style.pointerEvents = 'auto';
-    
-    console.log('Timeline: Re-entry listeners attached to #timeline-window-start');
   }
   
   // Helper function to show the year element (ensure it's visible)
@@ -923,8 +898,6 @@ export function initTimelineAnimation() {
   let isDismissing = false;
   
   function hideTimelineContainer() {
-    console.log('Timeline: Dismissing timeline section');
-
     // NEW: Fade out timeline-container first (440ms)
     gsap.to(timelineContainer, {
       opacity: 0,
@@ -938,8 +911,6 @@ export function initTimelineAnimation() {
   }
   // Function to dismiss timeline and clean up
   function dismissTimeline() {
-    console.log('Timeline: Dismissing timeline section');
-    
     // Set dismissing flag to lock background updates
     isDismissing = true;
     
@@ -1007,7 +978,6 @@ export function initTimelineAnimation() {
     // Resume background animations immediately
     if (window.backgroundPaused) {
       window.backgroundPaused = false;
-      console.log('[Timeline] Dismissal: Resuming background shader');
       window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: false } }));
     }
 
@@ -1040,8 +1010,6 @@ export function initTimelineAnimation() {
       duration: 0.44,
       ease: 'power2.inOut',
       onComplete: () => {
-        console.log('Timeline: Section faded out, performing instant jump');
-        
         // 2. Bring background to front to mask the jump
         timelineWindowBg.style.zIndex = '9999';
         
@@ -1100,9 +1068,6 @@ export function initTimelineAnimation() {
             
             // Remove .in-timeline class from body LAST
             document.body.classList.remove('in-timeline');
-            
-            console.log('Timeline: Dismissal complete');
-            
             // Reset dismissing flag
             isDismissing = false;
           }
@@ -1141,7 +1106,6 @@ export function initTimelineAnimation() {
             
             if (!self._loggedShaderResume) {
               self._loggedShaderResume = true;
-              console.log('[Timeline] Resuming timeline shader (Early via onUpdate, progress:', progress.toFixed(4), ')');
             }
           } else if (!self._loggedShaderMissing) {
             self._loggedShaderMissing = true;
@@ -1154,7 +1118,6 @@ export function initTimelineAnimation() {
             
             if (!self._loggedOrbResume) {
               self._loggedOrbResume = true;
-              console.log('[Timeline] Resuming cover orb (Early via onUpdate, progress:', progress.toFixed(4), ')');
             }
           } else if (!self._loggedOrbMissing) {
             self._loggedOrbMissing = true;
@@ -1179,7 +1142,6 @@ export function initTimelineAnimation() {
           if (Math.abs(currentOpacity - 1.0) > 0.01) {
             timelineWindowBg.style.opacity = '1';
             timelineWindowBg.style.visibility = 'visible';
-            console.log('Timeline: SAFETY - BG is full viewport, forcing opacity to 1.0 from', currentOpacity.toFixed(3));
           }
           return; // Skip other checks when BG is full viewport
         }
@@ -1195,7 +1157,6 @@ export function initTimelineAnimation() {
           if (currentBgOpacity > 0) {
             timelineWindowBg.style.opacity = '0';
             timelineWindowBg.style.visibility = 'hidden'; // Extra safety
-            console.log('Timeline: SAFETY - Pseudo visible, forcing BG to 0. Pseudo opacity:', pseudoOpacity.toFixed(3));
           }
         }
         
@@ -1263,13 +1224,10 @@ export function initTimelineAnimation() {
         }
       },
       onEnter: () => {
-        console.log('Timeline: INSTANT handoff from span to BG element');
-
         // Resume timeline shader early (just before main timeline starts)
         // This ensures smoothness during the entry transition
         if (window.timelineShaderControls && window.timelineShaderControls.resume) {
            window.timelineShaderControls.resume();
-           console.log('[Timeline] Resuming timeline shader (Early Entry)');
         }
 
         
@@ -1282,7 +1240,6 @@ export function initTimelineAnimation() {
         // CRITICAL: Kill the pseudo fade timeline to prevent it from overriding our opacity
         if (pseudoFadeTl) {
           pseudoFadeTl.kill();
-          console.log('Timeline: Killed pseudo fade timeline');
         }
         
         // INSTANT HANDOFF: Transfer from span pseudo-element to BG element
@@ -1335,12 +1292,8 @@ export function initTimelineAnimation() {
           width: adjustedWidth,
           height: adjustedHeight
         };
-        
-        console.log('Timeline: INSTANT handoff complete, BG element now visible at', capturedPosition);
       },
       onLeaveBack: () => {
-        console.log('Timeline: INSTANT reverse handoff from BG element to span');
-        
         // Resume tracking span position updates
         isTrackingSpan = true;
         positionBgToSpan();
@@ -1372,8 +1325,6 @@ export function initTimelineAnimation() {
         
         // 3. Reset captured position
         capturedPosition = null;
-        
-        console.log('Timeline: INSTANT reverse handoff complete, pseudo-element restored');
       }
     }
   });
@@ -1429,7 +1380,6 @@ export function initTimelineAnimation() {
       onReverseComplete: () => {
         // When reversing (scrolling back), set opacity back to 0 after reaching start
         timelineWindowBg.style.opacity = '0';
-        console.log('Timeline: BG element hidden on reverse');
       }
     }, 
     0
@@ -1460,7 +1410,6 @@ export function initTimelineAnimation() {
   // Ensure ScrollTrigger refreshes after fonts load to prevent layout shifts affecting positions
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(() => {
-      console.log('Timeline: Fonts loaded, refreshing ScrollTrigger');
       ScrollTrigger.refresh();
     });
   }
@@ -1487,7 +1436,6 @@ export function initTimelineAnimation() {
         if (isDismissing) return;
         
         // Called after refresh/resize - ensure animations are in correct state
-        console.log('Timeline: ScrollTrigger refreshed, progress:', self.progress.toFixed(3));
         
         // Update scrubber and background state immediately
         if (self.animation) {
@@ -1590,8 +1538,6 @@ export function initTimelineAnimation() {
         }
       },
       onEnter: () => {
-        console.log('Timeline: Entering timeline section');
-        
         // Add .in-timeline class to body (only if not dismissed)
         if (!isTimelineDismissed) {
           document.body.classList.add('in-timeline');
@@ -1607,18 +1553,26 @@ export function initTimelineAnimation() {
 
           if (!window.backgroundPaused) {
             window.backgroundPaused = true;
-            console.log('[Timeline] Pausing background shader for performance');
             window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: true } }));
+          }
+          
+          // Notify adaptive renderer we're entering timeline (switch canvas monitoring)
+          if (window.shaderBackgroundRenderer && window.shaderBackgroundRenderer.setInTimeline) {
+            window.shaderBackgroundRenderer.setInTimeline(true);
           }
           
           // Resume timeline canvases (coverOrb and shader)
           if (window.coverOrbControls && window.coverOrbControls.resume) {
             window.coverOrbControls.resume();
-            console.log('[Timeline] Resuming cover orb rendering');
           }
           if (window.timelineShaderControls && window.timelineShaderControls.resume) {
             window.timelineShaderControls.resume();
-            console.log('[Timeline] Resuming timeline shader rendering');
+          }
+          
+          // Clear any pending pause timeout to prevent canvases from being paused
+          if (window._timelinePauseTimeout) {
+            clearTimeout(window._timelinePauseTimeout);
+            window._timelinePauseTimeout = null;
           }
         }
         
@@ -1682,14 +1636,11 @@ export function initTimelineAnimation() {
               transformOrigin: 'left'
             });
             
-            console.log('Timeline: Initialized first minor node as active, scrubber progress:', scrubberProgressValue.toFixed(3));
           }
         }
         
         // Reset and hide the year display completely when entering timeline
         // The year will only show when scrolling to the first actual event after the cover
-        console.log('Timeline: Resetting and hiding year display on entry');
-        
         // Get the year element
         if (!currentYearElement) {
           currentYearElement = document.querySelector('#current-timeline-year');
@@ -1711,21 +1662,21 @@ export function initTimelineAnimation() {
           // Reset the state variables so updateScrubber will show the year when appropriate
           lastDisplayedYear = null;
           isAnimatingYear = false;
-          
-          console.log('Timeline: Year display cleared and hidden');
         }
       },
       onLeave: () => {
-        console.log('Timeline: Leaving timeline section');
-        
         // Remove .in-timeline class from body
         document.body.classList.remove('in-timeline');
         
         // Resume regular background shader
         if (window.backgroundPaused) {
           window.backgroundPaused = false;
-          console.log('[Timeline] Resuming background shader');
           window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: false } }));
+        }
+        
+        // Notify adaptive renderer we're leaving timeline (switch canvas monitoring)
+        if (window.shaderBackgroundRenderer && window.shaderBackgroundRenderer.setInTimeline) {
+          window.shaderBackgroundRenderer.setInTimeline(false);
         }
         
         // Pause timeline canvases logic removed from here to prevent premature freezing.
@@ -1748,7 +1699,6 @@ export function initTimelineAnimation() {
         });
       },
       onLeaveBack: () => {
-        console.log('Timeline: Leaving timeline section (scrolling back up)');
         
         // Remove .in-timeline class from body
         document.body.classList.remove('in-timeline');
@@ -1756,21 +1706,32 @@ export function initTimelineAnimation() {
         // Resume regular background shader
         if (window.backgroundPaused) {
           window.backgroundPaused = false;
-          console.log('[Timeline] Resuming background shader');
           window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: false } }));
         }
         
+        // Notify adaptive renderer we're leaving timeline (switch canvas monitoring)
+        if (window.shaderBackgroundRenderer && window.shaderBackgroundRenderer.setInTimeline) {
+          window.shaderBackgroundRenderer.setInTimeline(false);
+        }
+        
         // Pause timeline canvases to save performance (with delay to prevent freeze during fade)
-        setTimeout(() => {
-          if (window.coverOrbControls && window.coverOrbControls.pause) {
-            window.coverOrbControls.pause();
-            console.log('[Timeline] Pausing cover orb rendering (delayed)');
-          }
-          if (window.timelineShaderControls && window.timelineShaderControls.stop) {
-            window.timelineShaderControls.stop();
-            console.log('[Timeline] Pausing timeline shader rendering (delayed)');
+        // Store timeout so it can be cleared if user re-enters
+        const pauseTimeout = setTimeout(() => {
+          // Safety check: only pause if we're actually still outside the timeline
+          // Check if body still doesn't have .in-timeline class
+          if (!document.body.classList.contains('in-timeline')) {
+            if (window.coverOrbControls && window.coverOrbControls.pause) {
+              window.coverOrbControls.pause();
+            }
+            if (window.timelineShaderControls && window.timelineShaderControls.stop) {
+              window.timelineShaderControls.stop();
+            }
+          } else {
           }
         }, 1000); // 1s delay to allow fade out to complete
+        
+        // Store timeout ID so it can be cleared if needed
+        window._timelinePauseTimeout = pauseTimeout;
         
         // Reset and hide the year display completely when leaving timeline upward
         if (!currentYearElement) {
@@ -1791,12 +1752,9 @@ export function initTimelineAnimation() {
           // Reset the state variables
           lastDisplayedYear = null;
           isAnimatingYear = false;
-          
-          console.log('Timeline: Year display reset on leave back');
         }
       },
       onEnterBack: () => {
-        console.log('Timeline: Re-entering timeline section from below (scrolling back up)');
         
         // Add .in-timeline class to body (only if not dismissed)
         if (!isTimelineDismissed) {
@@ -1805,18 +1763,26 @@ export function initTimelineAnimation() {
           // Pause regular background shader when re-entering timeline
           if (!window.backgroundPaused) {
             window.backgroundPaused = true;
-            console.log('[Timeline] Pausing background shader for performance');
             window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: true } }));
+          }
+          
+          // Notify adaptive renderer we're re-entering timeline (switch canvas monitoring)
+          if (window.shaderBackgroundRenderer && window.shaderBackgroundRenderer.setInTimeline) {
+            window.shaderBackgroundRenderer.setInTimeline(true);
           }
           
           // Resume timeline canvases (coverOrb and shader)
           if (window.coverOrbControls && window.coverOrbControls.resume) {
             window.coverOrbControls.resume();
-            console.log('[Timeline] Resuming cover orb rendering');
           }
           if (window.timelineShaderControls && window.timelineShaderControls.resume) {
             window.timelineShaderControls.resume();
-            console.log('[Timeline] Resuming timeline shader rendering');
+          }
+          
+          // Clear any pending pause timeout to prevent canvases from being paused
+          if (window._timelinePauseTimeout) {
+            clearTimeout(window._timelinePauseTimeout);
+            window._timelinePauseTimeout = null;
           }
         }
         
@@ -2002,7 +1968,6 @@ export function initTimelineAnimation() {
   const closeButton = timeline.querySelector('.timeline-close');
   if (closeButton) {
     closeButton.addEventListener('click', () => {
-      console.log('Timeline: Close button clicked, dismissing timeline');
       hideTimelineContainer();
     });
   }
@@ -2129,8 +2094,7 @@ export function initTimelineAnimation() {
             const positionInGap = offsetFromMarker + leftPadding + (availableWidth * yearPositionInDecade);
             
             minorNode.style.left = `${positionInGap}px`;
-            
-            console.log(`Minor node ${eventYearStr}: position ${(yearPositionInDecade * 100).toFixed(1)}% in decade, ${positionInGap.toFixed(0)}px from marker`);
+
           } else {
             // Last decade - position based on percentage of expected gap
             const viewportWidth = window.innerWidth;
@@ -2214,8 +2178,6 @@ export function initTimelineAnimation() {
           const scrollDistance = end - start;
           const targetScroll = start + (scrollDistance * eventProgress);
 
-          console.log(`Minor Node Click: Event ${globalEventIndex} (Decade: ${decadeName}, Local: ${localEventIndex}), Year ${eventYear}, Progress: ${eventProgress.toFixed(3)}`);
-
           // Smooth scroll to the target position
           if (window.lenis) {
             window.lenis.scrollTo(targetScroll, {
@@ -2226,7 +2188,6 @@ export function initTimelineAnimation() {
                   markerLock.isLocked = false;
                   markerLock.targetIndex = -1;
                   markerLock.reason = '';
-                  console.log('Minor Node Click: Unlocked after scroll complete');
                 }, 500);
               }
             });
@@ -2250,10 +2211,7 @@ export function initTimelineAnimation() {
       });
 
       const minorNodesCreated = decadeEvents.filter(e => !e.classList.contains('timeline-cover')).length;
-      console.log(`Timeline: Generated ${minorNodesCreated} minor nodes for decade ${decadeName}`);
     });
-
-    console.log(`Timeline: Generated ${minorNodeIndex} total minor nodes across ${decades.length} decades`);
   }
 
   // Generate minor nodes for individual events
@@ -2419,7 +2377,6 @@ export function initTimelineAnimation() {
             if (nextMarkerRect.right > rightBoundary || nextMarkerRect.left > rightBoundary) {
               shouldScroll = true;
               targetMarkerIndex = activeMarkerIndex + 1; // Scroll to show next marker
-              console.log('Scrubber: Proactive scroll forward to show next marker');
             }
           }
         } else if (direction < 0) {
@@ -2432,7 +2389,6 @@ export function initTimelineAnimation() {
             if (prevMarkerRect.left < leftBoundary || prevMarkerRect.right < leftBoundary) {
               shouldScroll = true;
               targetMarkerIndex = activeMarkerIndex - 1; // Scroll to show previous marker
-              console.log('Scrubber: Proactive scroll backward to show previous marker');
             }
           }
         }
@@ -2443,8 +2399,6 @@ export function initTimelineAnimation() {
         scrollToMarker(targetMarkerIndex);
       }
     };
-
-    console.log('Timeline: Scrubber scrolling initialized');
   }
 
   // Initialize scrubber scrolling functionality
@@ -2454,8 +2408,6 @@ export function initTimelineAnimation() {
   const markers = gsap.utils.toArray('.marker');
   markers.forEach((marker, index) => {
     marker.addEventListener('click', () => {
-      console.log(`Marker Click: Clicked marker index ${index}`);
-      
       // Very short lock just to prevent interference during scroll start
       markerLock.isLocked = true;
       markerLock.targetIndex = index;
@@ -2471,7 +2423,6 @@ export function initTimelineAnimation() {
         markerLock.isLocked = false;
         markerLock.targetIndex = -1;
         markerLock.reason = '';
-        console.log('Marker Click: Unlocked - updateScrubber will handle state');
       }, 100); // Very short delay
       
       // Calculate the target progress for this marker
@@ -2486,8 +2437,6 @@ export function initTimelineAnimation() {
       const end = scrollTriggerInstance.end;
       const scrollDistance = end - start;
       const targetScroll = start + (scrollDistance * targetProgress);
-      
-      console.log(`Marker Click: Scrolling to progress ${targetProgress.toFixed(3)}, scroll position: ${targetScroll.toFixed(0)}`);
       
       // Smooth scroll to the target position
       // updateScrubber will handle all state updates during the scroll
@@ -2527,7 +2476,6 @@ export function initTimelineAnimation() {
          // Removed explicit pause here. Ideally, we rely on a much later cleanup or the fact 
          // that it's off-screen and eventually might be paused by other mechanisms if needed.
          // For now, ensuring it runs provides the requested smoothness.
-         console.log('[Timeline] Letting shader run after exit (per user request)');
       }
     }
   }).to([timelineWindowBg, timeline], {
@@ -2538,13 +2486,10 @@ export function initTimelineAnimation() {
   // Handle resize to keep user on the same event
   ScrollTrigger.addEventListener('refreshInit', () => {
     // Store the current active event index before refresh
-    console.log('Timeline: Refresh Init - Active Event Index:', currentActiveEventIndex);
   });
 
   ScrollTrigger.addEventListener('refresh', () => {
     // Restore position to the active event
-    console.log('Timeline: Refresh Complete - Restoring to Event Index:', currentActiveEventIndex);
-    
     if (currentActiveEventIndex > 0) {
         // Calculate scroll position for this event
         // We use the label associated with the event move
@@ -2565,7 +2510,6 @@ export function initTimelineAnimation() {
                
                // Scroll there immediately
                window.scrollTo(0, scrollPos);
-               console.log('Timeline: Restored scroll position to event', currentActiveEventIndex);
              }
         }
     }
@@ -2655,8 +2599,6 @@ function captureTimelineState() {
     activeDecadeIndex = activeMarkerIndex;
   }
   
-  console.log('Timeline Resize: Captured state - marker:', activeMarkerIndex, 'decade:', activeDecadeIndex, 'progress:', progress.toFixed(3));
-  
   return {
     progress,
     activeEventIndex,
@@ -2680,7 +2622,6 @@ function restoreTimelinePosition(state) {
   // Use the saved progress to calculate new scroll position
   const targetScroll = start + (scrollDistance * state.progress);
   
-  console.log(`Timeline Resize: Restoring to event ${state.activeEventIndex}, decade ${state.activeDecadeIndex}, marker ${state.activeMarkerIndex}, progress ${state.progress.toFixed(3)}`);
   
   // Immediately jump to position (no smooth scroll during resize)
   if (window.lenis) {
@@ -2707,7 +2648,6 @@ function restoreTimelinePosition(state) {
         marker.classList.add('complete');
       }
     });
-    console.log(`Timeline Resize: Restored marker ${state.activeMarkerIndex} as active`);
   }
 }
 
@@ -2723,14 +2663,11 @@ function handleResizeStart() {
     document.body.classList.add('timeline-resizing');
     
     if (resizeState.savedProgress) {
-      console.log('Timeline Resize: Captured state -', resizeState.savedProgress);
     }
   }
 }
 
 function handleResizeEnd() {
-  console.log('Timeline Resize: Starting resize end handler');
-  
   // Update timeline shader canvas dimensions to match viewport
   const timelineShaderCanvas = document.querySelector('#timeline-shader-bg');
   if (timelineShaderCanvas) {
@@ -2756,8 +2693,6 @@ function handleResizeEnd() {
         const end = scrollTrigger.end;
         const scrollDistance = end - start;
         const targetScroll = start + (scrollDistance * resizeState.savedProgress.progress);
-        
-        console.log('Timeline Resize: Restoring to progress', resizeState.savedProgress.progress.toFixed(3));
         
         // Use Lenis or native scroll to restore position
         if (window.lenis) {
@@ -2809,7 +2744,6 @@ function handleResizeEnd() {
               resizeState.markerLockRef.isLocked = false;
               resizeState.markerLockRef.targetIndex = -1;
               resizeState.markerLockRef.reason = '';
-              console.log('Timeline Resize: Marker unlocked');
             }
           }, 500);
           
@@ -2817,15 +2751,12 @@ function handleResizeEnd() {
           document.body.classList.remove('timeline-resizing');
           resizeState.isResizing = false;
           resizeState.savedProgress = null;
-          
-          console.log('Timeline Resize: Complete');
         }, 150); // Increased timeout for animation to settle
       } else {
         // No saved progress, just clean up
         document.body.classList.remove('timeline-resizing');
         resizeState.isResizing = false;
         resizeState.savedProgress = null;
-        console.log('Timeline Resize: Complete (no saved state)');
       }
     });
   });
@@ -2858,7 +2789,6 @@ function manageBackgroundPause(progress) {
     // We're fully in the timeline - pause global background
     if (!window.backgroundPaused) {
       window.backgroundPaused = true;
-      console.log('[Timeline] Pausing background shader for performance (film grain, waves, particles frozen)');
       
       // Also dispatch event for other systems that might need to know
       window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: true } }));
@@ -2867,7 +2797,6 @@ function manageBackgroundPause(progress) {
     // We're exiting or entering timeline - resume global background
     if (window.backgroundPaused) {
       window.backgroundPaused = false;
-      console.log('[Timeline] Resuming background shader (film grain, waves, particles active)');
       
       // Dispatch resume event
       window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: false } }));
@@ -2912,7 +2841,6 @@ export function disposeTimeline() {
   // Ensure background is resumed when timeline is disposed
   if (window.backgroundPaused) {
     window.backgroundPaused = false;
-    console.log('[Timeline] Cleanup: Resuming background shader');
     window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: false } }));
   }
 }

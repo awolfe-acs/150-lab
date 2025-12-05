@@ -269,7 +269,7 @@ function initSharePanelBehavior(shareButton, sharePanel) {
         backdrop-filter: blur(20px);
         border-radius: 24px;
       }
-
+      
       .share-panel.active {
         filter:opacity(1);
         visibility: visible;

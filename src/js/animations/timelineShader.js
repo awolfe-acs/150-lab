@@ -113,10 +113,10 @@ export function initTimelineShader() {
   const renderer = new THREE.WebGLRenderer({
     canvas: canvas,
     alpha: true,
-    antialias: true
+    antialias: false // Disabled to save memory on framebuffers
   });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25)); // Reduced from 1.5 to save memory
   
   // Set initial canvas element dimensions to match viewport
   canvas.style.width = `${window.innerWidth}px`;

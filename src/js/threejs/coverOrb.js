@@ -14,7 +14,6 @@ export function initCoverOrb() {
   }
   
   window.coverOrbInitialized = true;
-  console.log('Cover Orb: Initializing...');
 
   // Scene setup
   const scene = new THREE.Scene();
@@ -255,14 +254,12 @@ export function initCoverOrb() {
   window.coverOrbUniforms = material.uniforms;
   window.coverOrbMaterial = material;
   window.coverOrbOrb = orb;
-  console.log('Cover Orb: Exposed to window - params, uniforms, material, orb');
 
   // Setup DAT.GUI
   const setupGUI = () => {
     if (window.gui) {
       // Check if folder already exists to prevent duplicates
       if (window.gui.__folders && window.gui.__folders["Cover Orb"]) {
-        console.log('Cover Orb GUI folder already exists');
         return;
       }
 
@@ -292,10 +289,7 @@ export function initCoverOrb() {
       folder.add(params, 'rotationSpeed', 0, 1).name('Rotation Speed');
       
       folder.open();
-      console.log('Cover Orb: GUI folder created and opened successfully');
     } else {
-      // Retry if GUI isn't ready yet
-      console.log('Cover Orb: GUI not ready, retrying setup in 1500ms');
       setTimeout(setupGUI, 1500);
     }
   };
@@ -381,13 +375,11 @@ export function initCoverOrb() {
       if (animationId) {
         cancelAnimationFrame(animationId);
       }
-      console.log('Cover Orb: Paused');
     },
     resume: () => {
       if (isPaused) {
         isPaused = false;
         animate();
-        console.log('Cover Orb: Resumed');
       }
     },
     cleanup: () => {
@@ -400,7 +392,6 @@ export function initCoverOrb() {
       geometry.dispose();
       material.dispose();
       window.coverOrbInitialized = false;
-      console.log('Cover Orb: Cleaned up');
     }
   };
   

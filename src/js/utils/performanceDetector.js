@@ -244,8 +244,8 @@ class PerformanceDetector {
     
     const settings = {
       high: {
-        particleCount: 150,
-        pixelRatio: Math.min(window.devicePixelRatio, 2),
+        particleCount: 100, // Reduced from 150 to save ~50MB
+        pixelRatio: Math.min(window.devicePixelRatio, 1.5), // Cap lower to reduce render target size
         antialias: false,
         shadowsEnabled: false,
         shaderQuality: 'high',
@@ -256,8 +256,8 @@ class PerformanceDetector {
         maxLights: 3,
       },
       medium: {
-        particleCount: 80,
-        pixelRatio: Math.min(window.devicePixelRatio, 1.5),
+        particleCount: 50, // Reduced from 80 to save ~30MB
+        pixelRatio: Math.min(window.devicePixelRatio, 1.25), // Cap even lower
         antialias: false,
         shadowsEnabled: false,
         shaderQuality: 'medium',
@@ -268,8 +268,8 @@ class PerformanceDetector {
         maxLights: 2,
       },
       low: {
-        particleCount: 40,
-        pixelRatio: 1,
+        particleCount: 30, // Reduced from 40 to save ~10MB
+        pixelRatio: 1, // Always 1x on low-end
         antialias: false,
         shadowsEnabled: false,
         shaderQuality: 'low',

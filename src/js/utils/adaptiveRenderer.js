@@ -14,6 +14,7 @@ export class AdaptiveRenderer {
     this.isRunning = false;
     this.rafId = null;
     this.pausedByTimeline = false;
+    this.inTimeline = false; // Track if we're in timeline experience
     
     // Performance monitoring
     this.frameCount = 0;
@@ -21,16 +22,23 @@ export class AdaptiveRenderer {
     this.lastFPSCheck = performance.now();
     this.currentFPS = targetFPS;
     
-    this.setupVisibilityObserver();
+    // Canvas monitoring - default to main background
+    this.currentCanvasId = 'shaderBackground';
+    this.observers = new Map(); // Store multiple observers
+    
+    this.setupVisibilityObserver(this.currentCanvasId);
     this.setupPageVisibilityListener();
   }
 
   /**
    * Setup Intersection Observer to detect when canvas is visible
    */
-  setupVisibilityObserver() {
-    const canvas = document.getElementById('shaderBackground');
-    if (!canvas) return;
+  setupVisibilityObserver(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+      console.warn(`[Adaptive Renderer] Canvas #${canvasId} not found for observation`);
+      return;
+    }
 
     const options = {
       root: null,
@@ -38,19 +46,21 @@ export class AdaptiveRenderer {
       threshold: 0.1, // At least 10% visible
     };
 
-    this.observer = new IntersectionObserver((entries) => {
+    const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
-        this.isVisible = entry.isIntersecting;
-        
-        if (this.isVisible && this.isRunning) {
-          console.log('[Adaptive Renderer] Canvas visible, resuming rendering');
-        } else if (!this.isVisible) {
-          console.log('[Adaptive Renderer] Canvas not visible, pausing rendering');
+        // Only update visibility if this is the currently monitored canvas
+        if (entry.target.id === this.currentCanvasId) {
+          this.isVisible = entry.isIntersecting;
+          
+          if (this.isVisible && this.isRunning) {
+          } else if (!this.isVisible) {
+          }
         }
       });
     }, options);
 
-    this.observer.observe(canvas);
+    observer.observe(canvas);
+    this.observers.set(canvasId, observer);
   }
 
   /**
@@ -59,10 +69,8 @@ export class AdaptiveRenderer {
   setupPageVisibilityListener() {
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
-        console.log('[Adaptive Renderer] Page hidden, pausing rendering');
         this.pause();
       } else {
-        console.log('[Adaptive Renderer] Page visible, resuming rendering');
         this.resume();
       }
     });
@@ -99,8 +107,16 @@ export class AdaptiveRenderer {
       this.lastFPSCheck = currentTime;
       
       // Auto-adjust target FPS if consistently missing target
-      if (this.currentFPS < this.targetFPS * 0.8) {
-        console.warn(`[Adaptive Renderer] FPS below target (${this.currentFPS}/${this.targetFPS}), consider reducing quality`);
+      // Only warn if we're monitoring an active canvas (not paused by timeline)
+      if (this.currentFPS < this.targetFPS * 0.8 && !this.pausedByTimeline) {
+        // Additional check: only warn if the expected canvas should be active
+        const shouldBeActive = this.inTimeline ? 
+          ['timeline-shader-bg', 'timeline-cover-canvas'].includes(this.currentCanvasId) :
+          this.currentCanvasId === 'shaderBackground';
+        
+        if (shouldBeActive) {
+          console.warn(`[Adaptive Renderer] FPS below target (${this.currentFPS}/${this.targetFPS}) on #${this.currentCanvasId}, consider reducing quality`);
+        }
       }
     }
 
@@ -150,6 +166,50 @@ export class AdaptiveRenderer {
    */
   setPausedByTimeline(paused) {
     this.pausedByTimeline = paused;
+    
+    // If pausing and we're on the background canvas, we expect this
+    if (paused && this.currentCanvasId === 'shaderBackground') {
+      // Reset frame count to avoid false FPS warnings
+      this.frameCount = 0;
+      this.lastFPSCheck = performance.now();
+    }
+  }
+  
+  /**
+   * Set timeline state and switch canvas monitoring
+   */
+  setInTimeline(inTimeline) {
+    if (this.inTimeline === inTimeline) return; // No change
+    
+    this.inTimeline = inTimeline;
+    
+    // Switch canvas monitoring based on timeline state
+    if (inTimeline) {
+      // Monitor timeline canvases
+      this.switchCanvasMonitoring('timeline-shader-bg');
+    } else {
+      // Monitor main background shader
+      this.switchCanvasMonitoring('shaderBackground');
+    }
+  }
+  
+  /**
+   * Switch which canvas is being monitored for visibility
+   */
+  switchCanvasMonitoring(canvasId) {
+    if (this.currentCanvasId === canvasId) return; // Already monitoring this canvas
+    
+    // Update current canvas
+    this.currentCanvasId = canvasId;
+    
+    // Set up observer for this canvas if not already set up
+    if (!this.observers.has(canvasId)) {
+      this.setupVisibilityObserver(canvasId);
+    }
+    
+    // Reset FPS tracking when switching canvases
+    this.frameCount = 0;
+    this.lastFPSCheck = performance.now();
   }
 
   /**
@@ -172,9 +232,9 @@ export class AdaptiveRenderer {
    */
   destroy() {
     this.pause();
-    if (this.observer) {
-      this.observer.disconnect();
-    }
+    // Disconnect all observers
+    this.observers.forEach(observer => observer.disconnect());
+    this.observers.clear();
   }
 }
 
