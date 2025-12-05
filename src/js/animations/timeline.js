@@ -301,7 +301,7 @@ export function initTimelineAnimation() {
   // Define scroll durations as functions to get current viewport size on resize
   const isMobile = () => window.innerWidth < 1024;
   const getInitialPhaseDuration = () => window.innerHeight * 1.0;
-  const getScrollPerEvent = () => window.innerHeight * (isMobile() ? 0.9 : 1.4); // Reduced distance for mobile
+  const getScrollPerEvent = () => window.innerHeight * (isMobile() ? 0.7 : 0.7); // Reduced: was 0.9/1.4, now 0.7/1.0
   const getTotalScrollDistance = () => getInitialPhaseDuration() + (remainingEventsCount * getScrollPerEvent());
   
   // Initial values
@@ -378,8 +378,8 @@ export function initTimelineAnimation() {
       gsap.to(currentYearSplit.chars, {
         opacity: 1,
         y: 0,
-        duration: 0.4,
-        stagger: 0.03,
+        duration: 0.27, // Reduced from 0.4 (-33%)
+        stagger: 0.02, // Reduced from 0.03 (-33%)
         ease: 'power2.out',
         overwrite: true,
         onComplete: () => {
@@ -413,8 +413,8 @@ export function initTimelineAnimation() {
       gsap.to(currentYearSplit.chars, {
         opacity: 0,
         y: -20,
-        duration: 0.25,
-        stagger: 0.015,
+        duration: 0.17, // Reduced from 0.25 (-33%)
+        stagger: 0.01, // Reduced from 0.015 (-33%)
         ease: 'power2.in',
         onComplete: () => {
           // Clean up and show new year after fade out
@@ -980,6 +980,21 @@ export function initTimelineAnimation() {
       window.backgroundPaused = false;
       window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: false } }));
     }
+    
+    // Notify adaptive renderer we're leaving timeline (switch canvas monitoring back to background)
+    if (window.shaderBackgroundRenderer && window.shaderBackgroundRenderer.setInTimeline) {
+      window.shaderBackgroundRenderer.setInTimeline(false);
+    }
+    
+    // Ensure background canvas is visible and ready
+    const backgroundCanvas = document.querySelector('#background-canvas');
+    if (backgroundCanvas) {
+      gsap.set(backgroundCanvas, { opacity: 1 });
+    }
+    
+    // Resume HTML background gradient (remove timeline gradient)
+    const htmlElement = document.documentElement;
+    htmlElement.style.background = ''; // Clear inline styles to use CSS defaults
 
     // Ensure background is fixed and visible (behind container initially)
     // Use cssText with !important to override ANY other styles or GSAP sets

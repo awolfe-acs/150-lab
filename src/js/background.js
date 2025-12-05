@@ -1626,10 +1626,11 @@ export async function initShaderBackground() {
     bottomWaveSpeed: { value: 0.0 }, // Controls the speed of the bottom wave animation
     bottomWaveOffset: { value: -2.207 }, // Controls the horizontal offset of the bottom wave
     // Film noise parameters
-    filmNoiseIntensity: { value: 0.06 }, // Controls the intensity of the film noise
-    filmNoiseSpeed: { value: 0.00001 }, // Controls the speed of the film noise animation
-    filmGrainSize: { value: 10.0 }, // Controls the size of the film grain
+    filmNoiseIntensity: { value: 0.056 }, // Controls the intensity of the film noise
+    filmNoiseSpeed: { value: 0.0000028 }, // Controls the speed of the film noise animation was 00001
+    filmGrainSize: { value: 6.0 }, // Controls the size of the film grain
     filmScratchIntensity: { value: 0.0 }, // Controls the intensity of film scratches
+    filmGrainEnabled: { value: true }, // Enable/disable film grain for performance
     // Lighting parameters
     lightDirection: { value: new THREE.Vector3(0.5, 0.5, 1.0).normalize() },
     ambientLight: { value: 0.6 }, // Ambient light intensity
@@ -1716,6 +1717,7 @@ export async function initShaderBackground() {
     uniform float filmNoiseSpeed;
     uniform float filmGrainSize;
     uniform float filmScratchIntensity;
+    uniform bool filmGrainEnabled; // Flag to completely disable film grain for performance
     uniform bool bottomWaveEnabled;
     uniform float bottomWaveDepth;
     uniform float bottomWaveWidth;
@@ -1985,14 +1987,11 @@ export async function initShaderBackground() {
       return distanceField;
     }
     
-    // Function to generate film grain noise
-    float filmGrain(vec2 uv, float time) {
-      // High frequency noise for grain
-      float noise1 = random(uv * filmGrainSize + time * 10.0);
-      float noise2 = random(uv * filmGrainSize * 2.0 - time * 15.0);
-      
-      // Mix different noise frequencies for more natural look
-      return mix(noise1, noise2, 0.5) * 2.0 - 1.0;
+    // Function to generate film grain noise (optimized)
+    float filmGrain(vec2 uv, float grainTime) {
+      // Single random call instead of two for better performance
+      // Pre-multiply by filmGrainSize to reduce per-pixel calculations
+      return random(uv * filmGrainSize + grainTime) * 2.0 - 1.0;
     }
     
     // Function to generate film scratches
@@ -2027,19 +2026,27 @@ export async function initShaderBackground() {
       return clamp(scratch, 0.0, 1.0);
     }
     
-    // Function to apply film noise effects
+    // Function to apply film noise effects (optimized)
     vec3 applyFilmNoise(vec3 color, vec2 uv) {
-      // Generate time-varying film grain
-      float grain = filmGrain(uv, time * filmNoiseSpeed);
+      // Early exit if film grain is disabled or intensity is zero
+      if (!filmGrainEnabled || (filmNoiseIntensity == 0.0 && filmScratchIntensity == 0.0)) {
+        return color;
+      }
       
-      // Generate film scratches
-      float scratches = filmScratches(uv, time * filmNoiseSpeed * 0.5);
+      // Cache time calculation (single operation instead of multiple)
+      float grainTime = time * filmNoiseSpeed * 10.0;
       
-      // Apply grain to the color
-      color += grain * filmNoiseIntensity;
+      // Apply grain only if intensity > 0
+      if (filmNoiseIntensity > 0.0) {
+        float grain = filmGrain(uv, grainTime);
+        color += grain * filmNoiseIntensity;
+      }
       
-      // Apply scratches (brighten the color where scratches occur)
-      color += scratches * filmScratchIntensity;
+      // Apply scratches only if intensity > 0 (scratches are disabled by default)
+      if (filmScratchIntensity > 0.0) {
+        float scratches = filmScratches(uv, grainTime * 0.5);
+        color += scratches * filmScratchIntensity;
+      }
       
       return color;
     }
@@ -2489,12 +2496,12 @@ export async function initShaderBackground() {
     });
 
   filmNoiseFolder
-    .add(uniforms.filmNoiseSpeed, "value", 0.00001, 0.00005)
-    .name("Noise Speed")
-    .step(0.00001)
-    .onChange((value) => {
-      uniforms.filmNoiseSpeed.value = value;
-    });
+      .add({ speed: uniforms.filmNoiseSpeed.value * 1e6 }, "speed", 1, 8)
+      .name("Noise Speed (×1e-6)")
+      .step(0.1)
+      .onChange((v) => {
+        uniforms.filmNoiseSpeed.value = v * 1e-6;
+      });
 
   filmNoiseFolder
     .add(uniforms.filmGrainSize, "value", 0.5, 50.0)
@@ -4701,6 +4708,15 @@ export async function initShaderBackground() {
       if (adaptiveRenderer) {
         adaptiveRenderer.setPausedByTimeline(value);
       }
+    }
+  });
+
+  // Listen for timeline background pause events to disable film grain for performance
+  window.addEventListener('timeline:backgroundPaused', (event) => {
+    if (uniforms && uniforms.filmGrainEnabled) {
+      // Disable film grain when entering timeline (paused=true)
+      // Enable when leaving timeline (paused=false)
+      uniforms.filmGrainEnabled.value = !event.detail.paused;
     }
   });
 
