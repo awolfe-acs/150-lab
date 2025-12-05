@@ -121,6 +121,7 @@ header.anniversary {
         @media (max-width:$small-mobile-viewport) {
             font-size:11px;
             letter-spacing:2px;
+            padding-right:20px;
         }
         span {
             font-weight: 450;
@@ -172,6 +173,7 @@ button.sound-toggle {
 
     @media (max-width:$mobile-viewport) {
         margin: 0 auto;
+        gap:8px;
     }
     @media (max-width:$small-mobile-viewport) {
         font-size:12px;

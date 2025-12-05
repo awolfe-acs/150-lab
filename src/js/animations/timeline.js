@@ -1483,7 +1483,15 @@ export function initTimelineAnimation() {
         if (!isTimelineDismissed) {
           document.body.classList.add('in-timeline');
           
+          // Force theme-color to black to prevent Android system bars from switching to light mode
+          // This overrides any automatic color extraction from the blue timeline background
+          const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+          if (metaThemeColor) {
+              metaThemeColor.setAttribute('content', '#000000');
+          }
+
           // Pause regular background shader immediately when entering timeline
+
           if (!window.backgroundPaused) {
             window.backgroundPaused = true;
             console.log('[Timeline] Pausing background shader for performance');
