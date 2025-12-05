@@ -381,6 +381,13 @@ export async function initShaderBackground() {
           const progress = self.progress;
 
           if (globeGroup) {
+            // Mobile check: On mobile devices, we disable the rising animation
+            // and keep the globe centered (handled by positionGlobeBehindBottomWave setting base position)
+            if (window.innerWidth <= 768) {
+              globeGroup.position.y = 0;
+              return;
+            }
+
             // Initial position (where the globe starts)
             const startY = -322;
 
@@ -2820,8 +2827,8 @@ export async function initShaderBackground() {
 
     // Check if we're in mobile viewport (640px or less)
     if (vw <= 640) {
-      // Set the Y position to 192 for mobile viewports as requested
-      globeModel.position.y = 192;
+      // Set the Y position to 0 for mobile viewports to center it
+      globeModel.position.y = 0;
       globeModel.position.z = -10; // Keep Z position consistent
 
       // Update the position values in the GUI
@@ -2829,7 +2836,7 @@ export async function initShaderBackground() {
         const controller = positionFolder.__controllers[i];
         if (controller.property === "positionY") {
           // Update without triggering onChange
-          controller.setValue(192);
+          controller.setValue(0);
         } else if (controller.property === "positionZ") {
           // Update without triggering onChange
           controller.setValue(-10);
@@ -3682,12 +3689,16 @@ export async function initShaderBackground() {
   const isMobileDevice =
     /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
     window.innerWidth <= 768 ||
+    (window.matchMedia && window.matchMedia("(hover: none)").matches) ||
     "ontouchstart" in window;
+
+  // Force disable on known touch devices to prevent interference
+  const shouldDisableOnMobile = isMobileDevice;
 
   // Mouse follow particle parameters
   const mouseParticleParams = {
     enabled: false, // Start disabled, will be enabled when enter-experience button is clicked
-    mobileDisabled: !perfSettings.mouseParticles, // Disable based on performance settings
+    mobileDisabled: shouldDisableOnMobile || !perfSettings.mouseParticles, // Disable based on device type OR performance settings
     spawnRate: performanceTier === 'high' ? 0.52 : (performanceTier === 'medium' ? 0.35 : 0.0),
     maxParticles: performanceTier === 'high' ? 150 : (performanceTier === 'medium' ? 75 : 0), // Reduce for lower tiers
     baseSize: 1.9, // Base particle size

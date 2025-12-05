@@ -20,7 +20,7 @@ $timeline-scrubber-height: 80px;
   opacity: 0; // Will fade in with ScrollTrigger
   pointer-events: none;
   overflow: visible;
-  transform-style: preserve-3d; // Critical: ensure 3D rendering context for backdrop-filter
+  // transform-style: preserve-3d; // REMOVED: improperly used and can block touch
   will-change: opacity, transform; // Hint for compositing layer
   @media (max-width: $mobile-viewport) {
     bottom: calc(4px + max(env(safe-area-inset-bottom), var(--js-detected-nav-height, 0px)));
@@ -45,7 +45,11 @@ body.in-timeline {
   scrollbar-width: none; // Firefox
   -ms-overflow-style: none; // IE/Edge
   scroll-behavior: smooth;
+  scroll-behavior: smooth;
   pointer-events: all;
+  z-index: 10;
+  touch-action: pan-x; // Enable native horizontal scrolling
+  //cursor: grab; // Indicate draggable/scrollable
   // Removed isolation: isolate - it creates compositing barrier blocking backdrop-filter
   
   &::-webkit-scrollbar {
@@ -183,6 +187,9 @@ body.in-timeline {
   transition: all 0.3s ease;
   padding: 8px;
   gap: 0; // No gap, minor nodes will handle their own spacing
+  touch-action: manipulation; // Ensure click isn't delayed
+  pointer-events: auto; // Explicitly enable pointer events
+
 
   &:hover {
     .marker-dot {
@@ -225,6 +232,21 @@ body.in-timeline {
   flex-direction: column;
   align-items: center;
   z-index: 10; // Above minor nodes
+
+  // Expanded touch target
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    z-index: 100; // Ensure it's on top of safe layers
+    cursor: pointer;
+    touch-action: manipulation; // Better touch handling
+  }
 }
 
 .marker-dot {
@@ -313,6 +335,21 @@ body.in-timeline {
     .minor-node-dot {
       background: rgba(255, 255, 255, 1.0);
     }
+  }
+
+  // Expanded touch target
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 44px;
+    height: 44px;
+    background: transparent;
+    z-index: 100; // Ensure it's on top of safe layers
+    cursor: pointer;
+    touch-action: manipulation;
   }
 }
 

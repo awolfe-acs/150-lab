@@ -185,6 +185,7 @@ body.timeline-resizing {
   opacity: 0; // Will be animated by GSAP
   position: relative;
   z-index: 20;
+  pointer-events:none;
   @media (max-width:$desktop-viewport) {
     width: 100vw;
     height: 100vh;
@@ -204,6 +205,7 @@ body.timeline-resizing {
     align-items: center;
     position: relative;
     z-index: 20;
+    pointer-events:none;
     @media (max-width:$desktop-viewport) {
       justify-content: flex-start;
       flex-direction: column;
@@ -289,15 +291,17 @@ body.timeline-resizing {
   padding: 16px 48px;
   min-height:80vh;
   color: white;
-
+  pointer-events:none;
   .event-year {
     font-size: 24px;
     font-weight: 700;
     margin-bottom: 16px;
     color: #fff;
+    pointer-events:auto;
   }
 
   .event-description {
+        pointer-events:auto;
     p {
       font-size: 18px;
       line-height: 1.6;

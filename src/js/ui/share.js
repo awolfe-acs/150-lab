@@ -261,15 +261,17 @@ function initSharePanelBehavior(shareButton, sharePanel) {
         bottom: 80px;
         right: 20px;
         z-index: 99998;
-        opacity: 0;
+        filter:opacity(0);
         visibility: hidden;
         transform: translateY(20px) scale(0.8);
         transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         pointer-events: none;
+        backdrop-filter: blur(20px);
+        border-radius: 24px;
       }
 
       .share-panel.active {
-        opacity: 1;
+        filter:opacity(1);
         visibility: visible;
         transform: translateY(0) scale(1);
         pointer-events: auto;

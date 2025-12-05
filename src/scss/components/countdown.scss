@@ -13,6 +13,9 @@
     z-index: 1000;
     transition: opacity 0.8s ease;
     margin-top:32px;
+    @media (max-width:$desktop-viewport) {
+        top:50%;
+    }
     @media (max-height:$short-viewport-height) {
         transform: translate(-50%, -50%) scale(0.9);
         margin-top:-24px;

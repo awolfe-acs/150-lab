@@ -183,9 +183,9 @@ html {
     touch-action: manipulation;
   }
 
-  // Ensure fixed elements don't interfere with touch - but allow header interactions
-  *[style*="position: fixed"]:not(header),
-  .fixed:not(header) {
+  // Ensure fixed elements don't interfere with touch - but allow header interactions and timeline controls
+  *[style*="position: fixed"]:not(header):not(.timeline-scrubber):not(.timeline-container):not(.pin-spacer),
+  .fixed:not(header):not(.timeline-scrubber) {
     touch-action: none;
     pointer-events: none;
 
@@ -779,5 +779,11 @@ html {
     &:active {
       transform: translateY(0);
     }
+  }
+}
+
+body.in-timeline {
+  .share-panel {
+    bottom:126px;
   }
 }

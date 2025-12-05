@@ -158,6 +158,11 @@ export function initTimelineAnimation() {
       Math.abs(rect.width - targetPosition.width) > sizeThreshold ||
       Math.abs(rect.height - targetPosition.height) > sizeThreshold;
     
+    // Prevent collapsing to 0x0 (fixes issue where element loses dimensions during fast scroll)
+    if (rect.width === 0 || rect.height === 0) {
+      return;
+    }
+
     if (!positionChanged && targetPosition.top !== 0) {
       return; // Skip update if position hasn't changed significantly
     }
@@ -181,11 +186,9 @@ export function initTimelineAnimation() {
       height: lerp(lastPosition.height || rect.height, rect.height, lerpFactor)
     };
     
-    // Get current opacity (preserve during tracking)
-    const currentOpacity = timelineWindowBg.style.opacity || '0';
-    
     // Use direct style manipulation for instant updates (no GSAP delay)
     // Use sub-pixel precision with transform for smoother Y-axis tracking
+    // IMPORTANT: Do NOT touch opacity here, let GSAP handle it to prevent flickering
     timelineWindowBg.style.position = 'fixed';
     timelineWindowBg.style.top = `${lastPosition.top}px`;
     timelineWindowBg.style.left = `${lastPosition.left}px`;
@@ -193,7 +196,6 @@ export function initTimelineAnimation() {
     timelineWindowBg.style.height = `${lastPosition.height}px`;
     timelineWindowBg.style.backgroundImage = 'linear-gradient(to bottom, #0493E2, #0493E2)';
     timelineWindowBg.style.zIndex = '0';
-    timelineWindowBg.style.opacity = currentOpacity;
     timelineWindowBg.style.borderRadius = '4px';
     
     // Removed will-change to prevent compositing layer blocking backdrop-filter
@@ -202,9 +204,11 @@ export function initTimelineAnimation() {
 
   // MAGIC TRICK: Use pseudo-element for span background to avoid affecting text opacity
   
-  // Set timeline window BG to invisible initially
+  // Set timeline window BG to COMPLETELY INVISIBLE initially
+  // It should only become visible at the handoff moment
   gsap.set(timelineWindowBg, {
-    opacity: 0
+    opacity: 0,
+    visibility: 'hidden'
   });
   
   // Create a style element for the pseudo-element background
@@ -239,17 +243,70 @@ export function initTimelineAnimation() {
     }, 100);
   });
 
-  // Update position only on resize (no continuous tracking needed with magic trick)
+  // Update position only on resize
   const resizeObserver = new ResizeObserver(() => {
     positionBgToSpan();
   });
   resizeObserver.observe(document.body);
 
-  // No continuous tracking needed - the span's own background handles the visual
-  // We only position the BG element once for the handoff moment
+  // Continuous tracking system for perfect sync during critical scroll phase
   let rafId = null;
-  const trackWithLenis = () => {}; // Keep for cleanup reference
-  const trackWithScroll = () => {}; // Keep for cleanup reference
+  let isContinuouslyTracking = false;
+  
+  const startContinuousTracking = () => {
+    if (isContinuouslyTracking) return; // Already tracking
+    
+    isContinuouslyTracking = true;
+    console.log('Timeline: Starting continuous position tracking');
+    
+    const trackLoop = () => {
+      if (!isContinuouslyTracking) return;
+      
+      // Update position every frame during critical phase
+      positionBgToSpan();
+      
+      // Continue loop
+      rafId = requestAnimationFrame(trackLoop);
+    };
+    
+    // Start the loop
+    trackLoop();
+  };
+  
+  const stopContinuousTracking = () => {
+    if (!isContinuouslyTracking) return;
+    
+    isContinuouslyTracking = false;
+    console.log('Timeline: Stopping continuous position tracking');
+    
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+  };
+  
+  // Set up ScrollTrigger to start aggressive tracking when .get-involved-message enters viewport
+  ScrollTrigger.create({
+    trigger: getInvolvedMessage,
+    start: 'top bottom', // When message enters bottom of viewport
+    end: 'bottom top', // When message exits top of viewport
+    onEnter: () => {
+      console.log('Timeline: Get-involved message entering viewport - starting continuous tracking');
+      startContinuousTracking();
+    },
+    onLeave: () => {
+      // Don't stop tracking when leaving downward - we need it for the handoff
+      console.log('Timeline: Get-involved message left viewport (downward)');
+    },
+    onEnterBack: () => {
+      console.log('Timeline: Get-involved message re-entering viewport - starting continuous tracking');
+      startContinuousTracking();
+    },
+    onLeaveBack: () => {
+      console.log('Timeline: Get-involved message left viewport (upward) - stopping continuous tracking');
+      stopContinuousTracking();
+    }
+  });
 
   // Calculate total horizontal scroll distance
   const events = gsap.utils.toArray('.timeline-event');
@@ -257,8 +314,9 @@ export function initTimelineAnimation() {
   const remainingEventsCount = events.length - 1;
   
   // Define scroll durations as functions to get current viewport size on resize
+  const isMobile = () => window.innerWidth < 1024;
   const getInitialPhaseDuration = () => window.innerHeight * 1.0;
-  const getScrollPerEvent = () => window.innerHeight * 1.4; // Reduced from 2.0 to 1.4 (30% faster)
+  const getScrollPerEvent = () => window.innerHeight * (isMobile() ? 0.9 : 1.4); // Reduced distance for mobile
   const getTotalScrollDistance = () => getInitialPhaseDuration() + (remainingEventsCount * getScrollPerEvent());
   
   // Initial values
@@ -267,7 +325,7 @@ export function initTimelineAnimation() {
   const totalScrollDistance = getTotalScrollDistance();
   
   // Adjust animation durations (relative timeline units)
-  const moveDuration = 0.75; // Reduced from 1.0 to 0.75 (25% faster transitions)
+  const moveDuration = isMobile() ? 0.6 : 0.75; // Faster transitions on mobile
   const holdDuration = 0.08; // Reduced from 0.15 to 0.08 (~50% less hold time)
   const totalCycleDuration = moveDuration + holdDuration;
   
@@ -1071,6 +1129,25 @@ export function initTimelineAnimation() {
         const progress = self.progress;
         const handoffThreshold = 0.01; // 1% - very tight threshold
         
+        // CRITICAL: Resume timeline visuals EARLY (at first sign of scroll)
+        // This ensures they're playing even during very slow scrolling
+        // Uses a closure variable to track state
+        if (!self._hasResumedVisuals && progress > 0.001) {
+          self._hasResumedVisuals = true;
+          
+          // Resume timeline shader
+          if (window.timelineShaderControls && window.timelineShaderControls.resume) {
+            window.timelineShaderControls.resume();
+            console.log('[Timeline] Resuming timeline shader (Early via onUpdate)');
+          }
+          
+          // Resume cover orb
+          if (window.coverOrbControls && window.coverOrbControls.resume) {
+            window.coverOrbControls.resume();
+            console.log('[Timeline] Resuming cover orb (Early via onUpdate)');
+          }
+        }
+        
         const styleEl = document.getElementById('timeline-window-start-bg-style');
         
         // CRITICAL SAFETY CHECK 1: If BG is full viewport size, FORCE opacity to 1.0
@@ -1185,6 +1262,9 @@ export function initTimelineAnimation() {
         // Stop tracking span position updates
         isTrackingSpan = false;
         
+        // Stop continuous RAF tracking since we're handing off to GSAP animation
+        stopContinuousTracking();
+        
         // CRITICAL: Kill the pseudo fade timeline to prevent it from overriding our opacity
         if (pseudoFadeTl) {
           pseudoFadeTl.kill();
@@ -1232,6 +1312,7 @@ export function initTimelineAnimation() {
         timelineWindowBg.style.borderRadius = '4px';
         timelineWindowBg.style.zIndex = '0';
         timelineWindowBg.style.opacity = '0.5'; // Match pseudo-element opacity
+        timelineWindowBg.style.visibility = 'visible'; // Make it visible at handoff
         
         // 4. Store this position for expansion animation
         capturedPosition = {
@@ -1291,16 +1372,23 @@ export function initTimelineAnimation() {
   
   // Expand background from highlight box to full viewport (first 70% of pin)
   // Use function to get starting values to account for captured position
+  // Create a proxy object for smoother opacity tweening
+  const opacityState = { value: 0.5 };
+
+  // Expand background from highlight box to full viewport (first 70% of pin)
+  // Use function to get starting values to account for captured position
   expansionTl.fromTo(timelineWindowBg, 
     () => {
+      // Reset opacity proxy to starting value
+      opacityState.value = 0.5;
+      
       // Use captured position if available, otherwise get current
       if (capturedPosition) {
         return {
           top: `${capturedPosition.top}px`,
           left: `${capturedPosition.left}px`,
           width: `${capturedPosition.width}px`,
-          height: `${capturedPosition.height}px`,
-          opacity: 0.5 // Start from handoff opacity
+          height: `${capturedPosition.height}px`
         };
       }
       const rect = timelineWindowStart.getBoundingClientRect();
@@ -1308,8 +1396,7 @@ export function initTimelineAnimation() {
         top: `${rect.top}px`,
         left: `${rect.left}px`,
         width: `${rect.width}px`,
-        height: `${rect.height}px`,
-        opacity: 0.5 // Start from handoff opacity
+        height: `${rect.height}px`
       };
     },
     {
@@ -1317,10 +1404,14 @@ export function initTimelineAnimation() {
       left: 0,
       width: '100vw',
       height: '100vh',
-      opacity: 1,
       borderRadius: '0px',
       ease: 'power2.inOut',
       duration: 0.7,
+      onUpdate: () => {
+        // Apply local proxy value to opacity for smoother tweening
+        // This avoids potential conflicts with CSS transitions or other updates
+        timelineWindowBg.style.opacity = opacityState.value;
+      },
       onReverseComplete: () => {
         // When reversing (scrolling back), set opacity back to 0 after reaching start
         timelineWindowBg.style.opacity = '0';
@@ -1329,6 +1420,14 @@ export function initTimelineAnimation() {
     }, 
     0
   );
+
+  // Animate the opacity proxy separately to ensure it runs concurrently
+  expansionTl.to(opacityState, {
+    value: 1,
+    duration: 0.7,
+    ease: 'power2.inOut'
+    // The onUpdate in the main tween above will handle applying this value
+  }, 0);
 
   // Animate the gradient colors alongside the expansion
   expansionTl.to(gradientState, {
@@ -1366,7 +1465,7 @@ export function initTimelineAnimation() {
       start: 'top top',
       end: () => `+=${getTotalScrollDistance()}`, // Function to recalculate on resize
       pin: timelineContainer,
-      scrub: 1, // smooth scrubbing
+      scrub: isMobile() ? 0.5 : 1, // Snappier scrubbing on mobile (less inertia)
       anticipatePin: 1,
       invalidateOnRefresh: true,
       onRefresh: (self) => {
@@ -2462,8 +2561,7 @@ export function initTimelineAnimation() {
   window._timelineCleanup = {
     rafId: rafId,
     resizeObserver: resizeObserver,
-    lenisCallback: trackWithLenis,
-    scrollCallback: trackWithScroll
+    stopTracking: stopContinuousTracking
   };
 
   // Store ScrollTrigger and markerLock references for resize handling
