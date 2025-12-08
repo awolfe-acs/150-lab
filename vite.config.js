@@ -424,6 +424,39 @@ For issues, check the browser console and verify WebGL support at https://get.we
         },
       },
       {
+        name: "transform-font-paths-for-aem",
+        apply: "build",
+        async writeBundle() {
+          // Only run for standard mode (dist-aem)
+          if (mode !== "standard") return;
+
+          // Find CSS files in the output directory
+          const outputDir = resolve(__dirname, outDir, "assets");
+          const files = fs.readdirSync(outputDir);
+          
+          // Process each CSS file
+          for (const file of files) {
+            if (file.endsWith(".css")) {
+              const filePath = path.join(outputDir, file);
+              let content = fs.readFileSync(filePath, "utf-8");
+              
+              // Transform font paths from /fonts/ to /assets/fonts/
+              const originalContent = content;
+              content = content.replace(
+                /url\(\/content\/dam\/acsorg\/150\/fonts\//g,
+                'url(/content/dam/acsorg/150/assets/fonts/'
+              );
+              
+              // Only write if content changed
+              if (content !== originalContent) {
+                fs.writeFileSync(filePath, content, "utf-8");
+                console.log(`✅ Transformed font paths in ${file} for AEM`);
+              }
+            }
+          }
+        },
+      },
+      {
         name: "copy-public-to-assets",
         apply: "build",
         closeBundle() {
