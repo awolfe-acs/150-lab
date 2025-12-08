@@ -4,6 +4,7 @@
     <meta name="robots" content="noindex" />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
     <title>ACS 150th Anniversary</title>
 
     <!-- Open Graph Meta Tags for Social Media Preview -->
@@ -105,11 +106,11 @@
             `;
       };
     </script>
-    <script type="module" crossorigin src="/content/dam/acsorg/150/assets/index-Bg74Lhax.js"></script>
-    <link rel="stylesheet" crossorigin href="/content/dam/acsorg/150/assets/style-C4vzB94F.css">
+    <script type="module" crossorigin src="/content/dam/acsorg/150/assets/index-5-poyCxZ.js"></script>
+    <link rel="stylesheet" crossorigin href="/content/dam/acsorg/150/assets/style-cP_-vunS.css">
   
-              <link rel="preload" href="/content/dam/acsorg/150/assets/style-C4vzB94F.css" as="style">
-              <link rel="preload" href="/content/dam/acsorg/150/assets/index-Bg74Lhax.js" as="script">
+              <link rel="preload" href="/content/dam/acsorg/150/assets/style-cP_-vunS.css" as="style">
+              <link rel="preload" href="/content/dam/acsorg/150/assets/index-5-poyCxZ.js" as="script">
             </head>
   <body>
     <!-- Skip Links for Keyboard Navigation -->
@@ -580,6 +581,7 @@
             </div>
           </div>
           <div class="page-nav">
+            <a href="" class="intro page-nav-link" tabindex="-1">Intro</a>
             <a href="" class="active anniversary page-nav-link" aria-current="page" tabindex="-1">150 Years of ACS</a>
             <!-- <a href="" class="story page-nav-link">Our Story</a> -->
             <a href="" class="get-involved page-nav-link" tabindex="-1">Get Involved</a>
@@ -789,7 +791,1157 @@
             possible—including you.
           </h4>
           <h4 class="split-lines text-align-center">Together, we will catalyze the next 150 years of chemistry.</h4>
+          <h4 class="split-lines text-align-center">Explore the <span id="timeline-window-start">timeline</span>, celebrate 150 years of innovation, and be a part of the journey ahead.</h4>
+          
         </div>
+        <!------ Start of ACS Timeline Section ------>
+        <section id="acs-timeline">
+          <div class="timeline-container">
+            
+            <!-- Timeline close button -->
+            <button class="timeline-close" aria-label="Close timeline">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M24 8L8 24M8 8L24 24" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            
+            <div id="current-timeline-year"><!--dynamically set the active .timeline-event data-year="" here, with a per character reveal animation--></div>
+
+            <!-- Three.js container for sphere and dot plane -->
+            <!-- Horizontal Scrolling Timeline -->
+
+              <div class="timeline-track">
+                <!-- Timeline Events -->
+                <!-- Timeline Decade: 1870s -->
+                <div class="timeline-decade" data-decade="1870s">
+                  <div class="timeline-event timeline-cover" data-year="1876">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1876</div>
+                        <div class="event-label">When ACS is born</div>
+                      </div>
+                    </div>
+                    <canvas id="timeline-cover-canvas"></canvas>
+                  </div>
+                  <div class="timeline-event" data-year="1876">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1876</div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1876</div>
+                        <div class="event-description">
+                          <p>The American Chemical Society is founded.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1876">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">April 6, 1876</div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">April 6, 1876</div>
+                        <div class="event-description">
+                          <p>Led by Charles F. Chandler, the first meeting for organization of the American Chemical Society is held at the New York College of Pharmacy. Chemists from New York City and the vicinity are invited to attend.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/1876-CharlesFrederickChandler.jpg" alt="Portrait of Charles Frederick Chandler, founder and organizer of the American Chemical Society" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1876">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">April 11, 1876</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">April 11, 1876</div>
+                        <div class="event-description">
+                          <p>Chandler (on behalf of the other members) invites the noted photochemist and physicist John W. Draper, a household name at the time, to become the first President of the American Chemical Society.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/1876-JohnWilliamDraper.jpg" alt="Portrait of John William Draper, first President of the American Chemical Society" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1876">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">May 4, 1876</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">May 4, 1876</div>
+                        <div class="event-description">
+                          <p>Thirty-five chemists held the founding meeting at the College of Pharmacy of the City of New York, marking the first official American Chemical Society meeting.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/1876-FirstAcsMeeting.jpg" alt="Historical photograph of the first regular meeting of the American Chemical Society" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1876">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">May 4, 1876</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">May 4, 1876</div>
+                        <div class="event-description">
+                          <p>Dr. H. Endemann, who will become the first editor of JACS, delivers the first paper before the society: <i>The Determination of Relative Effectiveness of Disinfectants</i>.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/1876-Endemann.jpg" alt="Dr. H. Endemann presenting the first scientific paper before the American Chemical Society" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1877">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1877</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1877</div>
+                        <div class="event-description">
+                          <p>The American Chemical Society is incorporated under the laws of the State of New York. Publication of <i>Proceedings of the American Chemical Society</i> begins.</p>
+                        </div>
+                        
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1879">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1879</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1879</div>
+                        <div class="event-description">
+                          <p>Ira Remsen begins publication of the <i></i>American Chemical Journal</i> (1879-1913).</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/1879-FirstJournal.jpg" alt="Cover of the first American Chemical Journal published by Ira Remsen" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1879">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1879</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1879</div>
+                        <div class="event-description">
+                          <p>The American Chemical Society began publishing its flagship journal, the <i>Journal of the American Chemical Society (JACS)</i>, in April 1879. The journal's inaugural Editor-in-Chief - Hermann Endemann - led the journal for one year and then returned briefly in 1881 for an additional year stewarding the journal that - since 2021 - has been led by Professor Erick Carreira.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+                <!-- Timeline Decade: 1890s -->
+                <div class="timeline-decade" data-decade="1890s">
+                  <div class="timeline-event" data-year="1891">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1891</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1891</div>
+                        <div class="event-description">
+                          <p>The Rhode Island Local Section of the American Chemical Society was officially established, becoming the first local section in the Society's history.</p>
+                        </div>
+                        
+                      </div>
+                    </div>
+                  </div>
+                  <div class="timeline-event" data-year="1891">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1891</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1891</div>
+                        <div class="event-description">
+                          <p>The American Chemical Society (ACS) accepts first "regularly admitted" female member, Rachel Lloyd. Lloyd is believed to be the first American woman to earn a Ph.D. in chemistry. She was known for introducing beet sweetening agent as a sugar substitute.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/1891-rachel-lloyd.jpg" alt="Rachel Lloyd, the first American woman to earn a Ph.D. in chemistry" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Timeline Decade: 1900s -->
+                <div class="timeline-decade" data-decade="1900s">
+                  <div class="timeline-event" data-year="1901">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1901</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1901</div>
+                        <div class="event-description">
+                          <p>The American Chemical Society celebrates its 25th anniversary with over 1,900 members.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/1901-25Anniversary.jpg" alt="Celebration of ACS 25th anniversary with over 1,900 members" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1907">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">January, 1907</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">January, 1907</div>
+                        <div class="event-description">
+                          <p><i></i>Chemical Abstracts</i>, a comprehensive and separate journal of abstracts, debuts.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/1907-ChemicalAbstracts.jpg" alt="First issue of Chemical Abstracts journal showing comprehensive scientific abstracts" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1908">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1908</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1908</div>
+                        <div class="event-description">
+                          <p>Industrial & Engineering Chemistry (I&EC) becomes the first official American Chemical Society Division.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/1908-I_EC.jpg" alt="Industrial and Engineering Chemistry publication, the first official ACS Division" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1908">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1908</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1908</div>
+                        <div class="event-description">
+                          <p>The first five Divisions of the American Chemical Society were created, including:<br><br>
+                            • Agricultural & Food Chemistry<br>
+                            • Industrial & Engineering Chemistry<br>
+                            • Organic Chemistry<br>
+                            • Physical Chemistry<br>
+                            • Fertilizer Chemistry</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+                <!-- Timeline Decade: 1910s -->
+                <div class="timeline-decade" data-decade="1910s">
+
+                  <div class="timeline-event" data-year="1916">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">January 13, 1916</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">January 13, 1916</div>
+                        <div class="event-description">
+                          <p>President Woodrow Wilson asks the American Chemical Society to help mobilize American manufacturing. Members from every U.S. state and territory are appointed to explore how the Society can better support the government in emergencies.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/1916-WoodrowWilson.jpg" alt="President Woodrow Wilson meeting with ACS members to mobilize American manufacturing" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1918">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1918</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1918</div>
+                        <div class="event-description">
+                          <p>JACS instituted formal peer review to protect the rigor and fairness of the publication process.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Timeline Decade: 1920s -->
+                <div class="timeline-decade" data-decade="1920s">
+
+                  <div class="timeline-event" data-year="1922">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1922</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1922</div>
+                        <div class="event-description">
+                          <p>The American Chemical Society established the Priestley Medal, its highest honor, named after Joseph Priestley, one of the discoverers of oxygen and a symbol of scientific freedom and discovery.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1923">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1923</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1923</div>
+                        <div class="event-description">
+                          <p>The first Priestley Medal was award in September 1923.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1924">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">April 24, 1924</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">April 24, 1924</div>
+                        <div class="event-description">
+                          <p>President Calvin Coolidge meets with the American Chemical Society members on the White House lawn.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/1924-CalvinCoolidge.jpg" alt="President Calvin Coolidge meeting with ACS members on the White House lawn" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+                <!-- Timeline Decade: 1930s -->
+                <div class="timeline-decade" data-decade="1930s">
+                  <div class="timeline-event" data-year="1930">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">September, 1930</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">September, 1930</div>
+                        <div class="event-description">
+                          <p>The Examinations Committee (which was renamed the Examinations Institute in 1984), begins as a project of the Division of Chemical Education.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/1930-DivisionofChemicalEducation.jpg" alt="Division of Chemical Education establishing the Examinations Committee" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1934">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1934</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1934</div>
+                        <div class="event-description">
+                          <p>The first American Chemical Society Exam, with a focus on General Chemistry, is released by the Examinations Committee.</p>
+                        </div>
+                        
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1937">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">August 25, 1937</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">August 25, 1937</div>
+                        <div class="event-description">
+                          <p>President Franklin D. Roosevelt signs Public Act No. 358, officially granting the American Chemical Society a federal charter.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/1937-FDR.jpg" alt="President Franklin D. Roosevelt signing Public Act No. 358, granting ACS a federal charter" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1938">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">January, 1938</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">January, 1938</div>
+                        <div class="event-description">
+                          <p>The American Chemical Society formally begins operations under its federal charter.</p>
+                        </div>
+                        
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+                <!-- Timeline Decade: 1940s -->
+                <div class="timeline-decade" data-decade="1940s">
+                  <div class="timeline-event" data-year="1944">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1944</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1944</div>
+                        <div class="event-description">
+                          <p>Universal Oil Products Co. (UOP) established a trust funded by its security holdings, designating the American Chemical Society as the sole beneficiary. The income from this trust later became the Petroleum Research Fund (PRF). The trust agreement stipulated that ACS must use all "funds for advanced scientific education and fundamental research in the 'petroleum field.'"</p>
+                        </div>
+                        
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+                <!-- Timeline Decade: 1950s -->
+                <div class="timeline-decade" data-decade="1950s">
+                  <div class="timeline-event" data-year="1954">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1954</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1954</div>
+                        <div class="event-description">
+                          <p>The first Petroleum Research Fund (PRF) grants are awarded by the American Chemical Society.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/1954-PetroleumResearchFund.jpg" alt="First Petroleum Research Fund grants awarded by ACS" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1956">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1956</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1956</div>
+                        <div class="event-description">
+                          <p>Chemical Abstracts Service (CAS) officially becomes an operating division of the American Chemical Society.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/1956-CAS.jpg" alt="Chemical Abstracts Service (CAS) becoming an official operating division of ACS" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+                <!-- Timeline Decade: 1960s -->
+                <div class="timeline-decade" data-decade="1960s">
+                  <div class="timeline-event" data-year="1965">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1965</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1965</div>
+                        <div class="event-description">
+                          <p>CAS Registry Numbers are established, which eliminate ambiguity in chemical naming by assigning a unique identifier to every substance described in scientific literature.</p>
+                        </div>
+                        
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1968">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">April 4, 1968</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">April 4, 1968</div>
+                        <div class="event-description">
+                          <p>Project SEED (Summer Experiences for the Economically Disadvantaged) is established, providing summer research opportunities for economically disadvantaged high school students to gain hands-on experience by working alongside scientists.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/1968-ProjectSEED.jpg" alt="Project SEED students working alongside scientists in summer research opportunities" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+                <!-- Timeline Decade: 1980s -->
+                <div class="timeline-decade" data-decade="1980s">
+                  <div class="timeline-event" data-year="1980">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1980</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1980</div>
+                        <div class="event-description">
+                          <p>Chemical Abstracts Service (CAS) officially becomes an operating division of the American Chemical Society.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/1980-casonline.jpg" alt="CAS Online" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1984">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1984</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1984</div>
+                        <div class="event-description">
+                          <p>The American Chemical Society begins to sponsor the U.S. National Chemistry Olympiad.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/1984-ChemistryOlympiad.jpg" alt="U.S. National Chemistry Olympiad competition sponsored by ACS" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1986">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">November 6, 1986</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">November 6, 1986</div>
+                        <div class="event-description">
+                          <p>The American Chemical Society celebrates the first National Chemistry Day.</p>
+                        </div>
+                        
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+                <!-- Timeline Decade: 1990s -->
+                <div class="timeline-decade" data-decade="1990s">
+                  <div class="timeline-event" data-year="1992">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1992</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1992</div>
+                        <div class="event-description">
+                          <p>The National Historic Chemical Landmarks Program is created. This program honors major achievements in chemistry that have shaped science and society. It designates discoveries, innovations, and sites as "Landmarks," marked with plaques and educational resources to preserve chemistry's heritage and inspire public appreciation.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/1992-NationalHistoricChemicalLandmarksProgram.jpg" alt="National Historic Chemical Landmarks Program plaque and ceremony" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1993">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1993</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1993</div>
+                        <div class="event-description">
+                          <p>The first National Historical Chemical Landmark is awarded to the Bakelizer, the steam pressure vessel used to commercialize the first completely synthetic plastic (Bakelite).</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/1993-Bakelizer.jpg" alt="The Bakelizer steam pressure vessel, first National Historical Chemical Landmark" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1993">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1993</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1993</div>
+                        <div class="event-description">
+                          <p>The first American Chemical Society International Chemical Sciences Chapter is created in Saudi Arabia (SAISCS-ACS). The SAISCS-ACS chapter was founded in 1988 and incorporated as a recognized an American Chemical Society affiliate in 1993, adopting the same goals, objectives, and organizational purpose.</p>
+                        </div>
+                        
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1993">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1993</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1993</div>
+                        <div class="event-description">
+                          <p>National Chemistry Day expands to National Chemistry Week, cementing the American Chemical Society's commitment to scientific outreach.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/1993-NationalChemistryWeek.jpg" alt="National Chemistry Week celebration and outreach activities" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1995">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">1995</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">1995</div>
+                        <div class="event-description">
+                          <p>Chemical Abstracts Service (CAS)  SciFinder is introduced, giving scientists access to CAS databases without needing to learn a command language.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/1995-SciFinder.jpg" alt="CAS SciFinder interface providing scientists access to chemical databases" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="1998">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">August, 1998</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">August, 1998</div>
+                        <div class="event-description">
+                          <p>Chemical & Engineering News (C&EN) Online debuts, introducing world-class science reporting to the internet.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/1998-C_EN.jpg" alt="Chemical and Engineering News Online website debut" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+                <!-- Timeline Decade: 2000s -->
+                <div class="timeline-decade" data-decade="2000s">
+                  <div class="timeline-event" data-year="2000">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">October 25, 2000</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">October 25, 2000</div>
+                        <div class="event-description">
+                          <p>The Petroleum Research Fund (PRF) Trust is officially transferred to the American Chemical Society (ACS), allowing ACS to increase the value of existing research grant programs and explore developing new grant programs.</p>
+                        </div>
+                        
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="2001">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">2001</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">2001</div>
+                        <div class="event-description">
+                          <p>The Green Chemistry Institute, initially founded in 1997 as an independent nonprofit, officially becomes part of the American Chemical Society.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/2001-GreenChemistryInstitute.jpg" alt="Green Chemistry Institute joining ACS to promote sustainable chemistry" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="2003">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">2003</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">2003</div>
+                        <div class="event-description">
+                          <p>The American Chemical Society hosts the first Chemists Celebrate Earth Week (CCEW).</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/2003-CCEW.jpg" alt="Chemists Celebrate Earth Week educational activities and events" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="2006">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">2006</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">2006</div>
+                        <div class="event-description">
+                          <p>The American Chemical Society and Disney Institute work together to offer "Everyday Chemistry" at Epcot. This program uses simple activities and resources to show how chemistry connects to daily life, making science fun and accessible for students and educators.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/2006-EverydayChemistryEPCOT.jpg" alt="Everyday Chemistry exhibit at EPCOT created by ACS and Disney Institute" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="2007">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">2007</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">2007</div>
+                        <div class="event-description">
+                          <p>The Award for Affordable Green Chemistry is established, recognizing the discovery of eco-friendly chemistries with the potential to enable products or manufacturing processes that are less expensive than existing alternatives.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/2007-AAGC.jpg" style="width:500px; max-width:100%;" alt="Award for Affordable Green Chemistry recognizing eco-friendly chemical innovations" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="2009">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">January, 2009</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">January, 2009</div>
+                        <div class="event-description">
+                          <p>The American Chemical Society (ACS) receives a gift of approximately $33 million from the Hach Scientific Foundation to continue the Foundation’s programs and complement pre-existing ACS resources. The ACS-Hach Programs continue to provide financial support to high school chemistry teachers across the U.S.</p>
+                        </div>
+                        
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="2009">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">2009</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">2009</div>
+                        <div class="event-description">
+                          <p>The first class of the American Chemical Society Fellows is announced.</p>
+                        </div>
+                        
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="2009">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">2009</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">2009</div>
+                        <div class="event-description">
+                          <p>The American Chemical Society renames their Washington, DC headquarters building in honor of Clifford and Kathryn Hach.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/2009-HatchBuilding.jpg" alt="ACS headquarters building renamed in honor of Clifford and Kathryn Hach" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+                <!-- Timeline Decade: 2010s -->
+                <div class="timeline-decade" data-decade="2010s">
+                  <div class="timeline-event" data-year="2010">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">2010</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">2010</div>
+                        <div class="event-description">
+                          <p>The Chemical Abstracts Service (CAS) Future Leaders Program is initiated. The program is a professional development initiative that selects early-career scientists for leadership training, networking, and skill-building to advance their careers and impact in science.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/2010-FutureLeaders-BCfpfD75.avif" alt="CAS Future Leaders Program participants and mentors" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="2014">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">2014</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">2014</div>
+                        <div class="event-description">
+                          <p>The American Association of Chemistry Teachers (AACT), a program designed to support and serve K-12 chemistry teachers, is created.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/2014-AACT.jpg" alt="American Association of Chemistry Teachers (AACT) supporting K-12 educators" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="2015">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">2015</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">2015</div>
+                        <div class="event-description">
+                          <p>In 2015, ACS Publications launched our first fully open access journal - ACS Central Science - as a diamond open access publication, led by future Nobel Laureate, Professor Carolyn Bertozzi.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+                <!-- Timeline Decade: 2020s -->
+                <div class="timeline-decade" data-decade="2020s">
+
+                  <div class="timeline-event" data-year="2021">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">2021</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">2021</div>
+                        <div class="event-description">
+                          <p>Professor Erick Carreira is named Editor-in-Chief of JACS, becoming the first Hispanic American chemist to assume this role, and the first Editor-in-Chief of the Society's flagship journal who resides outside the US. </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timeline-event" data-year="2025">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">May 22, 2025</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">May 22, 2025</div>
+                        <div class="event-description">
+                          <p>The American Chemical Society celebrates the first Chemical Technical Professionals (CTP) day, honoring and sharing resources for these professionals across the chemical industry.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/2025-CTP.jpg" alt="Chemical Technical Professionals Day celebrating professionals across the chemical industry" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+                <!-- Timeline Decade: 2026 (150th Anniversary) -->
+                <div class="timeline-decade" data-decade="2026">
+                  <div class="timeline-event" data-year="2026">
+                    <div class="event-content-wrapper">
+                      <div class="event-date">
+                        <div class="event-value">April 6, 2026</div>
+                        <div class="event-label"></div>
+                      </div>
+                      
+                      <div class="event-panel">
+                        <div class="event-year">April 6, 2026</div>
+                        <div class="event-description">
+                          <p>ACS celebrates its 150th anniversary, marking a century and a half of advancing chemistry and serving the global scientific community.</p>
+                        </div>
+                        <div class="event-image">
+                          <img src="/content/dam/acsorg/150/assets/images/150.jpg" alt="American Chemical Society 150th Anniversary celebration" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+
+              <!-- Timeline Scrubber -->
+              <div class="timeline-scrubber">
+                <!-- Navigation Arrows -->
+                <button class="scrubber-nav scrubber-nav-prev" aria-label="Previous decade">
+                  <svg viewBox="0 0 24 24">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
+                <button class="scrubber-nav scrubber-nav-next" aria-label="Next decade">
+                  <svg viewBox="0 0 24 24">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+                
+                <!-- Scrollable Wrapper -->
+                <div class="scrubber-scroll-wrapper">
+                  <div class="scrubber-content">
+                    <div class="scrubber-line">
+                      <div class="scrubber-progress"></div>
+                    </div>
+                    
+                    <!-- Minor Nodes (deprecated, kept for backwards compatibility) -->
+                    <div class="scrubber-minor-nodes" style="display: none;"></div>
+                    
+                    <!-- Scrubber Markers -->
+                    <div class="scrubber-markers">
+                    <!-- Decade Markers -->
+                    <div class="marker" data-decade="1870s">
+                      <div class="marker-main">
+                        <div class="marker-dot"></div>
+                        <div class="marker-label">1870s</div>
+                      </div>
+                      <div class="marker-minor-nodes"></div>
+                    </div>
+                    <div class="marker" data-decade="1890s">
+                      <div class="marker-main">
+                        <div class="marker-dot"></div>
+                        <div class="marker-label">1890s</div>
+                      </div>
+                      <div class="marker-minor-nodes"></div>
+                    </div>
+                    <div class="marker" data-decade="1900s">
+                      <div class="marker-main">
+                        <div class="marker-dot"></div>
+                        <div class="marker-label">1900s</div>
+                      </div>
+                      <div class="marker-minor-nodes"></div>
+                    </div>
+                    <div class="marker" data-decade="1910s">
+                      <div class="marker-main">
+                        <div class="marker-dot"></div>
+                        <div class="marker-label">1910s</div>
+                      </div>
+                      <div class="marker-minor-nodes"></div>
+                    </div>
+                    <div class="marker" data-decade="1920s">
+                      <div class="marker-main">
+                        <div class="marker-dot"></div>
+                        <div class="marker-label">1920s</div>
+                      </div>
+                      <div class="marker-minor-nodes"></div>
+                    </div>
+                    <div class="marker" data-decade="1930s">
+                      <div class="marker-main">
+                        <div class="marker-dot"></div>
+                        <div class="marker-label">1930s</div>
+                      </div>
+                      <div class="marker-minor-nodes"></div>
+                    </div>
+                    <div class="marker" data-decade="1940s">
+                      <div class="marker-main">
+                        <div class="marker-dot"></div>
+                        <div class="marker-label">1940s</div>
+                      </div>
+                      <div class="marker-minor-nodes"></div>
+                    </div>
+                    <div class="marker" data-decade="1950s">
+                      <div class="marker-main">
+                        <div class="marker-dot"></div>
+                        <div class="marker-label">1950s</div>
+                      </div>
+                      <div class="marker-minor-nodes"></div>
+                    </div>
+                    <div class="marker" data-decade="1960s">
+                      <div class="marker-main">
+                        <div class="marker-dot"></div>
+                        <div class="marker-label">1960s</div>
+                      </div>
+                      <div class="marker-minor-nodes"></div>
+                    </div>
+                    <div class="marker" data-decade="1980s">
+                      <div class="marker-main">
+                        <div class="marker-dot"></div>
+                        <div class="marker-label">1980s</div>
+                      </div>
+                      <div class="marker-minor-nodes"></div>
+                    </div>
+                    <div class="marker" data-decade="1990s">
+                      <div class="marker-main">
+                        <div class="marker-dot"></div>
+                        <div class="marker-label">1990s</div>
+                      </div>
+                      <div class="marker-minor-nodes"></div>
+                    </div>
+                    <div class="marker" data-decade="2000s">
+                      <div class="marker-main">
+                        <div class="marker-dot"></div>
+                        <div class="marker-label">2000s</div>
+                      </div>
+                      <div class="marker-minor-nodes"></div>
+                    </div>
+                    <div class="marker" data-decade="2010s">
+                      <div class="marker-main">
+                        <div class="marker-dot"></div>
+                        <div class="marker-label">2010s</div>
+                      </div>
+                      <div class="marker-minor-nodes"></div>
+                    </div>
+                    <div class="marker" data-decade="2020s">
+                      <div class="marker-main">
+                        <div class="marker-dot"></div>
+                        <div class="marker-label">2020s</div>
+                      </div>
+                      <div class="marker-minor-nodes"></div>
+                    </div>
+                    <div class="marker" data-decade="2026">
+                      <div class="marker-main">
+                        <div class="marker-dot"></div>
+                        <div class="marker-label">2026</div>
+                      </div>
+                      <div class="marker-minor-nodes"></div>
+                    </div>
+
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            
+          </div>
+        </section>
+        
+        <!-- Expanding background element (sits behind everything via z-index) -->
+        <div id="timeline-window-bg">
+          <canvas id="timeline-shader-bg"></canvas>
+        </div>
+        <!------ End of ACS Timeline Section ------>
 
         <div class="form-panel colored-glass" id="signup-form">
           <div class="inner-wrapper">
@@ -1387,8 +2539,8 @@ year-long celebration guided by 12 monthly pillars.
         </section>
         <div class="share-footer">
           <h2 class="large split-lines text-align-center hashtag-celebrate">#ACS150</h2>
-          <h5 class="split-lines text-align-center">Celebrate with us by sharing what "Chemistry is Everything" means to you.</h5>
-          <div class="scroll-reveal flex justify-center" data-reveal-delay="0.6">
+          <h5 class="split-lines text-align-center" data-reveal-delay="0.4">Celebrate with us by sharing what "Chemistry is Everything" means to you.</h5>
+          <div class="scroll-reveal flex justify-center" data-reveal-delay="0.9">
             <a class="fancy-btn" target="_blank" href="https://form.asana.com/?k=oUg8GpE3xb7ZkZoQ4HjlRA&d=3771128315389">Share Your Story</a>
           </div>
         </div>
@@ -2335,6 +3487,6 @@ year-long celebration guided by 12 monthly pillars.
         }, true); // Use capture phase to ensure we catch it early
       });
     </script>
-
+
   </body>
 </html>
