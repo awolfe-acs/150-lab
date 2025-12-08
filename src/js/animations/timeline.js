@@ -301,7 +301,7 @@ export function initTimelineAnimation() {
   // Define scroll durations as functions to get current viewport size on resize
   const isMobile = () => window.innerWidth < 1024;
   const getInitialPhaseDuration = () => window.innerHeight * 1.0;
-  const getScrollPerEvent = () => window.innerHeight * (isMobile() ? 0.7 : 0.7); // Reduced: was 0.9/1.4, now 0.7/1.0
+  const getScrollPerEvent = () => window.innerHeight * (isMobile() ? 0.7 : 0.88); // Reduced: was 0.9/1.4, now 0.7/1.0
   const getTotalScrollDistance = () => getInitialPhaseDuration() + (remainingEventsCount * getScrollPerEvent());
   
   // Initial values
@@ -310,7 +310,7 @@ export function initTimelineAnimation() {
   const totalScrollDistance = getTotalScrollDistance();
   
   // Adjust animation durations (relative timeline units)
-  const moveDuration = isMobile() ? 0.6 : 0.75; // Faster transitions on mobile
+  const moveDuration = isMobile() ? 0.6 : 0.88; // Faster transitions on mobile
   const holdDuration = 0.08; // Reduced from 0.15 to 0.08 (~50% less hold time)
   const totalCycleDuration = moveDuration + holdDuration;
   
@@ -458,127 +458,467 @@ export function initTimelineAnimation() {
   
   // Function to re-enter timeline after dismissal
   function reEnterTimeline() {
-    // Reset dismissed flags
+    console.log('[Re-entry] Starting timeline re-entry');
+    
+    // Set re-entering flag to prevent scroll-based positioning logic from interfering
+    isReEntering = true;
+    console.log('[Re-entry] Set isReEntering flag to TRUE - scroll positioning disabled');
+    
+    // Reset dismissed flags (both local and global)
     isTimelineDismissed = false;
     isDismissing = false;
+    window._isTimelineDismissed = false;
+    window._isDismissing = false;
     
-    // Re-enable timeline pointer events
-    timeline.style.pointerEvents = '';
+    // Reset get-involved-message opacity
+    gsap.set(getInvolvedMessage, { opacity: 1 });
     
-    // Remove closed class
-    timeline.classList.remove('closed');
+    // IMPORTANT: Make sure timeline is still in collapsed state while we measure
+    // This ensures #timeline-window-start is in its correct position
+    if (!timeline.classList.contains('closed')) {
+      console.warn('[Re-entry] Timeline was not collapsed, should have been');
+    }
     
-    // Set timeline opacity to 1 immediately
-    timeline.style.opacity = '1';
+    // STEP 1: Setup background to match #timeline-window-start position FIRST
+    // Do this BEFORE touching page structure
+    // Kill any existing GSAP animations on this element
+    gsap.killTweensOf(timelineWindowBg);
     
-    // Set container opacity to 1
-    timelineContainer.style.opacity = '1';
+    // Clear any existing inline styles first to avoid conflicts
+    timelineWindowBg.style.cssText = '';
     
-    // STEP 1: Re-enable all ScrollTriggers FIRST (before animating or scrolling)
-    scrollTriggers.forEach(trigger => {
-      if (trigger && trigger.enable) {
-        trigger.enable();
+    // Get the current position of #timeline-window-start to match it
+    const startRect = timelineWindowStart.getBoundingClientRect();
+    const adjustedTop = startRect.top - 2;
+    const adjustedLeft = startRect.left - 6;
+    const adjustedWidth = startRect.width + 12;
+    const adjustedHeight = startRect.height + 4;
+    
+    // Set initial state to match #timeline-window-start::after position
+    timelineWindowBg.style.position = 'fixed';
+    timelineWindowBg.style.top = `${adjustedTop}px`;
+    timelineWindowBg.style.left = `${adjustedLeft}px`;
+    timelineWindowBg.style.width = `${adjustedWidth}px`;
+    timelineWindowBg.style.height = `${adjustedHeight}px`;
+    timelineWindowBg.style.zIndex = '9999'; // Very high to ensure it's on top
+    timelineWindowBg.style.backgroundImage = 'linear-gradient(to bottom, #0493E2, #0493E2)';
+    timelineWindowBg.style.backgroundColor = '#0493E2';
+    timelineWindowBg.style.pointerEvents = 'none';
+    timelineWindowBg.style.visibility = 'visible';
+    timelineWindowBg.style.display = 'block';
+    timelineWindowBg.style.borderRadius = '4px';
+    timelineWindowBg.style.opacity = '0.5';
+    
+    console.log('[Re-entry] Background positioned to match timeline-window-start:', {
+      top: adjustedTop,
+      left: adjustedLeft,
+      width: adjustedWidth,
+      height: adjustedHeight
+    });
+    
+    // STEP 2: Animate background expansion (BEFORE restoring timeline content)
+    function expandBackground() {
+      console.log('[Re-entry] Starting background expansion animation');
+      
+      // Initialize shader background opacity to 0 (will fade in at the end)
+      timelineWindowBg.style.setProperty('--decal-opacity', '0');
+      console.log('[Re-entry] Set shader background (--decal-opacity) to 0');
+      
+      // Hide the pseudo-element now that we're taking over
+      const styleEl = document.getElementById('timeline-window-start-bg-style');
+      if (styleEl) {
+        styleEl.textContent = `
+          #timeline-window-start::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -6px;
+            right: -6px;
+            bottom: -2px;
+            background: linear-gradient(to bottom, #0493E2, #0493E2);
+            border-radius: 4px;
+            opacity: 0 !important;
+            z-index: -1;
+            pointer-events: none;
+            transition: none !important;
+          }
+        `;
       }
-    });
-    ScrollTrigger.getAll().forEach(trigger => {
-      if (trigger.vars.trigger === timeline || 
-          trigger.vars.trigger === getInvolvedMessage ||
-          trigger.vars.pin === timelineContainer) {
-        trigger.enable();
-      }
-    });
-    
-    // Reset all timeline events to initial state (hidden)
-    const allEvents = gsap.utils.toArray('.timeline-event');
-    allEvents.forEach(event => {
-      gsap.set(event, { opacity: 0 });
-    });
-    
-    // Reset timeline track position
-    const timelineTrack = document.querySelector('.timeline-track');
-    if (timelineTrack) {
-      gsap.set(timelineTrack, { x: 0, y: 0 });
-    }
-    
-    // STEP 2: Refresh ScrollTrigger to recalculate page height WITH timeline pinned
-    ScrollTrigger.refresh();
-    
-    // STEP 3: Get the correct scroll position from timeline's ScrollTrigger
-    // Scroll to BEFORE the exact start so the cover hasn't started fading in yet
-    let targetScrollPos;
-    if (tl && tl.scrollTrigger) {
-      // Scroll to slightly before start to match the initial scroll-based entry
-      // where the cover is still at opacity: 0
-      const offset = window.innerHeight * 1.00001; // Small offset to fully entered .timeline-cover
-      targetScrollPos = tl.scrollTrigger.start + offset;
-    } else {
-      // Fallback to element position
-      const timelineRect = timeline.getBoundingClientRect();
-      targetScrollPos = timelineRect.top + window.scrollY;
-    }
-    
-    // STEP 4: Animate background to fill viewport
-    gsap.set(timelineWindowBg, {
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: '100vw',
-      height: '100vh',
-      opacity: 0,
-      zIndex: 5,
-      backgroundImage: 'linear-gradient(to bottom, #0493AB, #0657A4)',
-      pointerEvents: 'none',
-      visibility: 'visible'
-    });
-    
-    // STEP 5: Scroll to timeline ScrollTrigger start THEN fade in background
-    if (window.lenis) {
-      window.lenis.scrollTo(targetScrollPos, { 
-        duration: 0.8,
-        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      
+      // Create timeline for expansion animation (matching original entry)
+      const expansionTl = gsap.timeline({
         onComplete: () => {
-          // After scroll completes, fade in background
-          fadeInBackground();
-        }
-      });
-    } else {
-      window.scrollTo({
-        top: targetScrollPos,
-        behavior: 'smooth'
-      });
-      // Fallback: fade in after delay
-      setTimeout(() => fadeInBackground(), 800);
-    }
-    
-    function fadeInBackground() {
-      gsap.to(timelineWindowBg, {
-        opacity: 1,
-        duration: 0.5,
-        ease: 'power2.out',
-        onComplete: () => {
-          // Add .in-timeline class to body
+          console.log('[Re-entry] Expansion complete, now locking background');
+          
+          // CRITICAL: Lock background at fullscreen IMMEDIATELY after expansion
+          // Do this BEFORE restoring content or calling ScrollTrigger.refresh()
+          // This prevents ANY logic from hiding or shrinking it
+          timelineWindowBg.style.position = 'fixed';
+          timelineWindowBg.style.top = '0';
+          timelineWindowBg.style.left = '0';
+          timelineWindowBg.style.width = '100vw';
+          timelineWindowBg.style.height = '100vh';
+          timelineWindowBg.style.opacity = '1';
+          timelineWindowBg.style.visibility = 'visible';
+          timelineWindowBg.style.display = 'block';
+          timelineWindowBg.style.borderRadius = '0px';
+          timelineWindowBg.style.backgroundImage = 'linear-gradient(to bottom, #0493AB, #0657A4)';
+          timelineWindowBg.style.zIndex = '9999'; // Keep high during transition
+          
+          // SET FULLSCREEN LOCK FLAG - prevents ANY position/size changes
+          isBgLockedFullscreen = true;
+          console.log('[Re-entry] Background locked at fullscreen - isBgLockedFullscreen = TRUE');
+          
+          // Start aggressive protection loop - continuously force fullscreen
+          function lockBackgroundLoop() {
+            if (!isBgLockedFullscreen) return; // Stop when flag is cleared
+            
+            // Check both inline styles AND computed position
+            const rect = timelineWindowBg.getBoundingClientRect();
+            const styleNeedsUpdate = (
+              timelineWindowBg.style.top !== '0px' || 
+              timelineWindowBg.style.left !== '0px' || 
+              timelineWindowBg.style.width !== '100vw' || 
+              timelineWindowBg.style.height !== '100vh'
+            );
+            const positionMoved = (
+              Math.abs(rect.top) > 2 || 
+              Math.abs(rect.left) > 2 || 
+              Math.abs(rect.width - window.innerWidth) > 5 || 
+              Math.abs(rect.height - window.innerHeight) > 5
+            );
+            
+            if (styleNeedsUpdate || positionMoved) {
+              console.warn('[Re-entry] AGGRESSIVE LOCK: Background moved! Inline styles:', {
+                top: timelineWindowBg.style.top,
+                left: timelineWindowBg.style.left,
+                width: timelineWindowBg.style.width,
+                height: timelineWindowBg.style.height
+              }, 'Computed position:', {
+                top: rect.top,
+                left: rect.left,
+                width: rect.width,
+                height: rect.height
+              });
+              
+              // Force all positioning properties
+              timelineWindowBg.style.position = 'fixed';
+              timelineWindowBg.style.top = '0';
+              timelineWindowBg.style.left = '0';
+              timelineWindowBg.style.width = '100vw';
+              timelineWindowBg.style.height = '100vh';
+              timelineWindowBg.style.opacity = '1';
+              timelineWindowBg.style.visibility = 'visible';
+              timelineWindowBg.style.display = 'block';
+              timelineWindowBg.style.zIndex = '9999';
+              timelineWindowBg.style.transform = 'none'; // Clear any transforms
+              timelineWindowBg.style.margin = '0'; // Clear margins
+              timelineWindowBg.style.padding = '0'; // Clear padding
+            }
+            
+            requestAnimationFrame(lockBackgroundLoop);
+          }
+          lockBackgroundLoop(); // Start the loop
+          console.log('[Re-entry] Started aggressive fullscreen protection loop');
+          
+          // CRITICAL: Add .in-timeline class NOW to activate all protection logic
+          // This ensures onUpdate/onRefresh callbacks won't touch the background
           document.body.classList.add('in-timeline');
+          console.log('[Re-entry] Added .in-timeline class for protection');
           
-          // Pause background shader
-          if (!window.backgroundPaused) {
-            window.backgroundPaused = true;
-            window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: true } }));
-          }
+          console.log('[Re-entry] Background locked at fullscreen, now restoring timeline content');
           
-          // Reset timeline progress to start
-          if (tl && tl.scrollTrigger) {
-            tl.progress(0);
-          }
+          // DON'T clear isReEntering yet - keep it active until scrolling is complete
+          // This prevents ScrollTrigger.refresh() from interfering with background size
+          
+          // STEP 3: After animation, restore timeline structure
+          restoreTimelineContent();
         }
       });
+      
+      // Animate background expansion to fullscreen
+      expansionTl.to(timelineWindowBg, {
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        borderRadius: '0px',
+        opacity: 1,
+        duration: 0.6,
+        ease: 'power2.inOut',
+        onStart: () => {
+          console.log('[Re-entry] Background expansion started');
+          // Ensure element is visible at start
+          timelineWindowBg.style.visibility = 'visible';
+          timelineWindowBg.style.display = 'block';
+          timelineWindowBg.style.zIndex = '9999';
+        },
+        onUpdate: function() {
+          // Force visibility and log progress
+          const progress = this.progress();
+          timelineWindowBg.style.visibility = 'visible';
+          timelineWindowBg.style.display = 'block';
+          
+          if (progress === 0 || progress === 0.5 || progress === 1) {
+            console.log(`[Re-entry] Expansion progress: ${(progress * 100).toFixed(0)}%, opacity: ${timelineWindowBg.style.opacity}, size: ${timelineWindowBg.style.width} x ${timelineWindowBg.style.height}`);
+          }
+        },
+        onComplete: () => {
+          console.log('[Re-entry] Background expansion animation complete');
+          timelineWindowBg.style.opacity = '1';
+        }
+      }, 0);
+      
+      // Animate gradient color change
+      expansionTl.to(timelineWindowBg, {
+        backgroundImage: 'linear-gradient(to bottom, #0493AB, #0657A4)',
+        backgroundColor: '#0493AB',
+        duration: 0.6,
+        ease: 'power2.inOut'
+      }, 0);
+      
+      // Fade out get-involved-message during expansion
+      expansionTl.to(getInvolvedMessage, {
+        opacity: 0,
+        duration: 0.4,
+        ease: 'power2.in'
+      }, 0.2);
+      
+      // Fade out the background canvas during expansion
+      const canvas = document.querySelector('#background-canvas');
+      if (canvas) {
+        expansionTl.to(canvas, { 
+          opacity: 0, 
+          duration: 0.5, 
+          ease: 'power2.inOut' 
+        }, 0);
+      }
+      
+      // Set HTML background to timeline gradient
+      const htmlElement = document.documentElement;
+      expansionTl.to(htmlElement, {
+        duration: 0.5,
+        ease: 'power2.inOut',
+        onUpdate: function() {
+          htmlElement.style.background = `linear-gradient(to bottom, #0493AB, #0657A4)`;
+        }
+      }, 0);
+      
+      // Start the animation
+      console.log('[Re-entry] Starting expansion timeline, duration:', expansionTl.duration());
+      expansionTl.play();
     }
+    
+    // STEP 3: Restore timeline content after expansion
+    function restoreTimelineContent() {
+      console.log('[Re-entry] Restoring timeline content and structure');
+      
+      // Ensure the timeline element is visible and ready
+      timeline.style.pointerEvents = '';
+      timeline.style.display = '';
+      
+      // Remove closed class (this expands the timeline section height)
+      timeline.classList.remove('closed');
+      
+      // Keep timeline opacity at 0 initially (will fade in via ScrollTrigger)
+      timeline.style.opacity = '0';
+      
+      // Set container opacity to 0 initially
+      timelineContainer.style.opacity = '0';
+      
+      // Re-enable all ScrollTriggers
+      scrollTriggers.forEach(trigger => {
+        if (trigger && trigger.enable) {
+          trigger.enable();
+        }
+      });
+      ScrollTrigger.getAll().forEach(trigger => {
+        if (trigger.vars.trigger === timeline || 
+            trigger.vars.trigger === getInvolvedMessage ||
+            trigger.vars.pin === timelineContainer) {
+          trigger.enable();
+        }
+      });
+      
+      // Reset all timeline events to initial state (hidden)
+      const allEvents = gsap.utils.toArray('.timeline-event');
+      allEvents.forEach(event => {
+        gsap.set(event, { opacity: 0 });
+      });
+      
+      // Reset timeline track position
+      const timelineTrack = document.querySelector('.timeline-track');
+      if (timelineTrack) {
+        gsap.set(timelineTrack, { x: 0, y: 0 });
+      }
+      
+      // Refresh ScrollTrigger to recalculate page height WITH timeline content
+      // Use requestAnimationFrame to ensure DOM updates are applied
+      requestAnimationFrame(() => {
+        ScrollTrigger.refresh();
+        
+        // Wait one more frame to ensure refresh completes
+        requestAnimationFrame(() => {
+          console.log('[Re-entry] Content restored, now scrolling to timeline');
+          
+          // STEP 4: After content is restored, scroll to timeline position
+          scrollToTimeline();
+        });
+      });
+    }
+    
+    // STEP 4: Scroll to timeline after content is restored
+    function scrollToTimeline() {
+      // Get the correct scroll position from timeline's ScrollTrigger
+      let targetScrollPos;
+      if (tl && tl.scrollTrigger) {
+        // Scroll to just at the start to show .timeline-cover without animation having begun
+        // Reduced offset to prevent timeline-cover from sliding left
+        const offset = window.innerHeight * 0.35; // Reduced from 0.5 to 0.35
+        targetScrollPos = tl.scrollTrigger.start + offset;
+      } else {
+        // Fallback to element position
+        const timelineRect = timeline.getBoundingClientRect();
+        targetScrollPos = timelineRect.top + window.scrollY;
+      }
+      
+      console.log('[Re-entry] Scrolling to timeline position:', targetScrollPos);
+      
+      // Add .in-timeline class to body
+      document.body.classList.add('in-timeline');
+      
+      // Pause background shader
+      if (!window.backgroundPaused) {
+        window.backgroundPaused = true;
+        window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: true } }));
+      }
+      
+      // Notify adaptive renderer we're entering timeline
+      if (window.shaderBackgroundRenderer && window.shaderBackgroundRenderer.setInTimeline) {
+        window.shaderBackgroundRenderer.setInTimeline(true);
+      }
+      
+      // Resume timeline canvases (coverOrb and shader)
+      if (window.coverOrbControls && window.coverOrbControls.resume) {
+        window.coverOrbControls.resume();
+      }
+      if (window.timelineShaderControls && window.timelineShaderControls.resume) {
+        window.timelineShaderControls.resume();
+      }
+      
+      // Reset timeline progress to start
+      if (tl && tl.scrollTrigger) {
+        tl.progress(0);
+      }
+      
+      if (window.lenis) {
+        window.lenis.scrollTo(targetScrollPos, { 
+          duration: 0.8,
+          easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+          onComplete: () => {
+            console.log('[Re-entry] Scroll complete, fading in timeline');
+            
+            // LOCK background at fullscreen BEFORE clearing flag
+            // This ensures it stays fullscreen when onUpdate callbacks resume
+            timelineWindowBg.style.position = 'fixed';
+            timelineWindowBg.style.top = '0';
+            timelineWindowBg.style.left = '0';
+            timelineWindowBg.style.width = '100vw';
+            timelineWindowBg.style.height = '100vh';
+            timelineWindowBg.style.opacity = '1';
+            timelineWindowBg.style.visibility = 'visible';
+            timelineWindowBg.style.display = 'block';
+            timelineWindowBg.style.borderRadius = '0px';
+            timelineWindowBg.style.backgroundImage = 'linear-gradient(to bottom, #0493AB, #0657A4)';
+            console.log('[Re-entry] Locked background at fullscreen state');
+            
+            // NOW clear re-entering flags - entire re-entry sequence is complete
+            isReEntering = false;
+            isBgLockedFullscreen = false;
+            console.log('[Re-entry] Cleared isReEntering and isBgLockedFullscreen flags to FALSE - scroll positioning re-enabled');
+            
+            // Lower z-index now that we're scrolled into timeline
+            timelineWindowBg.style.zIndex = '5';
+            
+            // Fade in timeline and container
+            gsap.to(timeline, { opacity: 1, duration: 0.3, ease: 'power2.out' });
+            gsap.to(timelineContainer, { opacity: 1, duration: 0.3, ease: 'power2.out' });
+            
+            // Fade in shader background (same as normal entry)
+            gsap.to(timelineWindowBg, {
+              '--decal-opacity': 1,
+              duration: 0.5,
+              ease: 'power2.out',
+              onUpdate: function() {
+                const opacityValue = gsap.getProperty(timelineWindowBg, '--decal-opacity') || 0;
+                timelineWindowBg.style.setProperty('--decal-opacity', opacityValue);
+              }
+            });
+            console.log('[Re-entry] Fading in shader background (--decal-opacity)');
+          }
+        });
+      } else {
+        window.scrollTo({
+          top: targetScrollPos,
+          behavior: 'smooth'
+        });
+        
+        // Fallback: fade in after delay
+        setTimeout(() => {
+          console.log('[Re-entry] Scroll complete, fading in timeline');
+          
+          // LOCK background at fullscreen BEFORE clearing flag
+          // This ensures it stays fullscreen when onUpdate callbacks resume
+          timelineWindowBg.style.position = 'fixed';
+          timelineWindowBg.style.top = '0';
+          timelineWindowBg.style.left = '0';
+          timelineWindowBg.style.width = '100vw';
+          timelineWindowBg.style.height = '100vh';
+          timelineWindowBg.style.opacity = '1';
+          timelineWindowBg.style.visibility = 'visible';
+          timelineWindowBg.style.display = 'block';
+          timelineWindowBg.style.borderRadius = '0px';
+          timelineWindowBg.style.backgroundImage = 'linear-gradient(to bottom, #0493AB, #0657A4)';
+          console.log('[Re-entry] Locked background at fullscreen state (fallback)');
+          
+          // NOW clear re-entering flags - entire re-entry sequence is complete
+          isReEntering = false;
+          isBgLockedFullscreen = false;
+          console.log('[Re-entry] Cleared isReEntering and isBgLockedFullscreen flags to FALSE - scroll positioning re-enabled');
+          
+          // Lower z-index now that we're scrolled into timeline
+          timelineWindowBg.style.zIndex = '5';
+          
+          // Fade in timeline and container
+          gsap.to(timeline, { opacity: 1, duration: 0.3, ease: 'power2.out' });
+          gsap.to(timelineContainer, { opacity: 1, duration: 0.3, ease: 'power2.out' });
+          
+          // Fade in shader background (same as normal entry)
+          gsap.to(timelineWindowBg, {
+            '--decal-opacity': 1,
+            duration: 0.5,
+            ease: 'power2.out',
+            onUpdate: function() {
+              const opacityValue = gsap.getProperty(timelineWindowBg, '--decal-opacity') || 0;
+              timelineWindowBg.style.setProperty('--decal-opacity', opacityValue);
+            }
+          });
+          console.log('[Re-entry] Fading in shader background (--decal-opacity) - fallback');
+        }, 800);
+      }
+    }
+    
+    // Start the expansion animation immediately
+    expandBackground();
   }
   
   // Add click/touch listener to #timeline-window-start for re-entry
   if (timelineWindowStart) {
     const handleReEntry = (e) => {
       // Only handle re-entry if timeline has been dismissed
-      if (isTimelineDismissed) {
+      // Check both local and global flags (global survives resize)
+      const isDismissed = isTimelineDismissed || window._isTimelineDismissed;
+      if (isDismissed) {
         e.preventDefault();
         e.stopPropagation();
         reEnterTimeline();
@@ -800,6 +1140,9 @@ export function initTimelineAnimation() {
       previousActiveMarkerIndex = activeMarkerIndex;
     }
   };
+  
+  // Store reference for resize handler
+  window._updateScrubber = updateScrubber;
 
   // Helper to calculate the timeline progress for a given marker/decade index
   const calculateProgressForMarker = (markerIndex) => {
@@ -893,9 +1236,17 @@ export function initTimelineAnimation() {
   const scrollTriggers = [];
   
   // Track if timeline has been dismissed
-  let isTimelineDismissed = false;
-  // Track if timeline is currently in the process of being dismissed
-  let isDismissing = false;
+  // Store in window for global access (survives resize operations)
+  if (typeof window._isTimelineDismissed === 'undefined') {
+    window._isTimelineDismissed = false;
+  }
+  if (typeof window._isDismissing === 'undefined') {
+    window._isDismissing = false;
+  }
+  let isTimelineDismissed = window._isTimelineDismissed;
+  let isDismissing = window._isDismissing;
+  let isReEntering = false; // Track re-entry in progress
+  let isBgLockedFullscreen = false; // Track when background is locked at fullscreen during re-entry
   
   function hideTimelineContainer() {
     // NEW: Fade out timeline-container first (440ms)
@@ -911,11 +1262,13 @@ export function initTimelineAnimation() {
   }
   // Function to dismiss timeline and clean up
   function dismissTimeline() {
-    // Set dismissing flag to lock background updates
+    // Set dismissing flag to lock background updates (both local and global)
     isDismissing = true;
+    window._isDismissing = true;
     
     // Mark as dismissed (in memory, not session storage)
     isTimelineDismissed = true;
+    window._isTimelineDismissed = true;
     
     // Remove .in-timeline class from body immediately
     document.body.classList.remove('in-timeline');
@@ -954,6 +1307,13 @@ export function initTimelineAnimation() {
         }
       `;
     }
+    
+    // Restore get-involved-message opacity
+    gsap.to(getInvolvedMessage, {
+      opacity: 1,
+      duration: 0.3,
+      ease: 'power2.out'
+    });
     
     // Disable all ScrollTriggers (instead of kill, so we can re-enable on re-entry)
     scrollTriggers.forEach(trigger => {
@@ -1069,22 +1429,32 @@ export function initTimelineAnimation() {
           duration: 0.44, // Faster fade (200ms instead of 350ms)
           ease: 'power2.inOut',
           onComplete: () => {
-            // Reset background styles
+            // Reset background styles - clear cssText first to remove !important declarations
             timelineWindowBg.style.cssText = '';
+            // Then explicitly reset individual properties
             timelineWindowBg.style.position = '';
             timelineWindowBg.style.top = '';
             timelineWindowBg.style.left = '';
             timelineWindowBg.style.width = '';
             timelineWindowBg.style.height = '';
             timelineWindowBg.style.zIndex = '';
+            timelineWindowBg.style.opacity = '';
+            timelineWindowBg.style.visibility = '';
+            timelineWindowBg.style.backgroundImage = '';
+            timelineWindowBg.style.backgroundColor = '';
+            timelineWindowBg.style.pointerEvents = '';
+            timelineWindowBg.style.transform = '';
+            timelineWindowBg.style.transition = '';
+            timelineWindowBg.style.borderRadius = '';
             
             // Disable pointer events on timeline
             timeline.style.pointerEvents = 'none';
             
             // Remove .in-timeline class from body LAST
             document.body.classList.remove('in-timeline');
-            // Reset dismissing flag
+            // Reset dismissing flag (both local and global)
             isDismissing = false;
+            window._isDismissing = false;
           }
         });
         }, 100); // Small delay to ensure scroll completes
@@ -1093,26 +1463,140 @@ export function initTimelineAnimation() {
   }
   
   // Phase 1: Pin #get-involved-message and expand background when it reaches center
+  // First, calculate the hold distance (33vh converted to pixels)
+  const holdDistance = window.innerHeight * 0.33; // 33vh in pixels
+  const expansionDistance = 600; // Original expansion scroll distance
+  const totalPinDistance = holdDistance + expansionDistance; // Total scroll distance for the pin
+  
+  // Calculate the normalized position where expansion should start (after the hold period)
+  const expansionStartPosition = holdDistance / totalPinDistance;
+  
   const expansionTl = gsap.timeline({
     scrollTrigger: {
       trigger: getInvolvedMessage,
       start: 'center center', // When message reaches middle of viewport
-      end: '+=600', // Scroll distance for pin duration and expansion
+      end: `+=${totalPinDistance}`, // Scroll distance: 33vh hold + expansion
       pin: true,
       scrub: 1,
       anticipatePin: 1,
+      invalidateOnRefresh: true, // Force recalculation on resize
+      onRefresh: (self) => {
+        // If re-entering, DO NOT touch the background
+        if (isReEntering) {
+          console.log('[Re-entry] onRefresh blocked by isReEntering flag');
+          return;
+        }
+        
+        // CRITICAL: If background is locked at fullscreen, don't touch ANYTHING
+        if (isBgLockedFullscreen) {
+          console.log('[Re-entry] onRefresh blocked by isBgLockedFullscreen flag');
+          return;
+        }
+        
+        // If already in timeline, don't touch the background at all
+        if (document.body.classList.contains('in-timeline')) {
+          console.log('[Re-entry] onRefresh blocked - already in timeline');
+          return;
+        }
+        
+        // Reset captured position on resize so it gets recalculated with fresh dimensions
+        capturedPosition = null;
+        
+        // Calculate handoff threshold (same logic as in onUpdate)
+        const currentHandoffThreshold = expansionStartPosition + (0.01 * (1 - expansionStartPosition));
+        
+        // If we're in the middle of the animation, immediately update BG position
+        // to match current timeline-window-start position
+        if (self.progress > 0 && self.progress < currentHandoffThreshold) {
+          // We're before handoff - ensure BG is hidden and positioned correctly
+          const rect = timelineWindowStart.getBoundingClientRect();
+          const adjustedTop = rect.top - 2;
+          const adjustedLeft = rect.left - 6;
+          const adjustedWidth = rect.width + 12;
+          const adjustedHeight = rect.height + 4;
+          
+          // Position BG but keep it hidden (pseudo-element is visible)
+          timelineWindowBg.style.position = 'fixed';
+          timelineWindowBg.style.top = `${adjustedTop}px`;
+          timelineWindowBg.style.left = `${adjustedLeft}px`;
+          timelineWindowBg.style.width = `${adjustedWidth}px`;
+          timelineWindowBg.style.height = `${adjustedHeight}px`;
+          timelineWindowBg.style.opacity = '0';
+          timelineWindowBg.style.visibility = 'hidden';
+          
+          // Capture this position for when expansion starts
+          capturedPosition = {
+            top: adjustedTop,
+            left: adjustedLeft,
+            width: adjustedWidth,
+            height: adjustedHeight
+          };
+        } else if (self.progress >= currentHandoffThreshold && self.progress < 1) {
+          // We're after handoff - recalculate from current state
+          // The fromTo will handle this on next frame
+          const rect = timelineWindowStart.getBoundingClientRect();
+          const adjustedTop = rect.top - 2;
+          const adjustedLeft = rect.left - 6;
+          const adjustedWidth = rect.width + 12;
+          const adjustedHeight = rect.height + 4;
+          
+          capturedPosition = {
+            top: adjustedTop,
+            left: adjustedLeft,
+            width: adjustedWidth,
+            height: adjustedHeight
+          };
+        }
+      },
       onUpdate: (self) => {
-        // If dismissing, DO NOT touch the background
-        if (isDismissing) return;
+        // If dismissing or re-entering, DO NOT touch the background
+        if (isDismissing || window._isDismissing || isReEntering) return;
+        
+        // CRITICAL: If background is locked at fullscreen, don't touch ANYTHING
+        if (isBgLockedFullscreen) {
+          // Force background to stay at fullscreen - protect ALL properties
+          if (timelineWindowBg.style.top !== '0px' || 
+              timelineWindowBg.style.left !== '0px' || 
+              timelineWindowBg.style.width !== '100vw' || 
+              timelineWindowBg.style.height !== '100vh' || 
+              timelineWindowBg.style.opacity !== '1') {
+            console.log('[Timeline] FULLSCREEN LOCK: Re-locking background at fullscreen');
+            timelineWindowBg.style.position = 'fixed';
+            timelineWindowBg.style.top = '0';
+            timelineWindowBg.style.left = '0';
+            timelineWindowBg.style.width = '100vw';
+            timelineWindowBg.style.height = '100vh';
+            timelineWindowBg.style.opacity = '1';
+            timelineWindowBg.style.visibility = 'visible';
+            timelineWindowBg.style.display = 'block';
+          }
+          return; // Skip ALL other logic when locked
+        }
+        
+        // CRITICAL: If we're already in timeline (from re-entry), don't touch ANYTHING
+        if (document.body.classList.contains('in-timeline')) {
+          // Just ensure background stays visible and at full opacity
+          if (timelineWindowBg.style.opacity !== '1' || timelineWindowBg.style.visibility !== 'visible') {
+            console.log('[Timeline] onUpdate safety: Forcing background visible (in-timeline)');
+            timelineWindowBg.style.opacity = '1';
+            timelineWindowBg.style.visibility = 'visible';
+            timelineWindowBg.style.display = 'block';
+          }
+          return; // Skip all other logic
+        }
         
         // REAL-TIME visibility management - runs EVERY FRAME for instant response
         const progress = self.progress;
-        const handoffThreshold = 0.01; // 1% - very tight threshold
+        // Handoff happens at the start of expansion (after the hold period)
+        // Add a small buffer of 1% of the expansion phase
+        const handoffThreshold = expansionStartPosition + (0.01 * (1 - expansionStartPosition));
         
         // CRITICAL: Resume timeline visuals EARLY AND AGGRESSIVELY
+        // But only AFTER the hold period - start when expansion begins
         // This ensures they're playing even during very slow scrolling
-        // We check EVERY frame during early progress to ensure they start
-        if (progress > 0.0001 && progress < 0.1) {
+        // We check EVERY frame during early expansion progress to ensure they start
+        const expansionProgress = Math.max(0, (progress - expansionStartPosition) / (1 - expansionStartPosition));
+        if (progress >= expansionStartPosition && expansionProgress < 0.1) {
           // Check timeline shader
           if (window.timelineShaderControls && window.timelineShaderControls.resume) {
             // Try to detect if it's actually paused by checking if a resume is needed
@@ -1155,6 +1639,7 @@ export function initTimelineAnimation() {
           // BG is full viewport - MUST be opacity 1.0
           const currentOpacity = parseFloat(timelineWindowBg.style.opacity || '0');
           if (Math.abs(currentOpacity - 1.0) > 0.01) {
+            console.log('[Timeline] SAFETY CHECK: Forcing BG to opacity 1 (was', currentOpacity, ')');
             timelineWindowBg.style.opacity = '1';
             timelineWindowBg.style.visibility = 'visible';
           }
@@ -1176,10 +1661,48 @@ export function initTimelineAnimation() {
         }
         
         if (progress < handoffThreshold) {
-          // BEFORE handoff: Pseudo visible, BG hidden
-          // Force update EVERY frame to ensure it sticks
+          // IMPORTANT: If we're already in the timeline (from re-entry), don't shrink the background
+          // Even if scroll progress is low, we want to keep it fullscreen
+          if (document.body.classList.contains('in-timeline')) {
+            // We're in timeline - keep background fullscreen and visible
+            console.log('[Timeline] Skipping shrink logic - already in timeline (body has .in-timeline class)');
+            return;
+          }
+          
+          // BEFORE handoff: Pseudo visible, BG hidden BUT positioned correctly
+          // This ensures seamless handoff when expansion starts
+          
+          // Get current position of timeline-window-start
+          const rect = timelineWindowStart.getBoundingClientRect();
+          const adjustedTop = rect.top - 2;
+          const adjustedLeft = rect.left - 6;
+          const adjustedWidth = rect.width + 12;
+          const adjustedHeight = rect.height + 4;
+          
+          // Position BG element exactly where it needs to be (but keep it invisible)
+          timelineWindowBg.style.position = 'fixed';
+          timelineWindowBg.style.top = `${adjustedTop}px`;
+          timelineWindowBg.style.left = `${adjustedLeft}px`;
+          timelineWindowBg.style.width = `${adjustedWidth}px`;
+          timelineWindowBg.style.height = `${adjustedHeight}px`;
+          timelineWindowBg.style.backgroundImage = 'linear-gradient(to bottom, #0493E2, #0493E2)';
+          timelineWindowBg.style.borderRadius = '4px';
           timelineWindowBg.style.opacity = '0';
           timelineWindowBg.style.visibility = 'hidden';
+          
+          // Update captured position continuously during hold period
+          if (!capturedPosition || 
+              Math.abs(capturedPosition.top - adjustedTop) > 1 ||
+              Math.abs(capturedPosition.left - adjustedLeft) > 1 ||
+              Math.abs(capturedPosition.width - adjustedWidth) > 1 ||
+              Math.abs(capturedPosition.height - adjustedHeight) > 1) {
+            capturedPosition = {
+              top: adjustedTop,
+              left: adjustedLeft,
+              width: adjustedWidth,
+              height: adjustedHeight
+            };
+          }
           
           if (styleEl) {
             styleEl.textContent = `
@@ -1201,12 +1724,19 @@ export function initTimelineAnimation() {
           }
         } else {
           // AFTER handoff: BG visible, Pseudo hidden
-          // Only make BG visible if pseudo is confirmed at 0
-          if (pseudoOpacity < 0.01) {
-            timelineWindowBg.style.opacity = '0.5';
-            timelineWindowBg.style.visibility = 'visible';
+          // This happens when we enter the expansion phase
+          
+          // IMPORTANT: If we're already in the timeline (from re-entry), keep background at full opacity
+          if (document.body.classList.contains('in-timeline')) {
+            // We're in timeline - ensure background stays at full viewport opacity
+            if (timelineWindowBg.style.opacity !== '1') {
+              timelineWindowBg.style.opacity = '1';
+              timelineWindowBg.style.visibility = 'visible';
+              console.log('[Timeline] Forcing background to opacity 1 - already in timeline');
+            }
           }
           
+          // Hide pseudo-element
           if (styleEl) {
             styleEl.textContent = `
               #timeline-window-start::before {
@@ -1225,31 +1755,20 @@ export function initTimelineAnimation() {
               }
             `;
           }
-        }
-        
-        // Capture position right before pin activates (at start)
-        if (progress < 0.01 && !capturedPosition) {
-          const rect = timelineWindowStart.getBoundingClientRect();
-          capturedPosition = {
-            top: rect.top,
-            left: rect.left,
-            width: rect.width,
-            height: rect.height
-          };
+          
+          // Make BG visible only if pseudo is confirmed hidden
+          // BUT: Don't reduce opacity if we're already in timeline (from re-entry)
+          if (pseudoOpacity < 0.01 && !document.body.classList.contains('in-timeline')) {
+            timelineWindowBg.style.opacity = '0.5';
+            timelineWindowBg.style.visibility = 'visible';
+          }
         }
       },
       onEnter: () => {
-        // Resume timeline shader early (just before main timeline starts)
-        // This ensures smoothness during the entry transition
-        if (window.timelineShaderControls && window.timelineShaderControls.resume) {
-           window.timelineShaderControls.resume();
-        }
-
-        
         // Stop tracking span position updates
         isTrackingSpan = false;
         
-        // Stop continuous RAF tracking since we're handing off to GSAP animation
+        // Stop continuous RAF tracking since we're entering the pinned section
         stopContinuousTracking();
         
         // CRITICAL: Kill the pseudo fade timeline to prevent it from overriding our opacity
@@ -1257,17 +1776,9 @@ export function initTimelineAnimation() {
           pseudoFadeTl.kill();
         }
         
-        // INSTANT HANDOFF: Transfer from span pseudo-element to BG element
-        // 1. Get the EXACT current position of the span (including padding from pseudo)
-        const rect = timelineWindowStart.getBoundingClientRect();
-        
-        // Account for pseudo-element padding (-6px left/right, -2px top/bottom)
-        const adjustedTop = rect.top - 2;
-        const adjustedLeft = rect.left - 6;
-        const adjustedWidth = rect.width + 12; // +6px on each side
-        const adjustedHeight = rect.height + 4; // +2px on each side
-        
-        // 2. INSTANTLY hide the pseudo-element background (force to 0)
+        // Set initial state - pseudo-element visible, BG hidden but positioned
+        // The onUpdate will handle continuous positioning during hold period
+        // and the handoff will happen at handoffThreshold
         const styleEl = document.getElementById('timeline-window-start-bg-style');
         if (styleEl) {
           styleEl.textContent = `
@@ -1280,7 +1791,7 @@ export function initTimelineAnimation() {
               bottom: -2px;
               background: linear-gradient(to bottom, #0493E2, #0493E2);
               border-radius: 4px;
-              opacity: 0 !important;
+              opacity: 0.5 !important;
               z-index: -1;
               pointer-events: none;
               transition: none !important;
@@ -1288,7 +1799,13 @@ export function initTimelineAnimation() {
           `;
         }
         
-        // 3. INSTANTLY position BG element exactly where pseudo-element was (using direct style for zero delay)
+        // Initial positioning of BG (hidden, will be positioned by onUpdate)
+        const rect = timelineWindowStart.getBoundingClientRect();
+        const adjustedTop = rect.top - 2;
+        const adjustedLeft = rect.left - 6;
+        const adjustedWidth = rect.width + 12;
+        const adjustedHeight = rect.height + 4;
+        
         timelineWindowBg.style.position = 'fixed';
         timelineWindowBg.style.top = `${adjustedTop}px`;
         timelineWindowBg.style.left = `${adjustedLeft}px`;
@@ -1297,10 +1814,10 @@ export function initTimelineAnimation() {
         timelineWindowBg.style.backgroundImage = 'linear-gradient(to bottom, #0493E2, #0493E2)';
         timelineWindowBg.style.borderRadius = '4px';
         timelineWindowBg.style.zIndex = '0';
-        timelineWindowBg.style.opacity = '0.5'; // Match pseudo-element opacity
-        timelineWindowBg.style.visibility = 'visible'; // Make it visible at handoff
+        timelineWindowBg.style.opacity = '0';
+        timelineWindowBg.style.visibility = 'hidden';
         
-        // 4. Store this position for expansion animation
+        // Store initial position
         capturedPosition = {
           top: adjustedTop,
           left: adjustedLeft,
@@ -1350,12 +1867,14 @@ export function initTimelineAnimation() {
   // Create a gradient animation object to tween between color states
   const gradientState = { progress: 0 };
   
-  // Expand background from highlight box to full viewport (first 70% of pin)
+  // Expand background from highlight box to full viewport
+  // Starts AFTER the hold period (expansion animations begin at expansionStartPosition)
   // Use function to get starting values to account for captured position
   // Create a proxy object for smoother opacity tweening
   const opacityState = { value: 0.5 };
 
-  // Expand background from highlight box to full viewport (first 70% of pin)
+  // Expand background from highlight box to full viewport
+  // Starts AFTER the hold period (33vh of pinned scroll)
   // Use function to get starting values to account for captured position
   expansionTl.fromTo(timelineWindowBg, 
     () => {
@@ -1397,18 +1916,20 @@ export function initTimelineAnimation() {
         timelineWindowBg.style.opacity = '0';
       }
     }, 
-    0
+    expansionStartPosition
   );
 
   // Animate the opacity proxy separately to ensure it runs concurrently
+  // Starts at the same position as the expansion (after the hold period)
   expansionTl.to(opacityState, {
     value: 1,
     duration: 0.7,
     ease: 'power2.inOut'
     // The onUpdate in the main tween above will handle applying this value
-  }, 0);
+  }, expansionStartPosition);
 
   // Animate the gradient colors alongside the expansion
+  // Starts at the same position as the expansion (after the hold period)
   expansionTl.to(gradientState, {
     progress: 1,
     duration: 0.7,
@@ -1420,7 +1941,7 @@ export function initTimelineAnimation() {
       
       timelineWindowBg.style.backgroundImage = `linear-gradient(to bottom, ${startColorTop}, ${startColorBottom})`;
     }
-  }, 0);
+  }, expansionStartPosition);
 
   // Ensure ScrollTrigger refreshes after fonts load to prevent layout shifts affecting positions
   if (document.fonts && document.fonts.ready) {
@@ -1429,12 +1950,14 @@ export function initTimelineAnimation() {
     });
   }
 
-  // Fade out the get-involved-message (starts at 40%, ends at 100%)
+  // Fade out the get-involved-message
+  // Starts after the hold period + 40% into the expansion phase
+  const messageFadeStart = expansionStartPosition + (0.4 * (1 - expansionStartPosition));
   expansionTl.to(getInvolvedMessage, {
     opacity: 0,
     ease: 'power2.in',
     duration: 0.6
-  }, 0.4);
+  }, messageFadeStart);
 
   // Phase 2: Master timeline for all timeline animations (starts after get-involved-message pin)
   tl = gsap.timeline({
@@ -1447,8 +1970,28 @@ export function initTimelineAnimation() {
       anticipatePin: 1,
       invalidateOnRefresh: true,
       onRefresh: (self) => {
-        // If dismissing, DO NOT touch the background
-        if (isDismissing) return;
+        // If dismissing or re-entering, DO NOT touch the background
+        if (isDismissing || window._isDismissing || isReEntering) return;
+        
+        // CRITICAL: If background is locked at fullscreen, don't touch ANYTHING
+        if (isBgLockedFullscreen) {
+          console.log('[Timeline] Timeline onRefresh blocked by isBgLockedFullscreen flag');
+          // Still update scrubber for timeline position
+          if (self.animation) {
+            updateScrubber(self.animation.progress());
+          }
+          return;
+        }
+        
+        // If already in timeline, minimal updates only (don't touch background)
+        if (document.body.classList.contains('in-timeline')) {
+          console.log('[Timeline] Timeline onRefresh - in timeline, skipping background updates');
+          // Still update scrubber for timeline position
+          if (self.animation) {
+            updateScrubber(self.animation.progress());
+          }
+          return;
+        }
         
         // Called after refresh/resize - ensure animations are in correct state
         
@@ -1460,8 +2003,40 @@ export function initTimelineAnimation() {
         }
       },
       onUpdate: (self) => {
-        // If dismissing, DO NOT touch the background
-        if (isDismissing) return;
+        // If dismissing or re-entering, DO NOT touch the background
+        if (isDismissing || window._isDismissing || isReEntering) return;
+        
+        // CRITICAL: If background is locked at fullscreen, protect ALL properties
+        if (isBgLockedFullscreen) {
+          // Force background to stay at fullscreen
+          if (timelineWindowBg.style.top !== '0px' || 
+              timelineWindowBg.style.left !== '0px' || 
+              timelineWindowBg.style.width !== '100vw' || 
+              timelineWindowBg.style.height !== '100vh' || 
+              timelineWindowBg.style.opacity !== '1') {
+            console.log('[Timeline] Timeline FULLSCREEN LOCK: Re-locking background');
+            timelineWindowBg.style.position = 'fixed';
+            timelineWindowBg.style.top = '0';
+            timelineWindowBg.style.left = '0';
+            timelineWindowBg.style.width = '100vw';
+            timelineWindowBg.style.height = '100vh';
+            timelineWindowBg.style.opacity = '1';
+            timelineWindowBg.style.visibility = 'visible';
+            timelineWindowBg.style.display = 'block';
+          }
+          return; // Skip all other logic when locked
+        }
+        
+        // CRITICAL: If we're in timeline (from re-entry or scroll), ensure background stays visible
+        if (document.body.classList.contains('in-timeline')) {
+          // Force background to stay visible and at full opacity
+          if (timelineWindowBg.style.opacity !== '1' || timelineWindowBg.style.visibility !== 'visible') {
+            console.log('[Timeline] Timeline onUpdate safety: Forcing background visible');
+            timelineWindowBg.style.opacity = '1';
+            timelineWindowBg.style.visibility = 'visible';
+            timelineWindowBg.style.display = 'block';
+          }
+        }
         
         // Use animation progress to account for scrub lag (visual position)
         const progress = self.animation.progress();
@@ -1554,7 +2129,7 @@ export function initTimelineAnimation() {
       },
       onEnter: () => {
         // Add .in-timeline class to body (only if not dismissed)
-        if (!isTimelineDismissed) {
+        if (!isTimelineDismissed && !window._isTimelineDismissed) {
           document.body.classList.add('in-timeline');
           
           // Force theme-color to black to prevent Android system bars from switching to light mode
@@ -1772,7 +2347,7 @@ export function initTimelineAnimation() {
       onEnterBack: () => {
         
         // Add .in-timeline class to body (only if not dismissed)
-        if (!isTimelineDismissed) {
+        if (!isTimelineDismissed && !window._isTimelineDismissed) {
           document.body.classList.add('in-timeline');
           
           // Pause regular background shader when re-entering timeline
@@ -2231,6 +2806,9 @@ export function initTimelineAnimation() {
 
   // Generate minor nodes for individual events
   generateMinorNodes();
+  
+  // Store reference for resize handler
+  window._generateMinorNodes = generateMinorNodes;
 
   // Function to initialize scrubber horizontal scrolling with nav arrows
   function initScrubberScrolling() {
@@ -2690,6 +3268,12 @@ function handleResizeEnd() {
     timelineShaderCanvas.style.height = `${window.innerHeight}px`;
   }
   
+  // Regenerate minor nodes to recalculate their positions based on new viewport
+  // This must happen BEFORE ScrollTrigger.refresh to ensure correct positioning
+  if (window._generateMinorNodes) {
+    window._generateMinorNodes();
+  }
+  
   // First, refresh ScrollTrigger with invalidation to recalculate everything
   ScrollTrigger.refresh(true); // true = invalidate all on refresh
   
@@ -2738,6 +3322,49 @@ function handleResizeEnd() {
               marker.classList.add('complete');
             }
           });
+          
+          // Restore minor node states based on active event
+          const activeEventIndex = resizeState.savedProgress.activeEventIndex;
+          const minorNodes = gsap.utils.toArray('.minor-node');
+          
+          // Find the minor node index (accounting for cover event)
+          // activeEventIndex 0 = cover (no minor node)
+          // activeEventIndex 1 = first minor node (index 0)
+          const activeMinorNodeIndex = activeEventIndex - 1;
+          
+          minorNodes.forEach((node, index) => {
+            node.classList.remove('active', 'complete');
+            const nodeMinorIndex = parseInt(node.getAttribute('data-minor-index') || index);
+            
+            if (nodeMinorIndex === activeMinorNodeIndex) {
+              node.classList.add('active');
+            } else if (nodeMinorIndex < activeMinorNodeIndex) {
+              node.classList.add('complete');
+            }
+          });
+          
+          // Update scrubber progress to match the active minor node position
+          const scrubberProgress = document.querySelector('.scrubber-progress');
+          if (scrubberProgress && activeMinorNodeIndex >= 0 && minorNodes[activeMinorNodeIndex]) {
+            const activeNode = minorNodes[activeMinorNodeIndex];
+            const scrubberLine = document.querySelector('.scrubber-line');
+            
+            if (scrubberLine && activeNode) {
+              // Wait for minor nodes to be fully positioned after regeneration
+              requestAnimationFrame(() => {
+                const lineRect = scrubberLine.getBoundingClientRect();
+                const nodeRect = activeNode.getBoundingClientRect();
+                const nodeCenterX = nodeRect.left + (nodeRect.width / 2) - lineRect.left;
+                const lineWidth = lineRect.width;
+                const scrubberProgressValue = Math.max(0, Math.min(1, nodeCenterX / lineWidth));
+                
+                gsap.set(scrubberProgress, {
+                  scaleX: scrubberProgressValue,
+                  transformOrigin: 'left'
+                });
+              });
+            }
+          }
         }
         
         // Force another update after scroll restoration and ensure animations are in correct state
@@ -2752,6 +3379,13 @@ function handleResizeEnd() {
           
           // Additional safety: trigger a scroll event to ensure everything updates
           window.dispatchEvent(new Event('scroll'));
+          
+          // Force updateScrubber to sync with current state after resize
+          if (scrollTrigger.animation && window._updateScrubber) {
+            requestAnimationFrame(() => {
+              window._updateScrubber(scrollTrigger.animation.progress());
+            });
+          }
           
           // Unlock marker after everything has settled
           setTimeout(() => {
