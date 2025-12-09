@@ -307,7 +307,8 @@ html {
   h1 {
     font-size: 4vw;
     text-align: center;
-    font-weight: 200;
+    font-family: $stolzl-light;
+    font-weight: 300;
     width: 60vw;
     max-width: 1400px;
     position: absolute;
@@ -344,7 +345,8 @@ html {
       transform-origin: center center;
       transform-style: preserve-3d; // Enhance 3D effect
       will-change: opacity, transform; // Optimize for animation
-      font-weight: 150;
+      font-weight:400!important;
+      font-family:$stolzl-light!important;
       transition: filter 0.24s ease, opacity 0.24s ease, transform 0.24s ease;
     }
   }
@@ -479,7 +481,8 @@ html {
   .line {
     font-size: inherit !important;
     text-align: center;
-    font-weight: 100;
+    font-family: $stolzl-light!important;
+    font-weight: 400!important;
     color: #fff;
   }
 }
@@ -550,6 +553,7 @@ html {
   color: #fff;
   font-size: 10vw;
   text-align: center;
+  font-family: $stolzl-light;
   font-weight: 100;
 }
 

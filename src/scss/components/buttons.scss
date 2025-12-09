@@ -81,6 +81,7 @@
         text-align: center;
         font-weight: 450 !important;
         pointer-events: none;
+        font-family: $font-family;
         transform: translateX(3px);
         position: relative;
         z-index: 2;
@@ -200,6 +201,7 @@
     color: white;
     font-size: 14px;
     font-weight: 450;
+    font-family: $font-family;
     text-transform: uppercase;
     padding: 0 16px;
     cursor: pointer;
@@ -246,6 +248,7 @@
         color: white;
         text-align: center;
         font-weight: 450 !important;
+        font-family: $font-family;
         pointer-events: none;
         transform: translateX(3px) translateY(0.5px);
         position: relative;
@@ -304,6 +307,7 @@
         span {
             z-index: 3;
             font-weight: 700;
+            font-family: $stolzl-bold;
             text-transform: uppercase;
             margin: 0; //looks correct on prod
         }

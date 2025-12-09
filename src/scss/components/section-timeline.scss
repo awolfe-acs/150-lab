@@ -42,6 +42,7 @@
         user-select: none;
 
         a {
+            font-family: $stolzl-light;
             font-weight: 200;
             text-transform: uppercase;
             white-space: nowrap;
@@ -168,6 +169,7 @@
 
             span {
                 font-size: 12px;
+                font-family: $stolzl-light;
                 font-weight: 200;
                 text-transform: uppercase;
                 letter-spacing: 6px;

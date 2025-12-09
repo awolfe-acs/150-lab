@@ -1,8 +1,8 @@
 @use './utilities' as *;
 
 @font-face {
-    font-family: 'stolzl';
-    font-weight: 100 300;
+    font-family: 'stolzl-light';
+    font-weight: 100 400;
     font-style: normal;
     font-display: swap;
     src: url('/fonts/Stolzl-Light.woff2') format('woff2'),
@@ -37,7 +37,7 @@
 }
 
 @font-face {
-    font-family: 'stolzl-bold', 'stolzl', sans-serif;
+    font-family: 'stolzl-bold';
     font-weight: 700 900; //tells browser to use Medium for 500+ without artificial bold
     font-style: normal;
     font-display: swap;
@@ -53,7 +53,7 @@ body {
 h1 {
     font-family: $font-family;
     font-size: 10vw;
-    font-weight: 400;
+    font-weight: 450;
     line-height: 1;
     letter-spacing: -0.05em;
     //margin: 24px 0 0 !important;
@@ -70,7 +70,7 @@ h1 {
 }
 
 h2 {
-    font-family: $font-family;
+    font-family: $stolzl-bold;
     font-size: 64px;
     font-weight: 900;
     line-height: 1;
@@ -91,7 +91,7 @@ h2 {
 }
 
 h3 {
-    font-family: $font-family;
+    font-family: $stolzl-bold;
     //font-size: 4vw;
     font-size: 48px;
     margin-bottom: 40px;
@@ -128,9 +128,9 @@ h3 {
 }
 
 h4 {
-    font-family: $font-family;
+    font-family: $stolzl-light!important;
+    font-weight: 400!important;
     font-size: clamp(16px, 3vw, 36px);
-    font-weight: 300;
     line-height: 1.2;
     letter-spacing: -0.05em;
     letter-spacing: -0.25px;
@@ -156,6 +156,11 @@ h4 {
     @media (max-width:$mobile-viewport) {
         font-size: 18px;
     }
+
+    .split-line {
+        font-weight:inherit;
+        font-family:inherit;
+    }
 }
 
 h5 {
@@ -163,9 +168,9 @@ h5 {
     font-weight:450;
 }
 p {
-    font-family: $font-family;
+    font-family: $stolzl-light;
+    font-weight: 400;
     font-size: 16px;
-    font-weight: 300;
     color: #fff;
     line-height: 1.5;
 }
@@ -180,6 +185,7 @@ p.large-paragraph, span:not(.split-char) {
 }
 
 p.large-paragraph {
+    font-family: $stolzl-light;
     font-size: 2.5vw;
     text-align: center;
     font-weight: 100;

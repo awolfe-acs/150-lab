@@ -155,7 +155,8 @@
                 font-size: 16px;
                 user-select: none;
                 margin-bottom: 0;
-
+                font-family: $stolzl-light;
+                font-weight: 400;
                 @media (min-width:$large-desktop-viewport) {
                     font-size: 18px;
                 }
