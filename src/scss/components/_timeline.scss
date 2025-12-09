@@ -330,6 +330,15 @@ body.timeline-resizing {
       display: block;
       border-radius: 20px;
       overflow: hidden;
+      @media (min-height: 860px) {
+        max-height:460px;
+      }
+    }
+    &.first-acs-meeting {
+      @media (min-height: 860px) and (min-width:1440px) {
+        transform:scale(1.45);
+        transform-origin:top left;
+      }
     }
   }
 }
