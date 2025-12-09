@@ -24,21 +24,22 @@
         max-height: calc(100svh - 80px);
         //width: calc(86vw - 32px);
         //max-width: 1366px;
-        min-width: min(calc(86vw - 32px), 1366px);
-        max-width: min(calc(86vw - 32px), 1366px);
+        width: min(calc(86vw - 32px), 1366px);
+        // Ensure width doesn't exceed 16:9 based on max-height
+        max-width: min(calc(86vw - 32px), 1366px, calc((100svh - 80px) * 16 / 9));
         margin: 0 auto;
         border-radius: 16px;
         overflow: hidden;
         transition: opacity 0.4s ease;
 
         @media (min-width:$desktop-viewport) and (max-width:1440px) {
-            max-width: calc(100% - 200px);
-            max-width: calc(100% - 200px);
+            width: calc(100% - 200px);
+            max-width: min(calc(100% - 200px), calc((100svh - 80px) * 16 / 9));
         }
 
         @media (max-width:$mobile-viewport) {
             width: calc(100vw - 32px);
-            min-width: calc(100vw - 32px);
+            max-width: calc((100svh - 80px) * 16 / 9);
         }
 
         .mejs__container, .mejs__inner, .mejs__mediaelement, #anniversary-video {

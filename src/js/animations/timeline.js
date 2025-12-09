@@ -177,7 +177,7 @@ export function initTimelineAnimation() {
     timelineWindowBg.style.left = `${lastPosition.left}px`;
     timelineWindowBg.style.width = `${lastPosition.width}px`;
     timelineWindowBg.style.height = `${lastPosition.height}px`;
-    timelineWindowBg.style.backgroundImage = 'linear-gradient(to bottom, #0493E2, #0493E2)';
+    timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
     timelineWindowBg.style.zIndex = '0';
     timelineWindowBg.style.borderRadius = '4px';
     
@@ -205,7 +205,7 @@ export function initTimelineAnimation() {
       left: -6px;
       right: -6px;
       bottom: -2px;
-      background: linear-gradient(to bottom, #0493E2, #0493E2);
+      background: linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164));
       border-radius: 4px;
       opacity: 0;
       z-index: -1;
@@ -501,8 +501,7 @@ export function initTimelineAnimation() {
     timelineWindowBg.style.width = `${adjustedWidth}px`;
     timelineWindowBg.style.height = `${adjustedHeight}px`;
     timelineWindowBg.style.zIndex = '9999'; // Very high to ensure it's on top
-    timelineWindowBg.style.backgroundImage = 'linear-gradient(to bottom, #0493E2, #0493E2)';
-    timelineWindowBg.style.backgroundColor = '#0493E2';
+    timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
     timelineWindowBg.style.pointerEvents = 'none';
     timelineWindowBg.style.visibility = 'visible';
     timelineWindowBg.style.display = 'block';
@@ -535,7 +534,7 @@ export function initTimelineAnimation() {
             left: -6px;
             right: -6px;
             bottom: -2px;
-            background: linear-gradient(to bottom, #0493E2, #0493E2);
+            background: linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164));
             border-radius: 4px;
             opacity: 0 !important;
             z-index: -1;
@@ -562,7 +561,7 @@ export function initTimelineAnimation() {
           timelineWindowBg.style.visibility = 'visible';
           timelineWindowBg.style.display = 'block';
           timelineWindowBg.style.borderRadius = '0px';
-          timelineWindowBg.style.backgroundImage = 'linear-gradient(to bottom, #0493AB, #0657A4)';
+          timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
           timelineWindowBg.style.zIndex = '9999'; // Keep high during transition
           
           // SET FULLSCREEN LOCK FLAG - prevents ANY position/size changes
@@ -648,6 +647,8 @@ export function initTimelineAnimation() {
         ease: 'power2.inOut',
         onStart: () => {
           console.log('[Re-entry] Background expansion started');
+          // Set background color once at start (not animated)
+          timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
           // Ensure element is visible at start
           timelineWindowBg.style.visibility = 'visible';
           timelineWindowBg.style.display = 'block';
@@ -658,6 +659,8 @@ export function initTimelineAnimation() {
           const progress = this.progress();
           timelineWindowBg.style.visibility = 'visible';
           timelineWindowBg.style.display = 'block';
+          // Ensure background stays static during animation
+          timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
           
           if (progress === 0 || progress === 0.5 || progress === 1) {
             console.log(`[Re-entry] Expansion progress: ${(progress * 100).toFixed(0)}%, opacity: ${timelineWindowBg.style.opacity}, size: ${timelineWindowBg.style.width} x ${timelineWindowBg.style.height}`);
@@ -666,16 +669,20 @@ export function initTimelineAnimation() {
         onComplete: () => {
           console.log('[Re-entry] Background expansion animation complete');
           timelineWindowBg.style.opacity = '1';
+          timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
         }
       }, 0);
       
-      // Animate gradient color change
-      expansionTl.to(timelineWindowBg, {
-        backgroundImage: 'linear-gradient(to bottom, #0493AB, #0657A4)',
-        backgroundColor: '#0493AB',
-        duration: 0.6,
-        ease: 'power2.inOut'
-      }, 0);
+      // Animate opacity separately with linear easing (no curve)
+      expansionTl.fromTo(timelineWindowBg, 
+        { opacity: 0.5 },
+        { 
+          opacity: 1,
+          duration: 0.6,
+          ease: 'none' // Linear, no easing curve
+        }, 
+        0
+      );
       
       // Fade out get-involved-message during expansion
       expansionTl.to(getInvolvedMessage, {
@@ -694,15 +701,9 @@ export function initTimelineAnimation() {
         }, 0);
       }
       
-      // Set HTML background to timeline gradient
+      // Set HTML background to timeline color (once at start, not animated)
       const htmlElement = document.documentElement;
-      expansionTl.to(htmlElement, {
-        duration: 0.5,
-        ease: 'power2.inOut',
-        onUpdate: function() {
-          htmlElement.style.background = `linear-gradient(to bottom, #0493AB, #0657A4)`;
-        }
-      }, 0);
+      htmlElement.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
       
       // Start the animation
       console.log('[Re-entry] Starting expansion timeline, duration:', expansionTl.duration());
@@ -829,7 +830,7 @@ export function initTimelineAnimation() {
             timelineWindowBg.style.visibility = 'visible';
             timelineWindowBg.style.display = 'block';
             timelineWindowBg.style.borderRadius = '0px';
-            timelineWindowBg.style.backgroundImage = 'linear-gradient(to bottom, #0493AB, #0657A4)';
+            timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
             console.log('[Re-entry] Locked background at fullscreen state');
             
             // NOW clear re-entering flags - entire re-entry sequence is complete
@@ -878,7 +879,7 @@ export function initTimelineAnimation() {
           timelineWindowBg.style.visibility = 'visible';
           timelineWindowBg.style.display = 'block';
           timelineWindowBg.style.borderRadius = '0px';
-          timelineWindowBg.style.backgroundImage = 'linear-gradient(to bottom, #0493AB, #0657A4)';
+          timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
           console.log('[Re-entry] Locked background at fullscreen state (fallback)');
           
           // NOW clear re-entering flags - entire re-entry sequence is complete
@@ -1218,7 +1219,7 @@ export function initTimelineAnimation() {
             left: -6px;
             right: -6px;
             bottom: -2px;
-            background: linear-gradient(to bottom, #0493E2, #0493E2);
+            background: linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164));
             border-radius: 4px;
             opacity: ${opacity};
             z-index: -1;
@@ -1298,7 +1299,7 @@ export function initTimelineAnimation() {
           left: -6px;
           right: -6px;
           bottom: -2px;
-          background: linear-gradient(to bottom, #0493E2, #0493E2);
+          background: linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164));
           border-radius: 4px;
           opacity: 0.5;
           z-index: -1;
@@ -1366,8 +1367,7 @@ export function initTimelineAnimation() {
       height: 100vh !important;
       opacity: 1 !important;
       z-index: 5 !important; /* Behind container (z-index 10) but above other content */
-      background-image: linear-gradient(to bottom, #0493AB, #0657A4) !important;
-      background-color: #0493AB !important; /* Fallback */
+      background: linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164)) !important;
       pointer-events: none !important;
       visibility: visible !important;
       transform: none !important;
@@ -1440,8 +1440,7 @@ export function initTimelineAnimation() {
             timelineWindowBg.style.zIndex = '';
             timelineWindowBg.style.opacity = '';
             timelineWindowBg.style.visibility = '';
-            timelineWindowBg.style.backgroundImage = '';
-            timelineWindowBg.style.backgroundColor = '';
+            timelineWindowBg.style.background = '';
             timelineWindowBg.style.pointerEvents = '';
             timelineWindowBg.style.transform = '';
             timelineWindowBg.style.transition = '';
@@ -1685,7 +1684,7 @@ export function initTimelineAnimation() {
           timelineWindowBg.style.left = `${adjustedLeft}px`;
           timelineWindowBg.style.width = `${adjustedWidth}px`;
           timelineWindowBg.style.height = `${adjustedHeight}px`;
-          timelineWindowBg.style.backgroundImage = 'linear-gradient(to bottom, #0493E2, #0493E2)';
+          timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
           timelineWindowBg.style.borderRadius = '4px';
           timelineWindowBg.style.opacity = '0';
           timelineWindowBg.style.visibility = 'hidden';
@@ -1713,7 +1712,7 @@ export function initTimelineAnimation() {
                 left: -6px;
                 right: -6px;
                 bottom: -2px;
-                background: linear-gradient(to bottom, #0493E2, #0493E2);
+                background: linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164));
                 border-radius: 4px;
                 opacity: 0.5 !important;
                 z-index: -1;
@@ -1746,7 +1745,7 @@ export function initTimelineAnimation() {
                 left: -6px;
                 right: -6px;
                 bottom: -2px;
-                background: linear-gradient(to bottom, #0493E2, #0493E2);
+                background: linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164));
                 border-radius: 4px;
                 opacity: 0 !important;
                 z-index: -1;
@@ -1789,7 +1788,7 @@ export function initTimelineAnimation() {
               left: -6px;
               right: -6px;
               bottom: -2px;
-              background: linear-gradient(to bottom, #0493E2, #0493E2);
+              background: linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164));
               border-radius: 4px;
               opacity: 0.5 !important;
               z-index: -1;
@@ -1811,7 +1810,7 @@ export function initTimelineAnimation() {
         timelineWindowBg.style.left = `${adjustedLeft}px`;
         timelineWindowBg.style.width = `${adjustedWidth}px`;
         timelineWindowBg.style.height = `${adjustedHeight}px`;
-        timelineWindowBg.style.backgroundImage = 'linear-gradient(to bottom, #0493E2, #0493E2)';
+        timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
         timelineWindowBg.style.borderRadius = '4px';
         timelineWindowBg.style.zIndex = '0';
         timelineWindowBg.style.opacity = '0';
@@ -1845,7 +1844,7 @@ export function initTimelineAnimation() {
               left: -6px;
               right: -6px;
               bottom: -2px;
-              background: linear-gradient(to bottom, #0493E2, #0493E2);
+              background: linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164));
               border-radius: 4px;
               opacity: 0.5;
               z-index: -1;
@@ -1864,22 +1863,13 @@ export function initTimelineAnimation() {
   // Store this ScrollTrigger for cleanup
   scrollTriggers.push(expansionTl.scrollTrigger);
 
-  // Create a gradient animation object to tween between color states
-  const gradientState = { progress: 0 };
-  
-  // Expand background from highlight box to full viewport
-  // Starts AFTER the hold period (expansion animations begin at expansionStartPosition)
-  // Use function to get starting values to account for captured position
-  // Create a proxy object for smoother opacity tweening
-  const opacityState = { value: 0.5 };
-
   // Expand background from highlight box to full viewport
   // Starts AFTER the hold period (33vh of pinned scroll)
   // Use function to get starting values to account for captured position
   expansionTl.fromTo(timelineWindowBg, 
     () => {
-      // Reset opacity proxy to starting value
-      opacityState.value = 0.5;
+      // Set background color once here (not animated)
+      timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
       
       // Use captured position if available, otherwise get current
       if (capturedPosition) {
@@ -1907,9 +1897,8 @@ export function initTimelineAnimation() {
       ease: 'power2.inOut',
       duration: 0.7,
       onUpdate: () => {
-        // Apply local proxy value to opacity for smoother tweening
-        // This avoids potential conflicts with CSS transitions or other updates
-        timelineWindowBg.style.opacity = opacityState.value;
+        // Ensure background stays static during animation
+        timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
       },
       onReverseComplete: () => {
         // When reversing (scrolling back), set opacity back to 0 after reaching start
@@ -1919,29 +1908,16 @@ export function initTimelineAnimation() {
     expansionStartPosition
   );
 
-  // Animate the opacity proxy separately to ensure it runs concurrently
-  // Starts at the same position as the expansion (after the hold period)
-  expansionTl.to(opacityState, {
-    value: 1,
-    duration: 0.7,
-    ease: 'power2.inOut'
-    // The onUpdate in the main tween above will handle applying this value
-  }, expansionStartPosition);
-
-  // Animate the gradient colors alongside the expansion
-  // Starts at the same position as the expansion (after the hold period)
-  expansionTl.to(gradientState, {
-    progress: 1,
-    duration: 0.7,
-    ease: 'power2.inOut',
-    onUpdate: () => {
-      // Interpolate between start gradient (#0493E2 → #0493E2) and end gradient (#0493AB → #0657A4)
-      const startColorTop = interpolateColor('#0493E2', '#0493AB', gradientState.progress);
-      const startColorBottom = interpolateColor('#0493E2', '#0657A4', gradientState.progress);
-      
-      timelineWindowBg.style.backgroundImage = `linear-gradient(to bottom, ${startColorTop}, ${startColorBottom})`;
-    }
-  }, expansionStartPosition);
+  // Animate opacity separately with LINEAR easing (no curve, just straight 0.5 to 1)
+  expansionTl.fromTo(timelineWindowBg,
+    { opacity: 0.5 },
+    {
+      opacity: 1,
+      duration: 0.7,
+      ease: 'none' // Linear interpolation, no easing curve
+    },
+    expansionStartPosition
+  );
 
   // Ensure ScrollTrigger refreshes after fonts load to prevent layout shifts affecting positions
   if (document.fonts && document.fonts.ready) {
@@ -2167,7 +2143,7 @@ export function initTimelineAnimation() {
         }
         
         // Ensure background is fully visible when entering timeline proper
-        gsap.to(timelineWindowBg, { opacity: 1, duration: 0.2, overwrite: 'auto' });
+        gsap.to(timelineWindowBg, { opacity: 1, duration: 0.2, ease: 'none', overwrite: 'auto' });
         
         // Fade out the canvas
         const canvas = document.querySelector('#background-canvas');
@@ -2175,17 +2151,9 @@ export function initTimelineAnimation() {
           gsap.to(canvas, { opacity: 0, duration: 0.5, ease: 'power2.inOut' });
         }
         
-        // Set HTML background to timeline gradient
+        // Set HTML background to timeline color (once, not animated)
         const htmlElement = document.documentElement;
-        gsap.to(htmlElement, {
-          duration: 0.5,
-          ease: 'power2.inOut',
-          onUpdate: function() {
-            const progress = this.progress();
-            // Interpolate from current to timeline gradient
-            htmlElement.style.background = `linear-gradient(to bottom, #0493AB, #0657A4)`;
-          }
-        });
+        htmlElement.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
         
         // Initialize first minor node as active and set scrubber progress
         const minorNodes = gsap.utils.toArray('.minor-node');
@@ -2377,7 +2345,7 @@ export function initTimelineAnimation() {
         }
         
         // Ensure background is visible when re-entering timeline from below
-        gsap.to(timelineWindowBg, { opacity: 1, duration: 0.2, overwrite: 'auto' });
+        gsap.to(timelineWindowBg, { opacity: 1, duration: 0.2, ease: 'none', overwrite: 'auto' });
         
         // Fade out the canvas
         const canvas = document.querySelector('#background-canvas');
@@ -2385,17 +2353,9 @@ export function initTimelineAnimation() {
           gsap.to(canvas, { opacity: 0, duration: 0.5, ease: 'power2.inOut' });
         }
         
-        // Set HTML background to timeline gradient
+        // Set HTML background to timeline color (once, not animated)
         const htmlElement = document.documentElement;
-        gsap.to(htmlElement, {
-          duration: 0.5,
-          ease: 'power2.inOut',
-          onUpdate: function() {
-            const progress = this.progress();
-            // Interpolate to timeline gradient
-            htmlElement.style.background = `linear-gradient(to bottom, #0493AB, #0657A4)`;
-          }
-        });
+        htmlElement.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
       }
     }
   });

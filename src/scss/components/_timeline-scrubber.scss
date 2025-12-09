@@ -286,6 +286,15 @@ body.in-timeline {
   height: 100%;
   z-index: 4; // Below major marker and main, above line
   pointer-events: none; // Container doesn't block clicks
+
+  &:has(.complete),&:has(.active){
+    .minor-node:not(.complete):not(.active){
+      pointer-events:none;
+      &:hover {
+
+      }
+    }
+  }
 }
 
 // Minor nodes (individual events within decades)

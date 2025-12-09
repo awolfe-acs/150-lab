@@ -76,11 +76,11 @@
             }
         }
 
-        /*
-        &:hover {
+        
+        &.has-link:hover {
             transform: scale(1.02) !important;
             z-index: 3;
-        }*/
+        }
 
         @media (max-width: 1280px) {
             // Ensure cards fill the full width of their container on mobile
@@ -183,12 +183,15 @@
                 z-index: 1;
                 @include ease;
             }
+        }
 
-            //&:hover {
-            //    &:after {
-            //        background-color: rgba(0, 0, 0, 0.16);
-            //    }
-            //}
+        &.has-link {
+            a:hover {
+                cursor:pointer;
+                &:after {
+                    background-color: rgba(0, 0, 0, 0.16);
+                }
+            }
         }
 
         &:nth-of-type(1) {
