@@ -81,6 +81,10 @@
             transform: scale(1.02) !important;
             z-index: 3;
         }
+        &.has-link:active {
+            transform: scale(1.005) !important;
+            z-index: 3;
+        }
 
         @media (max-width: 1280px) {
             // Ensure cards fill the full width of their container on mobile

@@ -6,23 +6,40 @@
   position: relative;
   width: 100%;
   height: 84px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  padding: 0 40px;
+  
+  .anniversary-banner-link {
+    position: absolute;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    text-decoration: none!important;
+    overflow: hidden;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding: 0 40px;
+    border-bottom:8px solid #fff;
+  }
   
   // Background image
-  background-image: url('/public/images/banner-bg.jpg');
+  //background-image: url('/public/images/banner-bg.jpg');
+  background:linear-gradient(to right, #056BF3, #412BFD);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 
+  transition: filter 0.4s ease;
+  &:hover {
+    filter:brightness(1.1);
+  }
+
   @media (min-width: 1600px) {
-    background-image: url('/public/images/banner-bg-2.jpg');
+    //background-image: url('/public/images/banner-bg-2.jpg');
     background-size: cover;
     background-position: center;
+    background-repeat: no-repeat;
   }
 
   @media (max-width: 1200px) {
@@ -31,6 +48,9 @@
 
   @media (max-width: 768px) {
     padding: 0 16px;
+  }
+  @media (max-width:640px) {
+    height:60px;
   }
 }
 
@@ -43,8 +63,11 @@
   align-items: center;
   justify-content: flex-start;
   gap: 48px;
-  width: 100%;
-  max-width: 1400px;
+  width: 1170px;
+  max-width: 100%;
+  margin:0 auto;
+  text-decoration:none!important;
+  color:white!important;
 
   @media (max-width: 1200px) {
     gap: 32px;
@@ -53,6 +76,11 @@
   @media (max-width: 768px) {
     gap: 24px;
   }
+  @media (max-width:640px) {
+    justify-content:space-between;
+    padding:0 8px;
+  }
+
 }
 
 // 150 Mark Logo
@@ -111,8 +139,8 @@
 
   .colon {
     opacity: 0.5;
-    font-family: $stolzl-light;
-    font-weight: 300;
+    font-family: "stolzl", sans-serif;
+    font-weight: 450;
     line-height: 1;
     font-size: 28px;
     color: #fff;
@@ -133,7 +161,7 @@
   .number {
     display: block;
     font-size: 32px;
-    font-weight: 700;
+    font-weight: 500;
     white-space: nowrap;
     user-select: none;
     line-height: 1;
@@ -189,8 +217,8 @@
 
   .countdown-title {
     font-size: 13px;
-    font-family: $stolzl-light;
-    font-weight: 400;
+    font-family: "stolzl", sans-serif;
+    font-weight: 450;
     text-align: left;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -199,6 +227,7 @@
 
     @media (max-width: 1024px) {
       font-size: 11px;
+      display:none;
     }
 
     @media (max-width: 768px) {
@@ -206,41 +235,42 @@
     }
   }
 
-  .acsbutton {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px 20px;
-    font-size: 13px;
-    font-weight: 600;
-    text-decoration: none;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-radius: 4px;
-    transition: all 0.3s ease;
-    white-space: nowrap;
-    border: 2px solid transparent;
+  .acsbutton-secondary, .acsbutton-mobile {
+    &:hover {
 
-    @media (max-width: 768px) {
-      padding: 8px 16px;
-      font-size: 11px;
-    }
-
-    @media (max-width: 480px) {
-      padding: 6px 12px;
-      font-size: 10px;
     }
   }
-
-  .acsbutton-primary {
+  .acsbutton-secondary {
     background-color: #fff;
     color: #1a1a1a;
     border-color: #fff;
 
-    &:hover {
-      background-color: transparent;
-      color: #fff;
-      border-color: #fff;
+    @media (max-width: 640px) {
+      &:not(.acsbutton-mobile) {
+        display: none;
+      }
+    }
+  }
+
+  .acsbutton-mobile {
+    display: none;
+    width: 24px;
+    height: 24px;
+    aspect-ratio:1/1;
+    min-width:24px;
+    padding: 0;
+    border-radius: 50%;
+    background-color: #fff;
+    color: #1a1a1a;
+    border: 2px solid #fff;
+    transform:translateY(-1px);
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    @media (max-width: 640px) {
+      display: inline-flex;
     }
   }
 }

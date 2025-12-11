@@ -336,11 +336,13 @@ body.timeline-resizing {
       width: auto;
       height: auto;
       max-height:400px;
+      max-height:min(400px, 100vh - 476px);
       display: block;
       border-radius: 20px;
       overflow: hidden;
       @media (min-height: 860px) {
         max-height:460px;
+        max-height:min(460px, calc(100vh - 548px));
       }
     }
     &.first-acs-meeting {

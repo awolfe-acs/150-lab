@@ -51,7 +51,9 @@ export default defineConfig(({ mode, command }) => {
               assetInfo.name.endsWith(".webp") ||
               assetInfo.name.endsWith(".svg") ||
               assetInfo.name.endsWith(".glb") ||
-              assetInfo.name.endsWith(".gltf")
+              assetInfo.name.endsWith(".gltf") ||
+              assetInfo.name.endsWith(".woff") ||
+              assetInfo.name.endsWith(".woff2")
             ) {
               const type = assetInfo.name.split(".").pop();
               const subDir =
@@ -61,10 +63,14 @@ export default defineConfig(({ mode, command }) => {
                   ? "video"
                   : type === "glb" || type === "gltf"
                   ? "models"
+                  : type === "woff" || type === "woff2"
+                  ? "fonts"
                   : "images";
-              return `assets/${subDir}/[name][extname]`;
+              // For banner mode, output directly to subDir without 'assets/' prefix
+              // since base path already includes '/assets/banner/'
+              return mode === "banner" ? `${subDir}/[name][extname]` : `assets/${subDir}/[name][extname]`;
             }
-            return "assets/[name]-[hash][extname]";
+            return mode === "banner" ? "[name]-[hash][extname]" : "assets/[name]-[hash][extname]";
           },
         },
       },
@@ -462,8 +468,11 @@ For issues, check the browser console and verify WebGL support at https://get.we
         closeBundle() {
           // Define the public directory and the destination assets directory
           const publicDir = resolve(__dirname, "public");
-          // Use the correct output directory based on the build mode
-          const assetsDir = resolve(__dirname, `${outDir}/assets`);
+          // For banner mode, copy directly to outDir root (not to /assets subdirectory)
+          // since the base path already includes /assets/banner/
+          const assetsDir = mode === "banner" 
+            ? resolve(__dirname, outDir)
+            : resolve(__dirname, `${outDir}/assets`);
 
           // Create the assets directory if it doesn't exist
           if (!fs.existsSync(assetsDir)) {
