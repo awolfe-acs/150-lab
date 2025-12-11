@@ -708,7 +708,6 @@ export function initHeroAnimation() {
   heroAnimationTl.to(heroNumber, {
     opacity: 1,
     duration: 1.5,
-    scrub: 1.5,
     ease: "power1.inOut",
   });
 

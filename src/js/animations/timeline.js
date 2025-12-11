@@ -1,12 +1,8 @@
 import gsap from 'gsap';
 import ScrollTrigger from 'gsap/ScrollTrigger';
 import SplitType from 'split-type';
-import { initTimelineScene } from '../threejs/timelineScene.js';
 import { initCoverOrb } from '../threejs/coverOrb.js';
 import { initTimelineShader } from './timelineShader.js';
-
-// Initialize timeline scene (Three.js)
-let timelineScene = null;
 
 // Helper function to interpolate between two hex colors
 function interpolateColor(color1, color2, progress) {
@@ -93,14 +89,6 @@ export function initTimelineAnimation() {
   // Ensure background pause state is initialized (not paused at start)
   if (typeof window.backgroundPaused === 'undefined') {
     window.backgroundPaused = false;
-  }
-
-  // Initialize Three.js scene for timeline visuals
-  try {
-    timelineScene = initTimelineScene();
-  } catch (error) {
-    console.error('Timeline: Failed to initialize Three.js scene:', error);
-    // Continue without Three.js visuals
   }
 
   // Cover Orb is already initialized at the top of this function (line ~55)
@@ -342,6 +330,55 @@ export function initTimelineAnimation() {
   
   // Main timeline instance (defined later but declared here for scope access)
   let tl;
+
+  // Helper to animate event content (year, description, optional image) as it enters
+  const animateEventContent = (eventNode, label, startOffset = 0) => {
+    if (!eventNode || !tl) return;
+    const pieces = [];
+    const yearEl = eventNode.querySelector('.event-year');
+    const descEl = eventNode.querySelector('.event-description');
+    const imgEl = eventNode.querySelector('.event-image');
+
+    if (yearEl) pieces.push(yearEl);
+    if (descEl) pieces.push(descEl);
+    if (imgEl) pieces.push(imgEl);
+
+    if (!pieces.length) return;
+
+    const horizontal = !isMobile();
+    const xOffset = (el) => {
+      if (!horizontal) return 0;
+      if (el === yearEl) return 80;          // title extra 80px
+      if (el === descEl) return 160;         // description extra 160px
+      if (el === imgEl) return 240;          // image extra 240px
+      return 160; // fallback
+    };
+    const yOffset = (el) => {
+      if (horizontal) return 0;
+      if (el === yearEl) return 20;
+      if (el === descEl) return 32;
+      if (el === imgEl) return 48;
+      return 24;
+    };
+
+    tl.fromTo(
+      pieces,
+      {
+        opacity: 0,
+        x: (i, el) => xOffset(el),
+        y: (i, el) => yOffset(el),
+      },
+      {
+        opacity: 1,
+        x: 0,
+        y: 0,
+        duration: Math.max(0.25, moveDuration * 0.65),
+        ease: 'power2.out',
+        stagger: 0.08,
+      },
+      label ? `${label}+=${startOffset}` : startOffset
+    );
+  };
 
   // Helper function to show the new year with animation
   const showNewYear = (year) => {
@@ -2141,6 +2178,13 @@ export function initTimelineAnimation() {
             window._timelinePauseTimeout = null;
           }
         }
+
+        // Safety: force timeline container visible when entering timeline
+        gsap.set(timelineContainer, {
+          opacity: 1,
+          display: 'block',
+          pointerEvents: 'auto'
+        });
         
         // Ensure background is fully visible when entering timeline proper
         gsap.to(timelineWindowBg, { opacity: 1, duration: 0.2, ease: 'none', overwrite: 'auto' });
@@ -2343,6 +2387,13 @@ export function initTimelineAnimation() {
             window._timelinePauseTimeout = null;
           }
         }
+
+        // Safety: force timeline container visible when re-entering timeline
+        gsap.set(timelineContainer, {
+          opacity: 1,
+          display: 'block',
+          pointerEvents: 'auto'
+        });
         
         // Ensure background is visible when re-entering timeline from below
         gsap.to(timelineWindowBg, { opacity: 1, duration: 0.2, ease: 'none', overwrite: 'auto' });
@@ -2379,18 +2430,7 @@ export function initTimelineAnimation() {
     0
   );
 
-  // Fade in Three.js container
-  tl.from(
-    '.timeline-threejs-container',
-    {
-      opacity: 0,
-      scale: 0.8,
-      duration: 0.03
-    },
-    0.01
-  );
-
-  // Fade in shader background (alongside coverOrb/threejs container)
+  // Fade in shader background
   tl.to(timelineWindowBg, {
     '--decal-opacity': 1,
     duration: 0.5,
@@ -2405,9 +2445,11 @@ export function initTimelineAnimation() {
   if (events.length > 0) {
     const firstEvent = events[0];
     const remainingEvents = events.slice(1);
+    const firstEventLabel = 'first-event';
     
     // Phase A: First event (1876) - Pinned in center
     // Start hidden and fade in "in place" as user scrolls
+    tl.add(firstEventLabel, 0);
     tl.fromTo(firstEvent, 
       { 
         opacity: 0, 
@@ -2419,8 +2461,11 @@ export function initTimelineAnimation() {
         duration: 0.25, // Quicker fade in for snappier feel
         ease: 'power2.out'
       },
-      0 // Start immediately at the beginning of the pinned section
+      firstEventLabel // Start immediately at the beginning of the pinned section
     );
+
+    // Animate inner content for the first event with a slight offset
+    animateEventContent(firstEvent, firstEventLabel, moveDuration * 0.05);
     
     // Hold first event visible
     tl.to({}, { duration: holdDuration }, '>');
@@ -2486,6 +2531,9 @@ export function initTimelineAnimation() {
         duration: moveDuration * 1.15,
         ease: 'power2.out'
       }, `${eventLabel}+=${moveDuration * 0.1}`);
+
+      // Animate inner content for each event as it enters
+      animateEventContent(event, eventLabel, moveDuration * 0.12);
       
       // When transitioning from cover (first event) to first remaining event,
       // fade in the close button and background decal simultaneously
@@ -3420,10 +3468,6 @@ function updateTimelineScrubber(progress) {
 
 // Export cleanup function
 export function disposeTimeline() {
-  if (timelineScene && typeof timelineScene.dispose === 'function') {
-    timelineScene.dispose();
-  }
-  
   // Clean up RAF, resize observer, and scroll listeners
   if (window._timelineCleanup) {
     if (window._timelineCleanup.rafId) {

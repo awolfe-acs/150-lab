@@ -347,7 +347,7 @@ body.timeline-resizing {
     }
     &.first-acs-meeting {
       @media (min-height: 860px) and (min-width:1440px) {
-        transform:scale(1.45);
+        transform:scale(1.38);
         transform-origin:top left;
         max-width:652px;
       }
@@ -371,6 +371,7 @@ body.timeline-resizing {
   transform-origin:bottom left;
   letter-spacing:-4px;
   white-space: nowrap;
+
   @media (min-width:1025px) and (max-width:1599px) {
     font-size: clamp(88px, 4vw, 16vw);
   }
@@ -390,6 +391,9 @@ body.timeline-resizing {
     transform:translateX(-50%) scale(1);
     transform-origin:center center;
     letter-spacing:-1px;
+  }
+  @media (min-width:830px) and (max-width:1024px) {
+    bottom:calc(145px + max(env(safe-area-inset-bottom), var(--js-detected-nav-height, 0px)));
   }
 }
 
