@@ -287,7 +287,8 @@ export function initTimelineAnimation() {
   const remainingEventsCount = events.length - 1;
   
   // Define scroll durations as functions to get current viewport size on resize
-  const isMobile = () => window.innerWidth < 1024;
+  // Use matchMedia to strictly match CSS breakpoint (1024px)
+  const isMobile = () => window.matchMedia("(max-width: 1024px)").matches;
   const getInitialPhaseDuration = () => window.innerHeight * 1.0;
   const getScrollPerEvent = () => window.innerHeight * (isMobile() ? 0.7 : 0.88); // Reduced: was 0.9/1.4, now 0.7/1.0
   const getTotalScrollDistance = () => getInitialPhaseDuration() + (remainingEventsCount * getScrollPerEvent());
@@ -1012,7 +1013,7 @@ export function initTimelineAnimation() {
       // This provides accurate synchronization with what's actually on screen
       
       // Find the event that's most centered in the viewport
-      const isMobile = window.innerWidth <= 1024;
+      const isMobile = window.matchMedia("(max-width: 1024px)").matches;
       const viewportCenter = isMobile ? window.innerHeight / 2 : window.innerWidth / 2;
       let closestEvent = null;
       let closestDistance = Infinity;
@@ -2183,8 +2184,37 @@ export function initTimelineAnimation() {
         gsap.set(timelineContainer, {
           opacity: 1,
           display: 'block',
-          pointerEvents: 'auto'
+          pointerEvents: 'auto',
+          visibility: 'visible'
         });
+        
+        // Safety: ensure track is visible and at starting position
+        if (timelineTrack) {
+          gsap.set(timelineTrack, { 
+            opacity: 1, 
+            visibility: 'visible',
+            // Reset position if stuck off-screen (isMobile handles direction)
+            clearProps: isMobile() ? 'x' : 'y'
+          });
+        }
+        
+        // Safety: ensure ALL timeline events have visibility visible
+        // (opacity animation still works, but they won't be display:none or visibility:hidden)
+        const allEvents = gsap.utils.toArray('.timeline-event');
+        allEvents.forEach(event => {
+          gsap.set(event, { visibility: 'visible', display: 'flex' });
+        });
+        
+        // Safety: ensure the first event (cover) is visible immediately
+        // This is a fallback in case GSAP animation doesn't trigger
+        const coverEvent = document.querySelector('.timeline-event.timeline-cover');
+        if (coverEvent) {
+          gsap.set(coverEvent, { opacity: 1, scale: 1, visibility: 'visible' });
+        }
+
+        // Safety: ensure background is behind content (z-index 0)
+        // This prevents the background from covering the timeline content
+        timelineWindowBg.style.zIndex = '0';
         
         // Ensure background is fully visible when entering timeline proper
         gsap.to(timelineWindowBg, { opacity: 1, duration: 0.2, ease: 'none', overwrite: 'auto' });
@@ -2392,8 +2422,26 @@ export function initTimelineAnimation() {
         gsap.set(timelineContainer, {
           opacity: 1,
           display: 'block',
-          pointerEvents: 'auto'
+          pointerEvents: 'auto',
+          visibility: 'visible'
         });
+        
+        // Safety: ensure track is visible
+        if (timelineTrack) {
+          gsap.set(timelineTrack, { 
+            opacity: 1, 
+            visibility: 'visible'
+          });
+        }
+        
+        // Safety: ensure ALL timeline events have visibility visible
+        const allEventsBack = gsap.utils.toArray('.timeline-event');
+        allEventsBack.forEach(event => {
+          gsap.set(event, { visibility: 'visible', display: 'flex' });
+        });
+
+        // Safety: ensure background is behind content
+        timelineWindowBg.style.zIndex = '0';
         
         // Ensure background is visible when re-entering timeline from below
         gsap.to(timelineWindowBg, { opacity: 1, duration: 0.2, ease: 'none', overwrite: 'auto' });
@@ -2488,7 +2536,7 @@ export function initTimelineAnimation() {
       // Event i starts at (100vw + i*50vw), center at (125vw + i*50vw)
       // To center at viewport center (50vw): move by -(75vw + i*50vw) = -((i+1.5)*50vw)
       // Mobile: Move Y (vertical)
-      const isMobile = () => window.innerWidth <= 1024;
+      const isMobile = () => window.matchMedia("(max-width: 1024px)").matches;
       const getTargetX = () => isMobile() ? 0 : -((index + 1.5) * window.innerWidth * 0.5);
       // Use string-based vh units for mobile to avoid drifting calculations when window.innerHeight changes (address bar)
       // This forces the browser to align with CSS 100vh elements
