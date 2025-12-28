@@ -72,6 +72,19 @@ video {
     }
 }
 
+iframe {
+    position: relative;
+    width:100% !important;
+    height:100% !important;
+    aspect-ratio: 16/9;
+    object-fit: cover;
+    object-position: center;
+    transform-origin: center center;
+    will-change: transform, opacity;
+    transition: box-shadow 0.3s ease;
+}
+
+
 /* Video overlay and play button styles */
 .video-overlay {
     position: absolute;

@@ -92,7 +92,6 @@ h2 {
 
 h3 {
     font-family: $stolzl-bold;
-    //font-size: 4vw;
     font-size: 48px;
     margin-bottom: 40px;
     font-weight: 900;
@@ -102,7 +101,7 @@ h3 {
     text-shadow: $text-shadow;
 
     @media (min-width:$desktop-viewport) and (max-width:1440px) {
-        font-size: 48px;
+        font-size: 40px;
     }
 
     @media (max-width:$desktop-viewport) {
@@ -130,7 +129,7 @@ h3 {
 h4 {
     font-family: $stolzl-light!important;
     font-weight: 400!important;
-    font-size: clamp(16px, 3vw, 36px);
+    font-size: clamp(16px, 3vw, 32px);
     line-height: 1.4;
     letter-spacing: -0.05em;
     letter-spacing: -0.25px;
@@ -169,7 +168,7 @@ h5 {
 }
 p {
     font-family: $stolzl-light;
-    font-weight: 400;
+    font-weight: 450;
     font-size: 16px;
     color: #fff;
     line-height: 1.5;

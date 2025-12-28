@@ -6,10 +6,19 @@ import posterUrl from "../../public/images/anniversary-video-poster.jpg?url";
 let videoSliderTriggeredUnmute = false;
 
 export function initVideo() {
-  const videoElement = document.getElementById("anniversary-video");
   const videoSection = document.querySelector("#video");
+  const videoWrapper = document.querySelector(".video-wrapper");
+  
+  if (!videoSection || !videoWrapper) return;
 
-  if (!videoElement || !videoSection) return;
+  // Check if there's an actual <video> element (not an iframe)
+  const videoElement = videoWrapper.querySelector("video");
+  
+  // If no video element found (e.g., using YouTube iframe instead), exit early
+  if (!videoElement) {
+    console.log("No <video> element found in .video-wrapper, skipping custom video controls");
+    return;
+  }
 
   // Assets are now imported directly, no need for path logic
 
@@ -272,8 +281,6 @@ export function initVideo() {
   });
 
   // Show/hide slider on video hover (only when playing)
-  const videoWrapper = videoElement.parentNode;
-
   videoWrapper.addEventListener("mouseenter", () => {
     if (!videoElement.paused) {
       audioSlider.style.opacity = "1";
