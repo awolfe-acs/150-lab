@@ -79,6 +79,188 @@ export function handleNewAudioElement(element) {
   });
 }
 
+// Load YouTube Player API if not already loaded
+function loadYouTubeAPI() {
+  if (window.YT && window.YT.Player) {
+    return Promise.resolve();
+  }
+  
+  return new Promise((resolve) => {
+    // Check if API is already loading
+    if (window.onYouTubeIframeAPIReady) {
+      // API is loading, chain our callback
+      const originalCallback = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        originalCallback();
+        resolve();
+      };
+      return;
+    }
+    
+    // Set up callback for when API loads
+    window.onYouTubeIframeAPIReady = () => {
+      resolve();
+    };
+    
+    // Load the API script
+    const tag = document.createElement("script");
+    tag.src = "https://www.youtube.com/iframe_api";
+    const firstScriptTag = document.getElementsByTagName("script")[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+  });
+}
+
+// Setup click handler for YouTube iframes
+function setupYouTubeIframeClickHandler(iframe) {
+  // Prevent multiple handlers on the same iframe
+  if (iframe.dataset.clickHandlerAdded) return;
+  iframe.dataset.clickHandlerAdded = "true";
+  
+  // Ensure iframe has enablejsapi=1 parameter for postMessage API
+  const src = iframe.src;
+  if (src && src.includes('youtube.com') && !src.includes('enablejsapi=1')) {
+    const separator = src.includes('?') ? '&' : '?';
+    iframe.src = src + separator + 'enablejsapi=1';
+  }
+  
+  // Create an overlay div to detect clicks (iframes don't bubble click events)
+  const overlay = document.createElement("div");
+  overlay.style.position = "absolute";
+  overlay.style.top = "0";
+  overlay.style.left = "0";
+  overlay.style.width = "100%";
+  overlay.style.height = "100%";
+  overlay.style.zIndex = "10";
+  overlay.style.cursor = "pointer";
+  overlay.style.pointerEvents = "auto";
+  overlay.style.backgroundColor = "transparent";
+  
+  // Position the iframe's parent relative if not already
+  const parent = iframe.parentElement;
+  if (parent && getComputedStyle(parent).position === "static") {
+    parent.style.position = "relative";
+  }
+  
+  // Insert overlay before the iframe
+  if (parent) {
+    parent.insertBefore(overlay, iframe);
+  }
+  
+  // Track if video has started playing
+  let videoStarted = false;
+  
+  // Handle overlay click
+  overlay.addEventListener("click", (e) => {
+    e.stopPropagation();
+    
+    // Play UI click sound BEFORE any other audio changes
+    if (!audioMuted) {
+      playUIClickSound();
+    }
+    
+    // Remove overlay so subsequent clicks go to iframe
+    overlay.style.pointerEvents = "none";
+    videoStarted = true;
+    
+    // Small delay to ensure click sound plays before muting background
+    setTimeout(() => {
+      // Pause background audio when YouTube video starts
+      if (backgroundAudioInstance && !backgroundAudioInstance.paused) {
+        backgroundAudioInstance.pause();
+      }
+    }, 100);
+    
+    // Programmatically trigger play on the iframe via postMessage
+    // This works better than trying to click the iframe
+    try {
+      iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+    } catch (error) {
+      console.warn("Could not send play command to YouTube iframe:", error);
+    }
+  });
+  
+  // Load YouTube Player API and set up state change listener
+  loadYouTubeAPI().then(() => {
+    try {
+      // Initialize YouTube Player to track state changes
+      const player = new window.YT.Player(iframe, {
+        events: {
+          onStateChange: (event) => {
+            // YouTube Player State: 1 = playing, 0 = ended, 2 = paused
+            if (event.data === 1) {
+              // Video is playing
+              if (!videoStarted) {
+                // First time playing - ensure overlay is disabled
+                videoStarted = true;
+                overlay.style.pointerEvents = "none";
+              }
+              
+              // Ensure background audio is paused
+              if (backgroundAudioInstance && !backgroundAudioInstance.paused) {
+                backgroundAudioInstance.pause();
+              }
+            } else if (event.data === 0 || event.data === 2) {
+              // Video ended (0) or paused (2)
+              // Resume background audio if not muted
+              if (backgroundAudioInstance && audioInitialized && !audioMuted) {
+                backgroundAudioInstance.play().catch((error) => {
+                  console.warn("Could not resume background audio:", error);
+                });
+              }
+            }
+          }
+        }
+      });
+    } catch (error) {
+      console.warn("Could not initialize YouTube Player API:", error);
+    }
+  });
+}
+
+// Setup click handler for HTML5 video elements
+function setupVideoElementClickHandler(videoElement) {
+  // Prevent multiple handlers on the same video
+  if (videoElement.dataset.clickSoundHandlerAdded) return;
+  videoElement.dataset.clickSoundHandlerAdded = "true";
+  
+  // Add click listener to play UI click sound
+  videoElement.addEventListener("click", (e) => {
+    // Only play sound if video is paused (about to play)
+    if (videoElement.paused) {
+      if (!audioMuted) {
+        playUIClickSound();
+      }
+    }
+  });
+  
+  // Listen for play event to pause background audio
+  videoElement.addEventListener("play", () => {
+    // Pause background audio when video starts
+    if (backgroundAudioInstance && !backgroundAudioInstance.paused) {
+      backgroundAudioInstance.pause();
+    }
+  });
+  
+  // Listen for pause/ended events to resume background audio
+  videoElement.addEventListener("pause", () => {
+    // Resume background audio if not muted and audio was initialized
+    if (backgroundAudioInstance && audioInitialized && !audioMuted && videoElement.ended) {
+      backgroundAudioInstance.play().catch((error) => {
+        console.warn("Could not resume background audio:", error);
+      });
+    }
+  });
+  
+  videoElement.addEventListener("ended", () => {
+    // Resume background audio when video ends
+    if (backgroundAudioInstance && audioInitialized && !audioMuted) {
+      backgroundAudioInstance.play().catch((error) => {
+        console.warn("Could not resume background audio:", error);
+      });
+    }
+  });
+}
+
 // Setup audio observer for dynamically added elements
 function setupAudioObserver() {
   // Add a mutation observer to detect dynamically added audio/video elements
@@ -89,11 +271,23 @@ function setupAudioObserver() {
           // Check if the added node is an audio or video element
           if (node.nodeName === "AUDIO" || node.nodeName === "VIDEO") {
             handleNewAudioElement(node);
+            if (node.nodeName === "VIDEO") {
+              setupVideoElementClickHandler(node);
+            }
           } else if (node.querySelectorAll) {
             // Check for audio/video elements inside the added node
             const audioNodes = node.querySelectorAll("audio, video");
             audioNodes.forEach((audioNode) => {
               handleNewAudioElement(audioNode);
+              if (audioNode.nodeName === "VIDEO") {
+                setupVideoElementClickHandler(audioNode);
+              }
+            });
+            
+            // Check for YouTube iframes and add click handlers
+            const iframes = node.querySelectorAll('iframe[src*="youtube.com"], iframe[src*="youtu.be"]');
+            iframes.forEach((iframe) => {
+              setupYouTubeIframeClickHandler(iframe);
             });
           }
         });
@@ -103,6 +297,18 @@ function setupAudioObserver() {
 
   // Start observing the document body for added nodes
   audioObserver.observe(document.body, { childList: true, subtree: true });
+  
+  // Also setup handlers for any existing YouTube iframes
+  const existingIframes = document.querySelectorAll('iframe[src*="youtube.com"], iframe[src*="youtu.be"]');
+  existingIframes.forEach((iframe) => {
+    setupYouTubeIframeClickHandler(iframe);
+  });
+  
+  // Also setup handlers for any existing video elements
+  const existingVideos = document.querySelectorAll("video");
+  existingVideos.forEach((video) => {
+    setupVideoElementClickHandler(video);
+  });
 }
 
 // Function to play audio when it's ready
@@ -384,9 +590,9 @@ export const setupUIClickSounds = () => {
   // Initialize UI click sound
   initializeUIClickSound();
 
-  // Select all interactive elements including timeline scrubber markers
+  // Select all interactive elements including timeline scrubber markers and video wrappers
   const interactiveElements = document.querySelectorAll(
-    'a, button, input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"], .marker, .minor-node'
+    'a, button, input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"], .marker, .minor-node, .video-wrapper'
   );
 
   // Add click event listeners to play sound
@@ -406,6 +612,35 @@ export const setupUIClickSounds = () => {
       if (!audioMuted) {
         playUIClickSound();
       }
+      
+      // For video wrapper, trigger video play and pause background audio
+      if (element.classList.contains("video-wrapper")) {
+        // Find YouTube iframe inside the wrapper
+        const iframe = element.querySelector('iframe[src*="youtube.com"], iframe[src*="youtu.be"]');
+        
+        if (iframe) {
+          // Ensure iframe has enablejsapi=1 parameter
+          const src = iframe.src;
+          if (src && !src.includes('enablejsapi=1')) {
+            const separator = src.includes('?') ? '&' : '?';
+            iframe.src = src + separator + 'enablejsapi=1';
+          }
+          
+          // Trigger video play via postMessage
+          setTimeout(() => {
+            try {
+              iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+            } catch (error) {
+              console.warn("Could not send play command to YouTube iframe:", error);
+            }
+            
+            // Pause background audio
+            if (backgroundAudioInstance && !backgroundAudioInstance.paused) {
+              backgroundAudioInstance.pause();
+            }
+          }, 150); // Delay to ensure click sound plays first
+        }
+      }
     });
   });
 
@@ -419,7 +654,7 @@ export const setupUIClickSounds = () => {
             // Check if the node itself is an interactive element
             if (
               node.matches(
-                'a, button, input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"], .marker, .minor-node'
+                'a, button, input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"], .marker, .minor-node, .video-wrapper'
               )
             ) {
               node.addEventListener("click", (event) => {
@@ -437,12 +672,41 @@ export const setupUIClickSounds = () => {
                 if (!audioMuted) {
                   playUIClickSound();
                 }
+                
+                // For video wrapper, trigger video play and pause background audio
+                if (node.classList.contains("video-wrapper")) {
+                  // Find YouTube iframe inside the wrapper
+                  const iframe = node.querySelector('iframe[src*="youtube.com"], iframe[src*="youtu.be"]');
+                  
+                  if (iframe) {
+                    // Ensure iframe has enablejsapi=1 parameter
+                    const src = iframe.src;
+                    if (src && !src.includes('enablejsapi=1')) {
+                      const separator = src.includes('?') ? '&' : '?';
+                      iframe.src = src + separator + 'enablejsapi=1';
+                    }
+                    
+                    // Trigger video play via postMessage
+                    setTimeout(() => {
+                      try {
+                        iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+                      } catch (error) {
+                        console.warn("Could not send play command to YouTube iframe:", error);
+                      }
+                      
+                      // Pause background audio
+                      if (backgroundAudioInstance && !backgroundAudioInstance.paused) {
+                        backgroundAudioInstance.pause();
+                      }
+                    }, 150); // Delay to ensure click sound plays first
+                  }
+                }
               });
             }
 
             // Check for interactive elements within the added node
             const childInteractiveElements = node.querySelectorAll(
-              'a, button, input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"], .marker, .minor-node'
+              'a, button, input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"], .marker, .minor-node, .video-wrapper'
             );
             childInteractiveElements.forEach((element) => {
               element.addEventListener("click", (event) => {
@@ -459,6 +723,35 @@ export const setupUIClickSounds = () => {
 
                 if (!audioMuted) {
                   playUIClickSound();
+                }
+                
+                // For video wrapper, trigger video play and pause background audio
+                if (element.classList.contains("video-wrapper")) {
+                  // Find YouTube iframe inside the wrapper
+                  const iframe = element.querySelector('iframe[src*="youtube.com"], iframe[src*="youtu.be"]');
+                  
+                  if (iframe) {
+                    // Ensure iframe has enablejsapi=1 parameter
+                    const src = iframe.src;
+                    if (src && !src.includes('enablejsapi=1')) {
+                      const separator = src.includes('?') ? '&' : '?';
+                      iframe.src = src + separator + 'enablejsapi=1';
+                    }
+                    
+                    // Trigger video play via postMessage
+                    setTimeout(() => {
+                      try {
+                        iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+                      } catch (error) {
+                        console.warn("Could not send play command to YouTube iframe:", error);
+                      }
+                      
+                      // Pause background audio
+                      if (backgroundAudioInstance && !backgroundAudioInstance.paused) {
+                        backgroundAudioInstance.pause();
+                      }
+                    }, 150); // Delay to ensure click sound plays first
+                  }
                 }
               });
             });

@@ -57,8 +57,12 @@ nav {
     }
 
     .nav-items {
+        justify-content:flex-start;
         gap: 32px;
-
+        @media (min-width:$desktop-viewport) {
+            max-width:calc(100vw - 336px);
+            overflow:hidden;
+        }
         @media (min-width:$large-desktop-viewport) {
             gap: 54px;
         }

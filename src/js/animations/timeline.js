@@ -3164,11 +3164,21 @@ export function initTimelineAnimation() {
     }
   });
 
-  // Store cleanup references
+  // Store cleanup references and positioning utilities
   window._timelineCleanup = {
     rafId: rafId,
     resizeObserver: resizeObserver,
     stopTracking: stopContinuousTracking
+  };
+  
+  // Expose positioning function and state for resize handling
+  window._timelinePositioning = {
+    positionBgToSpan: positionBgToSpan,
+    resetCapturedPosition: () => {
+      capturedPosition = null;
+      lastPosition = { top: 0, left: 0, width: 0, height: 0 };
+      targetPosition = { top: 0, left: 0, width: 0, height: 0 };
+    }
   };
 
   // Store ScrollTrigger and markerLock references for resize handling
@@ -3330,6 +3340,30 @@ function handleResizeEnd() {
     window._generateMinorNodes();
   }
   
+  // CRITICAL: If we're before the timeline section, re-sync background with span
+  // Check if we're not in the timeline yet
+  const timeline = document.querySelector('#acs-timeline');
+  
+  if (timeline && window._timelinePositioning) {
+    // Check if we're before the timeline or not in it yet
+    const inTimeline = document.body.classList.contains('in-timeline');
+    const timelineRect = timeline.getBoundingClientRect();
+    const isBeforeTimeline = timelineRect.top > window.innerHeight * 0.5;
+    
+    if (!inTimeline && isBeforeTimeline) {
+      // We're before the timeline - reset captured position and re-sync with span
+      console.log('[Resize] Before timeline - resetting background position');
+      window._timelinePositioning.resetCapturedPosition();
+      
+      // Force immediate position update
+      requestAnimationFrame(() => {
+        if (window._timelinePositioning.positionBgToSpan) {
+          window._timelinePositioning.positionBgToSpan();
+        }
+      });
+    }
+  }
+  
   // First, refresh ScrollTrigger with invalidation to recalculate everything
   ScrollTrigger.refresh(true); // true = invalidate all on refresh
   
@@ -3338,6 +3372,20 @@ function handleResizeEnd() {
     requestAnimationFrame(() => {
       // Force ScrollTrigger update to apply current scroll position
       ScrollTrigger.update();
+      
+      // Re-sync background position after ScrollTrigger refresh if before timeline
+      if (timeline && window._timelinePositioning) {
+        const inTimeline = document.body.classList.contains('in-timeline');
+        const timelineRect = timeline.getBoundingClientRect();
+        const isBeforeTimeline = timelineRect.top > window.innerHeight * 0.5;
+        
+        if (!inTimeline && isBeforeTimeline) {
+          console.log('[Resize] Post-refresh: Re-syncing background position');
+          if (window._timelinePositioning.positionBgToSpan) {
+            window._timelinePositioning.positionBgToSpan();
+          }
+        }
+      }
       
       // If we have saved progress, restore it
       if (resizeState.savedProgress && resizeState.timelineScrollTrigger) {
