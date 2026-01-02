@@ -286,6 +286,20 @@ export function initTimelineAnimation() {
   const decades = gsap.utils.toArray('.timeline-decade');
   const remainingEventsCount = events.length - 1;
   
+  // Helper function to get current event width based on viewport
+  const getEventWidth = () => {
+    const vw = window.innerWidth;
+    if (vw < 1025) {
+      return vw; // Mobile: 100vw
+    } else if (vw >= 1280) {
+      // Desktop 1280px+: min(1324px, 92vw)
+      return Math.min(1324, vw * 0.92);
+    } else {
+      // Desktop 1025-1279px: 50vw
+      return vw * 0.5;
+    }
+  };
+  
   // Define scroll durations as functions to get current viewport size on resize
   // Use matchMedia to strictly match CSS breakpoint (1024px)
   const isMobile = () => window.matchMedia("(max-width: 1024px)").matches;
@@ -2531,13 +2545,32 @@ export function initTimelineAnimation() {
     
       remainingEvents.forEach((event, index) => {
       // Calculate target position to center this event
-      // Desktop: Move X (horizontal) - events are 50vw wide
-      // With 100vw padding and 50vw event width:
-      // Event i starts at (100vw + i*50vw), center at (125vw + i*50vw)
-      // To center at viewport center (50vw): move by -(75vw + i*50vw) = -((i+1.5)*50vw)
+      // Desktop: Move X (horizontal) - events are dynamically sized
+      // With 100vw padding and variable event width:
+      // Event i starts at (100vw + sum of previous event widths), center at that + (eventWidth / 2)
+      // To center at viewport center (50vw): calculate accumulated width offset
       // Mobile: Move Y (vertical)
       const isMobile = () => window.matchMedia("(max-width: 1024px)").matches;
-      const getTargetX = () => isMobile() ? 0 : -((index + 1.5) * window.innerWidth * 0.5);
+      
+      const getTargetX = () => {
+        if (isMobile()) return 0;
+        
+        // Calculate accumulated width of all previous events (including cover)
+        // Cover event is 100vw, plus index regular events
+        const eventWidth = getEventWidth();
+        const coverWidth = window.innerWidth; // Cover is always 100vw
+        const viewportCenter = window.innerWidth * 0.5;
+        
+        // Position calculation:
+        // - Start with 100vw padding
+        // - Add cover event width (100vw) 
+        // - Add (index) event widths for events before this one
+        // - Add half of current event width to get its center
+        // - Subtract viewport center to center it on screen
+        const eventCenter = coverWidth + (index * eventWidth) + (eventWidth * 0.5);
+        return viewportCenter - eventCenter;
+      };
+      
       // Use string-based vh units for mobile to avoid drifting calculations when window.innerHeight changes (address bar)
       // This forces the browser to align with CSS 100vh elements
       const getTargetY = () => isMobile() ? `${-(index + 1) * 100}vh` : 0;

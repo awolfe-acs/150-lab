@@ -28,12 +28,35 @@ export default defineConfig(({ mode, command }) => {
     server: {
       host: true, // or use host: '0.0.0.0'
     },
+    optimizeDeps: {
+      // Pre-bundle GSAP to ensure it's available
+      include: mode === "banner" ? ['gsap'] : undefined,
+    },
     build: {
       outDir,
       cssCodeSplit: false,
+      minify: 'esbuild',
+      // Ensure target is modern enough for ES modules
+      target: mode === "banner" ? 'es2018' : 'es2020',
+      commonjsOptions: {
+        // Ensure proper handling of CommonJS modules like GSAP
+        transformMixedEsModules: true,
+        // Explicitly include GSAP for proper transformation
+        include: /node_modules|gsap/,
+        // Force GSAP to be treated as ES module
+        defaultIsModuleExports: 'auto'
+      },
       rollupOptions: {
         input: mode === "banner" ? resolve(__dirname, "index-banner.html") : resolve(__dirname, "index.html"),
+        // Ensure GSAP is bundled inline for banner mode (don't externalize it)
+        external: mode === "banner" ? [] : undefined,
         output: {
+          // Ensure ES module format for proper GSAP loading
+          format: 'es',
+          // For banner mode, inline all dynamic imports to avoid loading issues
+          ...(mode === "banner" ? {
+            inlineDynamicImports: true,
+          } : {}),
           // For banner mode, output JS and CSS to root, otherwise to assets/
           entryFileNames: mode === "banner" ? "[name]-[hash].js" : "assets/[name]-[hash].js",
           chunkFileNames: mode === "banner" ? "[name]-[hash].js" : "assets/[name]-[hash].js",
