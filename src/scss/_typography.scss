@@ -81,7 +81,9 @@ h2 {
     line-height: 1;
     letter-spacing: -0.05em;
     letter-spacing: -0.25px;
-
+    @media (min-width:$desktop-viewport) and (max-width:1440px) {
+        font-size: 48px;
+    }
     @media (max-width:$desktop-viewport) {
         font-size: 6vw;
     }
@@ -106,7 +108,7 @@ h3 {
     text-shadow: $text-shadow;
 
     @media (min-width:$desktop-viewport) and (max-width:1440px) {
-        font-size: 40px;
+        font-size: 36px;
     }
 
     @media (max-width:$desktop-viewport) {
