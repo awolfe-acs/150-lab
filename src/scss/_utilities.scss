@@ -84,6 +84,8 @@ $text-width-max: clamp(50ch, 66vw, 75ch);
 
 .text-align-center {
     text-align: center;
+    margin-left:auto;
+    margin-right:auto;
 }
 
 .text-align-left {

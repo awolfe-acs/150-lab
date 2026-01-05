@@ -87,6 +87,11 @@ body.timeline-resizing {
     height:0!important;
     min-height:0!important;
     margin-top:0!important;
+    pointer-events:none!important;
+    z-index:-1!important;
+    * {
+      pointer-events:none!important;
+    }
   }
 }
 
