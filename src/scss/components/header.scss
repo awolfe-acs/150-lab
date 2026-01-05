@@ -33,7 +33,7 @@ header.anniversary {
     }
 
     // Re-enable pointer events for interactive elements
-    .logo, button {
+    .logo, button, a {
         pointer-events: auto;
         touch-action: manipulation;
     }
@@ -43,7 +43,7 @@ header.anniversary {
     }
 
     &.nav-active {
-        .logo, button {
+        .logo, button, a {
             opacity: 0 !important;
             pointer-events: none !important;
             transition: opacity 0.24s ease;
@@ -250,4 +250,15 @@ button.sound-toggle {
             opacity: 1;
         }
     }
+}
+
+header.anniversary a.content-hub-btn {
+    z-index:1;
+    position:relative;
+    margin-right:80px;
+}
+
+header.nav-active a.content-hub-btn {
+    opacity: 0;
+    pointer-events: none;
 }

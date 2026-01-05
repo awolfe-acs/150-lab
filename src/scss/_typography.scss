@@ -1,5 +1,7 @@
 @use './utilities' as *;
 
+
+
 @font-face {
     font-family: 'stolzl-light';
     font-weight: 100 400;
@@ -49,7 +51,10 @@ body {
     font-family: "stolzl", Arial, sans-serif;
 }
 
-
+h1,h2,h3,h4,h5,p {
+    width:100%;
+    max-width: $text-width-max;
+}
 h1 {
     font-family: $font-family;
     font-size: 10vw;
@@ -171,7 +176,7 @@ p {
     font-weight: 450;
     font-size: 16px;
     color: #fff;
-    line-height: 1.5;
+    line-height: 1.6;
 }
 
 p.large-paragraph, span:not(.split-char) {
@@ -198,4 +203,8 @@ p.large-paragraph {
 
 i {
     font-style: italic !important;
+}
+
+#get-involved-heading {
+    width: 60vw;
 }

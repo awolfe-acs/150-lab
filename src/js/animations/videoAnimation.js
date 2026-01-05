@@ -21,14 +21,15 @@ export function animateVideoScale() {
       pointerEvents: "none",
     });
 
-    // Create a timeline for the video animations - start as video approaches viewport top
+    // Create a timeline for the video animations - coordinate with intro-text fade out
     const videoTl = gsap.timeline({
       scrollTrigger: {
-        trigger: "#video", // Use video section as trigger
-        start: "top top", // Start when top of video reaches 5% down the viewport
-        end: "top -50%", // Complete when top of video reaches -45% from top of viewport
+        trigger: "#intro-text-travel-area", // Use intro-text travel area as trigger
+        start: "47% top", // Start after intro-text fully fades out (45% + small buffer)
+        end: "80% top", // Complete by 80% - much longer distance for slower scale
         scrub: true,
         markers: false,
+        invalidateOnRefresh: true,
         onUpdate: (self) => {
           // Add/remove class based on progress
           if (self.progress > 0.8) {
@@ -49,10 +50,11 @@ export function animateVideoScale() {
 
     // Separate ScrollTrigger for pointer events control
     ScrollTrigger.create({
-      trigger: "#video",
-      start: "top 20%", // Enable after video is mostly revealed
-      end: "top top",
+      trigger: "#intro-text-travel-area",
+      start: "bottom bottom", // Enable after intro-text travel area has passed
+      end: "bottom top",
       markers: false,
+      invalidateOnRefresh: true,
       onEnter: () => {
         // Enable pointer events after video is mostly revealed
         gsap.set(videoSection, {

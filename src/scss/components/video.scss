@@ -18,7 +18,7 @@
 
     .video-wrapper {
         position: relative;
-        border-radius: 16px;
+        border-radius: 32px;
         aspect-ratio: 16/9;
         //background: rgba(22, 22, 22, 0.66);
         max-height: calc(100svh - 80px);
@@ -45,12 +45,17 @@
         .mejs__container, .mejs__inner, .mejs__mediaelement, #anniversary-video {
             width: 100% !important;
         }
+
+        iframe {
+            border-radius:32px;
+            overflow:hidden;
+        }
     }
 }
 
 video {
     position: relative;
-    border-radius: 16px;
+    border-radius: 32px;
     aspect-ratio: 16/9;
     height: auto;
     object-fit: cover;
@@ -160,4 +165,21 @@ iframe {
     &:hover::before {
         display: none !important;
     }
+}
+
+.preview-video-wrapper {
+    aspect-ratio: 16/9;
+    max-height: calc(100svh - 80px);
+    width: min(calc(66vw - 32px), 1200px);
+    max-width: min(calc(66vw - 32px), 1200px, calc((100svh - 80px) * 16 / 9));
+    margin-top:64px;
+    margin-bottom:64px;
+    @media (max-width:$mobile-viewport) {
+        margin-top:32px;
+        margin-bottom:32px;
+    }
+}
+.preview-video {
+    border-radius: 16px;
+    overflow:hidden;
 }

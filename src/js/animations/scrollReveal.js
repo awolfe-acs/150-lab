@@ -17,8 +17,9 @@ export function initScrollRevealAnimation() {
     // Check if this element has the button class
     const isButton = element.classList.contains("fancy-btn");
     
-    // Check for custom delay attribute (in seconds)
-    const customDelay = parseFloat(element.getAttribute("data-reveal-delay")) || 0;
+    // Check for custom delay attribute (in milliseconds, converted to seconds for GSAP)
+    const customDelayMs = parseFloat(element.getAttribute("data-reveal-delay")) || 0;
+    const customDelay = customDelayMs / 1000; // Convert milliseconds to seconds
     
     // Determine animation direction and trigger position based on class
     let initialY = 50; // Default: from bottom

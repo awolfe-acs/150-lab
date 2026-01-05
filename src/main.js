@@ -19,6 +19,7 @@ import {
   initHeroPinning,
 } from "./js/animations/hero.js";
 import { animateVideoScale } from "./js/animations/videoAnimation.js";
+import { initIntroTextAnimation } from "./js/animations/introText.js";
 import {
   animateGetInvolvedText,
   initGetInvolvedLogoAnimation,
@@ -102,8 +103,11 @@ function initAnimations() {
   // Initialize hero animations
   initHeroAnimation();
   initHeroNumberCountdown();
-  initHeroPinning();
+  initHeroPinning(); // This also handles intro-text pinning
   setupHeroHeadingFadeAnimation();
+
+  // Initialize intro text animations
+  initIntroTextAnimation();
 
   // Initialize other animations
   animateVideoScale();

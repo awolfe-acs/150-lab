@@ -160,11 +160,12 @@ export async function initShaderBackground() {
     // Create ScrollTrigger to animate the colorDarkness value
     gsap.timeline({
       scrollTrigger: {
-        trigger: "#video-travel-area",
-        start: "top 135%", // Starts 35% earlier - when the top of video-travel-area is 35% below the bottom of viewport
-        end: "top 20%", // Ends when the top of video-travel-area reaches 20% from the top of viewport
+        trigger: "#intro-text-travel-area",
+        start: "35% top", // Start when intro-text begins fading out (matches fade-out timing)
+        end: "45% top", // Complete by 45% to match text fade completion
         scrub: true, // Smooth scrubbing effect, tied to scroll position
         markers: false, // Set to true for debugging
+        invalidateOnRefresh: true,
         onUpdate: (self) => {
           // Update the colorDarkness value based on progress
           if (uniforms && uniforms.colorDarkness) {
@@ -1225,10 +1226,10 @@ export async function initShaderBackground() {
     enabled: false, // Start with overlay disabled
     startOpacity: 0.0, // Top opacity (fully transparent)
     endOpacity: 1.0, // Bottom opacity (fully opaque black)
-    offsetY: 0.22, // Y position offset (for gradient calculation) - changed to 0.22
-    height: 3.0, // Height multiplier for gradient - changed to 3.0
+    offsetY: 0.05, // Y position offset (for gradient calculation) - Gradient Shift
+    height: 2.5, // Height multiplier for gradient - Gradient Distribution
     color: "#000000", // Pure black color
-    yOffset: -0.03, // Y position of the entire overlay (in viewport height %) - changed to -0.3
+    yOffset: 0.09, // Y position of the entire overlay (in viewport height %) - Vertical Position
   };
 
   function createGradientOverlay() {
