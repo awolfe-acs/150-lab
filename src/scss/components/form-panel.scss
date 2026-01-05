@@ -11,7 +11,7 @@
     height: 486px;
     position: relative;
     backdrop-filter: blur(20px);
-
+    background:rgba(0,0,0,0.95);
     @media (min-width:$desktop-viewport) {
         max-width: calc(100% - 200px);
     }
@@ -328,10 +328,10 @@
                 height: 56px;
                 background: #3E2BF4;
                 color: #fff;
-                font-weight: 700;
+                font-weight: 500;
                 font-size: 16px;
                 border-radius: 48px;
-                width: 178px;
+                width: 240px;
                 border: 1px solid rgba(255, 255, 255, 0);
                 display: flex;
                 align-items: center;
@@ -570,7 +570,7 @@
     color: red !important;
     display: inline;
     float: none;
-    font-weight: 700;
+    font-weight: 500;
     margin: 0;
     padding: 0
 }
@@ -1726,7 +1726,7 @@
 }
 
 .LV_validation_message {
-    font-weight: 700;
+    font-weight: 500;
     margin: 0 0 0 5px
 }
 

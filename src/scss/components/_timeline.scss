@@ -386,9 +386,9 @@ body.timeline-resizing {
     }
     &.first-acs-meeting {
       @media (min-height: 860px) and (min-width:1440px) {
-        transform:scale(1.38);
-        transform-origin:top left;
-        max-width:652px;
+        //transform:scale(1.38);
+        //transform-origin:top left;
+        //max-width:652px;
       }
     }
   }
