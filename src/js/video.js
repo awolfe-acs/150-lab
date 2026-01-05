@@ -5,11 +5,211 @@ import posterUrl from "../../public/images/anniversary-video-poster.jpg?url";
 // Flag to indicate when sound toggle is triggered by video slider
 let videoSliderTriggeredUnmute = false;
 
+// YouTube Player API
+let youtubePlayer = null;
+
+// Initialize YouTube API
+function initYouTubeAPI() {
+  // Check if YouTube Player API is already loaded
+  if (window.YT && window.YT.Player) {
+    console.log('YouTube API already loaded, initializing player immediately');
+    initPlayer();
+    return;
+  }
+  
+  // Check if API is already loading
+  if (window.onYouTubeIframeAPIReady) {
+    console.log('YouTube API is loading, chaining our callback');
+    // API is loading, chain our callback
+    const originalCallback = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      originalCallback();
+      initPlayer();
+    };
+    return;
+  }
+  
+  // Load YouTube IFrame API for the first time
+  console.log('Loading YouTube API for the first time');
+  const tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  const firstScriptTag = document.getElementsByTagName('script')[0];
+  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+  // Set up callback for when API loads
+  window.onYouTubeIframeAPIReady = () => {
+    console.log('YouTube API ready, initializing player');
+    initPlayer();
+  };
+}
+
+// Separate function to initialize the player once API is ready
+function initPlayer() {
+  const iframe = document.getElementById('youtube-video-iframe');
+  if (iframe) {
+    youtubePlayer = new YT.Player('youtube-video-iframe', {
+      events: {
+        'onReady': onPlayerReady,
+        'onStateChange': onPlayerStateChange
+      }
+    });
+    
+    // Expose state checker for global audio management
+    window.isMainVideoPlaying = () => {
+      try {
+        return youtubePlayer && youtubePlayer.getPlayerState && youtubePlayer.getPlayerState() === 1;
+      } catch (e) {
+        return false;
+      }
+    };
+  }
+}
+
+function onPlayerReady(event) {
+  console.log('YouTube player ready');
+  
+  // Set up the custom overlay click handler
+  const overlay = document.querySelector('.video-start-overlay');
+  if (overlay) {
+    overlay.addEventListener('click', function() {
+      // Play UI click sound if audio is not muted
+      if (!window.audioMuted && window.playUIClickSound) {
+        try {
+          window.playUIClickSound();
+        } catch (e) {
+          console.warn('Could not play UI click sound:', e);
+        }
+      }
+      
+      if (youtubePlayer) {
+        youtubePlayer.playVideo();
+        
+        // IMMEDIATE audio fade out on click
+        console.log('[video.js] Overlay clicked, fading out audio immediately');
+        if (window.cancelActiveFade) window.cancelActiveFade();
+        if (window.fadeBackgroundAudio) {
+          window.fadeBackgroundAudio(0.001, 1000, () => {
+            // Just duck the audio (volume 0.001), don't pause it to keep the session active
+            // We use 0.001 instead of 0 to prevent browsers from auto-suspending the context
+            console.log('[video.js] Background audio ducked (vol 0.001) via overlay click');
+          });
+        } else if (window.backgroundAudio) {
+          // Fallback if helpers aren't ready
+          window.backgroundAudio.volume = 0.001;
+        }
+        
+        // Wait 150ms before starting overlay fade out
+        setTimeout(() => {
+          // Hide the overlay with transition (0.4s fade)
+          overlay.classList.add('hidden');
+          
+          // Wait for fade transition to complete (400ms) then remove from DOM
+          setTimeout(() => {
+            overlay.remove();
+          }, 400);
+        }, 150);
+      }
+    });
+  }
+  
+  // Setup IntersectionObserver to pause video when scrolled out of view
+  const videoSection = document.querySelector('#video');
+  if (videoSection && youtubePlayer) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) {
+          // Video scrolled out of view
+          console.log('[video.js] Main video scrolled out of view, pausing');
+          try {
+            const playerState = youtubePlayer.getPlayerState();
+            // Only pause if currently playing (state 1)
+            if (playerState === 1) {
+              youtubePlayer.pauseVideo();
+            }
+          } catch (error) {
+            console.warn('[video.js] Could not pause video:', error);
+          }
+        }
+      });
+    }, {
+      threshold: 0.25 // Trigger when 25% or less of video is visible
+    });
+    
+    observer.observe(videoSection);
+  }
+}
+
+function onPlayerStateChange(event) {
+  console.log('Main video state changed:', event.data);
+  
+  // Manage background audio for main video
+  // YouTube Player State: 1 = playing, 0 = ended, 2 = paused
+  if (event.data === 1) {
+    // Video is playing - fade out and pause background audio
+    console.log('[video.js] Video playing, pausing background audio');
+    if (window.cancelActiveFade) window.cancelActiveFade();
+    
+    if (window.backgroundAudio) {
+      // Always attempt to duck, regardless of current state
+      // This ensures that even if it was just resuming, we force it back down
+      if (window.fadeBackgroundAudio) {
+        window.fadeBackgroundAudio(0.001, 1000, () => {
+          // Just duck the audio (volume 0.001), don't pause it to keep the session active
+          // We use 0.001 instead of 0 to prevent browsers from auto-suspending the context
+          console.log('[video.js] Background audio ducked (vol 0.001)');
+        });
+      } else {
+        // Fallback
+        window.backgroundAudio.volume = 0.001;
+      }
+    }
+  } else if (event.data === 0 || event.data === 2) {
+    // Video ended (0) or paused (2) - resume background audio
+    console.log('[video.js] Video paused/ended, calling resumeBackgroundAudio');
+    if (window.resumeBackgroundAudio) {
+      window.resumeBackgroundAudio();
+    } else {
+      console.error('[video.js] resumeBackgroundAudio not found on window');
+    }
+  }
+}
+
+// Function to fade audio (used by both custom video and YouTube)
+function fadeAudio(audioElement, targetVolume, duration = 1000) {
+  if (!audioElement) return;
+
+  const startVolume = audioElement.volume;
+  const startTime = performance.now();
+
+  const fade = (currentTime) => {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+
+    // Use exponential easing for more natural fade
+    const easedProgress = progress * progress;
+    audioElement.volume = startVolume + (targetVolume - startVolume) * easedProgress;
+
+    if (progress < 1) {
+      requestAnimationFrame(fade);
+    }
+  };
+
+  requestAnimationFrame(fade);
+}
+
 export function initVideo() {
   const videoSection = document.querySelector("#video");
   const videoWrapper = document.querySelector(".video-wrapper");
   
   if (!videoSection || !videoWrapper) return;
+
+  // Check if there's a YouTube iframe
+  const youtubeIframe = videoWrapper.querySelector("iframe#youtube-video-iframe");
+  if (youtubeIframe) {
+    console.log("YouTube iframe detected, initializing YouTube API");
+    initYouTubeAPI();
+    return;
+  }
 
   // Check if there's an actual <video> element (not an iframe)
   const videoElement = videoWrapper.querySelector("video");
@@ -437,29 +637,6 @@ export function initVideo() {
 
   // Initialize progress bar
   updateProgressBar();
-
-  // Function to fade audio
-  const fadeAudio = (audioElement, targetVolume, duration = 1000) => {
-    if (!audioElement) return;
-
-    const startVolume = audioElement.volume;
-    const startTime = performance.now();
-
-    const fade = (currentTime) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-
-      // Use exponential easing for more natural fade
-      const easedProgress = progress * progress;
-      audioElement.volume = startVolume + (targetVolume - startVolume) * easedProgress;
-
-      if (progress < 1) {
-        requestAnimationFrame(fade);
-      }
-    };
-
-    requestAnimationFrame(fade);
-  };
 
   // Track original video volume for restoration
   let originalVideoVolume = DEFAULT_VOLUME;

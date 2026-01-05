@@ -90,7 +90,114 @@ iframe {
 }
 
 
-/* Video overlay and play button styles */
+/* Custom Video Start Overlay with Cover Image */
+.video-start-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url('/images/ACS150-promo-cover.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    cursor: pointer;
+    transition: opacity 0.4s ease;
+    border-radius: 32px;
+    overflow: hidden;
+
+    // Darken overlay on hover
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.3);
+        transition: background 0.3s ease;
+        z-index: 1;
+        border-radius: 32px;
+        overflow: hidden;
+    }
+
+    &:hover {
+        &::before {
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .play-button-overlay {
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+
+            @media (max-width:$mobile-viewport) {
+                transform: scale(1.05);
+            }
+        }
+    }
+    &:active {
+        &::before {
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .play-button-overlay {
+            transform: scale(0.98);
+            background: rgba(255, 255, 255, 1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+
+            @media (max-width:$mobile-viewport) {
+                transform: scale(1.05);
+            }
+        }
+    }
+    &.hidden {
+        opacity: 0;
+        pointer-events: none !important;
+    }
+}
+
+.play-button-overlay {
+    position: relative;
+    z-index: 2;
+    width: 96px;
+    height: 96px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+
+    @media (max-width:$mobile-viewport) {
+        width: 80px;
+        height: 80px;
+    }
+
+    .play-icon {
+        width: 36px;
+        height: 36px;
+        margin-left: 4px;
+        transition: transform 0.3s ease;
+        transform:scale(1.4);
+        path {
+            fill: #412bfd;
+        }
+        
+        @media (max-width:$mobile-viewport) {
+            width: 30px;
+            height: 30px;
+        }
+    }
+}
+
+/* Legacy Video overlay and play button styles (kept for compatibility) */
 .video-overlay {
     position: absolute;
     top: 0;
@@ -104,9 +211,10 @@ iframe {
     z-index: 2;
     cursor: pointer;
     transition: 0.3s ease;
-
+    border-radius: 32px;
+    overflow: hidden;
     &:hover {
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(0, 0, 0, 0.4);
 
         .play-button {
             transform: scale(1.1);
@@ -182,4 +290,14 @@ iframe {
 .preview-video {
     border-radius: 16px;
     overflow:hidden;
+}
+
+#youtube-video-wrapper {
+    border-radius: 32px;
+    overflow: hidden;
+    .video-wrapper {
+        > div {
+            display:none!important;
+        }
+    }
 }

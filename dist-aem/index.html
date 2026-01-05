@@ -106,11 +106,11 @@
             `;
       };
     </script>
-    <script type="module" crossorigin src="/content/dam/acsorg/150/assets/index-BUkfMwUC.js"></script>
-    <link rel="stylesheet" crossorigin href="/content/dam/acsorg/150/assets/style-8INy4-fs.css">
+    <script type="module" crossorigin src="/content/dam/acsorg/150/assets/index-nTmfvCCx.js"></script>
+    <link rel="stylesheet" crossorigin href="/content/dam/acsorg/150/assets/style-DYeEsSjx.css">
   
-              <link rel="preload" href="/content/dam/acsorg/150/assets/style-8INy4-fs.css" as="style">
-              <link rel="preload" href="/content/dam/acsorg/150/assets/index-BUkfMwUC.js" as="script">
+              <link rel="preload" href="/content/dam/acsorg/150/assets/style-DYeEsSjx.css" as="style">
+              <link rel="preload" href="/content/dam/acsorg/150/assets/index-nTmfvCCx.js" as="script">
             </head>
   <body>
     <!-- Skip Links for Keyboard Navigation -->
@@ -771,8 +771,9 @@
           class="flex vertical justify-center align-flex-end height-100svh"
           aria-label="Anniversary video section"
         >
-          <div class="video-wrapper">
+          <div class="video-wrapper" id="youtube-video-wrapper">
             <iframe 
+            id="youtube-video-iframe"
             style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
             src="https://www.youtube.com/embed/5_d6VUnbig4?rel=0&modestbranding=1&iv_load_policy=3&autoplay=0&enablejsapi=1" 
             title="ACS 150th Anniversary Video" 
@@ -780,6 +781,15 @@
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
             allowfullscreen>
           </iframe>
+            
+            <!-- Custom Start Button Overlay -->
+            <div class="video-start-overlay">
+              <div class="play-button-overlay">
+                <svg class="play-icon" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+              </div>
+            </div>
 
             <!--
             <video
@@ -794,7 +804,7 @@
           </div>
         </section>
       </section>
-      <section id="intro-text-travel-area">
+      <section id="intro-text-travel-area" style="z-index:1;">
         <section id="intro-text" class="pin-top-top">
           <div class="intro-text-container">
             <h2 class="split-lines text-align-center">Chemistry is everything.</h2>
@@ -802,7 +812,7 @@
           </div>
         </section>
       </section>
-      <section id="video-travel-area" class="height-100svh"></section>
+      <section id="video-travel-area" class="height-100svh" style="z-index:2;"></section>
       <section id="get-involved" role="region" aria-labelledby="get-involved-heading">
         <section id="stories-hub-callout">
           <div class="stories-hub-callout-container">
@@ -946,27 +956,6 @@
                           </div>
                         </div>
                         
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="timeline-event" data-year="1879">
-                    <div class="event-content-wrapper">
-                      <div class="event-date">
-                        <div class="event-value">1879</div>
-                        <div class="event-label"></div>
-                      </div>
-                      
-                      <div class="event-panel">
-                        <div class="event-info">
-                          <div class="event-year">1879</div>
-                          <div class="event-description">
-                            <p>Ira Remsen begins publication of the <i></i>American Chemical Journal</i> (1879—1913).</p>
-                          </div>
-                        </div>
-                        <div class="event-image">
-                          <img src="/content/dam/acsorg/150/assets/images/1879-FirstJournal.jpg" alt="Cover of the first American Chemical Journal published by Ira Remsen" />
-                        </div>
                       </div>
                     </div>
                   </div>
