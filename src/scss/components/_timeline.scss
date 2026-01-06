@@ -106,8 +106,8 @@ body.timeline-resizing {
 // Timeline close button
 .timeline-close {
   position: fixed;
-  top: 30px;
-  right: 30px;
+  top: calc(2vw + 2.5px);
+  right: 2vw;
   z-index: 100;
   //background: rgba(0, 0, 0, 0.3);
   //border: 1px solid rgba(255, 255, 255, 0.2);
@@ -123,6 +123,10 @@ body.timeline-resizing {
   opacity: 0; // Will fade in with ScrollTrigger
   border:none;
   border-radius:8px;
+  @media (max-width:$desktop-viewport) {
+    top: calc(2vw + 6px);
+    right: 2vw;
+  }
   &:hover {
     background: rgba(0, 0, 0, 0.2);
     transform: scale(1.1);
@@ -493,7 +497,7 @@ body.timeline-resizing {
 
 @media (max-width: 1024px) {
   .timeline-close {
-    top: 24px;
+    //top: 24px;
     right: 16px;
     width: 32px;
     height: 32px;

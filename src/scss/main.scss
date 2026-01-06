@@ -454,6 +454,9 @@ html {
 
 #video-travel-area {
   margin-top: -20svh; // Slight negative margin to tighten spacing after intro text
+  @media (min-width:$desktop-viewport) {
+    margin-bottom: -8svh;
+  }
 }
 
 #get-involved {
@@ -469,7 +472,7 @@ html {
   .get-involved-message {
     position: relative;
     z-index: 1; // Above timeline-window-bg highlight
-    padding-bottom: 64px;
+    //padding-bottom: 64px;
     text-shadow: 0 2px 2px rgba(0, 0, 0, 0.32), 0px 2px 6px rgba(2, 2, 2, 0.18), 0px 2px 20px rgba(2, 2, 2, 0.12), 0px 2px 24px rgba(2, 2, 2, 0.08), 0 2px 2px rgba(0, 0, 0, 0.24), 0px 2px 6px rgba(2, 2, 2, 0.12), 0px 2px 20px rgba(2, 2, 2, 0.08), 0px 2px 24px rgba(2, 2, 2, 0.04);
 
     h4 {
@@ -540,6 +543,7 @@ html {
   justify-content: center;
   min-height:50vh;
   padding-bottom:25svh;
+  padding-bottom:12svh;
   .stories-hub-callout-container {
     display: flex;
     flex-direction: column;

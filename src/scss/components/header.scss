@@ -4,6 +4,9 @@
 body.in-timeline {
     header.anniversary {
         padding-right:8vw;
+        @media (max-width:$desktop-viewport) {
+            padding-right: 10vw;
+        }
         @media (max-width:$mobile-viewport) {
             padding-right: 64px;
         }
@@ -178,7 +181,9 @@ button.sound-toggle {
     margin-left: auto;
     outline-offset: 8px !important;
     border-radius: 4px !important;
-
+    @media (min-width:$mobile-viewport) and (max-width:$desktop-viewport) {
+        margin-right: 48px;
+    }
     @media (max-width:$mobile-viewport) {
         margin: 0 auto;
         gap:8px;
@@ -267,6 +272,9 @@ header.anniversary a.content-hub-btn {
     z-index:1;
     position:relative;
     margin-right:80px;
+    @media (min-width:$mobile-viewport) and (max-width:$desktop-viewport) {
+        margin-right: 48px;
+    }
     @media (max-width:$mobile-viewport) {
         margin-right:20px;
     }
