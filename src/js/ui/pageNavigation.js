@@ -13,8 +13,7 @@ export function updatePageNavigation() {
 
   // Target sections
   const getInvolvedMessage = document.querySelector(".get-involved-message") || document.querySelector("#acs-timeline"); // Fallback to timeline if message missing
-  const signupForm = document.querySelector("#signup-form");
-  const eventsSection = document.querySelector("#events");
+  const getInvolvedCards = document.querySelector("#get-involved-cards");
   
   if (!pageNav || !activeTitle || !sectionTimeline) return;
 
@@ -77,7 +76,6 @@ export function updatePageNavigation() {
   const introLink = pageNav.querySelector(".intro");
   const anniversaryLink = pageNav.querySelector(".anniversary");
   const getInvolvedLink = pageNav.querySelector(".get-involved");
-  const eventsLink = pageNav.querySelector(".events");
 
   // Create a function to update the active title with a quick fade transition
   const updateActiveTitle = (newText) => {
@@ -188,11 +186,7 @@ export function updatePageNavigation() {
   }
 
   if (getInvolvedLink) {
-    getInvolvedLink.addEventListener("click", (e) => handleNavClick(e, getInvolvedLink, "Get Involved", signupForm, false, -48));
-  }
-
-  if (eventsLink) {
-    eventsLink.addEventListener("click", (e) => handleNavClick(e, eventsLink, "Events", eventsSection));
+    getInvolvedLink.addEventListener("click", (e) => handleNavClick(e, getInvolvedLink, "Get Involved", getInvolvedCards, false, -48));
   }
 
   // -------------------------
@@ -219,17 +213,9 @@ export function updatePageNavigation() {
     },
     {
       id: "getinvolved",
-      element: signupForm,
+      element: getInvolvedCards,
       title: "Get Involved",
       link: getInvolvedLink,
-      top: 0,
-      bottom: 0,
-    },
-    {
-      id: "events",
-      element: eventsSection,
-      title: "Events",
-      link: eventsLink,
       top: 0,
       bottom: 0,
     },
@@ -258,15 +244,8 @@ export function updatePageNavigation() {
       sections[1].bottom = sections[2].top;
     }
 
-    // Get Involved ends where Events starts (if events exists)
-    if (sections[3].element) {
-      sections[2].bottom = sections[3].top;
-      // Events ends at bottom of page
-      sections[3].bottom = document.body.scrollHeight;
-    } else {
-      // If no events section, Get Involved goes to bottom
-      sections[2].bottom = document.body.scrollHeight;
-    }
+    // Get Involved is the last section, goes to bottom of page
+    sections[2].bottom = document.body.scrollHeight;
   }
 
   // Initial calculation

@@ -118,11 +118,19 @@ header.anniversary {
         box-shadow: none !important;
         outline-offset: 8px !important;
         border-radius: 4px !important;
+
+        @media (max-width:$mobile-viewport) {
+            span {
+                display:none!important;
+            }
+        }
+
         @media (max-width:$small-mobile-viewport) {
             font-size:11px;
             letter-spacing:2px;
             padding-right:20px;
         }
+
         span {
             font-weight: 450;
             transform: translateY(1px);
@@ -196,6 +204,9 @@ button.sound-toggle {
     span {
         font-family: $stolzl-light;
         font-weight: 300;
+        @media (max-width:$mobile-viewport) {
+            display:none!important;
+        }
     }
 
     svg {
@@ -256,6 +267,9 @@ header.anniversary a.content-hub-btn {
     z-index:1;
     position:relative;
     margin-right:80px;
+    @media (max-width:$mobile-viewport) {
+        margin-right:20px;
+    }
 }
 
 header.nav-active a.content-hub-btn {
