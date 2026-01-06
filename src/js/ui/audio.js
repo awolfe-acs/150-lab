@@ -233,11 +233,16 @@ function setupYouTubeIframeClickHandler(iframe) {
     iframe.id = 'youtube-iframe-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
   }
   
-  // Ensure iframe has enablejsapi=1 parameter for postMessage API
+  // Ensure iframe has enablejsapi=1 parameter for postMessage and Player API
   const src = iframe.src;
-  if (src && src.includes('youtube.com') && !src.includes('enablejsapi=1')) {
-    const separator = src.includes('?') ? '&' : '?';
-    iframe.src = src + separator + 'enablejsapi=1';
+  if (src && (src.includes('youtube.com') || src.includes('youtu.be'))) {
+    if (!src.includes('enablejsapi=1')) {
+      const separator = src.includes('?') ? '&' : '?';
+      const newSrc = src + separator + 'enablejsapi=1';
+      console.log('[audio.js] Adding enablejsapi to iframe:', iframe.id, '- will need to wait for reload');
+      iframe.src = newSrc;
+      // Continue with setup - the iframe will reload but our handlers will still work
+    }
   }
   
   // Check if there's already a custom start overlay (e.g., .video-start-overlay)
@@ -251,8 +256,9 @@ function setupYouTubeIframeClickHandler(iframe) {
     return;
   }
   
-  // Store player instance reference for overlay click handler
+  // Store player instance reference and ready state for overlay click handler
   let playerInstance = null;
+  let playerReady = false;
   
   // Setup YouTube Player API state listener for iframes WITHOUT custom overlays
   // This is essential for background audio management
@@ -264,6 +270,10 @@ function setupYouTubeIframeClickHandler(iframe) {
         // Initialize YouTube Player to track state changes
         playerInstance = new window.YT.Player(iframe.id, {
         events: {
+          onReady: (event) => {
+            console.log('[audio.js] YouTube Player ready for iframe:', iframe.id);
+            playerReady = true;
+          },
           onStateChange: (event) => {
             console.log('YouTube Player state changed:', event.data, 'for iframe:', iframe.id);
             // YouTube Player State: 1 = playing, 0 = ended, 2 = paused
@@ -292,7 +302,7 @@ function setupYouTubeIframeClickHandler(iframe) {
       // Expose state checker for global audio management
       window.isSecondVideoPlaying = () => {
         try {
-          return playerInstance && playerInstance.getPlayerState && playerInstance.getPlayerState() === 1;
+          return playerReady && playerInstance && playerInstance.getPlayerState && playerInstance.getPlayerState() === 1;
         } catch (e) {
           return false;
         }
@@ -300,20 +310,43 @@ function setupYouTubeIframeClickHandler(iframe) {
         
         // Setup IntersectionObserver to pause video when scrolled out of view
         const videoContainer = iframe.closest('.preview-video-wrapper') || iframe.parentElement;
-        if (videoContainer && playerInstance) {
+        if (videoContainer) {
           const observer = new IntersectionObserver((entries) => {
             entries.forEach((entry) => {
               if (!entry.isIntersecting) {
                 // Video scrolled out of view
-                console.log('[audio.js] Video', iframe.id, 'scrolled out of view, pausing');
+                console.log('[audio.js] Video', iframe.id, 'scrolled out of view, attempting to pause');
+                
+                // Track if video was playing before we pause it
+                let wasPlaying = false;
+                
                 try {
-                  const playerState = playerInstance.getPlayerState();
-                  // Only pause if currently playing (state 1)
-                  if (playerState === 1) {
-                    playerInstance.pauseVideo();
+                  if (playerReady && playerInstance && typeof playerInstance.getPlayerState === 'function') {
+                    const playerState = playerInstance.getPlayerState();
+                    // Only pause if currently playing (state 1)
+                    if (playerState === 1) {
+                      wasPlaying = true;
+                      playerInstance.pauseVideo();
+                      console.log('[audio.js] Video paused successfully');
+                    }
                   }
                 } catch (error) {
                   console.warn('[audio.js] Could not pause video:', error);
+                }
+                
+                // FALLBACK: If video has been interacted with (overlay was clicked), resume background audio
+                // This ensures audio resumes even if state change events don't fire
+                if (videoStarted || wasPlaying) {
+                  console.log('[audio.js] Video left viewport after being played, resuming background audio as fallback');
+                  setTimeout(() => {
+                    // Only resume if no other videos are playing
+                    const mainPlaying = window.isMainVideoPlaying ? window.isMainVideoPlaying() : false;
+                    const secondPlaying = window.isSecondVideoPlaying ? window.isSecondVideoPlaying() : false;
+                    
+                    if (!mainPlaying && !secondPlaying && !audioMuted) {
+                      resumeBackgroundAudio();
+                    }
+                  }, 300); // Small delay to ensure pause event fires first
                 }
               }
             });
@@ -326,8 +359,10 @@ function setupYouTubeIframeClickHandler(iframe) {
         }
       } catch (error) {
         console.error("Could not initialize YouTube Player API for iframe:", iframe.id, error);
+        // Even if Player setup fails, we should still be able to use postMessage
+        playerReady = false;
       }
-    }, 100); // Small delay for iframe to be ready
+    }, 200); // Increased delay to ensure iframe is fully ready
   }).catch((error) => {
     console.error("Could not load YouTube API:", error);
   });
@@ -383,15 +418,49 @@ function setupYouTubeIframeClickHandler(iframe) {
     }, 100);
     
     // Play the video using YouTube Player API
-    console.log('[audio.js] Overlay clicked, attempting to play video. Player ready:', !!playerInstance);
+    console.log('[audio.js] Overlay clicked for iframe:', iframe.id, '| Player ready:', playerReady, '| Player exists:', !!playerInstance);
     
     const playVideo = () => {
-      // If playerInstance is missing, try to re-initialize it immediately
+      // Strategy 1: If player is ready and available, use it directly
+      if (playerReady && playerInstance && typeof playerInstance.playVideo === 'function') {
+        console.log('[audio.js] Using ready Player API to play video');
+        try {
+          playerInstance.playVideo();
+          return; // Success, exit early
+        } catch (error) {
+          console.warn('[audio.js] Player API failed, trying fallback:', error);
+        }
+      }
+      
+      // Strategy 2: Try postMessage API (works even if Player not ready)
+      console.log('[audio.js] Using postMessage API as primary method');
+      try {
+        iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+      } catch (error) {
+        console.warn('[audio.js] postMessage failed:', error);
+      }
+      
+      // Strategy 3: If Player exists but might not be ready, try it anyway
+      if (playerInstance && typeof playerInstance.playVideo === 'function') {
+        console.log('[audio.js] Attempting Player API as backup');
+        try {
+          playerInstance.playVideo();
+        } catch (error) {
+          console.warn('[audio.js] Backup Player API call failed:', error);
+        }
+      }
+      
+      // Strategy 4: If Player doesn't exist yet but API is loaded, create it now
       if (!playerInstance && window.YT && window.YT.Player) {
-        console.log('[audio.js] Player instance missing on click, attempting to recreate');
+        console.log('[audio.js] Player instance missing, creating new Player');
         try {
           playerInstance = new window.YT.Player(iframe.id, {
             events: {
+              onReady: (event) => {
+                console.log('[audio.js] New player ready, playing immediately');
+                playerReady = true;
+                event.target.playVideo();
+              },
               onStateChange: (event) => {
                 // Re-attach state listener logic
                 if (event.data === 1) {
@@ -404,51 +473,33 @@ function setupYouTubeIframeClickHandler(iframe) {
                 } else if (event.data === 0 || event.data === 2) {
                   resumeBackgroundAudio();
                 }
-              },
-              onReady: (event) => {
-                console.log('[audio.js] Recreated player ready, playing');
-                event.target.playVideo();
               }
             }
           });
         } catch (e) {
-          console.error('[audio.js] Failed to recreate player:', e);
+          console.error('[audio.js] Failed to create new player:', e);
         }
       }
-
-      if (playerInstance && typeof playerInstance.playVideo === 'function') {
-        // Use the Player API directly
-        try {
-          playerInstance.playVideo();
-          console.log('[audio.js] Video playback started via Player API');
-        } catch (error) {
-          console.warn('[audio.js] Could not play via Player API, trying postMessage:', error);
-          // Fallback to postMessage
-          try {
-            iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
-          } catch (err) {
-            console.error('[audio.js] Both methods failed:', err);
-          }
-        }
-      } else {
-        // Player not ready yet, use postMessage as fallback
-        console.log('[audio.js] Player not ready, using postMessage');
-        try {
-          iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
-        } catch (error) {
-          console.warn('[audio.js] postMessage failed:', error);
-        }
-        
-        // Also queue a check for the player instance
+      
+      // Strategy 5: Wait for player to become ready (last resort)
+      if (!playerReady) {
+        console.log('[audio.js] Player not ready, setting up retry mechanism');
         let checkCount = 0;
         const checkInterval = setInterval(() => {
           checkCount++;
-          if (playerInstance && typeof playerInstance.playVideo === 'function') {
+          if (playerReady && playerInstance && typeof playerInstance.playVideo === 'function') {
             clearInterval(checkInterval);
-            console.log('[audio.js] Player became ready, playing video');
-            playerInstance.playVideo();
+            console.log('[audio.js] Player became ready after', checkCount * 100, 'ms, playing video');
+            try {
+              playerInstance.playVideo();
+            } catch (error) {
+              console.warn('[audio.js] Delayed play attempt failed:', error);
+            }
           }
-          if (checkCount > 20) clearInterval(checkInterval); // Stop after 2 seconds
+          if (checkCount > 30) {
+            clearInterval(checkInterval); // Stop after 3 seconds
+            console.warn('[audio.js] Player never became ready after 3 seconds');
+          }
         }, 100);
       }
     };

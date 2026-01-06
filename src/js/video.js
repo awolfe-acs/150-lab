@@ -120,14 +120,34 @@ function onPlayerReady(event) {
         if (!entry.isIntersecting) {
           // Video scrolled out of view
           console.log('[video.js] Main video scrolled out of view, pausing');
+          
+          // Track if video was playing before we pause it
+          let wasPlaying = false;
+          
           try {
             const playerState = youtubePlayer.getPlayerState();
             // Only pause if currently playing (state 1)
             if (playerState === 1) {
+              wasPlaying = true;
               youtubePlayer.pauseVideo();
             }
           } catch (error) {
             console.warn('[video.js] Could not pause video:', error);
+          }
+          
+          // FALLBACK: If video has been played, resume background audio
+          // This ensures audio resumes even if state change events don't fire
+          if (wasPlaying) {
+            console.log('[video.js] Main video left viewport after playing, resuming background audio as fallback');
+            setTimeout(() => {
+              // Only resume if no other videos are playing
+              const mainPlaying = window.isMainVideoPlaying ? window.isMainVideoPlaying() : false;
+              const secondPlaying = window.isSecondVideoPlaying ? window.isSecondVideoPlaying() : false;
+              
+              if (!mainPlaying && !secondPlaying && window.resumeBackgroundAudio && !window.audioMuted) {
+                window.resumeBackgroundAudio();
+              }
+            }, 300); // Small delay to ensure pause event fires first
           }
         }
       });
@@ -754,8 +774,26 @@ export function initVideo() {
     (entries) => {
       entries.forEach((entry) => {
         if (!entry.isIntersecting) {
+          // Track if video was playing
+          const wasPlaying = !videoElement.paused;
+          
           // Video is out of view, fade out audio and then pause
           fadeOutAndPauseVideo();
+          
+          // FALLBACK: If video has been played, ensure background audio resumes
+          // This provides extra safety in case pause event doesn't trigger audio resume
+          if (wasPlaying) {
+            console.log('[video.js] Custom video left viewport after playing, ensuring background audio resumes');
+            setTimeout(() => {
+              // Only resume if no other videos are playing
+              const mainPlaying = window.isMainVideoPlaying ? window.isMainVideoPlaying() : false;
+              const secondPlaying = window.isSecondVideoPlaying ? window.isSecondVideoPlaying() : false;
+              
+              if (!mainPlaying && !secondPlaying && window.resumeBackgroundAudio && !window.audioMuted) {
+                window.resumeBackgroundAudio();
+              }
+            }, 800); // Delay accounts for the 600ms fade + 200ms buffer
+          }
         }
       });
     },
