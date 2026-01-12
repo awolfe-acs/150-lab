@@ -38,8 +38,9 @@
         }
 
         @media (max-width:$mobile-viewport) {
-            width: calc(100vw - 32px);
-            max-width: calc((100svh - 80px) * 16 / 9);
+            width: 100%;
+            max-width: 100%;
+            border-radius: 0;
         }
 
         .mejs__container, .mejs__inner, .mejs__mediaelement, #anniversary-video {
@@ -285,6 +286,8 @@ iframe {
     @media (max-width:$mobile-viewport) {
         margin-top:32px;
         margin-bottom:32px;
+        width: 100%;
+        max-width: 100%;
     }
 }
 .preview-video {

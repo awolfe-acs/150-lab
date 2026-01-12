@@ -45,6 +45,14 @@ body.timeline-resizing {
 // #timeline-window-bg: The expanding background element
 #timeline-window-bg {
   position: fixed;
+  // CRITICAL: Start invisible and off-screen until JavaScript positions it
+  // This prevents the 0x0 flash on mobile during initial scroll
+  top: -100vh;
+  left: -100vw;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  visibility: hidden;
   z-index: 0; // Behind timeline content but visible
   pointer-events: none; // Don't block interactions
   will-change: transform, width, height, opacity;
@@ -56,6 +64,7 @@ body.timeline-resizing {
   background-repeat: no-repeat;
   background-size: cover;
   background:linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164));
+  border-radius: 4px;
   // CSS custom property for decal opacity
   --decal-opacity: 0;
   transition: opacity 0.05s;

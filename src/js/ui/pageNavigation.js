@@ -12,8 +12,10 @@ export function updatePageNavigation() {
   const timelineNavWrapper = document.querySelector(".timeline-nav-wrapper");
 
   // Target sections
+  const videoTravelArea = document.querySelector("#video-travel-area");
   const getInvolvedMessage = document.querySelector(".get-involved-message") || document.querySelector("#acs-timeline"); // Fallback to timeline if message missing
   const getInvolvedCards = document.querySelector("#get-involved-cards");
+  const storiesHubCallout = document.querySelector("#stories-hub-callout");
   
   if (!pageNav || !activeTitle || !sectionTimeline) return;
 
@@ -182,7 +184,13 @@ export function updatePageNavigation() {
   }
 
   if (anniversaryLink) {
-    anniversaryLink.addEventListener("click", (e) => handleNavClick(e, anniversaryLink, "150 Years of ACS", getInvolvedMessage));
+    anniversaryLink.addEventListener("click", (e) => {
+      // Calculate offset to position bottom of #stories-hub-callout at center of viewport
+      // offset = element.height - (viewport.height / 2)
+      const targetElement = storiesHubCallout || getInvolvedMessage;
+      const offset = targetElement ? (targetElement.offsetHeight - (window.innerHeight / 2)) : 0;
+      handleNavClick(e, anniversaryLink, "150 Years of ACS", targetElement, false, offset);
+    });
   }
 
   if (getInvolvedLink) {
@@ -205,7 +213,7 @@ export function updatePageNavigation() {
     },
     {
       id: "anniversary",
-      element: getInvolvedMessage,
+      element: videoTravelArea || getInvolvedMessage, // Use video-travel-area as primary trigger, fallback to message
       title: "150 Years of ACS",
       link: anniversaryLink,
       top: 0,
@@ -313,6 +321,12 @@ export function updatePageNavigation() {
       handleResize();
     }, 300);
   });
+
+  // Use ResizeObserver to detect content changes (like timeline collapse) that don't trigger window resize
+  const resizeObserver = new ResizeObserver(() => {
+    handleResize();
+  });
+  resizeObserver.observe(document.body);
 
   const initializeNavigation = () => {
     updateSectionBoundaries();

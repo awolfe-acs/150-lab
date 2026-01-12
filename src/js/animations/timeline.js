@@ -95,14 +95,55 @@ export function initTimelineAnimation() {
   // No need to call initCoverOrb() again here
 
   // Cache for position with interpolation to prevent jitter
-  let lastPosition = { top: 0, left: 0, width: 0, height: 0 };
-  let targetPosition = { top: 0, left: 0, width: 0, height: 0 };
+  // Initialize with null to indicate "not yet positioned"
+  let lastPosition = null;
+  let targetPosition = null;
   
   // Flag to track if we should be updating the BG position to match the span
   let isTrackingSpan = true;
   
   // Lerp (linear interpolation) for smooth transitions
   const lerp = (start, end, factor) => start + (end - start) * factor;
+  
+  // Helper to get the current position of timeline-window-start with adjustments
+  const getSpanPosition = () => {
+    if (!timelineWindowStart) return null;
+    
+    const rect = timelineWindowStart.getBoundingClientRect();
+    
+    // Validate that we got real dimensions (not 0x0 from off-screen element)
+    if (rect.width === 0 || rect.height === 0) {
+      return null;
+    }
+    
+    return {
+      top: rect.top - 2,
+      left: rect.left - 6,
+      width: rect.width + 12,
+      height: rect.height + 4
+    };
+  };
+  
+  // Function to IMMEDIATELY sync BG position to span (no lerp, instant)
+  const syncBgToSpanImmediate = () => {
+    const pos = getSpanPosition();
+    if (!pos || !timelineWindowBg) return false;
+    
+    // Update caches
+    lastPosition = { ...pos };
+    targetPosition = { ...pos };
+    
+    // Apply position immediately
+    timelineWindowBg.style.position = 'fixed';
+    timelineWindowBg.style.top = `${pos.top}px`;
+    timelineWindowBg.style.left = `${pos.left}px`;
+    timelineWindowBg.style.width = `${pos.width}px`;
+    timelineWindowBg.style.height = `${pos.height}px`;
+    timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
+    timelineWindowBg.style.borderRadius = '4px';
+    
+    return true;
+  };
   
   // Function to position background to match the span (like a highlight box)
   const positionBgToSpan = () => {
@@ -116,11 +157,21 @@ export function initTimelineAnimation() {
     // During tracking phase, the element isn't being transformed
     const rect = timelineWindowStart.getBoundingClientRect();
     
+    // Prevent collapsing to 0x0 (fixes issue where element loses dimensions during fast scroll)
+    if (rect.width === 0 || rect.height === 0) {
+      return;
+    }
+    
     // Use tighter threshold for Y-axis (more sensitive to vertical changes)
     // Use looser threshold for X-axis (less critical)
     const yThreshold = 0.1; // Very sensitive to Y changes
     const xThreshold = 0.5; // Standard for X changes
     const sizeThreshold = 0.5; // Standard for size changes
+    
+    // Initialize targetPosition if null
+    if (!targetPosition) {
+      targetPosition = { top: 0, left: 0, width: 0, height: 0 };
+    }
     
     // Check if position actually changed
     const positionChanged = 
@@ -128,11 +179,6 @@ export function initTimelineAnimation() {
       Math.abs(rect.left - targetPosition.left) > xThreshold ||
       Math.abs(rect.width - targetPosition.width) > sizeThreshold ||
       Math.abs(rect.height - targetPosition.height) > sizeThreshold;
-    
-    // Prevent collapsing to 0x0 (fixes issue where element loses dimensions during fast scroll)
-    if (rect.width === 0 || rect.height === 0) {
-      return;
-    }
 
     if (!positionChanged && targetPosition.top !== 0) {
       return; // Skip update if position hasn't changed significantly
@@ -146,16 +192,24 @@ export function initTimelineAnimation() {
       height: rect.height
     };
     
-    // Smooth interpolation to prevent jitter (especially on Y-axis)
-    // Use faster lerp for first-time positioning
-    const lerpFactor = lastPosition.top === 0 ? 1 : 0.6;
-    
-    lastPosition = {
-      top: lerp(lastPosition.top || rect.top, rect.top, lerpFactor),
-      left: lerp(lastPosition.left || rect.left, rect.left, lerpFactor),
-      width: lerp(lastPosition.width || rect.width, rect.width, lerpFactor),
-      height: lerp(lastPosition.height || rect.height, rect.height, lerpFactor)
-    };
+    // First-time positioning: use instant sync (no lerp)
+    if (!lastPosition) {
+      lastPosition = {
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height
+      };
+    } else {
+      // Smooth interpolation to prevent jitter (especially on Y-axis)
+      const lerpFactor = 0.6;
+      lastPosition = {
+        top: lerp(lastPosition.top, rect.top, lerpFactor),
+        left: lerp(lastPosition.left, rect.left, lerpFactor),
+        width: lerp(lastPosition.width, rect.width, lerpFactor),
+        height: lerp(lastPosition.height, rect.height, lerpFactor)
+      };
+    }
     
     // Use direct style manipulation for instant updates (no GSAP delay)
     // Use sub-pixel precision with transform for smoother Y-axis tracking
@@ -208,10 +262,39 @@ export function initTimelineAnimation() {
   timelineWindowStart.style.zIndex = '1';
 
   // Position the BG element once, but keep it invisible
+  // Use multiple attempts to ensure we get a valid position (handles async layout)
+  const initBgPosition = () => {
+    const pos = getSpanPosition();
+    if (pos) {
+      // Update caches
+      lastPosition = { ...pos };
+      targetPosition = { ...pos };
+      capturedPosition = { ...pos };
+      
+      // Position the BG element (invisible)
+      timelineWindowBg.style.position = 'fixed';
+      timelineWindowBg.style.top = `${pos.top}px`;
+      timelineWindowBg.style.left = `${pos.left}px`;
+      timelineWindowBg.style.width = `${pos.width}px`;
+      timelineWindowBg.style.height = `${pos.height}px`;
+      timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
+      timelineWindowBg.style.borderRadius = '4px';
+      return true;
+    }
+    return false;
+  };
+  
   requestAnimationFrame(() => {
-    setTimeout(() => {
-      positionBgToSpan();
-    }, 100);
+    // Try immediately
+    if (!initBgPosition()) {
+      // If element not ready, try again after short delay
+      setTimeout(() => {
+        if (!initBgPosition()) {
+          // One more attempt after longer delay (for slow mobile layouts)
+          setTimeout(initBgPosition, 200);
+        }
+      }, 100);
+    }
   });
 
   // Update position only on resize
@@ -268,12 +351,17 @@ export function initTimelineAnimation() {
     start: 'top bottom', // When message enters bottom of viewport
     end: 'bottom top', // When message exits top of viewport
     onEnter: () => {
+      // CRITICAL: When entering the tracking zone, immediately sync position
+      // This ensures we have valid position data before any animations start
+      syncBgToSpanImmediate();
       startContinuousTracking();
     },
     onLeave: () => {
       // Don't stop tracking when leaving downward - we need it for the handoff
     },
     onEnterBack: () => {
+      // Also sync immediately on re-entry
+      syncBgToSpanImmediate();
       startContinuousTracking();
     },
     onLeaveBack: () => {
@@ -539,12 +627,19 @@ export function initTimelineAnimation() {
     // Clear any existing inline styles first to avoid conflicts
     timelineWindowBg.style.cssText = '';
     
-    // Get the current position of #timeline-window-start to match it
-    const startRect = timelineWindowStart.getBoundingClientRect();
-    const adjustedTop = startRect.top - 2;
-    const adjustedLeft = startRect.left - 6;
-    const adjustedWidth = startRect.width + 12;
-    const adjustedHeight = startRect.height + 4;
+    // Get the current position of #timeline-window-start using helper (validates dimensions)
+    const pos = getSpanPosition();
+    
+    // Fallback if helper returns null (shouldn't happen, but be safe)
+    const adjustedTop = pos ? pos.top : (window.innerHeight / 2 - 20);
+    const adjustedLeft = pos ? pos.left : (window.innerWidth / 2 - 100);
+    const adjustedWidth = pos ? pos.width : 200;
+    const adjustedHeight = pos ? pos.height : 40;
+    
+    // Update cached position for expansion animation
+    if (pos) {
+      capturedPosition = { ...pos };
+    }
     
     // Set initial state to match #timeline-window-start::after position
     timelineWindowBg.style.position = 'fixed';
@@ -564,7 +659,8 @@ export function initTimelineAnimation() {
       top: adjustedTop,
       left: adjustedLeft,
       width: adjustedWidth,
-      height: adjustedHeight
+      height: adjustedHeight,
+      posValid: !!pos
     });
     
     // STEP 2: Animate background expansion (BEFORE restoring timeline content)
@@ -1556,47 +1652,32 @@ export function initTimelineAnimation() {
         // Calculate handoff threshold (same logic as in onUpdate)
         const currentHandoffThreshold = expansionStartPosition + (0.01 * (1 - expansionStartPosition));
         
+        // Get fresh position using helper
+        const pos = getSpanPosition();
+        
         // If we're in the middle of the animation, immediately update BG position
         // to match current timeline-window-start position
         if (self.progress > 0 && self.progress < currentHandoffThreshold) {
           // We're before handoff - ensure BG is hidden and positioned correctly
-          const rect = timelineWindowStart.getBoundingClientRect();
-          const adjustedTop = rect.top - 2;
-          const adjustedLeft = rect.left - 6;
-          const adjustedWidth = rect.width + 12;
-          const adjustedHeight = rect.height + 4;
-          
-          // Position BG but keep it hidden (pseudo-element is visible)
-          timelineWindowBg.style.position = 'fixed';
-          timelineWindowBg.style.top = `${adjustedTop}px`;
-          timelineWindowBg.style.left = `${adjustedLeft}px`;
-          timelineWindowBg.style.width = `${adjustedWidth}px`;
-          timelineWindowBg.style.height = `${adjustedHeight}px`;
-          timelineWindowBg.style.opacity = '0';
-          timelineWindowBg.style.visibility = 'hidden';
-          
-          // Capture this position for when expansion starts
-          capturedPosition = {
-            top: adjustedTop,
-            left: adjustedLeft,
-            width: adjustedWidth,
-            height: adjustedHeight
-          };
+          if (pos) {
+            // Position BG but keep it hidden (pseudo-element is visible)
+            timelineWindowBg.style.position = 'fixed';
+            timelineWindowBg.style.top = `${pos.top}px`;
+            timelineWindowBg.style.left = `${pos.left}px`;
+            timelineWindowBg.style.width = `${pos.width}px`;
+            timelineWindowBg.style.height = `${pos.height}px`;
+            timelineWindowBg.style.opacity = '0';
+            timelineWindowBg.style.visibility = 'hidden';
+            
+            // Capture this position for when expansion starts
+            capturedPosition = { ...pos };
+          }
         } else if (self.progress >= currentHandoffThreshold && self.progress < 1) {
           // We're after handoff - recalculate from current state
           // The fromTo will handle this on next frame
-          const rect = timelineWindowStart.getBoundingClientRect();
-          const adjustedTop = rect.top - 2;
-          const adjustedLeft = rect.left - 6;
-          const adjustedWidth = rect.width + 12;
-          const adjustedHeight = rect.height + 4;
-          
-          capturedPosition = {
-            top: adjustedTop,
-            left: adjustedLeft,
-            width: adjustedWidth,
-            height: adjustedHeight
-          };
+          if (pos) {
+            capturedPosition = { ...pos };
+          }
         }
       },
       onUpdate: (self) => {
@@ -1723,36 +1804,25 @@ export function initTimelineAnimation() {
           // BEFORE handoff: Pseudo visible, BG hidden BUT positioned correctly
           // This ensures seamless handoff when expansion starts
           
-          // Get current position of timeline-window-start
-          const rect = timelineWindowStart.getBoundingClientRect();
-          const adjustedTop = rect.top - 2;
-          const adjustedLeft = rect.left - 6;
-          const adjustedWidth = rect.width + 12;
-          const adjustedHeight = rect.height + 4;
+          // Get current position of timeline-window-start using helper
+          const pos = getSpanPosition();
           
-          // Position BG element exactly where it needs to be (but keep it invisible)
-          timelineWindowBg.style.position = 'fixed';
-          timelineWindowBg.style.top = `${adjustedTop}px`;
-          timelineWindowBg.style.left = `${adjustedLeft}px`;
-          timelineWindowBg.style.width = `${adjustedWidth}px`;
-          timelineWindowBg.style.height = `${adjustedHeight}px`;
-          timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
-          timelineWindowBg.style.borderRadius = '4px';
-          timelineWindowBg.style.opacity = '0';
-          timelineWindowBg.style.visibility = 'hidden';
-          
-          // Update captured position continuously during hold period
-          if (!capturedPosition || 
-              Math.abs(capturedPosition.top - adjustedTop) > 1 ||
-              Math.abs(capturedPosition.left - adjustedLeft) > 1 ||
-              Math.abs(capturedPosition.width - adjustedWidth) > 1 ||
-              Math.abs(capturedPosition.height - adjustedHeight) > 1) {
-            capturedPosition = {
-              top: adjustedTop,
-              left: adjustedLeft,
-              width: adjustedWidth,
-              height: adjustedHeight
-            };
+          // Only update if we got valid position
+          if (pos) {
+            // Position BG element exactly where it needs to be (but keep it invisible)
+            timelineWindowBg.style.position = 'fixed';
+            timelineWindowBg.style.top = `${pos.top}px`;
+            timelineWindowBg.style.left = `${pos.left}px`;
+            timelineWindowBg.style.width = `${pos.width}px`;
+            timelineWindowBg.style.height = `${pos.height}px`;
+            timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
+            timelineWindowBg.style.borderRadius = '4px';
+            timelineWindowBg.style.opacity = '0';
+            timelineWindowBg.style.visibility = 'hidden';
+            
+            // Update captured position continuously during hold period
+            // This ensures we always have the most recent valid position for the expansion animation
+            capturedPosition = { ...pos };
           }
           
           if (styleEl) {
@@ -1850,40 +1920,42 @@ export function initTimelineAnimation() {
           `;
         }
         
-        // Initial positioning of BG (hidden, will be positioned by onUpdate)
-        const rect = timelineWindowStart.getBoundingClientRect();
-        const adjustedTop = rect.top - 2;
-        const adjustedLeft = rect.left - 6;
-        const adjustedWidth = rect.width + 12;
-        const adjustedHeight = rect.height + 4;
+        // Initial positioning of BG using helper function (validates dimensions)
+        // This is critical for mobile where fast scrolling might cause issues
+        const pos = getSpanPosition();
         
-        timelineWindowBg.style.position = 'fixed';
-        timelineWindowBg.style.top = `${adjustedTop}px`;
-        timelineWindowBg.style.left = `${adjustedLeft}px`;
-        timelineWindowBg.style.width = `${adjustedWidth}px`;
-        timelineWindowBg.style.height = `${adjustedHeight}px`;
-        timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
-        timelineWindowBg.style.borderRadius = '4px';
-        timelineWindowBg.style.zIndex = '0';
-        timelineWindowBg.style.opacity = '0';
-        timelineWindowBg.style.visibility = 'hidden';
-        
-        // Store initial position
-        capturedPosition = {
-          top: adjustedTop,
-          left: adjustedLeft,
-          width: adjustedWidth,
-          height: adjustedHeight
-        };
+        if (pos) {
+          timelineWindowBg.style.position = 'fixed';
+          timelineWindowBg.style.top = `${pos.top}px`;
+          timelineWindowBg.style.left = `${pos.left}px`;
+          timelineWindowBg.style.width = `${pos.width}px`;
+          timelineWindowBg.style.height = `${pos.height}px`;
+          timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
+          timelineWindowBg.style.borderRadius = '4px';
+          timelineWindowBg.style.zIndex = '0';
+          timelineWindowBg.style.opacity = '0';
+          timelineWindowBg.style.visibility = 'hidden';
+          
+          // Store initial position
+          capturedPosition = { ...pos };
+        } else {
+          console.warn('[Timeline] onEnter: Could not get valid span position');
+        }
       },
       onLeaveBack: () => {
         // Resume tracking span position updates
         isTrackingSpan = true;
+        
+        // Immediately sync BG to span position before resuming tracking
+        syncBgToSpanImmediate();
+        
+        // Start tracking
         positionBgToSpan();
         
         // INSTANT REVERSE HANDOFF: Transfer back from BG element to pseudo-element
         // 1. INSTANTLY hide the BG element
         timelineWindowBg.style.opacity = '0';
+        timelineWindowBg.style.visibility = 'hidden';
         
         // 2. INSTANTLY restore the pseudo-element background
         const styleEl = document.getElementById('timeline-window-start-bg-style');
@@ -1906,8 +1978,8 @@ export function initTimelineAnimation() {
           `;
         }
         
-        // 3. Reset captured position
-        capturedPosition = null;
+        // 3. Keep captured position for potential re-entry, but allow fresh capture on next enter
+        // Don't reset to null - keep the valid position in case of quick scroll back
       }
     }
   });
@@ -1918,13 +1990,16 @@ export function initTimelineAnimation() {
   // Expand background from highlight box to full viewport
   // Starts AFTER the hold period (33vh of pinned scroll)
   // Use function to get starting values to account for captured position
+  // CRITICAL: immediateRender: false prevents GSAP from evaluating "from" values at timeline creation
+  // The onStart callback ensures we have correct position at the exact moment animation begins
   expansionTl.fromTo(timelineWindowBg, 
     () => {
       // Set background color once here (not animated)
       timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
       
-      // Use captured position if available, otherwise get current
-      if (capturedPosition) {
+      // Use captured position if available, otherwise get FRESH position
+      // This is critical for mobile where the element may have moved since page load
+      if (capturedPosition && capturedPosition.width > 0 && capturedPosition.height > 0) {
         return {
           top: `${capturedPosition.top}px`,
           left: `${capturedPosition.left}px`,
@@ -1932,12 +2007,29 @@ export function initTimelineAnimation() {
           height: `${capturedPosition.height}px`
         };
       }
-      const rect = timelineWindowStart.getBoundingClientRect();
+      
+      // Fallback: get fresh position from the span
+      const pos = getSpanPosition();
+      if (pos) {
+        // Update cached position
+        capturedPosition = { ...pos };
+        return {
+          top: `${pos.top}px`,
+          left: `${pos.left}px`,
+          width: `${pos.width}px`,
+          height: `${pos.height}px`
+        };
+      }
+      
+      // Last resort fallback - should never happen if element is visible
+      console.warn('[Timeline] No valid position for expansion animation - using viewport center fallback');
+      const fallbackWidth = 200;
+      const fallbackHeight = 40;
       return {
-        top: `${rect.top}px`,
-        left: `${rect.left}px`,
-        width: `${rect.width}px`,
-        height: `${rect.height}px`
+        top: `${(window.innerHeight - fallbackHeight) / 2}px`,
+        left: `${(window.innerWidth - fallbackWidth) / 2}px`,
+        width: `${fallbackWidth}px`,
+        height: `${fallbackHeight}px`
       };
     },
     {
@@ -1948,6 +2040,29 @@ export function initTimelineAnimation() {
       borderRadius: '0px',
       ease: 'power2.inOut',
       duration: 0.7,
+      immediateRender: false, // CRITICAL: Don't evaluate "from" values until animation actually starts
+      onStart: () => {
+        // CRITICAL: At the exact moment the expansion starts, ensure BG is at correct position
+        // This handles cases where capturedPosition might be stale or not yet set
+        const pos = getSpanPosition();
+        if (pos && capturedPosition) {
+          // Check if current position differs significantly from cached
+          const drift = Math.abs(pos.top - capturedPosition.top) + 
+                       Math.abs(pos.left - capturedPosition.left) +
+                       Math.abs(pos.width - capturedPosition.width) +
+                       Math.abs(pos.height - capturedPosition.height);
+          
+          if (drift > 5) {
+            // Position has drifted - immediately sync before animation continues
+            console.log('[Timeline] Position drift detected on expansion start, syncing:', drift.toFixed(1), 'px');
+            timelineWindowBg.style.top = `${pos.top}px`;
+            timelineWindowBg.style.left = `${pos.left}px`;
+            timelineWindowBg.style.width = `${pos.width}px`;
+            timelineWindowBg.style.height = `${pos.height}px`;
+            capturedPosition = { ...pos };
+          }
+        }
+      },
       onUpdate: () => {
         // Ensure background stays static during animation
         timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
