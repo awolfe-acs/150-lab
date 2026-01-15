@@ -146,7 +146,14 @@ html {
     // Ensure touch scrolling works on mobile
     -webkit-overflow-scrolling: touch;
     touch-action: manipulation; // Allow all touch gestures for better touch response
-
+    &:has(#bd) {
+      *:not(.split-line),
+      *:before,
+      *:after {
+        font-family: "acs-clarity","stolzl", sans-serif;
+        font-style: normal;
+      }
+    }
     &:not(:has(#bd)) {
       *:not(.split-line),
       *:before,
