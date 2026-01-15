@@ -207,7 +207,7 @@ button.sound-toggle {
     }
 
     span {
-        font-family: $stolzl-light;
+        font-family: $stolzl-light!important;
         font-weight: 300;
         @media (max-width:$mobile-viewport) {
             display:none!important;

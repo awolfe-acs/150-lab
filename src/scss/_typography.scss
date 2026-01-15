@@ -174,7 +174,7 @@ h5 {
     font-weight:450;
 }
 p {
-    font-family: $stolzl-light;
+    font-family: $stolzl-light!important;
     font-weight: 450;
     font-size: 16px;
     color: #fff;
@@ -191,7 +191,7 @@ p.large-paragraph, span:not(.split-char) {
 }
 
 p.large-paragraph {
-    font-family: $stolzl-light;
+    font-family: $stolzl-light!important;
     font-size: 2.5vw;
     text-align: center;
     font-weight: 100;

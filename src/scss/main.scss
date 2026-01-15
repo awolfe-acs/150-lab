@@ -124,8 +124,6 @@ html {
   *,
   *:before,
   *:after {
-    font-family: "stolzl", sans-serif;
-    font-style: normal;
     color: #fff;
   }
 
@@ -149,7 +147,14 @@ html {
     -webkit-overflow-scrolling: touch;
     touch-action: manipulation; // Allow all touch gestures for better touch response
 
-
+    &:not(:has(#bd)) {
+      *:not(.split-line),
+      *:before,
+      *:after {
+        font-family: "stolzl", sans-serif;
+        font-style: normal;
+      }
+    }
     @media (min-width:$desktop-viewport) {
       min-width: calc(100vw + 5px);
     }
@@ -307,7 +312,7 @@ html {
   h1 {
     font-size: 4vw;
     text-align: center;
-    font-family: $stolzl-light;
+    font-family: $stolzl-light!important;
     font-weight: 300;
     width: 60vw;
     max-width: 1400px;
@@ -633,7 +638,7 @@ html {
   color: #fff;
   font-size: 10vw;
   text-align: center;
-  font-family: $stolzl-light;
+  font-family: $stolzl-light!important;
   font-weight: 100;
 }
 
