@@ -220,7 +220,7 @@ export function initCoverArea() {
   // Make the logo fixed position so it stays in place while scrolling
   gsap.set(coverLogo, {
     position: "fixed",
-    top: "calc(50% - 100px)",
+    top: "calc(50% - 44px)",
     left: "50%",
     transform: "translate(-50%, -50%)",
     zIndex: 1000,
