@@ -1,6 +1,7 @@
 // animations/introText.js
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
+import logger from "../utils/logger.js";
 
 // Note: Pinning is handled by initHeroPinning() in hero.js
 // which processes all .pin-top-top elements including #intro-text
@@ -12,7 +13,7 @@ export function initIntroTextAnimation() {
   const introTextTravelArea = document.querySelector("#intro-text-travel-area");
   
   if (!introTextContainer || !heroTravelArea || !introTextTravelArea) {
-    console.warn("Intro text elements not found for animation");
+    logger.warn("Intro text elements not found for animation");
     return;
   }
 

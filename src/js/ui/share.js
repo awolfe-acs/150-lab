@@ -2,6 +2,7 @@
 // Share button and share panel functionality
 
 import gsap from "gsap";
+import logger from "../utils/logger.js";
 
 // Initialize share button overlap detection with events panel
 export function initShareButtonOverlapDetection() {
@@ -10,7 +11,7 @@ export function initShareButtonOverlapDetection() {
   const timelineSection = document.querySelector("#acs-timeline");
 
   if (!shareButton) {
-    console.warn("Share button not found for overlap detection");
+    logger.warn("Share button not found for overlap detection");
     return;
   }
 
@@ -93,7 +94,7 @@ export function initSharePanel() {
   const shareButton = document.querySelector(".share-button-pinned");
 
   if (!shareButton) {
-    console.warn("Share button not found for share panel initialization");
+    logger.warn("Share button not found for share panel initialization");
     return;
   }
 
@@ -166,7 +167,7 @@ function initSharePanelBehavior(shareButton, sharePanel) {
       await navigator.clipboard.writeText(text);
       return true;
     } catch (err) {
-      console.error("Failed to copy text: ", err);
+      logger.error("Failed to copy text: ", err);
       return false;
     }
   };

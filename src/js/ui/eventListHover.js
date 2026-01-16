@@ -4,13 +4,14 @@
 import pacifichemEventImage from "../../../public/images/pacifichem-event1.jpg?url";
 import greenChemistryEventImage from "../../../public/images/green-chemistry-event2.jpg?url";
 import acsSpringMeetingEventImage from "../../../public/images/acs-spring-meeting-event3.jpg?url";
+import logger from "../utils/logger.js";
 
 // Initialize event list item hover interactions with pinned images
 export function initEventListItemHover() {
   const eventListItems = document.querySelectorAll(".event-list-item");
 
   if (!eventListItems.length) {
-    console.warn("No .event-list-item elements found");
+    logger.warn("No .event-list-item elements found");
     return;
   }
 
@@ -67,7 +68,7 @@ export function initEventListItemHover() {
     const imageUrl = eventImageMap[index];
 
     if (!imageUrl) {
-      console.warn(`No image mapped for event item ${index}`);
+      logger.warn(`No image mapped for event item ${index}`);
       return;
     }
 

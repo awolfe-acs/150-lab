@@ -1,15 +1,16 @@
 import * as THREE from 'three';
+import logger from '../utils/logger.js';
 
 export function initCoverOrb() {
   const canvas = document.querySelector('#timeline-cover-canvas');
   if (!canvas) {
-    console.warn('Cover orb canvas not found');
+    logger.warn('Cover orb canvas not found');
     return;
   }
   
   // Prevent double initialization
   if (window.coverOrbInitialized) {
-    console.warn('Cover orb already initialized, skipping duplicate call');
+    logger.warn('Cover orb already initialized, skipping duplicate call');
     return window.coverOrbControls;
   }
   

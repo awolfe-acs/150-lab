@@ -1,5 +1,6 @@
 import Globe from "globe.gl";
 import { createClient } from "@supabase/supabase-js";
+import logger from "./utils/logger.js";
 
 // Supabase configuration
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://uttarkvvcusvhawpgvvrc.supabase.co";
@@ -92,7 +93,7 @@ async function isOnLand(lat, lng) {
       return data.countryCode && data.countryCode.length > 0;
     }
   } catch (error) {
-    console.warn("Reverse geocoding failed, using fallback method:", error);
+    logger.warn("Reverse geocoding failed, using fallback method:", error);
   }
 
   // Method 2: Fallback - Basic geographic rules for major water bodies
@@ -347,7 +348,7 @@ function initGlobe() {
   const container = document.getElementById("interactive-globe");
 
   if (!container) {
-    console.error("Fatal: Globe container #interactive-globe not found in the DOM.");
+    logger.error("Fatal: Globe container #interactive-globe not found in the DOM.");
     return;
   }
 
@@ -359,11 +360,11 @@ function initGlobe() {
 
   // Check for container dimensions
   if (container.clientWidth === 0 || container.clientHeight === 0) {
-    console.error("Globe container has no dimensions. Aborting.");
+    logger.error("Globe container has no dimensions. Aborting.");
     return;
   }
 
-  console.log("Container dimensions:", container.clientWidth, "x", container.clientHeight);
+  logger.log("Container dimensions:", container.clientWidth, "x", container.clientHeight);
 
   try {
     // Check if Globe constructor is available
@@ -396,7 +397,7 @@ function initGlobe() {
         container.style.cursor = point ? "pointer" : "grab";
       });
 
-    console.log("Globe initialized successfully.");
+    logger.log("Globe initialized successfully.");
 
     // --- Setup was successful, add interactions and data ---
 
@@ -440,7 +441,7 @@ function initGlobe() {
     // Start pin animations
     animatePins();
   } catch (e) {
-    console.error("A critical error occurred during Globe GL initialization:", e);
+    logger.error("A critical error occurred during Globe GL initialization:", e);
   }
 }
 
@@ -454,7 +455,7 @@ async function submitPin(userId, lat, lng) {
       .eq("user_fingerprint", userId);
 
     if (checkError) {
-      console.error("Error checking existing pins:", checkError);
+      logger.error("Error checking existing pins:", checkError);
       if (checkError.code === "42P01") {
         createSnackbar("Database not set up. Please contact the administrator.", "error");
         return;
@@ -478,7 +479,7 @@ async function submitPin(userId, lat, lng) {
     });
 
     if (error) {
-      console.error("Error submitting pin:", error);
+      logger.error("Error submitting pin:", error);
       if (error.code === "42P01") {
         createSnackbar("Database not set up. Please contact the administrator.", "error");
         return;
@@ -526,7 +527,7 @@ async function submitPin(userId, lat, lng) {
 
     // Refresh pins will happen automatically via real-time subscription to get the actual database ID
   } catch (error) {
-    console.error("Error submitting pin:", error);
+    logger.error("Error submitting pin:", error);
     createSnackbar("Failed to place pin. Please try again.", "error");
   }
 }
@@ -537,11 +538,11 @@ async function fetchPins() {
     const { data, error } = await supabase.from("pins").select("*");
 
     if (error) {
-      console.error("Error fetching pins:", error);
+      logger.error("Error fetching pins:", error);
 
       // If table doesn't exist, show a helpful message
       if (error.code === "42P01") {
-        console.warn("Database table 'pins' doesn't exist. Please run the setup SQL first.");
+        logger.warn("Database table 'pins' doesn't exist. Please run the setup SQL first.");
         showDatabaseSetupMessage();
         return;
       }
@@ -563,7 +564,7 @@ async function fetchPins() {
       updatePinCount(data.length);
     }
   } catch (error) {
-    console.error("Error fetching pins:", error);
+    logger.error("Error fetching pins:", error);
   }
 }
 
@@ -631,7 +632,7 @@ async function clearPin() {
     const { error } = await supabase.from("pins").delete().eq("user_fingerprint", userId);
 
     if (error) {
-      console.error("Error clearing pin:", error);
+      logger.error("Error clearing pin:", error);
       createSnackbar("Failed to clear pin. Please try again.", "error");
       return;
     }
@@ -660,7 +661,7 @@ async function clearPin() {
 
     // Real-time subscription will sync any remaining state differences
   } catch (error) {
-    console.error("Error clearing pin:", error);
+    logger.error("Error clearing pin:", error);
     createSnackbar("Failed to clear pin. Please try again.", "error");
   }
 }
@@ -825,7 +826,7 @@ function createSnackbar(message, type = "info", duration = 4000) {
 function setupRealTime() {
   // Don't create multiple subscriptions
   if (realtimeChannel) {
-    console.log("Real-time already setup, skipping...");
+    logger.log("Real-time already setup, skipping...");
     return;
   }
 
@@ -839,7 +840,7 @@ function setupRealTime() {
         table: "pins",
       },
       (payload) => {
-        console.log("Real-time update:", payload);
+        logger.log("Real-time update:", payload);
         fetchPins(); // Refresh pins when changes occur
       }
     )
@@ -851,17 +852,17 @@ let globeInitialized = false;
 
 // Initialize when the window has fully loaded and is ready to paint
 window.addEventListener("load", () => {
-  console.log("Window loaded, checking for globe container...");
+  logger.log("Window loaded, checking for globe container...");
   const globeContainer = document.getElementById("interactive-globe");
   if (globeContainer && !globeInitialized) {
-    console.log("Globe container found, initializing globe...");
+    logger.log("Globe container found, initializing globe...");
     globeInitialized = true;
     // Use a short timeout to ensure other scripts have finished manipulating the DOM
     setTimeout(initGlobe, 100);
   } else if (globeInitialized) {
-    console.log("Globe already initialized, skipping...");
+    logger.log("Globe already initialized, skipping...");
   } else {
-    console.error("Globe container not found on window load");
+    logger.error("Globe container not found on window load");
   }
 });
 

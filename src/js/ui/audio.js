@@ -4,6 +4,7 @@
 import uiClickAudioUrl from "../../../public/audio/ui-click.mp3?url";
 import backgroundAudioUrl from "../../../public/audio/chemistry-3-final.mp3?url";
 import gsap from "gsap";
+import logger from "../utils/logger.js";
 
 // Internal module state
 let backgroundAudioInstance = null;
@@ -96,19 +97,19 @@ const playUIClickSound = () => {
     const clickSound = uiClickSound.cloneNode();
     clickSound.volume = 0.35;
     clickSound.play().catch((error) => {
-      console.warn("UI click sound play was prevented:", error);
+      logger.warn("UI click sound play was prevented:", error);
     });
   } catch (error) {
-    console.error("Error playing UI click sound:", error);
+    logger.error("Error playing UI click sound:", error);
   }
 };
 
 // Robust function to resume background audio
 function resumeBackgroundAudio() {
-  console.log('[audio.js] resumeBackgroundAudio called');
+  logger.log('[audio.js] resumeBackgroundAudio called');
   
   if (!backgroundAudioInstance || audioMuted) {
-    console.log('[audio.js] Cannot resume: instance missing or muted');
+    logger.log('[audio.js] Cannot resume: instance missing or muted');
     return;
   }
   
@@ -119,11 +120,11 @@ function resumeBackgroundAudio() {
     try {
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
       if (audioContext.state === 'suspended') {
-        console.log('[audio.js] Resuming suspended audio context');
+        logger.log('[audio.js] Resuming suspended audio context');
         audioContext.resume();
       }
     } catch (e) {
-      console.warn('[audio.js] Error accessing AudioContext:', e);
+      logger.warn('[audio.js] Error accessing AudioContext:', e);
     }
   }
   
@@ -139,29 +140,29 @@ function resumeBackgroundAudio() {
   if (playPromise !== undefined) {
     playPromise
       .then(() => {
-        console.log('[audio.js] Audio play confirmed, fading in to 0.22');
+        logger.log('[audio.js] Audio play confirmed, fading in to 0.22');
         fadeBackgroundAudio(0.22, 1000);
       })
       .catch((error) => {
-        console.warn('[audio.js] Audio play blocked:', error);
+        logger.warn('[audio.js] Audio play blocked:', error);
         
         // Setup one-time click listener for fallback
         const resumeOnClick = () => {
-          console.log('[audio.js] User clicked, retrying audio resume');
+          logger.log('[audio.js] User clicked, retrying audio resume');
           if (backgroundAudioInstance && !audioMuted) {
             backgroundAudioInstance.play()
               .then(() => {
                 fadeBackgroundAudio(0.22, 1000);
                 document.removeEventListener('click', resumeOnClick);
               })
-              .catch(e => console.error('[audio.js] Retry failed:', e));
+              .catch(e => logger.error('[audio.js] Retry failed:', e));
           }
         };
         document.addEventListener('click', resumeOnClick, { once: true });
       });
   } else {
     // If play() didn't return a promise (very old browsers), just fade in
-    console.log('[audio.js] Play promise undefined, fading in');
+    logger.log('[audio.js] Play promise undefined, fading in');
     fadeBackgroundAudio(0.22, 1000);
   }
 }
@@ -239,7 +240,7 @@ function setupYouTubeIframeClickHandler(iframe) {
     if (!src.includes('enablejsapi=1')) {
       const separator = src.includes('?') ? '&' : '?';
       const newSrc = src + separator + 'enablejsapi=1';
-      console.log('[audio.js] Adding enablejsapi to iframe:', iframe.id, '- will need to wait for reload');
+      logger.log('[audio.js] Adding enablejsapi to iframe:', iframe.id, '- will need to wait for reload');
       iframe.src = newSrc;
       // Continue with setup - the iframe will reload but our handlers will still work
     }
@@ -252,7 +253,7 @@ function setupYouTubeIframeClickHandler(iframe) {
   // If there's a custom overlay, skip Player creation - video.js will handle it
   // This prevents creating duplicate Player instances for the same iframe
   if (existingCustomOverlay) {
-    console.log('[audio.js] Custom video overlay detected, skipping Player creation for:', iframe.id, '(video.js will manage this)');
+    logger.log('[audio.js] Custom video overlay detected, skipping Player creation for:', iframe.id, '(video.js will manage this)');
     return;
   }
   
@@ -266,20 +267,20 @@ function setupYouTubeIframeClickHandler(iframe) {
     // Small delay to ensure iframe is fully loaded
     setTimeout(() => {
       try {
-        console.log('[audio.js] Setting up YouTube Player API for iframe:', iframe.id);
+        logger.log('[audio.js] Setting up YouTube Player API for iframe:', iframe.id);
         // Initialize YouTube Player to track state changes
         playerInstance = new window.YT.Player(iframe.id, {
         events: {
           onReady: (event) => {
-            console.log('[audio.js] YouTube Player ready for iframe:', iframe.id);
+            logger.log('[audio.js] YouTube Player ready for iframe:', iframe.id);
             playerReady = true;
           },
           onStateChange: (event) => {
-            console.log('YouTube Player state changed:', event.data, 'for iframe:', iframe.id);
+            logger.log('YouTube Player state changed:', event.data, 'for iframe:', iframe.id);
             // YouTube Player State: 1 = playing, 0 = ended, 2 = paused
             if (event.data === 1) {
               // Video is playing - cancel any fades, then fade out and pause background audio
-              console.log('Video playing, pausing background audio');
+              logger.log('Video playing, pausing background audio');
               cancelActiveFade();
               if (backgroundAudioInstance) {
                 // Always attempt to duck, regardless of current state
@@ -287,26 +288,18 @@ function setupYouTubeIframeClickHandler(iframe) {
                 fadeBackgroundAudio(0.001, 1000, () => {
                   // Just duck the audio (volume 0.001), don't pause it to keep the session active
                   // We use 0.001 instead of 0 to prevent browsers from auto-suspending the context
-                  console.log('Background audio ducked (vol 0.001)');
+                  logger.log('Background audio ducked (vol 0.001)');
                 });
               }
             } else if (event.data === 0 || event.data === 2) {
               // Video ended (0) or paused (2) - resume background audio
-              console.log('[audio.js] Video paused/ended, calling resumeBackgroundAudio');
+              logger.log('[audio.js] Video paused/ended, calling resumeBackgroundAudio');
               resumeBackgroundAudio();
             }
           }
         }
       });
       
-      // Expose state checker for global audio management
-      window.isSecondVideoPlaying = () => {
-        try {
-          return playerReady && playerInstance && playerInstance.getPlayerState && playerInstance.getPlayerState() === 1;
-        } catch (e) {
-          return false;
-        }
-      };
         
         // Setup IntersectionObserver to pause video when scrolled out of view
         const videoContainer = iframe.closest('.preview-video-wrapper') || iframe.parentElement;
@@ -315,7 +308,7 @@ function setupYouTubeIframeClickHandler(iframe) {
             entries.forEach((entry) => {
               if (!entry.isIntersecting) {
                 // Video scrolled out of view
-                console.log('[audio.js] Video', iframe.id, 'scrolled out of view, attempting to pause');
+                logger.log('[audio.js] Video', iframe.id, 'scrolled out of view, attempting to pause');
                 
                 // Track if video was playing before we pause it
                 let wasPlaying = false;
@@ -327,23 +320,22 @@ function setupYouTubeIframeClickHandler(iframe) {
                     if (playerState === 1) {
                       wasPlaying = true;
                       playerInstance.pauseVideo();
-                      console.log('[audio.js] Video paused successfully');
+                      logger.log('[audio.js] Video paused successfully');
                     }
                   }
                 } catch (error) {
-                  console.warn('[audio.js] Could not pause video:', error);
+                  logger.warn('[audio.js] Could not pause video:', error);
                 }
                 
                 // FALLBACK: If video has been interacted with (overlay was clicked), resume background audio
                 // This ensures audio resumes even if state change events don't fire
                 if (videoStarted || wasPlaying) {
-                  console.log('[audio.js] Video left viewport after being played, resuming background audio as fallback');
+                  logger.log('[audio.js] Video left viewport after being played, resuming background audio as fallback');
                   setTimeout(() => {
-                    // Only resume if no other videos are playing
+                    // Only resume if main video is not playing
                     const mainPlaying = window.isMainVideoPlaying ? window.isMainVideoPlaying() : false;
-                    const secondPlaying = window.isSecondVideoPlaying ? window.isSecondVideoPlaying() : false;
                     
-                    if (!mainPlaying && !secondPlaying && !audioMuted) {
+                    if (!mainPlaying && !audioMuted) {
                       resumeBackgroundAudio();
                     }
                   }, 300); // Small delay to ensure pause event fires first
@@ -355,16 +347,16 @@ function setupYouTubeIframeClickHandler(iframe) {
           });
           
           observer.observe(videoContainer);
-          console.log('[audio.js] IntersectionObserver set up for iframe:', iframe.id);
+          logger.log('[audio.js] IntersectionObserver set up for iframe:', iframe.id);
         }
       } catch (error) {
-        console.error("Could not initialize YouTube Player API for iframe:", iframe.id, error);
+        logger.error("Could not initialize YouTube Player API for iframe:", iframe.id, error);
         // Even if Player setup fails, we should still be able to use postMessage
         playerReady = false;
       }
     }, 200); // Increased delay to ensure iframe is fully ready
   }).catch((error) => {
-    console.error("Could not load YouTube API:", error);
+    logger.error("Could not load YouTube API:", error);
   });
   
   // Create an overlay div to detect clicks (iframes don't bubble click events)
@@ -412,52 +404,52 @@ function setupYouTubeIframeClickHandler(iframe) {
       if (backgroundAudioInstance && !backgroundAudioInstance.paused) {
         fadeBackgroundAudio(0.001, 1000, () => {
           // Just duck the audio (volume 0.001), don't pause it
-          console.log('[audio.js] Background audio ducked (vol 0.001) via overlay click');
+          logger.log('[audio.js] Background audio ducked (vol 0.001) via overlay click');
         });
       }
     }, 100);
     
     // Play the video using YouTube Player API
-    console.log('[audio.js] Overlay clicked for iframe:', iframe.id, '| Player ready:', playerReady, '| Player exists:', !!playerInstance);
+    logger.log('[audio.js] Overlay clicked for iframe:', iframe.id, '| Player ready:', playerReady, '| Player exists:', !!playerInstance);
     
     const playVideo = () => {
       // Strategy 1: If player is ready and available, use it directly
       if (playerReady && playerInstance && typeof playerInstance.playVideo === 'function') {
-        console.log('[audio.js] Using ready Player API to play video');
+        logger.log('[audio.js] Using ready Player API to play video');
         try {
           playerInstance.playVideo();
           return; // Success, exit early
         } catch (error) {
-          console.warn('[audio.js] Player API failed, trying fallback:', error);
+          logger.warn('[audio.js] Player API failed, trying fallback:', error);
         }
       }
       
       // Strategy 2: Try postMessage API (works even if Player not ready)
-      console.log('[audio.js] Using postMessage API as primary method');
+      logger.log('[audio.js] Using postMessage API as primary method');
       try {
         iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
       } catch (error) {
-        console.warn('[audio.js] postMessage failed:', error);
+        logger.warn('[audio.js] postMessage failed:', error);
       }
       
       // Strategy 3: If Player exists but might not be ready, try it anyway
       if (playerInstance && typeof playerInstance.playVideo === 'function') {
-        console.log('[audio.js] Attempting Player API as backup');
+        logger.log('[audio.js] Attempting Player API as backup');
         try {
           playerInstance.playVideo();
         } catch (error) {
-          console.warn('[audio.js] Backup Player API call failed:', error);
+          logger.warn('[audio.js] Backup Player API call failed:', error);
         }
       }
       
       // Strategy 4: If Player doesn't exist yet but API is loaded, create it now
       if (!playerInstance && window.YT && window.YT.Player) {
-        console.log('[audio.js] Player instance missing, creating new Player');
+        logger.log('[audio.js] Player instance missing, creating new Player');
         try {
           playerInstance = new window.YT.Player(iframe.id, {
             events: {
               onReady: (event) => {
-                console.log('[audio.js] New player ready, playing immediately');
+                logger.log('[audio.js] New player ready, playing immediately');
                 playerReady = true;
                 event.target.playVideo();
               },
@@ -467,7 +459,7 @@ function setupYouTubeIframeClickHandler(iframe) {
                   cancelActiveFade();
                   if (backgroundAudioInstance && !backgroundAudioInstance.paused) {
                     fadeBackgroundAudio(0.001, 1000, () => {
-                      console.log('Background audio ducked (vol 0.001)');
+                      logger.log('Background audio ducked (vol 0.001)');
                     });
                   }
                 } else if (event.data === 0 || event.data === 2) {
@@ -477,28 +469,28 @@ function setupYouTubeIframeClickHandler(iframe) {
             }
           });
         } catch (e) {
-          console.error('[audio.js] Failed to create new player:', e);
+          logger.error('[audio.js] Failed to create new player:', e);
         }
       }
       
       // Strategy 5: Wait for player to become ready (last resort)
       if (!playerReady) {
-        console.log('[audio.js] Player not ready, setting up retry mechanism');
+        logger.log('[audio.js] Player not ready, setting up retry mechanism');
         let checkCount = 0;
         const checkInterval = setInterval(() => {
           checkCount++;
           if (playerReady && playerInstance && typeof playerInstance.playVideo === 'function') {
             clearInterval(checkInterval);
-            console.log('[audio.js] Player became ready after', checkCount * 100, 'ms, playing video');
+            logger.log('[audio.js] Player became ready after', checkCount * 100, 'ms, playing video');
             try {
               playerInstance.playVideo();
             } catch (error) {
-              console.warn('[audio.js] Delayed play attempt failed:', error);
+              logger.warn('[audio.js] Delayed play attempt failed:', error);
             }
           }
           if (checkCount > 30) {
             clearInterval(checkInterval); // Stop after 3 seconds
-            console.warn('[audio.js] Player never became ready after 3 seconds');
+            logger.warn('[audio.js] Player never became ready after 3 seconds');
           }
         }, 100);
       }
@@ -537,7 +529,7 @@ function setupVideoElementClickHandler(videoElement) {
     // Resume background audio if not muted and audio was initialized
     if (backgroundAudioInstance && audioInitialized && !audioMuted && videoElement.ended) {
       backgroundAudioInstance.play().catch((error) => {
-        console.warn("Could not resume background audio:", error);
+        logger.warn("Could not resume background audio:", error);
       });
     }
   });
@@ -546,7 +538,7 @@ function setupVideoElementClickHandler(videoElement) {
     // Resume background audio when video ends
     if (backgroundAudioInstance && audioInitialized && !audioMuted) {
       backgroundAudioInstance.play().catch((error) => {
-        console.warn("Could not resume background audio:", error);
+        logger.warn("Could not resume background audio:", error);
       });
     }
   });
@@ -616,7 +608,7 @@ function setupAudioObserver() {
         // If nothing is playing, ensure background audio is resumed
         // Only if it's currently ducked (playing but volume near 0)
         if (backgroundAudioInstance && !backgroundAudioInstance.paused && backgroundAudioInstance.volume < 0.05 && !audioMuted) {
-          console.log('[audio.js] Scroll fallback: No videos playing, resuming ducked audio');
+          logger.log('[audio.js] Scroll fallback: No videos playing, resuming ducked audio');
           fadeBackgroundAudio(0.22, 1000);
         }
       }
@@ -635,7 +627,7 @@ function playBackgroundAudioWhenReady(fromEnterButton = false) {
 
   // Stop retrying after max attempts
   if (audioRetryCount >= maxAudioRetries) {
-    console.warn(`Exceeded maximum audio retry attempts (${maxAudioRetries}). Stopping retries.`);
+    logger.warn(`Exceeded maximum audio retry attempts (${maxAudioRetries}). Stopping retries.`);
     return;
   }
 
@@ -651,7 +643,7 @@ function playBackgroundAudioWhenReady(fromEnterButton = false) {
         source.connect(audioContext.destination);
         source.start(0);
       } catch (e) {
-        console.warn("Could not create audio context:", e);
+        logger.warn("Could not create audio context:", e);
       }
     }
 
@@ -673,7 +665,7 @@ function playBackgroundAudioWhenReady(fromEnterButton = false) {
         window.audioRetryCount = 0;
       })
       .catch((error) => {
-        console.error("Audio play was prevented:", error);
+        logger.error("Audio play was prevented:", error);
 
         // Some browsers require user gesture to play audio
         // We'll retry playing when user clicks next time
@@ -689,7 +681,7 @@ function playBackgroundAudioWhenReady(fromEnterButton = false) {
         }
       });
   } catch (error) {
-    console.error("Error playing audio:", error);
+    logger.error("Error playing audio:", error);
     audioInitialized = false;
 
     // Retry if it was from the enter button
@@ -716,7 +708,7 @@ const handleVisibilityChange = () => {
     if (backgroundAudioInstance && wasPlayingBeforeHidden && audioInitialized && !audioMuted) {
       wasPlayingBeforeHidden = false;
       backgroundAudioInstance.play().catch((error) => {
-        console.warn("Could not resume background audio:", error);
+        logger.warn("Could not resume background audio:", error);
         // If we can't resume, try to reinitialize
         audioInitialized = false;
         if (enterButtonClicked) {
@@ -746,7 +738,7 @@ function setupVisibilityListeners() {
     if (backgroundAudioInstance && wasPlayingBeforeHidden && audioInitialized && !audioMuted) {
       wasPlayingBeforeHidden = false;
       backgroundAudioInstance.play().catch((error) => {
-        console.warn("Could not resume background audio on focus:", error);
+        logger.warn("Could not resume background audio on focus:", error);
         // If we can't resume, try to reinitialize
         audioInitialized = false;
         if (enterButtonClicked) {
@@ -781,7 +773,7 @@ export const playBackgroundAudio = (fromEnterButton = false) => {
 
   // Stop retrying after max attempts (prevents infinite loops)
   if (audioRetryCount >= maxAudioRetries) {
-    console.warn(`Exceeded maximum audio retry attempts (${maxAudioRetries}). Stopping retries.`);
+    logger.warn(`Exceeded maximum audio retry attempts (${maxAudioRetries}). Stopping retries.`);
     // Clear any audio retry timers
     if (audioRetryTimer) {
       clearInterval(audioRetryTimer);
@@ -804,7 +796,7 @@ export const playBackgroundAudio = (fromEnterButton = false) => {
           // Try to force load again
           backgroundAudioInstance.load();
         } catch (e) {
-          console.warn("Error reloading background audio:", e);
+          logger.warn("Error reloading background audio:", e);
         }
       }
     }, 2000); // 2-second delay
@@ -823,7 +815,7 @@ export const playBackgroundAudio = (fromEnterButton = false) => {
         // Try to force load again
         backgroundAudioInstance.load();
       } catch (e) {
-        console.warn("Error reloading background audio:", e);
+        logger.warn("Error reloading background audio:", e);
       }
     }
   }
@@ -846,13 +838,13 @@ export function preloadBackgroundAudio() {
   });
 
   backgroundAudio.addEventListener("error", (e) => {
-    console.error("Audio loading error:", e);
-    console.error("Audio src:", backgroundAudio.src);
+    logger.error("Audio loading error:", e);
+    logger.error("Audio src:", backgroundAudio.src);
 
     // In development mode, provide specific guidance
     const isDevServer = window.location.hostname === "localhost" || window.location.hostname.includes("127.0.0.1");
     if (isDevServer) {
-      console.warn("Audio failed to load in dev mode. Ensure audio files are in 150-lab/public/audio/ directory.");
+      logger.warn("Audio failed to load in dev mode. Ensure audio files are in 150-lab/public/audio/ directory.");
     }
   });
 
@@ -868,7 +860,7 @@ export function preloadBackgroundAudio() {
   try {
     backgroundAudio.load();
   } catch (e) {
-    console.error("Error loading background audio:", e);
+    logger.error("Error loading background audio:", e);
   }
 
   // Store reference for later use
@@ -1049,10 +1041,10 @@ export function setupSoundToggle() {
           const clickSound = uiClickSound.cloneNode();
           clickSound.volume = 0.38;
           clickSound.play().catch((error) => {
-            console.warn("UI click sound play was prevented:", error);
+            logger.warn("UI click sound play was prevented:", error);
           });
         } catch (error) {
-          console.error("Error playing UI click sound:", error);
+          logger.error("Error playing UI click sound:", error);
         }
       } else {
         // If we weren't muted, use the normal click sound function
@@ -1103,7 +1095,7 @@ export function setupSoundToggle() {
                     playBackgroundAudio(true);
                   } else {
                     // Stop trying after max retries
-                    console.warn(`Exceeded maximum audio retry attempts (${maxAudioRetries}). Stopping retries.`);
+                    logger.warn(`Exceeded maximum audio retry attempts (${maxAudioRetries}). Stopping retries.`);
                     clearInterval(audioRetryTimer);
                     audioRetryTimer = null;
                   }
@@ -1117,7 +1109,7 @@ export function setupSoundToggle() {
             // If audio was paused, restart it
             if (backgroundAudioInstance.paused) {
               backgroundAudioInstance.play().catch((error) => {
-                console.warn("Audio play was prevented:", error);
+                logger.warn("Audio play was prevented:", error);
 
                 // If play failed, mark as not initialized so it can be retried
                 audioInitialized = false;

@@ -3,6 +3,24 @@ import ScrollTrigger from 'gsap/ScrollTrigger';
 import SplitType from 'split-type';
 import { initCoverOrb } from '../threejs/coverOrb.js';
 import { initTimelineShader } from './timelineShader.js';
+import performanceDetector from '../utils/performanceDetector.js';
+import logger from '../utils/logger.js';
+
+// GSAP Ticker Optimization for smoother animations when competing with WebGL
+// Disable lag smoothing - prevents "catch up" jitter when frames are dropped
+gsap.ticker.lagSmoothing(0);
+
+// Listen for adaptive FPS cap and apply to GSAP ticker
+// This stabilizes animation frame timing based on detected refresh rate
+performanceDetector.onFpsCapChange((info) => {
+  logger.log(`[Timeline] Applying GSAP ticker fps cap: ${info.cap}fps (${info.reason})`);
+  gsap.ticker.fps(info.cap);
+});
+
+// Throttle state for expensive safety checks (getBoundingClientRect, getComputedStyle)
+// These cause layout thrashing if called every frame
+let lastSafetyCheckTime = 0;
+const SAFETY_CHECK_INTERVAL = 150; // Only run expensive checks every 150ms
 
 // Helper function to interpolate between two hex colors
 function interpolateColor(color1, color2, progress) {
@@ -56,7 +74,7 @@ export function initTimelineAnimation() {
   
   // Check if required elements exist
   if (!timeline || !timelineWindowStart || !timelineWindowBg || !getInvolvedMessage) {
-    console.warn('Timeline: Required elements not found. Skipping timeline initialization.');
+    logger.warn('Timeline: Required elements not found. Skipping timeline initialization.');
     return;
   }
   
@@ -82,7 +100,7 @@ export function initTimelineAnimation() {
   const timelineTrack = timeline.querySelector('.timeline-track');
   
   if (!timelineContainer || !timelineTrack) {
-    console.warn('Timeline: Container or track not found. Skipping timeline initialization.');
+    logger.warn('Timeline: Container or track not found. Skipping timeline initialization.');
     return;
   }
 
@@ -435,6 +453,7 @@ export function initTimelineAnimation() {
   let tl;
 
   // Helper to animate event content (year, description, optional image) as it enters
+  // Simplified: Only opacity fade, no different translateX rates for smoother performance
   const animateEventContent = (eventNode, label, startOffset = 0) => {
     if (!eventNode || !tl) return;
     const pieces = [];
@@ -448,36 +467,19 @@ export function initTimelineAnimation() {
 
     if (!pieces.length) return;
 
-    const horizontal = !isMobile();
-    const xOffset = (el) => {
-      if (!horizontal) return 0;
-      if (el === yearEl) return 80;          // title extra 80px
-      if (el === descEl) return 160;         // description extra 160px
-      if (el === imgEl) return 240;          // image extra 240px
-      return 160; // fallback
-    };
-    const yOffset = (el) => {
-      if (horizontal) return 0;
-      if (el === yearEl) return 20;
-      if (el === descEl) return 32;
-      if (el === imgEl) return 48;
-      return 24;
-    };
-
+    // Simple opacity fade only - no X/Y translation for year/description
+    // This reduces competing transform animations and improves smoothness
     tl.fromTo(
       pieces,
       {
         opacity: 0,
-        x: (i, el) => xOffset(el),
-        y: (i, el) => yOffset(el),
       },
       {
         opacity: 1,
-        x: 0,
-        y: 0,
         duration: Math.max(0.25, moveDuration * 0.65),
         ease: 'power2.out',
         stagger: 0.08,
+        force3D: true, // GPU acceleration for smooth 60fps
       },
       label ? `${label}+=${startOffset}` : startOffset
     );
@@ -512,16 +514,18 @@ export function initTimelineAnimation() {
       gsap.set(currentYearSplit.chars, {
         opacity: 0,
         y: 20,
-        display: 'inline-block'
+        display: 'inline-block',
+        force3D: true
       });
       
       gsap.to(currentYearSplit.chars, {
         opacity: 1,
         y: 0,
-        duration: 0.27, // Reduced from 0.4 (-33%)
-        stagger: 0.02, // Reduced from 0.03 (-33%)
+        duration: 0.27,
+        stagger: 0.02,
         ease: 'power2.out',
         overwrite: true,
+        force3D: true, // GPU acceleration
         onComplete: () => {
           // Reset flag when animation completes
           isAnimatingYear = false;
@@ -553,9 +557,10 @@ export function initTimelineAnimation() {
       gsap.to(currentYearSplit.chars, {
         opacity: 0,
         y: -20,
-        duration: 0.17, // Reduced from 0.25 (-33%)
-        stagger: 0.01, // Reduced from 0.015 (-33%)
+        duration: 0.17,
+        stagger: 0.01,
         ease: 'power2.in',
+        force3D: true, // GPU acceleration
         onComplete: () => {
           // Clean up and show new year after fade out
           if (currentYearSplit && typeof currentYearSplit.revert === 'function') {
@@ -584,6 +589,7 @@ export function initTimelineAnimation() {
       opacity: 0,
       duration: 0.3,
       ease: 'power2.out',
+      force3D: true, // GPU acceleration
       onComplete: () => {
         // Clean up split and reset
         if (currentYearSplit && typeof currentYearSplit.revert === 'function') {
@@ -598,11 +604,11 @@ export function initTimelineAnimation() {
   
   // Function to re-enter timeline after dismissal
   function reEnterTimeline() {
-    console.log('[Re-entry] Starting timeline re-entry');
+    logger.log('[Re-entry] Starting timeline re-entry');
     
     // Set re-entering flag to prevent scroll-based positioning logic from interfering
     isReEntering = true;
-    console.log('[Re-entry] Set isReEntering flag to TRUE - scroll positioning disabled');
+    logger.log('[Re-entry] Set isReEntering flag to TRUE - scroll positioning disabled');
     
     // Reset dismissed flags (both local and global)
     isTimelineDismissed = false;
@@ -616,7 +622,7 @@ export function initTimelineAnimation() {
     // IMPORTANT: Make sure timeline is still in collapsed state while we measure
     // This ensures #timeline-window-start is in its correct position
     if (!timeline.classList.contains('closed')) {
-      console.warn('[Re-entry] Timeline was not collapsed, should have been');
+      logger.warn('[Re-entry] Timeline was not collapsed, should have been');
     }
     
     // STEP 1: Setup background to match #timeline-window-start position FIRST
@@ -655,7 +661,7 @@ export function initTimelineAnimation() {
     timelineWindowBg.style.borderRadius = '4px';
     timelineWindowBg.style.opacity = '0.5';
     
-    console.log('[Re-entry] Background positioned to match timeline-window-start:', {
+    logger.log('[Re-entry] Background positioned to match timeline-window-start:', {
       top: adjustedTop,
       left: adjustedLeft,
       width: adjustedWidth,
@@ -665,11 +671,11 @@ export function initTimelineAnimation() {
     
     // STEP 2: Animate background expansion (BEFORE restoring timeline content)
     function expandBackground() {
-      console.log('[Re-entry] Starting background expansion animation');
+      logger.log('[Re-entry] Starting background expansion animation');
       
       // Initialize shader background opacity to 0 (will fade in at the end)
       timelineWindowBg.style.setProperty('--decal-opacity', '0');
-      console.log('[Re-entry] Set shader background (--decal-opacity) to 0');
+      logger.log('[Re-entry] Set shader background (--decal-opacity) to 0');
       
       // Hide the pseudo-element now that we're taking over
       const styleEl = document.getElementById('timeline-window-start-bg-style');
@@ -695,7 +701,7 @@ export function initTimelineAnimation() {
       // Create timeline for expansion animation (matching original entry)
       const expansionTl = gsap.timeline({
         onComplete: () => {
-          console.log('[Re-entry] Expansion complete, now locking background');
+          logger.log('[Re-entry] Expansion complete, now locking background');
           
           // CRITICAL: Lock background at fullscreen IMMEDIATELY after expansion
           // Do this BEFORE restoring content or calling ScrollTrigger.refresh()
@@ -714,7 +720,7 @@ export function initTimelineAnimation() {
           
           // SET FULLSCREEN LOCK FLAG - prevents ANY position/size changes
           isBgLockedFullscreen = true;
-          console.log('[Re-entry] Background locked at fullscreen - isBgLockedFullscreen = TRUE');
+          logger.log('[Re-entry] Background locked at fullscreen - isBgLockedFullscreen = TRUE');
           
           // Start aggressive protection loop - continuously force fullscreen
           function lockBackgroundLoop() {
@@ -736,7 +742,7 @@ export function initTimelineAnimation() {
             );
             
             if (styleNeedsUpdate || positionMoved) {
-              console.warn('[Re-entry] AGGRESSIVE LOCK: Background moved! Inline styles:', {
+              logger.warn('[Re-entry] AGGRESSIVE LOCK: Background moved! Inline styles:', {
                 top: timelineWindowBg.style.top,
                 left: timelineWindowBg.style.left,
                 width: timelineWindowBg.style.width,
@@ -766,14 +772,14 @@ export function initTimelineAnimation() {
             requestAnimationFrame(lockBackgroundLoop);
           }
           lockBackgroundLoop(); // Start the loop
-          console.log('[Re-entry] Started aggressive fullscreen protection loop');
+          logger.log('[Re-entry] Started aggressive fullscreen protection loop');
           
           // CRITICAL: Add .in-timeline class NOW to activate all protection logic
           // This ensures onUpdate/onRefresh callbacks won't touch the background
           document.body.classList.add('in-timeline');
-          console.log('[Re-entry] Added .in-timeline class for protection');
+          logger.log('[Re-entry] Added .in-timeline class for protection');
           
-          console.log('[Re-entry] Background locked at fullscreen, now restoring timeline content');
+          logger.log('[Re-entry] Background locked at fullscreen, now restoring timeline content');
           
           // DON'T clear isReEntering yet - keep it active until scrolling is complete
           // This prevents ScrollTrigger.refresh() from interfering with background size
@@ -794,7 +800,7 @@ export function initTimelineAnimation() {
         duration: 0.6,
         ease: 'power2.inOut',
         onStart: () => {
-          console.log('[Re-entry] Background expansion started');
+          logger.log('[Re-entry] Background expansion started');
           // Set background color once at start (not animated)
           timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
           // Ensure element is visible at start
@@ -811,11 +817,11 @@ export function initTimelineAnimation() {
           timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
           
           if (progress === 0 || progress === 0.5 || progress === 1) {
-            console.log(`[Re-entry] Expansion progress: ${(progress * 100).toFixed(0)}%, opacity: ${timelineWindowBg.style.opacity}, size: ${timelineWindowBg.style.width} x ${timelineWindowBg.style.height}`);
+            logger.log(`[Re-entry] Expansion progress: ${(progress * 100).toFixed(0)}%, opacity: ${timelineWindowBg.style.opacity}, size: ${timelineWindowBg.style.width} x ${timelineWindowBg.style.height}`);
           }
         },
         onComplete: () => {
-          console.log('[Re-entry] Background expansion animation complete');
+          logger.log('[Re-entry] Background expansion animation complete');
           timelineWindowBg.style.opacity = '1';
           timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
         }
@@ -854,13 +860,13 @@ export function initTimelineAnimation() {
       htmlElement.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
       
       // Start the animation
-      console.log('[Re-entry] Starting expansion timeline, duration:', expansionTl.duration());
+      logger.log('[Re-entry] Starting expansion timeline, duration:', expansionTl.duration());
       expansionTl.play();
     }
     
     // STEP 3: Restore timeline content after expansion
     function restoreTimelineContent() {
-      console.log('[Re-entry] Restoring timeline content and structure');
+      logger.log('[Re-entry] Restoring timeline content and structure');
       
       // Ensure the timeline element is visible and ready
       timeline.style.pointerEvents = '';
@@ -908,7 +914,7 @@ export function initTimelineAnimation() {
         
         // Wait one more frame to ensure refresh completes
         requestAnimationFrame(() => {
-          console.log('[Re-entry] Content restored, now scrolling to timeline');
+          logger.log('[Re-entry] Content restored, now scrolling to timeline');
           
           // STEP 4: After content is restored, scroll to timeline position
           scrollToTimeline();
@@ -931,7 +937,7 @@ export function initTimelineAnimation() {
         targetScrollPos = timelineRect.top + window.scrollY;
       }
       
-      console.log('[Re-entry] Scrolling to timeline position:', targetScrollPos);
+      logger.log('[Re-entry] Scrolling to timeline position:', targetScrollPos);
       
       // Add .in-timeline class to body
       document.body.classList.add('in-timeline');
@@ -965,7 +971,7 @@ export function initTimelineAnimation() {
           duration: 0.8,
           easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
           onComplete: () => {
-            console.log('[Re-entry] Scroll complete, fading in timeline');
+            logger.log('[Re-entry] Scroll complete, fading in timeline');
             
             // LOCK background at fullscreen BEFORE clearing flag
             // This ensures it stays fullscreen when onUpdate callbacks resume
@@ -979,12 +985,12 @@ export function initTimelineAnimation() {
             timelineWindowBg.style.display = 'block';
             timelineWindowBg.style.borderRadius = '0px';
             timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
-            console.log('[Re-entry] Locked background at fullscreen state');
+            logger.log('[Re-entry] Locked background at fullscreen state');
             
             // NOW clear re-entering flags - entire re-entry sequence is complete
             isReEntering = false;
             isBgLockedFullscreen = false;
-            console.log('[Re-entry] Cleared isReEntering and isBgLockedFullscreen flags to FALSE - scroll positioning re-enabled');
+            logger.log('[Re-entry] Cleared isReEntering and isBgLockedFullscreen flags to FALSE - scroll positioning re-enabled');
             
             // Lower z-index now that we're scrolled into timeline
             timelineWindowBg.style.zIndex = '5';
@@ -1003,7 +1009,7 @@ export function initTimelineAnimation() {
                 timelineWindowBg.style.setProperty('--decal-opacity', opacityValue);
               }
             });
-            console.log('[Re-entry] Fading in shader background (--decal-opacity)');
+            logger.log('[Re-entry] Fading in shader background (--decal-opacity)');
           }
         });
       } else {
@@ -1014,7 +1020,7 @@ export function initTimelineAnimation() {
         
         // Fallback: fade in after delay
         setTimeout(() => {
-          console.log('[Re-entry] Scroll complete, fading in timeline');
+          logger.log('[Re-entry] Scroll complete, fading in timeline');
           
           // LOCK background at fullscreen BEFORE clearing flag
           // This ensures it stays fullscreen when onUpdate callbacks resume
@@ -1028,12 +1034,12 @@ export function initTimelineAnimation() {
           timelineWindowBg.style.display = 'block';
           timelineWindowBg.style.borderRadius = '0px';
           timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
-          console.log('[Re-entry] Locked background at fullscreen state (fallback)');
+          logger.log('[Re-entry] Locked background at fullscreen state (fallback)');
           
           // NOW clear re-entering flags - entire re-entry sequence is complete
           isReEntering = false;
           isBgLockedFullscreen = false;
-          console.log('[Re-entry] Cleared isReEntering and isBgLockedFullscreen flags to FALSE - scroll positioning re-enabled');
+          logger.log('[Re-entry] Cleared isReEntering and isBgLockedFullscreen flags to FALSE - scroll positioning re-enabled');
           
           // Lower z-index now that we're scrolled into timeline
           timelineWindowBg.style.zIndex = '5';
@@ -1052,7 +1058,7 @@ export function initTimelineAnimation() {
               timelineWindowBg.style.setProperty('--decal-opacity', opacityValue);
             }
           });
-          console.log('[Re-entry] Fading in shader background (--decal-opacity) - fallback');
+          logger.log('[Re-entry] Fading in shader background (--decal-opacity) - fallback');
         }, 800);
       }
     }
@@ -1101,11 +1107,43 @@ export function initTimelineAnimation() {
     }
   };
 
+  // Throttle state for updateScrubber - prevents excessive DOM queries
+  let scrubberUpdateScheduled = false;
+  let lastScrubberProgress = -1;
+  
   // Helper to update scrubber based on decades (not individual events)
   const updateScrubber = (progress) => {
-    const scrubberProgress = document.querySelector('.scrubber-progress');
-    const markers = gsap.utils.toArray('.marker');
-    const minorNodes = gsap.utils.toArray('.minor-node');
+    // Skip if progress hasn't changed significantly (reduces redundant updates)
+    if (Math.abs(progress - lastScrubberProgress) < 0.001) return;
+    lastScrubberProgress = progress;
+    
+    // RAF-based throttle: skip if update already scheduled
+    if (scrubberUpdateScheduled) return;
+    scrubberUpdateScheduled = true;
+    
+    requestAnimationFrame(() => {
+      scrubberUpdateScheduled = false;
+      updateScrubberInternal(progress);
+    });
+  };
+  
+  // Cached DOM elements for scrubber (populated on first use)
+  let cachedScrubberProgress = null;
+  let cachedMarkers = null;
+  let cachedMinorNodes = null;
+  let cachedScrubberLine = null;
+  let cachedScrubberContent = null;
+  
+  // Internal scrubber update (called via RAF throttle)
+  const updateScrubberInternal = (progress) => {
+    // Use cached elements or query once
+    if (!cachedScrubberProgress) cachedScrubberProgress = document.querySelector('.scrubber-progress');
+    if (!cachedMarkers) cachedMarkers = gsap.utils.toArray('.marker');
+    if (!cachedMinorNodes) cachedMinorNodes = gsap.utils.toArray('.minor-node');
+    
+    const scrubberProgress = cachedScrubberProgress;
+    const markers = cachedMarkers;
+    const minorNodes = cachedMinorNodes;
     
     if (!scrubberProgress || !decades.length) return;
     
@@ -1203,15 +1241,15 @@ export function initTimelineAnimation() {
       // Find the active minor node
       const activeNode = minorNodes[activeMinorNodeIndex];
       if (activeNode) {
-        // Get the scrubber line and active node positions
-        const scrubberLine = document.querySelector('.scrubber-line');
-        const scrubberContent = document.querySelector('.scrubber-content');
+        // Get the scrubber line and active node positions (use cached refs)
+        if (!cachedScrubberLine) cachedScrubberLine = document.querySelector('.scrubber-line');
+        if (!cachedScrubberContent) cachedScrubberContent = document.querySelector('.scrubber-content');
         
-        if (scrubberLine && scrubberContent) {
+        if (cachedScrubberLine && cachedScrubberContent) {
           // Get positions relative to the content container
-          const lineRect = scrubberLine.getBoundingClientRect();
+          const lineRect = cachedScrubberLine.getBoundingClientRect();
           const nodeRect = activeNode.getBoundingClientRect();
-          const contentRect = scrubberContent.getBoundingClientRect();
+          const contentRect = cachedScrubberContent.getBoundingClientRect();
           
           // Calculate the node's center position relative to the line start
           const nodeCenterX = nodeRect.left + (nodeRect.width / 2) - lineRect.left;
@@ -1236,7 +1274,9 @@ export function initTimelineAnimation() {
       scaleX: scrubberProgressValue,
       transformOrigin: 'left',
       duration: 0.3,
-      ease: 'power2.out'
+      ease: 'power2.out',
+      force3D: true, // GPU acceleration
+      overwrite: 'auto' // Prevent tween buildup
     });
 
     // Update major markers (decades)
@@ -1315,7 +1355,7 @@ export function initTimelineAnimation() {
     const targetDecadeEvents = gsap.utils.toArray('.timeline-event', targetDecade);
     
     if (targetDecadeEvents.length === 0) {
-      console.warn(`Decade ${markerIndex} has no events`);
+      logger.warn(`Decade ${markerIndex} has no events`);
       return 0;
     }
     
@@ -1630,19 +1670,19 @@ export function initTimelineAnimation() {
       onRefresh: (self) => {
         // If re-entering, DO NOT touch the background
         if (isReEntering) {
-          console.log('[Re-entry] onRefresh blocked by isReEntering flag');
+          logger.log('[Re-entry] onRefresh blocked by isReEntering flag');
           return;
         }
         
         // CRITICAL: If background is locked at fullscreen, don't touch ANYTHING
         if (isBgLockedFullscreen) {
-          console.log('[Re-entry] onRefresh blocked by isBgLockedFullscreen flag');
+          logger.log('[Re-entry] onRefresh blocked by isBgLockedFullscreen flag');
           return;
         }
         
         // If already in timeline, don't touch the background at all
         if (document.body.classList.contains('in-timeline')) {
-          console.log('[Re-entry] onRefresh blocked - already in timeline');
+          logger.log('[Re-entry] onRefresh blocked - already in timeline');
           return;
         }
         
@@ -1692,7 +1732,7 @@ export function initTimelineAnimation() {
               timelineWindowBg.style.width !== '100vw' || 
               timelineWindowBg.style.height !== '100vh' || 
               timelineWindowBg.style.opacity !== '1') {
-            console.log('[Timeline] FULLSCREEN LOCK: Re-locking background at fullscreen');
+            logger.log('[Timeline] FULLSCREEN LOCK: Re-locking background at fullscreen');
             timelineWindowBg.style.position = 'fixed';
             timelineWindowBg.style.top = '0';
             timelineWindowBg.style.left = '0';
@@ -1709,7 +1749,7 @@ export function initTimelineAnimation() {
         if (document.body.classList.contains('in-timeline')) {
           // Just ensure background stays visible and at full opacity
           if (timelineWindowBg.style.opacity !== '1' || timelineWindowBg.style.visibility !== 'visible') {
-            console.log('[Timeline] onUpdate safety: Forcing background visible (in-timeline)');
+            logger.log('[Timeline] onUpdate safety: Forcing background visible (in-timeline)');
             timelineWindowBg.style.opacity = '1';
             timelineWindowBg.style.visibility = 'visible';
             timelineWindowBg.style.display = 'block';
@@ -1740,7 +1780,7 @@ export function initTimelineAnimation() {
             }
           } else if (!self._loggedShaderMissing) {
             self._loggedShaderMissing = true;
-            console.warn('[Timeline] Timeline shader controls not available at progress:', progress.toFixed(4));
+            logger.warn('[Timeline] Timeline shader controls not available at progress:', progress.toFixed(4));
           }
           
           // Check cover orb
@@ -1752,43 +1792,50 @@ export function initTimelineAnimation() {
             }
           } else if (!self._loggedOrbMissing) {
             self._loggedOrbMissing = true;
-            console.warn('[Timeline] Cover orb controls not available at progress:', progress.toFixed(4));
+            logger.warn('[Timeline] Cover orb controls not available at progress:', progress.toFixed(4));
           }
         }
         
         const styleEl = document.getElementById('timeline-window-start-bg-style');
         
-        // CRITICAL SAFETY CHECK 1: If BG is full viewport size, FORCE opacity to 1.0
-        const bgRect = timelineWindowBg.getBoundingClientRect();
-        const isFullViewport = (
-          Math.abs(bgRect.width - window.innerWidth) < 10 &&
-          Math.abs(bgRect.height - window.innerHeight) < 10 &&
-          Math.abs(bgRect.top) < 10 &&
-          Math.abs(bgRect.left) < 10
-        );
-        
-        if (isFullViewport) {
-          // BG is full viewport - MUST be opacity 1.0
-          const currentOpacity = parseFloat(timelineWindowBg.style.opacity || '0');
-          if (Math.abs(currentOpacity - 1.0) > 0.01) {
-            console.log('[Timeline] SAFETY CHECK: Forcing BG to opacity 1 (was', currentOpacity, ')');
-            timelineWindowBg.style.opacity = '1';
-            timelineWindowBg.style.visibility = 'visible';
+        // THROTTLED SAFETY CHECKS: Only run expensive DOM queries periodically to avoid layout thrashing
+        // These checks use getBoundingClientRect() and getComputedStyle() which force reflow
+        const now = performance.now();
+        if (now - lastSafetyCheckTime >= SAFETY_CHECK_INTERVAL) {
+          lastSafetyCheckTime = now;
+          
+          // CRITICAL SAFETY CHECK 1: If BG is full viewport size, FORCE opacity to 1.0
+          const bgRect = timelineWindowBg.getBoundingClientRect();
+          const isFullViewport = (
+            Math.abs(bgRect.width - window.innerWidth) < 10 &&
+            Math.abs(bgRect.height - window.innerHeight) < 10 &&
+            Math.abs(bgRect.top) < 10 &&
+            Math.abs(bgRect.left) < 10
+          );
+          
+          if (isFullViewport) {
+            // BG is full viewport - MUST be opacity 1.0
+            const currentOpacity = parseFloat(timelineWindowBg.style.opacity || '0');
+            if (Math.abs(currentOpacity - 1.0) > 0.01) {
+              logger.log('[Timeline] SAFETY CHECK: Forcing BG to opacity 1 (was', currentOpacity, ')');
+              timelineWindowBg.style.opacity = '1';
+              timelineWindowBg.style.visibility = 'visible';
+            }
+            return; // Skip other checks when BG is full viewport
           }
-          return; // Skip other checks when BG is full viewport
-        }
-        
-        // CRITICAL SAFETY CHECK 2: If pseudo-element has ANY opacity, BG MUST be 0
-        // This is the ultimate protection when scrolling back up
-        const pseudoComputedStyle = window.getComputedStyle(timelineWindowStart, '::before');
-        const pseudoOpacity = parseFloat(pseudoComputedStyle.opacity || '0');
-        
-        if (pseudoOpacity > 0) {
-          // Pseudo-element is visible - BG MUST be hidden
-          const currentBgOpacity = parseFloat(timelineWindowBg.style.opacity || '1');
-          if (currentBgOpacity > 0) {
-            timelineWindowBg.style.opacity = '0';
-            timelineWindowBg.style.visibility = 'hidden'; // Extra safety
+          
+          // CRITICAL SAFETY CHECK 2: If pseudo-element has ANY opacity, BG MUST be 0
+          // This is the ultimate protection when scrolling back up
+          const pseudoComputedStyle = window.getComputedStyle(timelineWindowStart, '::before');
+          const pseudoOpacity = parseFloat(pseudoComputedStyle.opacity || '0');
+          
+          if (pseudoOpacity > 0) {
+            // Pseudo-element is visible - BG MUST be hidden
+            const currentBgOpacity = parseFloat(timelineWindowBg.style.opacity || '1');
+            if (currentBgOpacity > 0) {
+              timelineWindowBg.style.opacity = '0';
+              timelineWindowBg.style.visibility = 'hidden'; // Extra safety
+            }
           }
         }
         
@@ -1797,51 +1844,57 @@ export function initTimelineAnimation() {
           // Even if scroll progress is low, we want to keep it fullscreen
           if (document.body.classList.contains('in-timeline')) {
             // We're in timeline - keep background fullscreen and visible
-            console.log('[Timeline] Skipping shrink logic - already in timeline (body has .in-timeline class)');
             return;
           }
           
-          // BEFORE handoff: Pseudo visible, BG hidden BUT positioned correctly
-          // This ensures seamless handoff when expansion starts
+          // THROTTLED: Position updates are expensive (getBoundingClientRect)
+          // Use same throttle window as safety checks to avoid double-work
+          // Only run these expensive operations when the safety check also ran this frame
+          const shouldRunExpensiveOps = (now - lastSafetyCheckTime < 50); // Within 50ms of last safety check
           
-          // Get current position of timeline-window-start using helper
-          const pos = getSpanPosition();
-          
-          // Only update if we got valid position
-          if (pos) {
-            // Position BG element exactly where it needs to be (but keep it invisible)
-            timelineWindowBg.style.position = 'fixed';
-            timelineWindowBg.style.top = `${pos.top}px`;
-            timelineWindowBg.style.left = `${pos.left}px`;
-            timelineWindowBg.style.width = `${pos.width}px`;
-            timelineWindowBg.style.height = `${pos.height}px`;
-            timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
-            timelineWindowBg.style.borderRadius = '4px';
-            timelineWindowBg.style.opacity = '0';
-            timelineWindowBg.style.visibility = 'hidden';
+          if (shouldRunExpensiveOps) {
+            // BEFORE handoff: Pseudo visible, BG hidden BUT positioned correctly
+            // This ensures seamless handoff when expansion starts
             
-            // Update captured position continuously during hold period
-            // This ensures we always have the most recent valid position for the expansion animation
-            capturedPosition = { ...pos };
-          }
-          
-          if (styleEl) {
-            styleEl.textContent = `
-              #timeline-window-start::before {
-                content: '';
-                position: absolute;
-                top: -2px;
-                left: -6px;
-                right: -6px;
-                bottom: -2px;
-                background: linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164));
-                border-radius: 4px;
-                opacity: 0.5 !important;
-                z-index: -1;
-                pointer-events: none;
-                transition: none !important;
-              }
-            `;
+            // Get current position of timeline-window-start using helper
+            const pos = getSpanPosition();
+            
+            // Only update if we got valid position
+            if (pos) {
+              // Position BG element exactly where it needs to be (but keep it invisible)
+              timelineWindowBg.style.position = 'fixed';
+              timelineWindowBg.style.top = `${pos.top}px`;
+              timelineWindowBg.style.left = `${pos.left}px`;
+              timelineWindowBg.style.width = `${pos.width}px`;
+              timelineWindowBg.style.height = `${pos.height}px`;
+              timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
+              timelineWindowBg.style.borderRadius = '4px';
+              timelineWindowBg.style.opacity = '0';
+              timelineWindowBg.style.visibility = 'hidden';
+              
+              // Update captured position continuously during hold period
+              // This ensures we always have the most recent valid position for the expansion animation
+              capturedPosition = { ...pos };
+            }
+            
+            if (styleEl) {
+              styleEl.textContent = `
+                #timeline-window-start::before {
+                  content: '';
+                  position: absolute;
+                  top: -2px;
+                  left: -6px;
+                  right: -6px;
+                  bottom: -2px;
+                  background: linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164));
+                  border-radius: 4px;
+                  opacity: 0.5 !important;
+                  z-index: -1;
+                  pointer-events: none;
+                  transition: none !important;
+                }
+              `;
+            }
           }
         } else {
           // AFTER handoff: BG visible, Pseudo hidden
@@ -1853,7 +1906,7 @@ export function initTimelineAnimation() {
             if (timelineWindowBg.style.opacity !== '1') {
               timelineWindowBg.style.opacity = '1';
               timelineWindowBg.style.visibility = 'visible';
-              console.log('[Timeline] Forcing background to opacity 1 - already in timeline');
+              logger.log('[Timeline] Forcing background to opacity 1 - already in timeline');
             }
           }
           
@@ -1877,9 +1930,10 @@ export function initTimelineAnimation() {
             `;
           }
           
-          // Make BG visible only if pseudo is confirmed hidden
+          // Make BG visible in after-handoff phase
           // BUT: Don't reduce opacity if we're already in timeline (from re-entry)
-          if (pseudoOpacity < 0.01 && !document.body.classList.contains('in-timeline')) {
+          // Note: We're past handoff threshold so pseudo should already be hidden
+          if (!document.body.classList.contains('in-timeline')) {
             timelineWindowBg.style.opacity = '0.5';
             timelineWindowBg.style.visibility = 'visible';
           }
@@ -1939,7 +1993,7 @@ export function initTimelineAnimation() {
           // Store initial position
           capturedPosition = { ...pos };
         } else {
-          console.warn('[Timeline] onEnter: Could not get valid span position');
+          logger.warn('[Timeline] onEnter: Could not get valid span position');
         }
       },
       onLeaveBack: () => {
@@ -2022,7 +2076,7 @@ export function initTimelineAnimation() {
       }
       
       // Last resort fallback - should never happen if element is visible
-      console.warn('[Timeline] No valid position for expansion animation - using viewport center fallback');
+      logger.warn('[Timeline] No valid position for expansion animation - using viewport center fallback');
       const fallbackWidth = 200;
       const fallbackHeight = 40;
       return {
@@ -2054,7 +2108,7 @@ export function initTimelineAnimation() {
           
           if (drift > 5) {
             // Position has drifted - immediately sync before animation continues
-            console.log('[Timeline] Position drift detected on expansion start, syncing:', drift.toFixed(1), 'px');
+            logger.log('[Timeline] Position drift detected on expansion start, syncing:', drift.toFixed(1), 'px');
             timelineWindowBg.style.top = `${pos.top}px`;
             timelineWindowBg.style.left = `${pos.left}px`;
             timelineWindowBg.style.width = `${pos.width}px`;
@@ -2102,6 +2156,43 @@ export function initTimelineAnimation() {
     duration: 0.6
   }, messageFadeStart);
 
+  // PERFORMANCE: Define shader interpolation params ONCE outside the scroll loop
+  // Avoids object recreation on every frame
+  const shaderStartParams = {
+    waveSpeed: 0.32,
+    waveAmplitude: 1.9,
+    waveFrequencyX: 0.16,
+    waveFrequencyY: 0.32,
+    bobbingAmplitude: 1.4,
+    bobbingSpeed: 0.22,
+    fadeIntensity: 0.86,
+    opacity: 0.58,
+    scale: 3.4,
+    rotationX: -1.7,
+    rotationZ: 0.26,
+    positionY: -30.0,
+    positionZ: -16.0
+  };
+  
+  const shaderEndParams = {
+    waveSpeed: 0.2,
+    waveAmplitude: 5.0,
+    waveFrequencyX: 0.6,
+    waveFrequencyY: 1.0,
+    bobbingAmplitude: 2.2,
+    bobbingSpeed: 0.24,
+    fadeIntensity: 0.39,
+    opacity: 1.0,
+    scale: 3.3,
+    rotationX: -1.6,
+    rotationZ: -1.44,
+    positionY: -20.0,
+    positionZ: -20.0
+  };
+  
+  // Reusable interpolated params object to avoid allocation in scroll loop
+  const interpolatedParams = {};
+
   // Phase 2: Master timeline for all timeline animations (starts after get-involved-message pin)
   tl = gsap.timeline({
     scrollTrigger: {
@@ -2109,7 +2200,9 @@ export function initTimelineAnimation() {
       start: 'top top',
       end: () => `+=${getTotalScrollDistance()}`, // Function to recalculate on resize
       pin: timelineContainer,
-      scrub: isMobile() ? 0.5 : 1, // Snappier scrubbing on mobile (less inertia)
+      // PERFORMANCE: Lower scrub values = more responsive, higher = more smooth but laggy
+      // 0.1-0.2 for snappy response, 0.5-1 for smooth but sluggish
+      scrub: isMobile() ? 0.15 : 0.2, // Much snappier - prioritize responsiveness
       anticipatePin: 1,
       invalidateOnRefresh: true,
       onRefresh: (self) => {
@@ -2118,7 +2211,7 @@ export function initTimelineAnimation() {
         
         // CRITICAL: If background is locked at fullscreen, don't touch ANYTHING
         if (isBgLockedFullscreen) {
-          console.log('[Timeline] Timeline onRefresh blocked by isBgLockedFullscreen flag');
+          logger.log('[Timeline] Timeline onRefresh blocked by isBgLockedFullscreen flag');
           // Still update scrubber for timeline position
           if (self.animation) {
             updateScrubber(self.animation.progress());
@@ -2128,7 +2221,7 @@ export function initTimelineAnimation() {
         
         // If already in timeline, minimal updates only (don't touch background)
         if (document.body.classList.contains('in-timeline')) {
-          console.log('[Timeline] Timeline onRefresh - in timeline, skipping background updates');
+          logger.log('[Timeline] Timeline onRefresh - in timeline, skipping background updates');
           // Still update scrubber for timeline position
           if (self.animation) {
             updateScrubber(self.animation.progress());
@@ -2146,128 +2239,49 @@ export function initTimelineAnimation() {
         }
       },
       onUpdate: (self) => {
-        // If dismissing or re-entering, DO NOT touch the background
+        // PERFORMANCE: Early exit for dismissing/re-entering states (no DOM operations)
         if (isDismissing || window._isDismissing || isReEntering) return;
         
-        // CRITICAL: If background is locked at fullscreen, protect ALL properties
-        if (isBgLockedFullscreen) {
-          // Force background to stay at fullscreen
-          if (timelineWindowBg.style.top !== '0px' || 
-              timelineWindowBg.style.left !== '0px' || 
-              timelineWindowBg.style.width !== '100vw' || 
-              timelineWindowBg.style.height !== '100vh' || 
-              timelineWindowBg.style.opacity !== '1') {
-            console.log('[Timeline] Timeline FULLSCREEN LOCK: Re-locking background');
-            timelineWindowBg.style.position = 'fixed';
-            timelineWindowBg.style.top = '0';
-            timelineWindowBg.style.left = '0';
-            timelineWindowBg.style.width = '100vw';
-            timelineWindowBg.style.height = '100vh';
-            timelineWindowBg.style.opacity = '1';
-            timelineWindowBg.style.visibility = 'visible';
-            timelineWindowBg.style.display = 'block';
-          }
-          return; // Skip all other logic when locked
-        }
-        
-        // CRITICAL: If we're in timeline (from re-entry or scroll), ensure background stays visible
-        if (document.body.classList.contains('in-timeline')) {
-          // Force background to stay visible and at full opacity
-          if (timelineWindowBg.style.opacity !== '1' || timelineWindowBg.style.visibility !== 'visible') {
-            console.log('[Timeline] Timeline onUpdate safety: Forcing background visible');
-            timelineWindowBg.style.opacity = '1';
-            timelineWindowBg.style.visibility = 'visible';
-            timelineWindowBg.style.display = 'block';
-          }
-        }
+        // PERFORMANCE: Skip all DOM checks when background is locked - trust the flag
+        if (isBgLockedFullscreen) return;
         
         // Use animation progress to account for scrub lag (visual position)
         const progress = self.animation.progress();
-        updateScrubber(progress);
-        // manageBackgroundPause(self.progress); // Removed to use strict onEnter/onLeave logic
         
-        // Ensure background stays opaque during timeline scrub
-        if (self.progress > 0 && self.progress < 0.95) {
-          if (timelineWindowBg.style.opacity !== '1') {
-            timelineWindowBg.style.opacity = '1';
-          }
-        }
+        // PERFORMANCE: Only update scrubber (already throttled via RAF)
+        updateScrubber(progress);
 
         // --- Timeline Shader Interpolation ---
-        // Interpolate shader parameters as we approach the 2000s and finale
-        // We'll start interpolating from around 80% progress (approx 1990s) to 100%
+        // PERFORMANCE: Only interpolate when in the final 25% of timeline
+        // This avoids unnecessary calculations for 75% of the scroll
+        const interpolationStart = 0.75;
         
-        if (window.timelineShaderControls && window.timelineShaderControls.updateParams) {
-          // Define start (default) and end (finale) parameters
-          const startParams = {
-            waveSpeed: 0.32,
-            waveAmplitude: 1.9,
-            waveFrequencyX: 0.16,
-            waveFrequencyY: 0.32,
-            bobbingAmplitude: 1.4,
-            bobbingSpeed: 0.22,
-            fadeIntensity: 0.86,
-            opacity: 0.58,
-            scale: 3.4,
-            rotationX: -1.7,
-            rotationZ: 0.26,
-            positionY: -30.0,
-            positionZ: -16.0
-          };
+        if (progress > interpolationStart && window.timelineShaderControls && window.timelineShaderControls.updateParams) {
+          // Normalize t from 0 to 1 over the range [interpolationStart, 1.0]
+          let t = (progress - interpolationStart) / (1.0 - interpolationStart);
+          // Clamp t to [0, 1]
+          t = Math.max(0, Math.min(1, t));
           
-          const endParams = {
-            waveSpeed: 0.2,
-            waveAmplitude: 5.0,
-            waveFrequencyX: 0.6,
-            waveFrequencyY: 1.0,
-            bobbingAmplitude: 2.2,
-            bobbingSpeed: 0.24,
-            fadeIntensity: 0.39,
-            opacity: 1.0,
-            scale: 3.3,
-            rotationX: -1.6,
-            rotationZ: -1.44,
-            positionY: -20.0,
-            positionZ: -20.0
-          };
+          // NO THROTTLE - shader transitions need full framerate for smooth scroll-based tweening
+          // The shader's visual interpolation during 2000-2026 scroll must be buttery smooth
           
-          // Determine interpolation factor
-          // Start interpolating at 75% progress (approx 1990s)
-          const interpolationStart = 0.75;
-          let t = 0;
+          // Reuse interpolatedParams object to avoid allocation
+          interpolatedParams.waveSpeed = shaderStartParams.waveSpeed + (shaderEndParams.waveSpeed - shaderStartParams.waveSpeed) * t;
+          interpolatedParams.waveAmplitude = shaderStartParams.waveAmplitude + (shaderEndParams.waveAmplitude - shaderStartParams.waveAmplitude) * t;
+          interpolatedParams.waveFrequencyX = shaderStartParams.waveFrequencyX + (shaderEndParams.waveFrequencyX - shaderStartParams.waveFrequencyX) * t;
+          interpolatedParams.waveFrequencyY = shaderStartParams.waveFrequencyY + (shaderEndParams.waveFrequencyY - shaderStartParams.waveFrequencyY) * t;
+          interpolatedParams.bobbingAmplitude = shaderStartParams.bobbingAmplitude + (shaderEndParams.bobbingAmplitude - shaderStartParams.bobbingAmplitude) * t;
+          interpolatedParams.bobbingSpeed = shaderStartParams.bobbingSpeed + (shaderEndParams.bobbingSpeed - shaderStartParams.bobbingSpeed) * t;
+          interpolatedParams.fadeIntensity = shaderStartParams.fadeIntensity + (shaderEndParams.fadeIntensity - shaderStartParams.fadeIntensity) * t;
+          interpolatedParams.opacity = shaderStartParams.opacity + (shaderEndParams.opacity - shaderStartParams.opacity) * t;
+          interpolatedParams.scale = shaderStartParams.scale + (shaderEndParams.scale - shaderStartParams.scale) * t;
+          interpolatedParams.rotationX = shaderStartParams.rotationX + (shaderEndParams.rotationX - shaderStartParams.rotationX) * t;
+          interpolatedParams.rotationZ = shaderStartParams.rotationZ + (shaderEndParams.rotationZ - shaderStartParams.rotationZ) * t;
+          interpolatedParams.positionY = shaderStartParams.positionY + (shaderEndParams.positionY - shaderStartParams.positionY) * t;
+          interpolatedParams.positionZ = shaderStartParams.positionZ + (shaderEndParams.positionZ - shaderStartParams.positionZ) * t;
           
-          if (progress > interpolationStart) {
-            // Normalize t from 0 to 1 over the range [interpolationStart, 1.0]
-            t = (progress - interpolationStart) / (1.0 - interpolationStart);
-            // Clamp t to [0, 1]
-            t = Math.max(0, Math.min(1, t));
-            
-            // Apply easing (optional, e.g., smoothstep)
-            // t = t * t * (3 - 2 * t); 
-          }
-          
-          // Helper to interpolate values
-          const lerp = (start, end, t) => start + (end - start) * t;
-          
-          // Calculate current params
-          const currentParams = {
-            waveSpeed: lerp(startParams.waveSpeed, endParams.waveSpeed, t),
-            waveAmplitude: lerp(startParams.waveAmplitude, endParams.waveAmplitude, t),
-            waveFrequencyX: lerp(startParams.waveFrequencyX, endParams.waveFrequencyX, t),
-            waveFrequencyY: lerp(startParams.waveFrequencyY, endParams.waveFrequencyY, t),
-            bobbingAmplitude: lerp(startParams.bobbingAmplitude, endParams.bobbingAmplitude, t),
-            bobbingSpeed: lerp(startParams.bobbingSpeed, endParams.bobbingSpeed, t),
-            fadeIntensity: lerp(startParams.fadeIntensity, endParams.fadeIntensity, t),
-            opacity: lerp(startParams.opacity, endParams.opacity, t),
-            scale: lerp(startParams.scale, endParams.scale, t),
-            rotationX: lerp(startParams.rotationX, endParams.rotationX, t),
-            rotationZ: lerp(startParams.rotationZ, endParams.rotationZ, t),
-            positionY: lerp(startParams.positionY, endParams.positionY, t),
-            positionZ: lerp(startParams.positionZ, endParams.positionZ, t)
-          };
-          
-          // Update shader
-          window.timelineShaderControls.updateParams(currentParams);
+          // Update shader with interpolated values
+          window.timelineShaderControls.updateParams(interpolatedParams);
         }
       },
       onEnter: () => {
@@ -2602,7 +2616,8 @@ export function initTimelineAnimation() {
       opacity: 1,
       y: 0,
       duration: 0.05,
-      ease: 'power2.out'
+      ease: 'power2.out',
+      force3D: true
     },
     0
   );
@@ -2636,7 +2651,8 @@ export function initTimelineAnimation() {
         opacity: 1, 
         scale: 1,
         duration: 0.25, // Quicker fade in for snappier feel
-        ease: 'power2.out'
+        ease: 'power2.out',
+        force3D: true // GPU acceleration
       },
       firstEventLabel // Start immediately at the beginning of the pinned section
     );
@@ -2692,12 +2708,13 @@ export function initTimelineAnimation() {
       
       const eventLabel = `event-${index}`;
       
-      // 1. Move Track
+      // 1. Move Track - GPU accelerated for smooth 60fps
       tl.to(timelineTrack, {
         x: getTargetX,
         y: getTargetY,
         duration: moveDuration,
-        ease: 'power1.inOut'
+        ease: 'power1.inOut',
+        force3D: true // GPU acceleration - critical for smooth horizontal scroll
       }, eventLabel);
       
       // 2. Handle Opacity during Move
@@ -2711,7 +2728,8 @@ export function initTimelineAnimation() {
         opacity: 0,
         scale: 0.94,
         duration: moveDuration * 0.28,
-        ease: 'power1.in'
+        ease: 'power1.in',
+        force3D: true // GPU acceleration
       }, `${eventLabel}+=${moveDuration * 0.34}`);
       
       // Fade In Current Event
@@ -2725,7 +2743,8 @@ export function initTimelineAnimation() {
         opacity: 1,
         scale: 1,
         duration: moveDuration * 1.15,
-        ease: 'power2.out'
+        ease: 'power2.out',
+        force3D: true // GPU acceleration
       }, `${eventLabel}+=${moveDuration * 0.1}`);
 
       // Animate inner content for each event as it enters
@@ -2740,7 +2759,8 @@ export function initTimelineAnimation() {
         }, {
           opacity: 1,
           duration: moveDuration * 0.5,
-          ease: 'power2.out'
+          ease: 'power2.out',
+          force3D: true
         }, `${eventLabel}+=${moveDuration * 0.3}`);
         
         // Background decal fade-in moved to start of timeline (alongside coverOrb)
@@ -2771,7 +2791,7 @@ export function initTimelineAnimation() {
     const markers = gsap.utils.toArray('.marker');
     
     if (!markers.length || !decades.length) {
-      console.warn('Timeline: Markers or decades not found');
+      logger.warn('Timeline: Markers or decades not found');
       return;
     }
 
@@ -2786,14 +2806,14 @@ export function initTimelineAnimation() {
       // Find the corresponding marker for this decade
       const marker = markers.find(m => m.getAttribute('data-decade') === decadeName);
       if (!marker) {
-        console.warn(`Timeline: No marker found for decade ${decadeName}`);
+        logger.warn(`Timeline: No marker found for decade ${decadeName}`);
         return;
       }
 
       // Find the minor nodes container within this marker
       const minorNodesContainer = marker.querySelector('.marker-minor-nodes');
       if (!minorNodesContainer) {
-        console.warn(`Timeline: No minor nodes container found for decade ${decadeName}`);
+        logger.warn(`Timeline: No minor nodes container found for decade ${decadeName}`);
         return;
       }
 
@@ -3022,7 +3042,7 @@ export function initTimelineAnimation() {
     const markers = gsap.utils.toArray('.marker');
 
     if (!scrollWrapper || !prevButton || !nextButton) {
-      console.warn('Timeline: Scrubber scroll elements not found');
+      logger.warn('Timeline: Scrubber scroll elements not found');
       return;
     }
 
@@ -3500,7 +3520,7 @@ function handleResizeEnd() {
     
     if (!inTimeline && isBeforeTimeline) {
       // We're before the timeline - reset captured position and re-sync with span
-      console.log('[Resize] Before timeline - resetting background position');
+      logger.log('[Resize] Before timeline - resetting background position');
       window._timelinePositioning.resetCapturedPosition();
       
       // Force immediate position update
@@ -3528,7 +3548,7 @@ function handleResizeEnd() {
         const isBeforeTimeline = timelineRect.top > window.innerHeight * 0.5;
         
         if (!inTimeline && isBeforeTimeline) {
-          console.log('[Resize] Post-refresh: Re-syncing background position');
+          logger.log('[Resize] Post-refresh: Re-syncing background position');
           if (window._timelinePositioning.positionBgToSpan) {
             window._timelinePositioning.positionBgToSpan();
           }

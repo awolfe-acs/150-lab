@@ -5,6 +5,7 @@ import { AdaptiveRenderer } from "./utils/adaptiveRenderer.js";
 import { PerformanceMonitor } from "./utils/performanceMonitor.js";
 import memoryManager from "./utils/memoryManager.js";
 import aemModeDetector from "./utils/aemModeDetector.js";
+import logger from "./utils/logger.js";
 
 /**
  * Simplified shader background for banner
@@ -17,7 +18,7 @@ export async function initBannerBackground(options = {}) {
   
   // Prevent multiple initializations
   if (window.bannerBackgroundInitialized) {
-    console.warn("Banner background already initialized.");
+    logger.warn("Banner background already initialized.");
     return;
   }
 
@@ -27,7 +28,7 @@ export async function initBannerBackground(options = {}) {
 
   const canvas = document.getElementById("canvas-webgl");
   if (!canvas) {
-    console.warn("Banner canvas not found");
+    logger.warn("Banner canvas not found");
     return;
   }
   const aemMode = aemModeDetector.detect();
@@ -56,7 +57,7 @@ export async function initBannerBackground(options = {}) {
   }
 
   if (!checkWebGLSupport()) {
-    console.warn("WebGL not supported, showing fallback");
+    logger.warn("WebGL not supported, showing fallback");
     canvas.style.display = "none";
     return;
   }
@@ -746,7 +747,7 @@ export async function initBannerBackground(options = {}) {
   
   // ===== DAT.GUI CONTROLS FOR DEBUGGING (only if debugGUI flag is true) =====
   if (debugGUI) {
-    console.log("[Banner] Debug GUI enabled");
+    logger.log("[Banner] Debug GUI enabled");
     
     // Inject lil-gui CSS
     const guiStyle = document.createElement('style');

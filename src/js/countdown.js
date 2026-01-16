@@ -1,4 +1,5 @@
 import { animateCountdownChange } from "./animation.js";
+import logger from "./utils/logger.js";
 
 export function initCountdown(targetDate) {
   // Verify countdown elements exist
@@ -6,11 +7,11 @@ export function initCountdown(targetDate) {
   const missingElements = requiredElements.filter(id => !document.querySelector(`#${id} .number`));
   
   if (missingElements.length > 0) {
-    console.error(`[Countdown] Missing required elements:`, missingElements);
+    logger.error(`[Countdown] Missing required elements:`, missingElements);
     return;
   }
   
-  console.log('[Countdown] All required elements found, starting countdown');
+  logger.log('[Countdown] All required elements found, starting countdown');
 
   function updateCountdown() {
     try {
@@ -19,7 +20,7 @@ export function initCountdown(targetDate) {
       
       if (distance < 0) {
         // Countdown finished
-        console.log('[Countdown] Target date reached');
+        logger.log('[Countdown] Target date reached');
         return;
       }
 
@@ -33,7 +34,7 @@ export function initCountdown(targetDate) {
       animateCountdownChange("minutes", minutes);
       animateCountdownChange("seconds", seconds);
     } catch (error) {
-      console.error('[Countdown] Error updating countdown:', error);
+      logger.error('[Countdown] Error updating countdown:', error);
     }
   }
 

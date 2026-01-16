@@ -2,13 +2,22 @@
  * Adaptive Renderer
  * Manages rendering performance by adapting to device capabilities
  * and visibility state
+ * 
+ * Key principle: Cap at 60fps max to ensure consistent visual appearance.
+ * The shader animation speed is independent of render FPS (controlled by
+ * fixed time increments). Only downgrade to 30fps after persistent evidence
+ * from the PerformanceDetector.
  */
+
+import performanceDetector from './performanceDetector.js';
+import logger from './logger.js';
 
 export class AdaptiveRenderer {
   constructor(animateCallback, targetFPS = 60) {
     this.animateCallback = animateCallback;
-    this.targetFPS = targetFPS;
-    this.frameInterval = 1000 / targetFPS;
+    // Always cap at 60fps max - visual speed is controlled separately
+    this.targetFPS = Math.min(targetFPS, 60);
+    this.frameInterval = 1000 / this.targetFPS;
     this.lastFrameTime = 0;
     this.isVisible = true;
     this.isRunning = false;
@@ -20,7 +29,11 @@ export class AdaptiveRenderer {
     this.frameCount = 0;
     this.fpsCheckInterval = 1000; // Check FPS every second
     this.lastFPSCheck = performance.now();
-    this.currentFPS = targetFPS;
+    this.currentFPS = this.targetFPS;
+    
+    // Degradation state - tracks if we've been downgraded
+    this.isDegraded = false;
+    this.minFPS = 30; // Minimum FPS for low-end devices
     
     // Canvas monitoring - default to main background
     this.currentCanvasId = 'shaderBackground';
@@ -28,6 +41,32 @@ export class AdaptiveRenderer {
     
     this.setupVisibilityObserver(this.currentCanvasId);
     this.setupPageVisibilityListener();
+    this.setupDegradationListener();
+  }
+  
+  /**
+   * Listen for performance degradation events from PerformanceDetector
+   */
+  setupDegradationListener() {
+    performanceDetector.onDegradation((info) => {
+      if (info.tier === 'low' && !this.isDegraded) {
+        logger.log('[Adaptive Renderer] Received degradation signal - reducing to 30fps');
+        this.isDegraded = true;
+        this.setTargetFPS(info.targetFPS || this.minFPS);
+      }
+    });
+    
+    // Listen for adaptive FPS cap changes
+    performanceDetector.onFpsCapChange((info) => {
+      if (this.isDegraded) return; // Don't override degradation
+      
+      logger.log(`[Adaptive Renderer] Received FPS cap signal: ${info.cap}fps (${info.reason})`);
+      
+      // Only apply cap if it's lower than current target
+      if (info.cap < this.targetFPS) {
+        this.setTargetFPS(info.cap);
+      }
+    });
   }
 
   /**
@@ -36,7 +75,7 @@ export class AdaptiveRenderer {
   setupVisibilityObserver(canvasId) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) {
-      console.warn(`[Adaptive Renderer] Canvas #${canvasId} not found for observation`);
+      logger.warn(`[Adaptive Renderer] Canvas #${canvasId} not found for observation`);
       return;
     }
 
@@ -91,6 +130,9 @@ export class AdaptiveRenderer {
 
   /**
    * Main rendering loop with adaptive FPS
+   * 
+   * Key behavior: Records FPS samples for runtime performance validation.
+   * Only shows warnings after persistent evidence, not single spikes.
    */
   loop() {
     if (!this.isRunning) return;
@@ -106,18 +148,14 @@ export class AdaptiveRenderer {
       this.frameCount = 0;
       this.lastFPSCheck = currentTime;
       
-      // Auto-adjust target FPS if consistently missing target
-      // Only warn if we're monitoring an active canvas (not paused by timeline)
-      if (this.currentFPS < this.targetFPS * 0.8 && !this.pausedByTimeline) {
-        // Additional check: only warn if the expected canvas should be active
-        const shouldBeActive = this.inTimeline ? 
-          ['timeline-shader-bg', 'timeline-cover-canvas'].includes(this.currentCanvasId) :
-          this.currentCanvasId === 'shaderBackground';
-        
-        if (shouldBeActive) {
-          console.warn(`[Adaptive Renderer] FPS below target (${this.currentFPS}/${this.targetFPS}) on #${this.currentCanvasId}, consider reducing quality`);
-        }
+      // Record FPS sample for persistent performance validation
+      // Only record when actively rendering (not paused)
+      if (!this.pausedByTimeline && this.isVisible && !document.hidden) {
+        performanceDetector.recordFpsSample(this.currentFPS);
       }
+      
+      // Removed automatic warnings - let PerformanceDetector handle degradation
+      // based on persistent evidence, not single measurements
     }
 
     // Skip frame if not enough time has passed

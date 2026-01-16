@@ -8,6 +8,7 @@ import { AdaptiveRenderer } from "./utils/adaptiveRenderer.js";
 import { PerformanceMonitor } from "./utils/performanceMonitor.js";
 import memoryManager from "./utils/memoryManager.js";
 import aemModeDetector from "./utils/aemModeDetector.js";
+import logger from "./utils/logger.js";
 
 // Helper function to get preloaded asset URL or fallback
 function getPreloadedAssetUrl(assetName, fallbackUrl) {
@@ -25,7 +26,7 @@ function getPreloadedAssetUrl(assetName, fallbackUrl) {
 export async function initShaderBackground() {
   // Prevent multiple initializations
   if (window.shaderBackgroundInitialized) {
-    console.warn("Shader background already initialized. Skipping...");
+    logger.warn("Shader background already initialized. Skipping...");
     return;
   }
 
@@ -35,8 +36,8 @@ export async function initShaderBackground() {
   
   // If in fallback mode (AEM Edit), skip initialization entirely
   if (aemSettings.mode === 'fallback' || !aemSettings.enableBackground) {
-    console.log('[Background Init] Skipping initialization - AEM fallback mode detected');
-    console.log('[Background Init] AEM Mode:', aemMode);
+    logger.log('[Background Init] Skipping initialization - AEM fallback mode detected');
+    logger.log('[Background Init] AEM Mode:', aemMode);
     
     // Apply static background
     aemModeDetector.applyStaticBackground();
@@ -50,9 +51,9 @@ export async function initShaderBackground() {
   const performanceTier = await performanceDetector.detect();
   const perfSettings = performanceDetector.getSettings();
   
-  console.log('[Background Init] AEM Mode:', aemMode);
-  console.log('[Background Init] Performance Tier:', performanceTier);
-  console.log('[Background Init] Settings:', perfSettings);
+  logger.log('[Background Init] AEM Mode:', aemMode);
+  logger.log('[Background Init] Performance Tier:', performanceTier);
+  logger.log('[Background Init] Settings:', perfSettings);
 
   // Set up default values
   window.colorPhase = 1; // Start in phase one (default colors)
@@ -100,7 +101,7 @@ export async function initShaderBackground() {
 
   // If WebGL is not supported, show a fallback and exit gracefully
   if (!checkWebGLSupport()) {
-    console.warn("WebGL is not supported on this device/browser. Skipping shader background initialization.");
+    logger.warn("WebGL is not supported on this device/browser. Skipping shader background initialization.");
     // Hide the canvas and show a fallback background color
     canvas.style.display = "none";
     document.body.style.backgroundColor = "#1a1a2e"; // Fallback dark background
@@ -118,7 +119,7 @@ export async function initShaderBackground() {
     if (typeof window.gsap !== "undefined") {
       setupColorDarknessAnimation(window.gsap, window.gsap.ScrollTrigger);
     } else {
-      console.warn("GSAP not found on window object - ScrollTrigger animations may not work");
+      logger.warn("GSAP not found on window object - ScrollTrigger animations may not work");
     }
   }, 200);
 
@@ -139,7 +140,7 @@ export async function initShaderBackground() {
     const videoTravelArea = document.querySelector("#video-travel-area");
 
     if (!videoTravelArea) {
-      console.warn("Could not find #video-travel-area element for shader animation");
+      logger.warn("Could not find #video-travel-area element for shader animation");
       return;
     }
 
@@ -217,7 +218,7 @@ export async function initShaderBackground() {
     const getInvolvedSection = document.querySelector("#get-involved");
 
     if (!getInvolvedSection) {
-      console.warn("Could not find #get-involved element for globe opacity animation");
+      logger.warn("Could not find #get-involved element for globe opacity animation");
       return;
     }
 
@@ -1111,10 +1112,10 @@ export async function initShaderBackground() {
     renderer.setSize(initialWidth, initialHeight);
     renderer.setPixelRatio(perfSettings.pixelRatio); // Use performance-based pixel ratio
     
-    console.log('[Background Init] Renderer pixel ratio:', perfSettings.pixelRatio);
+    logger.log('[Background Init] Renderer pixel ratio:', perfSettings.pixelRatio);
   } catch (error) {
-    console.error("Failed to create WebGL renderer:", error);
-    console.warn("Falling back to fallback background. WebGL initialization failed.");
+    logger.error("Failed to create WebGL renderer:", error);
+    logger.warn("Falling back to fallback background. WebGL initialization failed.");
 
     // Hide the canvas and show a fallback background
     canvas.style.display = "none";
@@ -1133,11 +1134,11 @@ export async function initShaderBackground() {
     // Don't cleanup if this is a mailto: link or other non-navigation action
     // Check if we're doing a mailto operation (flag set by mailto handler)
     if (window._isMailtoOperation || window._preventBackgroundCleanup) {
-      console.log('[Background] Skipping cleanup for mailto/non-navigation action');
+      logger.log('[Background] Skipping cleanup for mailto/non-navigation action');
       return;
     }
     
-    console.log('[Background] Cleaning up resources before page unload');
+    logger.log('[Background] Cleaning up resources before page unload');
     
     // Stop rendering
     if (window.shaderBackgroundRenderer) {
@@ -1146,7 +1147,7 @@ export async function initShaderBackground() {
     
     // Dispose all tracked resources
     const disposed = memoryManager.disposeAll();
-    console.log(`[Background] Disposed ${disposed} Three.js resources`);
+    logger.log(`[Background] Disposed ${disposed} Three.js resources`);
     
     // Dispose renderer
     if (renderer) {
@@ -1160,7 +1161,7 @@ export async function initShaderBackground() {
 
   // Add context loss handling
   canvas.addEventListener("webglcontextlost", function (event) {
-    console.warn("WebGL context lost. Attempting to restore...");
+    logger.warn("WebGL context lost. Attempting to restore...");
     event.preventDefault();
     // Reset initialization flag so it can be reinitialized
     window.shaderBackgroundInitialized = false;
@@ -1175,7 +1176,7 @@ export async function initShaderBackground() {
         try {
           initShaderBackground();
         } catch (error) {
-          console.error("Failed to reinitialize shader background after context restore:", error);
+          logger.error("Failed to reinitialize shader background after context restore:", error);
         } finally {
           window.shaderBackgroundReinitializing = false;
         }
@@ -1548,7 +1549,7 @@ export async function initShaderBackground() {
   // Function to load the globe model
   const loadGlobeModel = () => {
   const globeUrl = getPreloadedAssetUrl("globe-hd.glb", globeModelUrl);
-    console.log('[Background Init] Loading globe model...');
+    logger.log('[Background Init] Loading globe model...');
   gltfLoader.load(
     globeUrl,
     handleGltfLoad,
@@ -1557,20 +1558,20 @@ export async function initShaderBackground() {
         if (xhr.lengthComputable) {
           const percentComplete = (xhr.loaded / xhr.total) * 100;
           if (percentComplete % 25 === 0) {
-            console.log(`[Background Init] Globe loading: ${percentComplete.toFixed(0)}%`);
+            logger.log(`[Background Init] Globe loading: ${percentComplete.toFixed(0)}%`);
           }
         }
       },
     // Error callback
     (error) => {
-      console.error("Error loading globe model:", error);
+      logger.error("Error loading globe model:", error);
     }
   );
   };
 
   // Defer globe loading for low-end devices and AEM to improve initial load time
   if (shouldDeferGlobeLoading) {
-    console.log('[Background Init] Deferring globe model load for performance');
+    logger.log('[Background Init] Deferring globe model load for performance');
     // Use requestIdleCallback if available, otherwise setTimeout
     if ('requestIdleCallback' in window) {
       requestIdleCallback(() => loadGlobeModel(), { timeout: 2000 });
@@ -2983,7 +2984,7 @@ export async function initShaderBackground() {
       // This will now account for mobile viewport positioning
       positionGlobeBehindBottomWave();
     } catch (error) {
-      console.error("Error updating globe size:", error);
+      logger.error("Error updating globe size:", error);
       // Restore original scale if there was an error
       globeModel.scale.set(originalScale.x, originalScale.y, originalScale.z);
     }
@@ -3198,7 +3199,7 @@ export async function initShaderBackground() {
 
   // Create particle system with performance-based count
   let particleCount = perfSettings.particleCount; // Use performance-based particle count
-  console.log('[Background Init] Using particle count:', particleCount);
+  logger.log('[Background Init] Using particle count:', particleCount);
   let particles = new Float32Array(particleCount * 3);
   let particleVelocities = new Float32Array(particleCount * 3);
   let particleColors = new Float32Array(particleCount * 3);
@@ -4677,16 +4678,23 @@ export async function initShaderBackground() {
   const perfMonitor = new PerformanceMonitor();
   window.shaderBackgroundPerfMonitor = perfMonitor;
   
-  // Enable performance monitoring in debug mode
+  // Enable performance monitoring in debug mode or dev mode
   const debugPerformance = new URLSearchParams(window.location.search).has('debugPerf');
+  const isDevMode = import.meta.env?.DEV === true;
+  
   if (debugPerformance) {
+    // Full debug overlay with all metrics
     perfMonitor.createDebugOverlay();
-    console.log('[Background Init] Performance monitoring enabled');
+    logger.log('[Background Init] Full performance monitoring enabled');
+  } else if (isDevMode) {
+    // Compact FPS counter for dev mode
+    perfMonitor.createFpsCounter();
+    logger.log('[Background Init] Dev mode FPS counter enabled');
   }
   
   // Set up warning callback for performance issues
   perfMonitor.setWarningCallback((warnings) => {
-    console.warn('[Performance Warning]', warnings);
+    logger.warn('[Performance Warning]', warnings);
     // Could potentially trigger quality reduction here
   });
   

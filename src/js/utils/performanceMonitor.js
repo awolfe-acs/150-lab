@@ -1,7 +1,13 @@
 /**
  * Performance Monitor
  * Tracks and logs performance metrics for Three.js/WebGL rendering
+ * 
+ * Key principle: Don't warn based on single spikes. Only surface warnings
+ * after persistent evidence of poor performance. Let the PerformanceDetector
+ * handle actual degradation decisions.
  */
+
+import logger from './logger.js';
 
 export class PerformanceMonitor {
   constructor() {
@@ -23,15 +29,19 @@ export class PerformanceMonitor {
     this.warningThreshold = {
       fps: 30,
       frameTime: 33, // ms
-      memory: 200, // MB - Increased from 100 to 200 (Three.js scenes typically use 100-150MB)
+      memory: 200, // MB
     };
     
     this.onWarning = null;
     
     // Throttle warnings to prevent spam
     this.lastWarningTime = 0;
-    this.warningCooldown = 30000; // Only warn once every 30 seconds
-    this.warningHistory = new Map(); // Track which warnings we've sent recently
+    this.warningCooldown = 60000; // Only warn once every 60 seconds (increased from 30)
+    this.warningHistory = new Map();
+    
+    // Persistence tracking - require multiple consecutive low readings
+    this.consecutiveLowFps = 0;
+    this.persistenceThreshold = 5; // Need 5 consecutive low readings before warning
   }
 
   /**
@@ -78,10 +88,21 @@ export class PerformanceMonitor {
   }
 
   /**
-   * Check if any metrics are below thresholds (with throttling)
+   * Check if any metrics are below thresholds (with throttling and persistence)
+   * 
+   * Key principle: Don't warn on spikes. Require persistent evidence before
+   * surfacing any performance warnings.
    */
   checkWarnings() {
     const now = performance.now();
+    
+    // Track consecutive low FPS for persistence checking
+    if (this.metrics.fps < this.warningThreshold.fps && this.getAverageFPS() < this.warningThreshold.fps) {
+      this.consecutiveLowFps++;
+    } else {
+      // Reset on good reading - single spikes don't matter
+      this.consecutiveLowFps = Math.max(0, this.consecutiveLowFps - 1);
+    }
     
     // Throttle warnings to prevent spam
     if (now - this.lastWarningTime < this.warningCooldown) {
@@ -90,25 +111,21 @@ export class PerformanceMonitor {
     
     const warnings = [];
     
-    // Only warn about FPS if it's consistently low (not just a spike)
-    if (this.metrics.fps < this.warningThreshold.fps && this.getAverageFPS() < this.warningThreshold.fps) {
+    // Only warn about FPS if it's persistently low (not just spikes)
+    // Require multiple consecutive low readings AND low average
+    if (this.consecutiveLowFps >= this.persistenceThreshold && 
+        this.metrics.fps < this.warningThreshold.fps && 
+        this.getAverageFPS() < this.warningThreshold.fps) {
       const warningKey = 'fps';
       if (!this.warningHistory.has(warningKey) || now - this.warningHistory.get(warningKey) > this.warningCooldown) {
-        warnings.push(`Low FPS: ${this.metrics.fps} (avg: ${this.getAverageFPS()})`);
+        warnings.push(`Persistent low FPS: ${this.metrics.fps} (avg: ${this.getAverageFPS()}, streak: ${this.consecutiveLowFps})`);
         this.warningHistory.set(warningKey, now);
       }
     }
     
-    if (this.metrics.frameTime > this.warningThreshold.frameTime) {
-      const warningKey = 'frameTime';
-      if (!this.warningHistory.has(warningKey) || now - this.warningHistory.get(warningKey) > this.warningCooldown) {
-        warnings.push(`High frame time: ${this.metrics.frameTime.toFixed(1)}ms`);
-        this.warningHistory.set(warningKey, now);
-      }
-    }
-    
-    // Only warn about memory if it's significantly over threshold (20% margin)
-    if (this.metrics.memory > this.warningThreshold.memory * 1.2) {
+    // Frame time warnings removed - FPS is the primary metric
+    // Memory warning only if significantly over threshold (50% margin instead of 20%)
+    if (this.metrics.memory > this.warningThreshold.memory * 1.5) {
       const warningKey = 'memory';
       if (!this.warningHistory.has(warningKey) || now - this.warningHistory.get(warningKey) > this.warningCooldown) {
         warnings.push(`High memory usage: ${this.metrics.memory}MB (threshold: ${this.warningThreshold.memory}MB)`);
@@ -142,7 +159,7 @@ export class PerformanceMonitor {
    * Log metrics to console
    */
   log() {
-    console.log('[Performance Monitor]', {
+    logger.log('[Performance Monitor]', {
       fps: this.metrics.fps,
       avgFPS: this.getAverageFPS(),
       frameTime: `${this.metrics.frameTime.toFixed(1)}ms`,
@@ -200,6 +217,114 @@ export class PerformanceMonitor {
     const overlay = document.getElementById('perf-monitor-overlay');
     if (overlay) {
       overlay.remove();
+    }
+  }
+
+  /**
+   * Create a compact FPS counter for dev mode
+   * Less intrusive than full debug overlay
+   * 
+   * IMPORTANT: This counter measures actual browser animation framerate
+   * independently of the shader background renderer, so it works
+   * even when the shader is paused (e.g., during timeline scroll).
+   */
+  createFpsCounter() {
+    // Import performanceDetector to get FPS cap info
+    import('./performanceDetector.js').then(module => {
+      const performanceDetector = module.default;
+      
+      const counter = document.createElement('div');
+      counter.id = 'fps-counter';
+      counter.style.cssText = `
+        position: fixed;
+        bottom: 10px;
+        left: 10px;
+        background: rgba(0, 0, 0, 0.7);
+        color: #0f0;
+        font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+        font-size: 11px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        z-index: 999999;
+        pointer-events: none;
+        user-select: none;
+        min-width: 60px;
+        text-align: center;
+      `;
+      document.body.appendChild(counter);
+      
+      // Track FPS cap
+      let currentCap = null;
+      performanceDetector.onFpsCapChange((info) => {
+        currentCap = info.cap;
+      });
+      
+      // Independent FPS measurement using requestAnimationFrame
+      // This measures actual browser animation framerate, not shader framerate
+      let independentFrameCount = 0;
+      let independentLastTime = performance.now();
+      let independentFps = 60;
+      let independentFpsHistory = [];
+      const historyLength = 10;
+      
+      const measureFrame = () => {
+        if (!document.getElementById('fps-counter')) return; // Stop if counter removed
+        
+        independentFrameCount++;
+        const currentTime = performance.now();
+        const elapsed = currentTime - independentLastTime;
+        
+        // Update FPS every second
+        if (elapsed >= 1000) {
+          independentFps = Math.round((independentFrameCount * 1000) / elapsed);
+          independentFrameCount = 0;
+          independentLastTime = currentTime;
+          
+          // Track history for average
+          independentFpsHistory.push(independentFps);
+          if (independentFpsHistory.length > historyLength) {
+            independentFpsHistory.shift();
+          }
+          
+          // Calculate average
+          const avgFps = Math.round(independentFpsHistory.reduce((a, b) => a + b, 0) / independentFpsHistory.length);
+          
+          // Color code based on performance
+          let color = '#0f0'; // Green for good
+          if (independentFps < 30) {
+            color = '#f00'; // Red for bad
+          } else if (independentFps < 50) {
+            color = '#ff0'; // Yellow for warning
+          }
+          
+          counter.style.color = color;
+          
+          // Show FPS cap if set
+          const capText = currentCap ? ` <span style="color: #0af; font-size: 9px;">cap:${currentCap}</span>` : '';
+          counter.innerHTML = `${independentFps} FPS <span style="color: #888; font-size: 9px;">(avg: ${avgFps})</span>${capText}`;
+        }
+        
+        requestAnimationFrame(measureFrame);
+      };
+      
+      // Start independent measurement loop
+      requestAnimationFrame(measureFrame);
+    });
+    
+    return document.getElementById('fps-counter');
+  }
+
+  /**
+   * Remove FPS counter
+   */
+  removeFpsCounter() {
+    const counter = document.getElementById('fps-counter');
+    if (counter) {
+      counter.remove();
+    }
+    if (this.fpsCounterInterval) {
+      clearInterval(this.fpsCounterInterval);
+      this.fpsCounterInterval = null;
     }
   }
 

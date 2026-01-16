@@ -1,36 +1,40 @@
 // Import video and poster as assets
 import videoUrl from "../../public/video/acs-150-compressed.mp4?url";
 import posterUrl from "../../public/images/anniversary-video-poster.jpg?url";
+import logger from "./utils/logger.js";
 
 // Flag to indicate when sound toggle is triggered by video slider
 let videoSliderTriggeredUnmute = false;
 
 // YouTube Player API
 let youtubePlayer = null;
+let youtubeIframeLoaded = false;
 
-// Initialize YouTube API
-function initYouTubeAPI() {
+// Initialize YouTube API - now called only when user interacts
+function initYouTubeAPI(onReady) {
   // Check if YouTube Player API is already loaded
   if (window.YT && window.YT.Player) {
-    console.log('YouTube API already loaded, initializing player immediately');
+    logger.log('YouTube API already loaded, initializing player immediately');
     initPlayer();
+    if (onReady) onReady();
     return;
   }
   
   // Check if API is already loading
   if (window.onYouTubeIframeAPIReady) {
-    console.log('YouTube API is loading, chaining our callback');
+    logger.log('YouTube API is loading, chaining our callback');
     // API is loading, chain our callback
     const originalCallback = window.onYouTubeIframeAPIReady;
     window.onYouTubeIframeAPIReady = () => {
       originalCallback();
       initPlayer();
+      if (onReady) onReady();
     };
     return;
   }
   
   // Load YouTube IFrame API for the first time
-  console.log('Loading YouTube API for the first time');
+  logger.log('Loading YouTube API for the first time');
   const tag = document.createElement('script');
   tag.src = 'https://www.youtube.com/iframe_api';
   const firstScriptTag = document.getElementsByTagName('script')[0];
@@ -38,9 +42,22 @@ function initYouTubeAPI() {
 
   // Set up callback for when API loads
   window.onYouTubeIframeAPIReady = () => {
-    console.log('YouTube API ready, initializing player');
+    logger.log('YouTube API ready, initializing player');
     initPlayer();
+    if (onReady) onReady();
   };
+}
+
+// Load the YouTube iframe src from data-src (lazy loading)
+function loadYouTubeIframe() {
+  if (youtubeIframeLoaded) return;
+  
+  const iframe = document.getElementById('youtube-video-iframe');
+  if (iframe && !iframe.src && iframe.dataset.src) {
+    logger.log('Lazy loading YouTube iframe');
+    iframe.src = iframe.dataset.src;
+    youtubeIframeLoaded = true;
+  }
 }
 
 // Separate function to initialize the player once API is ready
@@ -66,107 +83,20 @@ function initPlayer() {
 }
 
 function onPlayerReady(event) {
-  console.log('YouTube player ready');
-  
-  // Set up the custom overlay click handler
-  const overlay = document.querySelector('.video-start-overlay');
-  if (overlay) {
-    overlay.addEventListener('click', function() {
-      // Play UI click sound if audio is not muted
-      if (!window.audioMuted && window.playUIClickSound) {
-        try {
-          window.playUIClickSound();
-        } catch (e) {
-          console.warn('Could not play UI click sound:', e);
-        }
-      }
-      
-      if (youtubePlayer) {
-        youtubePlayer.playVideo();
-        
-        // IMMEDIATE audio fade out on click
-        console.log('[video.js] Overlay clicked, fading out audio immediately');
-        if (window.cancelActiveFade) window.cancelActiveFade();
-        if (window.fadeBackgroundAudio) {
-          window.fadeBackgroundAudio(0.001, 1000, () => {
-            // Just duck the audio (volume 0.001), don't pause it to keep the session active
-            // We use 0.001 instead of 0 to prevent browsers from auto-suspending the context
-            console.log('[video.js] Background audio ducked (vol 0.001) via overlay click');
-          });
-        } else if (window.backgroundAudio) {
-          // Fallback if helpers aren't ready
-          window.backgroundAudio.volume = 0.001;
-        }
-        
-        // Wait 150ms before starting overlay fade out
-        setTimeout(() => {
-          // Hide the overlay with transition (0.4s fade)
-          overlay.classList.add('hidden');
-          
-          // Wait for fade transition to complete (400ms) then remove from DOM
-          setTimeout(() => {
-            overlay.remove();
-          }, 400);
-        }, 150);
-      }
-    });
-  }
-  
-  // Setup IntersectionObserver to pause video when scrolled out of view
-  const videoSection = document.querySelector('#video');
-  if (videoSection && youtubePlayer) {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (!entry.isIntersecting) {
-          // Video scrolled out of view
-          console.log('[video.js] Main video scrolled out of view, pausing');
-          
-          // Track if video was playing before we pause it
-          let wasPlaying = false;
-          
-          try {
-            const playerState = youtubePlayer.getPlayerState();
-            // Only pause if currently playing (state 1)
-            if (playerState === 1) {
-              wasPlaying = true;
-              youtubePlayer.pauseVideo();
-            }
-          } catch (error) {
-            console.warn('[video.js] Could not pause video:', error);
-          }
-          
-          // FALLBACK: If video has been played, resume background audio
-          // This ensures audio resumes even if state change events don't fire
-          if (wasPlaying) {
-            console.log('[video.js] Main video left viewport after playing, resuming background audio as fallback');
-            setTimeout(() => {
-              // Only resume if no other videos are playing
-              const mainPlaying = window.isMainVideoPlaying ? window.isMainVideoPlaying() : false;
-              const secondPlaying = window.isSecondVideoPlaying ? window.isSecondVideoPlaying() : false;
-              
-              if (!mainPlaying && !secondPlaying && window.resumeBackgroundAudio && !window.audioMuted) {
-                window.resumeBackgroundAudio();
-              }
-            }, 300); // Small delay to ensure pause event fires first
-          }
-        }
-      });
-    }, {
-      threshold: 0.25 // Trigger when 25% or less of video is visible
-    });
-    
-    observer.observe(videoSection);
-  }
+  logger.log('YouTube player ready');
+  // Note: Overlay click handling and IntersectionObserver are now set up in initVideo()
+  // before the YouTube API is loaded, to support lazy loading.
+  // This function is kept for the onReady event callback but the setup is done earlier.
 }
 
 function onPlayerStateChange(event) {
-  console.log('Main video state changed:', event.data);
+  logger.log('Main video state changed:', event.data);
   
   // Manage background audio for main video
   // YouTube Player State: 1 = playing, 0 = ended, 2 = paused
   if (event.data === 1) {
     // Video is playing - fade out and pause background audio
-    console.log('[video.js] Video playing, pausing background audio');
+    logger.log('[video.js] Video playing, pausing background audio');
     if (window.cancelActiveFade) window.cancelActiveFade();
     
     if (window.backgroundAudio) {
@@ -176,7 +106,7 @@ function onPlayerStateChange(event) {
         window.fadeBackgroundAudio(0.001, 1000, () => {
           // Just duck the audio (volume 0.001), don't pause it to keep the session active
           // We use 0.001 instead of 0 to prevent browsers from auto-suspending the context
-          console.log('[video.js] Background audio ducked (vol 0.001)');
+          logger.log('[video.js] Background audio ducked (vol 0.001)');
         });
       } else {
         // Fallback
@@ -185,11 +115,11 @@ function onPlayerStateChange(event) {
     }
   } else if (event.data === 0 || event.data === 2) {
     // Video ended (0) or paused (2) - resume background audio
-    console.log('[video.js] Video paused/ended, calling resumeBackgroundAudio');
+    logger.log('[video.js] Video paused/ended, calling resumeBackgroundAudio');
     if (window.resumeBackgroundAudio) {
       window.resumeBackgroundAudio();
     } else {
-      console.error('[video.js] resumeBackgroundAudio not found on window');
+      logger.error('[video.js] resumeBackgroundAudio not found on window');
     }
   }
 }
@@ -226,8 +156,90 @@ export function initVideo() {
   // Check if there's a YouTube iframe
   const youtubeIframe = videoWrapper.querySelector("iframe#youtube-video-iframe");
   if (youtubeIframe) {
-    console.log("YouTube iframe detected, initializing YouTube API");
-    initYouTubeAPI();
+    logger.log("YouTube iframe detected, setting up lazy loading");
+    
+    // Setup the click handler to lazy-load YouTube when user clicks
+    const overlay = document.querySelector('.video-start-overlay');
+    if (overlay) {
+      overlay.addEventListener('click', function handleOverlayClick() {
+        // Play UI click sound if audio is not muted
+        if (!window.audioMuted && window.playUIClickSound) {
+          try {
+            window.playUIClickSound();
+          } catch (e) {
+            logger.warn('Could not play UI click sound:', e);
+          }
+        }
+        
+        // IMMEDIATE audio fade out on click
+        logger.log('[video.js] Overlay clicked, fading out audio immediately');
+        if (window.cancelActiveFade) window.cancelActiveFade();
+        if (window.fadeBackgroundAudio) {
+          window.fadeBackgroundAudio(0.001, 1000, () => {
+            logger.log('[video.js] Background audio ducked (vol 0.001) via overlay click');
+          });
+        } else if (window.backgroundAudio) {
+          window.backgroundAudio.volume = 0.001;
+        }
+        
+        // Load the YouTube iframe (lazy loading)
+        loadYouTubeIframe();
+        
+        // Wait a short moment for iframe to start loading, then init API
+        // The iframe src now has autoplay=1, so it will play automatically
+        setTimeout(() => {
+          initYouTubeAPI(() => {
+            // Player is ready and video will autoplay due to autoplay=1 in src
+            logger.log('[video.js] YouTube player initialized after lazy load');
+          });
+        }, 100);
+        
+        // Start overlay fade out
+        setTimeout(() => {
+          overlay.classList.add('hidden');
+          setTimeout(() => {
+            overlay.remove();
+          }, 400);
+        }, 150);
+        
+        // Remove this click handler since it's one-time
+        overlay.removeEventListener('click', handleOverlayClick);
+      });
+    }
+    
+    // Setup IntersectionObserver for the video section (for pausing when scrolled away)
+    // But only after video is loaded
+    const videoSection = document.querySelector('#video');
+    if (videoSection) {
+      const visibilityObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting && youtubePlayer) {
+            logger.log('[video.js] Main video scrolled out of view, pausing');
+            try {
+              const playerState = youtubePlayer.getPlayerState();
+              if (playerState === 1) {
+                youtubePlayer.pauseVideo();
+              }
+            } catch (error) {
+              logger.warn('[video.js] Could not pause video:', error);
+            }
+            
+            // Resume background audio
+            setTimeout(() => {
+              const mainPlaying = window.isMainVideoPlaying ? window.isMainVideoPlaying() : false;
+              if (!mainPlaying && window.resumeBackgroundAudio && !window.audioMuted) {
+                window.resumeBackgroundAudio();
+              }
+            }, 300);
+          }
+        });
+      }, {
+        threshold: 0.25
+      });
+      
+      visibilityObserver.observe(videoSection);
+    }
+    
     return;
   }
 
@@ -236,7 +248,7 @@ export function initVideo() {
   
   // If no video element found (e.g., using YouTube iframe instead), exit early
   if (!videoElement) {
-    console.log("No <video> element found in .video-wrapper, skipping custom video controls");
+    logger.log("No <video> element found in .video-wrapper, skipping custom video controls");
     return;
   }
 
@@ -250,10 +262,10 @@ export function initVideo() {
 
   // Add error event listener to check if the video file can be loaded
   videoElement.addEventListener("error", (e) => {
-    console.error("Video loading error:", e);
-    console.error("Video src:", videoElement.src);
-    console.error("Video error code:", videoElement.error?.code);
-    console.error("Video error message:", videoElement.error?.message);
+    logger.error("Video loading error:", e);
+    logger.error("Video src:", videoElement.src);
+    logger.error("Video error code:", videoElement.error?.code);
+    logger.error("Video error message:", videoElement.error?.message);
   });
 
   // Add loadeddata event to ensure video is ready
@@ -783,13 +795,12 @@ export function initVideo() {
           // FALLBACK: If video has been played, ensure background audio resumes
           // This provides extra safety in case pause event doesn't trigger audio resume
           if (wasPlaying) {
-            console.log('[video.js] Custom video left viewport after playing, ensuring background audio resumes');
+            logger.log('[video.js] Custom video left viewport after playing, ensuring background audio resumes');
             setTimeout(() => {
-              // Only resume if no other videos are playing
+              // Only resume if main video is not playing
               const mainPlaying = window.isMainVideoPlaying ? window.isMainVideoPlaying() : false;
-              const secondPlaying = window.isSecondVideoPlaying ? window.isSecondVideoPlaying() : false;
               
-              if (!mainPlaying && !secondPlaying && window.resumeBackgroundAudio && !window.audioMuted) {
+              if (!mainPlaying && window.resumeBackgroundAudio && !window.audioMuted) {
                 window.resumeBackgroundAudio();
               }
             }, 800); // Delay accounts for the 600ms fade + 200ms buffer

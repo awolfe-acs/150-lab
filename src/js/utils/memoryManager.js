@@ -3,6 +3,8 @@
  * Utilities for managing and cleaning up Three.js resources
  */
 
+import logger from './logger.js';
+
 export class MemoryManager {
   constructor() {
     this.disposables = new Set();
@@ -49,7 +51,7 @@ export class MemoryManager {
       this.geometries.delete(resource);
       this.materials.delete(resource);
     } catch (error) {
-      console.warn('[Memory Manager] Error disposing resource:', error);
+      logger.warn('[Memory Manager] Error disposing resource:', error);
     }
   }
 
@@ -67,7 +69,7 @@ export class MemoryManager {
           disposed++;
         }
       } catch (error) {
-        console.warn('[Memory Manager] Error disposing texture:', error);
+        logger.warn('[Memory Manager] Error disposing texture:', error);
       }
     });
     this.textures.clear();
@@ -80,7 +82,7 @@ export class MemoryManager {
           disposed++;
         }
       } catch (error) {
-        console.warn('[Memory Manager] Error disposing geometry:', error);
+        logger.warn('[Memory Manager] Error disposing geometry:', error);
       }
     });
     this.geometries.clear();
@@ -93,7 +95,7 @@ export class MemoryManager {
           disposed++;
         }
       } catch (error) {
-        console.warn('[Memory Manager] Error disposing material:', error);
+        logger.warn('[Memory Manager] Error disposing material:', error);
       }
     });
     this.materials.clear();
@@ -106,12 +108,12 @@ export class MemoryManager {
           disposed++;
         }
       } catch (error) {
-        console.warn('[Memory Manager] Error disposing resource:', error);
+        logger.warn('[Memory Manager] Error disposing resource:', error);
       }
     });
     this.disposables.clear();
     
-    console.log(`[Memory Manager] Disposed ${disposed} resources`);
+    logger.log(`[Memory Manager] Disposed ${disposed} resources`);
     
     return disposed;
   }
@@ -204,7 +206,7 @@ export class MemoryManager {
     try {
       if (window.gc) {
         window.gc();
-        console.log('[Memory Manager] Forced garbage collection');
+        logger.log('[Memory Manager] Forced garbage collection');
       } else {
         // Create and discard large arrays to hint at garbage collection
         const hint = new Array(1000000);

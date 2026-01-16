@@ -2,6 +2,7 @@
 import SplitType from "split-type";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
+import logger from "./logger.js";
 
 // Internal state for split instances
 const splitInstances = [];
@@ -168,7 +169,7 @@ const processSplitElement = (element, index) => {
             attemptSplit(attempt + 1);
           }, 300 * (attempt + 1)); // 300ms, 600ms, 900ms
         } else {
-          console.warn("SplitType failed to create lines properly after multiple attempts:", element);
+          logger.warn("SplitType failed to create lines properly after multiple attempts:", element);
           // Restore original content if split failed after all retries
           element.innerHTML = originalContent;
         }
@@ -261,7 +262,7 @@ const processSplitCharsElement = (element, index) => {
             attemptSplit(attempt + 1);
           }, 300 * (attempt + 1)); // 300ms, 600ms, 900ms
         } else {
-          console.warn("SplitType failed to create chars after multiple attempts:", element);
+          logger.warn("SplitType failed to create chars after multiple attempts:", element);
           // Restore original content if split failed after all retries
           element.innerHTML = originalContent;
         }
@@ -278,7 +279,7 @@ export function initSplitLinesAnimation(elementsToSplit = null) {
   const splitLinesElements = elementsToSplit || document.querySelectorAll(".split-lines");
 
   if (!splitLinesElements || splitLinesElements.length === 0) {
-    console.warn("No .split-lines elements found or provided for initialization");
+    logger.warn("No .split-lines elements found or provided for initialization");
     return;
   }
 
@@ -293,7 +294,7 @@ export function initSplitCharsAnimation(elementsToSplit = null) {
   const splitCharsElements = elementsToSplit || document.querySelectorAll(".split-chars");
 
   if (!splitCharsElements || splitCharsElements.length === 0) {
-    console.warn("No .split-chars elements found or provided for initialization");
+    logger.warn("No .split-chars elements found or provided for initialization");
     return;
   }
 

@@ -2,6 +2,7 @@
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import debounce from "../utils/debounce.js";
+import logger from "../utils/logger.js";
 
 // Initialize infinite marquee animation for form panel image with responsive support
 export function initInfiniteMarqueeAnimation() {
@@ -9,7 +10,7 @@ export function initInfiniteMarqueeAnimation() {
   const originalImage = animationColumn?.querySelector("img");
 
   if (!animationColumn || !originalImage) {
-    console.warn("Form panel animation column or image not found");
+    logger.warn("Form panel animation column or image not found");
     return;
   }
 
@@ -62,7 +63,7 @@ export function initInfiniteMarqueeAnimation() {
         if (window.innerWidth < 580) {
           return;
         }
-        console.warn("Image height is 0, retrying marquee setup...");
+        logger.warn("Image height is 0, retrying marquee setup...");
         setTimeout(setupAnimation, 200);
         return;
       }

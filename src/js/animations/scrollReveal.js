@@ -1,6 +1,7 @@
 // animations/scrollReveal.js
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
+import logger from "../utils/logger.js";
 
 // Initialize simple scroll reveal animation without text splitting
 export function initScrollRevealAnimation() {
@@ -8,7 +9,7 @@ export function initScrollRevealAnimation() {
   const scrollRevealElements = document.querySelectorAll(".scroll-reveal, .reveal-top-center, .reveal-center-center");
 
   if (!scrollRevealElements.length) {
-    console.warn("No reveal elements found");
+    logger.warn("No reveal elements found");
     return;
   }
 

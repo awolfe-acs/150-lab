@@ -4,6 +4,8 @@
  * and provides appropriate fallback settings
  */
 
+import logger from './logger.js';
+
 class AEMModeDetector {
   constructor() {
     this.isAuthorMode = false;
@@ -51,7 +53,7 @@ class AEMModeDetector {
 
     // CRITICAL: Skip detection entirely if in development environment
     if (this.isDevelopmentEnvironment()) {
-      console.log('[AEM Mode Detector] Development environment detected - skipping AEM detection');
+      logger.log('[AEM Mode Detector] Development environment detected - skipping AEM detection');
       this.isPublishMode = true;
       this.isAuthorMode = false;
       this.isEditMode = false;
@@ -66,7 +68,7 @@ class AEMModeDetector {
     
     // CRITICAL: Check for wcmmode=disabled - this means "show as published"
     if (url.includes('wcmmode=disabled')) {
-      console.log('[AEM Mode Detector] wcmmode=disabled detected - using publish mode');
+      logger.log('[AEM Mode Detector] wcmmode=disabled detected - using publish mode');
       this.isPublishMode = true;
       this.isAuthorMode = false;
       this.isEditMode = false;
@@ -100,7 +102,7 @@ class AEMModeDetector {
       this.isAuthorMode = true;
       this.isPublishMode = false;
       this.isEditMode = true;
-      console.log('[AEM Mode Detector] Edit mode detected via URL');
+      logger.log('[AEM Mode Detector] Edit mode detected via URL');
     }
     
     // Preview mode is treated as limited mode, not fallback
@@ -108,7 +110,7 @@ class AEMModeDetector {
       this.isAuthorMode = true;
       this.isPublishMode = false;
       this.isPreviewMode = true;
-      console.log('[AEM Mode Detector] Preview mode detected via URL');
+      logger.log('[AEM Mode Detector] Preview mode detected via URL');
     }
 
     // Method 2: Check for AEM Granite namespace (author environment)
@@ -120,7 +122,7 @@ class AEMModeDetector {
         this.isAuthorMode = true;
         this.isPublishMode = false;
         // Keep as author but not edit (limited mode, not fallback)
-        console.log('[AEM Mode Detector] Granite namespace detected (author environment)');
+        logger.log('[AEM Mode Detector] Granite namespace detected (author environment)');
       }
     }
 
@@ -137,12 +139,12 @@ class AEMModeDetector {
       this.isAuthorMode = true;
       this.isEditMode = true;
       this.isPublishMode = false;
-      console.log('[AEM Mode Detector] AEM Edit UI elements detected');
+      logger.log('[AEM Mode Detector] AEM Edit UI elements detected');
     } else if (hasAuthorUIElements && isAEMDomain && !this.isEditMode) {
       // Has author UI but not specifically edit mode
       this.isAuthorMode = true;
       this.isPublishMode = false;
-      console.log('[AEM Mode Detector] AEM Author UI detected (not edit mode)');
+      logger.log('[AEM Mode Detector] AEM Author UI detected (not edit mode)');
     }
 
     // Method 4: Check for wcmmode cookie
@@ -158,18 +160,18 @@ class AEMModeDetector {
           this.isAuthorMode = false;
           this.isEditMode = false;
           this.isPreviewMode = false;
-          console.log('[AEM Mode Detector] wcmmode=disabled cookie - using publish mode');
+          logger.log('[AEM Mode Detector] wcmmode=disabled cookie - using publish mode');
           break;
         } else if (value === 'edit' || value === 'design') {
           this.isAuthorMode = true;
           this.isEditMode = true;
           this.isPublishMode = false;
-          console.log('[AEM Mode Detector] wcmmode=edit/design cookie detected');
+          logger.log('[AEM Mode Detector] wcmmode=edit/design cookie detected');
         } else if (value === 'preview') {
           this.isAuthorMode = true;
           this.isPreviewMode = true;
           this.isPublishMode = false;
-          console.log('[AEM Mode Detector] wcmmode=preview cookie detected');
+          logger.log('[AEM Mode Detector] wcmmode=preview cookie detected');
         }
         break;
       }
@@ -189,14 +191,14 @@ class AEMModeDetector {
           this.isAuthorMode = true;
           this.isEditMode = true;
           this.isPublishMode = false;
-          console.log('[AEM Mode Detector] AEM Editor iframe detected');
+          logger.log('[AEM Mode Detector] AEM Editor iframe detected');
         }
       }
     } catch (e) {
       // Cross-origin iframe - only assume EDIT mode if already detected
       // Don't assume edit mode just from cross-origin iframe
       if (this.isEditMode && isAEMDomain) {
-        console.log('[AEM Mode Detector] Cross-origin iframe in edit context');
+        logger.log('[AEM Mode Detector] Cross-origin iframe in edit context');
       }
     }
 
@@ -204,7 +206,7 @@ class AEMModeDetector {
 
     // Log detection results
     const mode = this.getMode();
-    console.log('[AEM Mode Detector] Detection complete:', {
+    logger.log('[AEM Mode Detector] Detection complete:', {
       mode: mode,
       url: url,
       hostname: hostname,
@@ -328,7 +330,7 @@ class AEMModeDetector {
     body.style.background = 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%)';
     body.style.backgroundAttachment = 'fixed';
     
-    console.log('[AEM Mode] Applied static background');
+    logger.log('[AEM Mode] Applied static background');
   }
 
   /**
@@ -363,7 +365,7 @@ class AEMModeDetector {
     
     document.body.appendChild(message);
     
-    console.log('[AEM Mode] Showing edit mode message');
+    logger.log('[AEM Mode] Showing edit mode message');
   }
 }
 

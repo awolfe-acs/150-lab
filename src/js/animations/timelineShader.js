@@ -1,9 +1,10 @@
 import * as THREE from 'three';
+import logger from '../utils/logger.js';
 
 export function initTimelineShader() {
   const canvas = document.querySelector('#timeline-shader-bg');
   if (!canvas) {
-    console.warn('Timeline Shader: Canvas #timeline-shader-bg not found');
+    logger.warn('Timeline Shader: Canvas #timeline-shader-bg not found');
     return;
   }
 
@@ -229,7 +230,9 @@ export function initTimelineShader() {
   
   scene.add(points);
 
-  // Animation Loop
+  // Animation Loop - NO FPS CAP for smooth scroll-based parameter transitions
+  // The shader params are interpolated during scroll (2000-2026 era), so it needs
+  // full refresh rate for smooth visual transitions
   const clock = new THREE.Clock();
   let animationId;
   let isPaused = false;
@@ -242,7 +245,7 @@ export function initTimelineShader() {
     const elapsedTime = clock.getElapsedTime();
     material.uniforms.uTime.value = elapsedTime * params.waveSpeed;
     
-    // Update uniforms from params (in case changed via console)
+    // Update uniforms from params (interpolated by ScrollTrigger onUpdate)
     material.uniforms.uFrequencyX.value = params.waveFrequencyX;
     material.uniforms.uFrequencyY.value = params.waveFrequencyY;
     material.uniforms.uAmplitude.value = params.waveAmplitude;
@@ -282,8 +285,8 @@ export function initTimelineShader() {
 
   window.addEventListener('resize', onWindowResize);
 
-  // Start Animation
-  animate();
+  // Start Animation with initial timestamp
+  requestAnimationFrame(animate);
 
   // Return control object
   return {
@@ -300,9 +303,9 @@ export function initTimelineShader() {
         // Force resize update to ensure proportionality
         onWindowResize();
         
-        clock.start(); // Reset or resume clock? Resume is better but Clock doesn't have resume. 
-        // Just continue animate
-        animate();
+        clock.start(); // Reset clock on resume
+        // Start animation loop
+        requestAnimationFrame(animate);
       }
     },
     updateParams: (newParams) => {

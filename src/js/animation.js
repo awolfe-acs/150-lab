@@ -1,10 +1,11 @@
 import gsap from "gsap";
+import logger from "./utils/logger.js";
 
 // Verify GSAP loaded correctly
 if (!gsap || typeof gsap.to !== 'function') {
-  console.error('[Animation] GSAP not loaded correctly!', gsap);
+  logger.error('[Animation] GSAP not loaded correctly!', gsap);
 } else {
-  console.log('[Animation] GSAP loaded successfully');
+  logger.log('[Animation] GSAP loaded successfully');
 }
 
 /**
@@ -62,13 +63,13 @@ export function animateCountdownChange(unit, value) {
   
   // Exit early if element doesn't exist
   if (!element) {
-    console.warn(`[Animation] Element not found for unit: ${unit}`);
+    logger.warn(`[Animation] Element not found for unit: ${unit}`);
     return;
   }
 
   // Validate element is a proper DOM node
   if (!isValidDOMElement(element)) {
-    console.warn(`[Animation] Invalid DOM element for unit: ${unit}`, element);
+    logger.warn(`[Animation] Invalid DOM element for unit: ${unit}`, element);
     return;
   }
 
@@ -86,7 +87,7 @@ export function animateCountdownChange(unit, value) {
     const gsapAvailable = gsap && typeof gsap.to === 'function';
     
     if (!gsapAvailable) {
-      console.warn('[Animation] GSAP not available, using CSS fallback');
+      logger.warn('[Animation] GSAP not available, using CSS fallback');
       animateWithCSS(element, formattedValue);
       return;
     }
@@ -161,7 +162,7 @@ export function animateCountdownChange(unit, value) {
       }
       
     } catch (error) {
-      console.error('[Animation] GSAP animation error, falling back to CSS:', error);
+      logger.error('[Animation] GSAP animation error, falling back to CSS:', error);
       // Fallback to CSS-based animation
       animateWithCSS(element, formattedValue);
     }

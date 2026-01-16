@@ -3,6 +3,7 @@ import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import SplitType from "split-type";
 import debounce from "../utils/debounce.js";
+import logger from "../utils/logger.js";
 
 export function animateGetInvolvedText() {
   const getInvolvedText = document.querySelector("#get-involved-text p");
@@ -61,7 +62,7 @@ export function animateGetInvolvedText() {
             ease: "power1.out",
           });
       } else {
-        console.warn("SplitType failed to detect lines properly");
+        logger.warn("SplitType failed to detect lines properly");
       }
     }, 100); // Small delay to ensure proper layout
   }
@@ -72,7 +73,7 @@ export function initGetInvolvedLogoAnimation() {
   const logoElement = document.querySelector(".get-involved-150-logo");
 
   if (!logoElement) {
-    console.warn("No .get-involved-150-logo element found");
+    logger.warn("No .get-involved-150-logo element found");
     return;
   }
 
@@ -206,6 +207,6 @@ export function animateSlidingCards() {
 
     window.addEventListener("resize", debounceResize);
   } else {
-    console.warn("Could not find sliding card wrapper or get-involved-cards section");
+    logger.warn("Could not find sliding card wrapper or get-involved-cards section");
   }
 }

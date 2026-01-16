@@ -10,6 +10,7 @@ import {
   setEnterButtonClicked,
   playBackgroundAudio,
 } from "../ui/audio.js";
+import logger from "../utils/logger.js";
 
 // Store SplitType instances for cleanup
 let heroHeadingSplitInstance = null;
@@ -60,14 +61,14 @@ export function setupHeroHeadingFadeAnimation() {
           transformOrigin: "center center",
         });
       } catch (error) {
-        console.error("Error re-splitting hero heading:", error);
+        logger.error("Error re-splitting hero heading:", error);
         return; // Exit if splitting fails
       }
     }
 
     // Ensure we have characters to animate now
     if (!splitTextChars || splitTextChars.length === 0) {
-      console.warn("Still no hero heading characters found after attempting re-split. Aborting animation setup.");
+      logger.warn("Still no hero heading characters found after attempting re-split. Aborting animation setup.");
       return;
     }
 
@@ -170,7 +171,7 @@ export function setupHeroHeadingFadeAnimation() {
       },
     });
   } else {
-    console.warn("#hero-area h1 not found for fade animation setup.");
+    logger.warn("#hero-area h1 not found for fade animation setup.");
   }
 }
 
@@ -344,7 +345,7 @@ export function initCoverArea() {
             if (window.audioRetryCount < window.maxAudioRetries) {
               playBackgroundAudio(true);
             } else {
-              console.warn(`Exceeded maximum audio retry attempts (${window.maxAudioRetries}). Stopping retries.`);
+              logger.warn(`Exceeded maximum audio retry attempts (${window.maxAudioRetries}). Stopping retries.`);
               clearInterval(window.audioRetryTimer);
               window.audioRetryTimer = null;
             }
@@ -1040,7 +1041,7 @@ export function initHeroNumberCountdown() {
         // Force a refresh to ensure proper initialization
         ScrollTrigger.refresh();
       } else {
-        console.error("Hero countdown: ScrollTrigger creation failed!");
+        logger.error("Hero countdown: ScrollTrigger creation failed!");
       }
     } else {
       // If the tween exists, ensure its ScrollTrigger is enabled (might be needed if killed previously)
@@ -1050,7 +1051,7 @@ export function initHeroNumberCountdown() {
       animationState.heroNumberTween.resume(); // Ensure tween is not paused
     }
   } else {
-    console.warn("#hero-number element not found for countdown animation.");
+    logger.warn("#hero-number element not found for countdown animation.");
   }
 }
 
