@@ -9,9 +9,17 @@ let videoSliderTriggeredUnmute = false;
 // YouTube Player API
 let youtubePlayer = null;
 let youtubeIframeLoaded = false;
+let youtubePlayerInitialized = false; // Prevent duplicate initialization
 
 // Initialize YouTube API - now called only when user interacts
 function initYouTubeAPI(onReady) {
+  // Prevent duplicate initialization
+  if (youtubePlayerInitialized) {
+    logger.log('YouTube player already initialized, skipping');
+    if (onReady) onReady();
+    return;
+  }
+  
   // Check if YouTube Player API is already loaded
   if (window.YT && window.YT.Player) {
     logger.log('YouTube API already loaded, initializing player immediately');
@@ -27,7 +35,9 @@ function initYouTubeAPI(onReady) {
     const originalCallback = window.onYouTubeIframeAPIReady;
     window.onYouTubeIframeAPIReady = () => {
       originalCallback();
-      initPlayer();
+      if (!youtubePlayerInitialized) {
+        initPlayer();
+      }
       if (onReady) onReady();
     };
     return;
@@ -43,27 +53,77 @@ function initYouTubeAPI(onReady) {
   // Set up callback for when API loads
   window.onYouTubeIframeAPIReady = () => {
     logger.log('YouTube API ready, initializing player');
-    initPlayer();
+    if (!youtubePlayerInitialized) {
+      initPlayer();
+    }
     if (onReady) onReady();
   };
 }
 
 // Load the YouTube iframe src from data-src (lazy loading)
 function loadYouTubeIframe() {
-  if (youtubeIframeLoaded) return;
+  if (youtubeIframeLoaded) {
+    logger.log('YouTube iframe already loaded, skipping');
+    return;
+  }
   
   const iframe = document.getElementById('youtube-video-iframe');
-  if (iframe && !iframe.src && iframe.dataset.src) {
-    logger.log('Lazy loading YouTube iframe');
+  if (!iframe) return;
+  
+  // Check if iframe already has src (AEM might pre-load it)
+  if (iframe.src && iframe.src !== 'about:blank' && iframe.src !== '') {
+    logger.log('YouTube iframe already has src, marking as loaded');
+    youtubeIframeLoaded = true;
+    return;
+  }
+  
+  // Load from data-src
+  if (iframe.dataset.src) {
+    logger.log('Lazy loading YouTube iframe from data-src');
     iframe.src = iframe.dataset.src;
     youtubeIframeLoaded = true;
   }
 }
 
+// Track when player is truly ready (after onReady fires)
+let youtubePlayerReady = false;
+
 // Separate function to initialize the player once API is ready
 function initPlayer() {
+  // Prevent duplicate initialization
+  if (youtubePlayerInitialized) {
+    logger.log('YouTube player already initialized (initPlayer check), skipping');
+    return;
+  }
+  
   const iframe = document.getElementById('youtube-video-iframe');
-  if (iframe) {
+  
+  // Ensure iframe exists and is in the document
+  if (!iframe || !document.body.contains(iframe)) {
+    logger.warn('YouTube iframe not found or not in DOM, delaying player init');
+    setTimeout(initPlayer, 100);
+    return;
+  }
+  
+  // Ensure iframe has loaded (has src set)
+  if (!iframe.src || iframe.src === 'about:blank') {
+    logger.warn('YouTube iframe src not set, delaying player init');
+    setTimeout(initPlayer, 100);
+    return;
+  }
+  
+  // Mark as initialized BEFORE creating player to prevent race conditions
+  youtubePlayerInitialized = true;
+  
+  // Mark iframe so audio.js and AEM's SDI tracking know not to create another player
+  iframe.setAttribute('data-player-managed', 'true');
+  iframe.setAttribute('data-yt-player-initialized', 'true');
+  
+  // Also set global flags for other scripts to check
+  window.mainYouTubePlayerManaged = true;
+  window.mainYouTubePlayerInitializing = true;
+  
+  try {
     youtubePlayer = new YT.Player('youtube-video-iframe', {
       events: {
         'onReady': onPlayerReady,
@@ -74,27 +134,76 @@ function initPlayer() {
     // Expose state checker for global audio management
     window.isMainVideoPlaying = () => {
       try {
-        return youtubePlayer && youtubePlayer.getPlayerState && youtubePlayer.getPlayerState() === 1;
+        return youtubePlayerReady && youtubePlayer && youtubePlayer.getPlayerState && youtubePlayer.getPlayerState() === 1;
       } catch (e) {
         return false;
       }
     };
+    
+    // Expose ready checker
+    window.isMainYouTubePlayerReady = () => youtubePlayerReady;
+    
+  } catch (error) {
+    logger.error('Error creating YouTube player:', error);
+    youtubePlayerInitialized = false; // Allow retry
+    window.mainYouTubePlayerManaged = false;
   }
+}
+
+// Remove any blocking overlay divs that YouTube creates
+function removeYouTubeBlockingDivs() {
+  const wrapper = document.getElementById('youtube-video-wrapper');
+  if (!wrapper) return;
+  
+  // Find any divs that YouTube API might have created that block the iframe
+  // These are typically positioned absolutely with z-index
+  const potentialBlockers = wrapper.querySelectorAll('div:not(.video-start-overlay):not(.play-button-overlay)');
+  potentialBlockers.forEach(div => {
+    const style = div.style;
+    // Check for YouTube's typical blocking div pattern
+    if (style.position === 'absolute' && 
+        style.top === '0px' && 
+        style.left === '0px' &&
+        style.width === '100%' && 
+        style.height === '100%' &&
+        !div.classList.length) {
+      logger.log('Removing YouTube blocking div');
+      div.remove();
+    }
+  });
 }
 
 function onPlayerReady(event) {
   logger.log('YouTube player ready');
-  // Note: Overlay click handling and IntersectionObserver are now set up in initVideo()
-  // before the YouTube API is loaded, to support lazy loading.
-  // This function is kept for the onReady event callback but the setup is done earlier.
+  
+  // Mark player as truly ready
+  youtubePlayerReady = true;
+  window.mainYouTubePlayerInitializing = false;
+  window.mainYouTubePlayerReady = true;
+  
+  // Remove any blocking divs that YouTube might have created
+  removeYouTubeBlockingDivs();
+  
+  // Also check again after a short delay (YouTube might add them after onReady)
+  setTimeout(removeYouTubeBlockingDivs, 500);
+  setTimeout(removeYouTubeBlockingDivs, 1000);
 }
 
 function onPlayerStateChange(event) {
+  // Ensure player is ready before processing state changes
+  if (!youtubePlayerReady) {
+    logger.warn('Player state change received but player not ready yet');
+    return;
+  }
+  
   logger.log('Main video state changed:', event.data);
   
   // Manage background audio for main video
   // YouTube Player State: 1 = playing, 0 = ended, 2 = paused
   if (event.data === 1) {
+    // Video is playing - ensure no blocking divs
+    removeYouTubeBlockingDivs();
+    
     // Video is playing - fade out and pause background audio
     logger.log('[video.js] Video playing, pausing background audio');
     if (window.cancelActiveFade) window.cancelActiveFade();
@@ -196,9 +305,11 @@ export function initVideo() {
         // Using iframe load event instead of arbitrary timeout
         const iframe = document.getElementById('youtube-video-iframe');
         if (iframe) {
-          const initPlayer = () => {
+          const doInitPlayer = () => {
             initYouTubeAPI(() => {
               logger.log('[video.js] YouTube player initialized after lazy load');
+              // Clean up any blocking divs that YouTube might create
+              removeYouTubeBlockingDivs();
             });
           };
           
@@ -206,17 +317,19 @@ export function initVideo() {
           // Otherwise wait for load event
           if (iframe.src && iframe.contentWindow) {
             // Give iframe a moment to be ready
-            setTimeout(initPlayer, 200);
+            setTimeout(doInitPlayer, 200);
           } else {
-            iframe.addEventListener('load', initPlayer, { once: true });
+            iframe.addEventListener('load', doInitPlayer, { once: true });
             // Fallback timeout in case load event doesn't fire
-            setTimeout(initPlayer, 1000);
+            setTimeout(doInitPlayer, 1000);
           }
         }
         
         // Remove overlay from DOM after fade animation
         setTimeout(() => {
           overlay.remove();
+          // Also clean up any blocking divs after overlay is removed
+          removeYouTubeBlockingDivs();
         }, 400);
         
         // Remove this click handler since it's one-time

@@ -257,6 +257,18 @@ function setupYouTubeIframeClickHandler(iframe) {
     return;
   }
   
+  // Check if player is already managed by video.js (for main YouTube video)
+  if (iframe.hasAttribute('data-player-managed') || window.mainYouTubePlayerManaged) {
+    logger.log('[audio.js] Player already managed by video.js, skipping for:', iframe.id);
+    return;
+  }
+  
+  // Also check for the main YouTube video iframe by ID
+  if (iframe.id === 'youtube-video-iframe') {
+    logger.log('[audio.js] Main YouTube video detected, skipping Player creation (video.js manages this)');
+    return;
+  }
+  
   // Store player instance reference and ready state for overlay click handler
   let playerInstance = null;
   let playerReady = false;
@@ -266,6 +278,15 @@ function setupYouTubeIframeClickHandler(iframe) {
   loadYouTubeAPI().then(() => {
     // Small delay to ensure iframe is fully loaded
     setTimeout(() => {
+      // Double-check: Make sure player wasn't initialized by video.js in the meantime
+      if (iframe.hasAttribute('data-player-managed') || 
+          iframe.hasAttribute('data-yt-player-initialized') ||
+          window.mainYouTubePlayerManaged ||
+          iframe.id === 'youtube-video-iframe') {
+        logger.log('[audio.js] Player was initialized by video.js during delay, skipping for:', iframe.id);
+        return;
+      }
+      
       try {
         logger.log('[audio.js] Setting up YouTube Player API for iframe:', iframe.id);
         // Initialize YouTube Player to track state changes
