@@ -1,59 +1,20 @@
 // Import video and poster as assets
 import videoUrl from "../../public/video/acs-150-compressed.mp4?url";
-import posterUrl from "../../public/images/anniversary-video-poster.jpg?url";
+import posterUrl from "../../public/images/ACS150-promo-cover.jpg?url";
 import logger from "./utils/logger.js";
-
-// ============================================================================
-// GLOBAL ERROR PROTECTION
-// Catch errors from AEM's SDI tracking code to prevent them from breaking scroll
-// ============================================================================
-(function setupGlobalErrorProtection() {
-  // Store original error handler
-  const originalOnError = window.onerror;
-  
-  // Override global error handler to catch SDI tracking errors
-  window.onerror = function(message, source, lineno, colno, error) {
-    // Check if this is an SDI tracking error
-    const isSDIError = message && (
-      message.includes('Media') ||
-      message.includes('_sdi') ||
-      message.includes('sc.s()')
-    );
-    
-    if (isSDIError) {
-      logger.warn('[video.js] Caught SDI tracking error (suppressed):', message);
-      return true; // Prevent error from propagating
-    }
-    
-    // Call original handler for other errors
-    if (originalOnError) {
-      return originalOnError.call(window, message, source, lineno, colno, error);
-    }
-    return false;
-  };
-  
-  // Also handle unhandled promise rejections from tracking code
-  window.addEventListener('unhandledrejection', function(event) {
-    const reason = event.reason;
-    if (reason && reason.message && (
-      reason.message.includes('Media') ||
-      reason.message.includes('_sdi')
-    )) {
-      logger.warn('[video.js] Caught SDI promise rejection (suppressed):', reason.message);
-      event.preventDefault();
-    }
-  });
-})();
 
 // Flag to indicate when sound toggle is triggered by video slider
 let videoSliderTriggeredUnmute = false;
 
-// YouTube Player API
+// ============================================================================
+// YouTube Player API - DISABLED (using custom .mp4 player instead)
+// ============================================================================
+// These variables exist only to prevent reference errors if YouTube code is somehow called
 let youtubePlayer = null;
 let youtubeIframeLoaded = false;
-let youtubePlayerInitialized = false; // Prevent duplicate initialization
+let youtubePlayerInitialized = false;
 
-// Initialize YouTube API - now called only when user interacts
+// Initialize YouTube API - DISABLED (kept for reference but won't be called)
 function initYouTubeAPI(onReady) {
   try {
     // Prevent duplicate initialization
@@ -492,24 +453,107 @@ export function initVideo() {
     return;
   }
 
-  // Assets are now imported directly, no need for path logic
+  logger.log("Custom .mp4 video player detected, initializing controls");
+  
+  // Expose state checker for global audio management (for custom video player)
+  window.isMainVideoPlaying = () => {
+    try {
+      return videoElement && !videoElement.paused;
+    } catch (e) {
+      return false;
+    }
+  };
 
-  // Use imported assets directly
-  videoElement.src = videoUrl;
-
-  // Set poster path using imported asset
+  // ============================================================================
+  // SMART LAZY LOADING STRATEGY
+  // Priority: Cover area/shader first, then video loads in background when idle
+  // ============================================================================
+  
+  // Track if video source has been loaded
+  let videoSourceLoaded = false;
+  
+  // Function to actually load the video source
+  const loadVideoSource = () => {
+    if (videoSourceLoaded) return;
+    videoSourceLoaded = true;
+    
+    logger.log("[video.js] Loading video source...");
+    
+    // Set the video source - this triggers the actual download
+    videoElement.src = videoUrl;
+    
+    // Change preload to metadata to start buffering
+    videoElement.preload = "metadata";
+    
+    // After a short delay, upgrade to auto for smoother playback
+    setTimeout(() => {
+      if (videoElement && !videoElement.paused) return; // Don't change if playing
+      videoElement.preload = "auto";
+      logger.log("[video.js] Upgraded preload to auto for buffering");
+    }, 2000);
+  };
+  
+  // Set poster immediately (small image, doesn't block paint)
   videoElement.poster = posterUrl;
+  
+  // STRATEGY 1: Use requestIdleCallback to load video when browser is idle
+  // This ensures cover area and shader have priority
+  const scheduleVideoLoad = () => {
+    if (typeof requestIdleCallback !== 'undefined') {
+      // Modern browsers: load when browser is idle
+      requestIdleCallback(() => {
+        loadVideoSource();
+      }, { timeout: 4000 }); // Max wait 4 seconds
+      logger.log("[video.js] Scheduled video load via requestIdleCallback");
+    } else {
+      // Fallback: load after a delay to allow critical content to render
+      setTimeout(() => {
+        loadVideoSource();
+      }, 2000);
+      logger.log("[video.js] Scheduled video load via setTimeout fallback");
+    }
+  };
+  
+  // STRATEGY 2: Intersection Observer as safety net
+  // If user scrolls toward video before idle load, trigger immediately
+  // Note: videoSection is already defined at top of initVideo()
+  if (videoSection) {
+    const preloadObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          // Start loading when video section is within 50% viewport distance
+          if (entry.isIntersecting && !videoSourceLoaded) {
+            logger.log("[video.js] Video section approaching viewport, loading immediately");
+            loadVideoSource();
+            preloadObserver.disconnect();
+          }
+        });
+      },
+      {
+        rootMargin: '50% 0px', // Start loading when within 50% of viewport
+        threshold: 0
+      }
+    );
+    preloadObserver.observe(videoSection);
+  }
+  
+  // Start the idle-based loading
+  scheduleVideoLoad();
 
   // Add error event listener to check if the video file can be loaded
   videoElement.addEventListener("error", (e) => {
-    logger.error("Video loading error:", e);
-    logger.error("Video src:", videoElement.src);
-    logger.error("Video error code:", videoElement.error?.code);
-    logger.error("Video error message:", videoElement.error?.message);
+    // Only log errors if we've actually tried to load the video
+    if (videoSourceLoaded) {
+      logger.error("Video loading error:", e);
+      logger.error("Video src:", videoElement.src);
+      logger.error("Video error code:", videoElement.error?.code);
+      logger.error("Video error message:", videoElement.error?.message);
+    }
   });
 
   // Add loadeddata event to ensure video is ready
   videoElement.addEventListener("loadeddata", () => {
+    logger.log("[video.js] Video data loaded successfully");
     videoElement.style.opacity = "1";
     // Ensure video starts paused
     videoElement.pause();
@@ -517,6 +561,7 @@ export function initVideo() {
 
   // Add loadedmetadata event to ensure video is ready
   videoElement.addEventListener("loadedmetadata", () => {
+    logger.log("[video.js] Video metadata loaded");
     // Force a layout recalculation
     videoElement.style.display = "none";
     videoElement.offsetHeight; // Force reflow
@@ -926,14 +971,7 @@ export function initVideo() {
       // Set timeout to pause after fade completes
       scrollAwayFadeTimeout = setTimeout(() => {
         videoElement.pause();
-        overlay.classList.remove("hidden");
-        // Hide audio slider when video is paused
-        audioSlider.style.opacity = "0";
-        audioSlider.style.pointerEvents = "none";
-        // Fade in background music only if not muted
-        if (window.backgroundAudio && !window.audioMuted) {
-          fadeAudio(window.backgroundAudio, 0.25);
-        }
+        // Note: The pause event listener handles overlay, audio slider, and background audio resume
         scrollAwayFadeTimeout = null;
       }, 600);
     }
@@ -949,14 +987,7 @@ export function initVideo() {
       }
 
       videoElement.pause();
-      overlay.classList.remove("hidden");
-      // Hide audio slider when video is paused
-      audioSlider.style.opacity = "0";
-      audioSlider.style.pointerEvents = "none";
-      // Fade in background music only if not muted
-      if (window.backgroundAudio && !window.audioMuted) {
-        fadeAudio(window.backgroundAudio, 0.25);
-      }
+      // Note: The pause event listener handles overlay, audio slider, and background audio resume
     }
   };
 
@@ -969,28 +1000,48 @@ export function initVideo() {
         scrollAwayFadeTimeout = null;
       }
 
-      videoElement.play();
-      overlay.classList.add("hidden");
-      // Fade out background music and ensure video audio is playing
-      if (window.backgroundAudio) {
-        fadeAudio(window.backgroundAudio, 0);
+      // Ensure video source is loaded before playing
+      if (!videoSourceLoaded) {
+        logger.log("[video.js] User clicked play before lazy load, loading immediately");
+        loadVideoSource();
+        // Wait for enough data to play
+        videoElement.addEventListener('canplay', function onCanPlay() {
+          videoElement.removeEventListener('canplay', onCanPlay);
+          playVideo();
+        }, { once: true });
+        // Show loading state on overlay
+        overlay.classList.add("loading");
+        return;
       }
-      // Restore original volume or set based on global audio state
-      if (window.audioMuted) {
-        videoElement.volume = 0;
-        videoElement.muted = true;
-      } else {
-        // Restore the original volume that was set before scroll-away fade
-        videoElement.muted = false;
-        videoElement.volume = originalVideoVolume;
-      }
-      // Update slider after setting volume
-      updateSlider();
-      // Ensure smooth updates are started
-      startSmoothUpdates();
+
+      playVideo();
     } else {
       pauseVideoAndShowOverlay();
     }
+  };
+  
+  // Extracted play logic for reuse
+  const playVideo = () => {
+    overlay.classList.remove("loading");
+    videoElement.play();
+    overlay.classList.add("hidden");
+    // Fade out background music and ensure video audio is playing
+    if (window.backgroundAudio) {
+      fadeAudio(window.backgroundAudio, 0);
+    }
+    // Restore original volume or set based on global audio state
+    if (window.audioMuted) {
+      videoElement.volume = 0;
+      videoElement.muted = true;
+    } else {
+      // Restore the original volume that was set before scroll-away fade
+      videoElement.muted = false;
+      videoElement.volume = originalVideoVolume;
+    }
+    // Update slider after setting volume
+    updateSlider();
+    // Ensure smooth updates are started
+    startSmoothUpdates();
   };
 
   // Add click handlers
@@ -1003,21 +1054,23 @@ export function initVideo() {
     // Hide audio slider when video ends
     audioSlider.style.opacity = "0";
     audioSlider.style.pointerEvents = "none";
-    // Fade in background music when video ends only if not muted
-    if (window.backgroundAudio && !window.audioMuted) {
-      fadeAudio(window.backgroundAudio, 0.25);
+    // Resume background music when video ends (only if not muted)
+    if (!window.audioMuted && window.resumeBackgroundAudio) {
+      logger.log('[video.js] Video ended, resuming background audio');
+      window.resumeBackgroundAudio();
     }
   });
 
-  // Handle video pause (when user clicks video controls)
+  // Handle video pause (when user clicks to pause or uses controls)
   videoElement.addEventListener("pause", () => {
     overlay.classList.remove("hidden");
     // Hide audio slider when video is paused
     audioSlider.style.opacity = "0";
     audioSlider.style.pointerEvents = "none";
-    // Fade in background music only if not muted
-    if (window.backgroundAudio && !window.audioMuted) {
-      fadeAudio(window.backgroundAudio, 0.25);
+    // Resume background music when video is paused (only if not muted)
+    if (!window.audioMuted && window.resumeBackgroundAudio) {
+      logger.log('[video.js] Video paused, resuming background audio');
+      window.resumeBackgroundAudio();
     }
   });
 

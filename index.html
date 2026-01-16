@@ -765,36 +765,16 @@
           class="flex vertical justify-center align-flex-end height-100svh"
           aria-label="Anniversary video section"
         >
-          <div class="video-wrapper" id="youtube-video-wrapper">
-            <iframe 
-            id="youtube-video-iframe"
-            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
-            data-src="https://www.youtube.com/embed/5_d6VUnbig4?rel=0&modestbranding=1&iv_load_policy=3&autoplay=1&enablejsapi=1" 
-            title="ACS 150th Anniversary Video" 
-            frameborder="0" 
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-            allowfullscreen>
-          </iframe>
-            
-            <!-- Custom Start Button Overlay -->
-            <div class="video-start-overlay">
-              <div class="play-button-overlay">
-                <svg class="play-icon" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z"/>
-                </svg>
-              </div>
-            </div>
-
-            <!--
+          <div class="video-wrapper" id="video-wrapper">
+            <!-- Custom .mp4 Video Player (fallback from YouTube) -->
             <video
               id="anniversary-video"
-              preload="auto"
+              preload="none"
               playsinline
               webkit-playsinline
               style="width: 100%; height: 100%; object-fit: cover; background: #000"
-              data-poster="anniversary-video-poster.jpg"
               aria-label="Watch the ACS 150th Anniversary video"
-            ></video>-->
+            ></video>
           </div>
         </section>
       </section>
