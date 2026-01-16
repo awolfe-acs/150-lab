@@ -1,5 +1,16 @@
 @use '../utilities' as *;
 
+// CSS animation for shader background fade-in
+// FIRST to fade in - before any cover elements
+@keyframes shaderFadeIn {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
 #shaderBackground {
     position: fixed;
     top: 0;
@@ -17,6 +28,17 @@
     /* Ensure touch events pass through to elements below */
     touch-action: none; // This element should not respond to touch at all
     background: #060E15;
+    
+    // CSS-based fade-in - NO DELAY, fades in FIRST
+    // Cover elements will wait for this to complete
+    opacity: 0;
+    animation: shaderFadeIn 0.8s ease-out forwards;
+    
+    // Ensure the canvas inside also fades in smoothly
+    canvas {
+        opacity: inherit;
+    }
+    
     @media (max-width:$desktop-viewport) {
         min-width:calc(100vw + 1px);
     }

@@ -187,6 +187,17 @@ export function initCoverArea() {
 
   if (!coverLogo || !enterExperienceBtn) return;
 
+  // === INITIAL STATES ===
+  // All cover elements start hidden, JS animates them in sequence
+  // Shader background fades in via CSS first (see background.scss)
+  
+  // Hide #app initially - will fade in after shader
+  if (app) {
+    gsap.set(app, {
+      opacity: 0,
+    });
+  }
+
   // Hide header and section-timeline initially
   if (header) {
     gsap.set(header, {
@@ -218,13 +229,15 @@ export function initCoverArea() {
     opacity: 1,
   });
 
-  // Make the logo fixed position so it stays in place while scrolling
+  // Make the logo fixed position and hidden initially
   gsap.set(coverLogo, {
     position: "fixed",
     top: "calc(50% - 44px)",
     left: "50%",
     transform: "translate(-50%, -50%)",
     zIndex: 1000,
+    opacity: 0,
+    scale: 0.95,
   });
 
   // Ensure countdown starts hidden
@@ -233,41 +246,42 @@ export function initCoverArea() {
       opacity: 0,
     });
   }
+  
+  // Ensure enter button starts hidden
+  gsap.set(enterExperienceBtn, {
+    opacity: 0,
+  });
 
   // Create a timeline for the cover area animation
+  // DELAY: Wait for shader background to fade in first (CSS takes ~0.8s)
+  // This ensures: Shader -> App -> Logo -> Countdown -> Button
   const tl = gsap.timeline({ delay: 0.6 });
 
   // First, fade in #app from opacity 0 to 1
   if (app) {
-    tl.fromTo(
+    tl.to(
       app,
       {
-        opacity: 0,
-      },
-      {
         opacity: 1,
-        duration: 0.8,
+        duration: 0.6,
         ease: "power2.out",
       }
     );
   }
 
-  // Animate the logo in
-  tl.fromTo(
+  // Animate the logo in (after app is visible)
+  tl.to(
     coverLogo,
-    {
-      opacity: 0,
-      scale: 0.95,
-    },
     {
       opacity: 1,
       scale: 1,
-      duration: 1.8,
+      duration: 1.2,
       ease: "power1.out",
-    }
+    },
+    "-=0.3" // Slight overlap with app fade
   );
 
-  // Animate the countdown in (directly after logo)
+  // Animate the countdown in (while logo is still animating)
   if (countdown) {
     tl.to(
       countdown,
@@ -276,22 +290,22 @@ export function initCoverArea() {
         duration: 0.4,
         ease: "power1.out",
       },
-      "-=0.4"
+      "-=0.6"
     );
   }
 
-  // Animate the enter button in
+  // Animate the enter button in (after countdown)
   tl.to(
     enterExperienceBtn,
     {
       opacity: 1,
-      duration: 0.6,
+      duration: 0.5,
       ease: "power2.out",
       onComplete: () => {
         enterExperienceBtn.style.pointerEvents = "auto";
       },
     },
-    "-=0.3"
+    "-=0.2"
   );
 
   // Add click event listener to the enter-experience button

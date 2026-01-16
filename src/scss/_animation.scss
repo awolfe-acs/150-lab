@@ -3,6 +3,14 @@
     opacity: 0;
 }
 
+// NOTE: Cover element fade-ins are handled ONLY by JS (hero.js initCoverArea)
+// DO NOT add CSS animations here - they will compete with GSAP animations
+// 
+// The shader background CSS animation (in background.scss) runs first,
+// then hero.js handles: #app -> .cover-logo -> #countdown -> button.enter-experience
+//
+// Initial states for JS animations (opacity: 0 is set by GSAP in hero.js)
+
 @mixin ease {
     transition:0.66s;
     transition-timing-function: cubic-bezier(0.075, 0.82, 0.165, 1);

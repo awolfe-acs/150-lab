@@ -89,55 +89,65 @@ function isMainPage() {
 }
 
 // Initialize all animations directly from modules
+// Optimized for faster initial render - defers non-critical work
 function initAnimations() {
   // Preload audio immediately - before anything else
   preloadBackgroundAudio();
 
-  // Initial refresh and clear match media
-  ScrollTrigger.refresh();
-  ScrollTrigger.clearMatchMedia();
-
   // Reset animation state using centralized function
   resetAnimationState();
 
-  // Initialize hero animations
+  // CRITICAL: Initialize hero animations first (cover area visibility)
+  // These are the most visible elements on page load
   initHeroAnimation();
-  initHeroNumberCountdown();
-  initHeroPinning(); // This also handles intro-text pinning
-  setupHeroHeadingFadeAnimation();
-
-  // Initialize intro text animations
-  initIntroTextAnimation();
-
-  // Initialize other animations
-  animateVideoScale();
-  animateGetInvolvedText();
-  animateSlidingCards();
-  initGetInvolvedLogoAnimation();
-  initInfiniteMarqueeAnimation();
-  initScrollRevealAnimation();
   
-  // Initialize timeline
-  initTimelineAnimation();
+  // Defer heavy ScrollTrigger operations to next frame
+  // This allows the cover area to render immediately
+  requestAnimationFrame(() => {
+    // Initial refresh and clear match media
+    ScrollTrigger.refresh();
+    ScrollTrigger.clearMatchMedia();
+    
+    initHeroNumberCountdown();
+    initHeroPinning(); // This also handles intro-text pinning
+    setupHeroHeadingFadeAnimation();
 
-  // Initialize UI components
-  updatePageNavigation();
-  initFancyButtonEffects();
-  setupUIClickSounds();
-  setupSoundToggle();
-  initShareButtonOverlapDetection();
-  initSharePanel();
-  initEventListItemHover();
+    // Initialize intro text animations
+    initIntroTextAnimation();
 
-  // Initialize split text animations
-  initSplitLinesAnimation(null);
-  initSplitCharsAnimation(null);
+    // Defer remaining animations to allow browser to paint
+    requestAnimationFrame(() => {
+      // Initialize other animations
+      animateVideoScale();
+      animateGetInvolvedText();
+      animateSlidingCards();
+      initGetInvolvedLogoAnimation();
+      initInfiniteMarqueeAnimation();
+      initScrollRevealAnimation();
+      
+      // Initialize timeline (heavy)
+      initTimelineAnimation();
 
-  // Initialize global resize handler
-  initGlobalResizeHandler();
-  
-  // Initialize Android navigation bar adjustment
-  initAndroidNavAdjustments();
+      // Initialize UI components
+      updatePageNavigation();
+      initFancyButtonEffects();
+      setupUIClickSounds();
+      setupSoundToggle();
+      initShareButtonOverlapDetection();
+      initSharePanel();
+      initEventListItemHover();
+
+      // Initialize split text animations
+      initSplitLinesAnimation(null);
+      initSplitCharsAnimation(null);
+
+      // Initialize global resize handler
+      initGlobalResizeHandler();
+      
+      // Initialize Android navigation bar adjustment
+      initAndroidNavAdjustments();
+    });
+  });
 
   // Add menu button click handler
   const menuButton = document.querySelector("button.toggle-menu");

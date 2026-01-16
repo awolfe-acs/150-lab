@@ -133,9 +133,6 @@ export default defineConfig(({ mode, command }) => {
       });
     });
     
-    if (removed) {
-      console.log('dat.GUI removed in production build');
-    }
   };
   
   // Try to remove immediately
