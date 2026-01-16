@@ -230,6 +230,8 @@ export function initCoverArea() {
   });
 
   // Make the logo fixed position and hidden initially
+  // IMPORTANT: pointer-events: none ensures it doesn't block clicks on elements below
+  // when opacity is 0 (like video controls)
   gsap.set(coverLogo, {
     position: "fixed",
     top: "calc(50% - 44px)",
@@ -238,6 +240,7 @@ export function initCoverArea() {
     zIndex: 1000,
     opacity: 0,
     scale: 0.95,
+    pointerEvents: "none",
   });
 
   // Ensure countdown starts hidden
@@ -270,11 +273,13 @@ export function initCoverArea() {
   }
 
   // Animate the logo in (after app is visible)
+  // Enable pointer-events when visible (will be disabled again when scrolled away)
   tl.to(
     coverLogo,
     {
       opacity: 1,
       scale: 1,
+      pointerEvents: "auto",
       duration: 1.2,
       ease: "power1.out",
     },
@@ -502,6 +507,7 @@ function initCoverLogoScrollTrigger(coverLogo, countdown) {
         
         // Ensure logo is hidden when leaving trigger area
         coverLogo.style.opacity = "0";
+        coverLogo.style.pointerEvents = "none"; // Prevent blocking clicks on elements below
         lastOpacity = 0;
         
         // Also hide countdown
@@ -518,6 +524,10 @@ function initCoverLogoScrollTrigger(coverLogo, countdown) {
         const currentProgress = coverLogoScrollTrigger.progress;
         const targetOpacity = 1 - currentProgress;
         coverLogo.style.opacity = targetOpacity;
+        // Re-enable pointer-events when becoming visible
+        if (targetOpacity > 0.1) {
+          coverLogo.style.pointerEvents = "auto";
+        }
         lastOpacity = targetOpacity;
         
         // Kill any existing countdown animation first
@@ -554,6 +564,7 @@ function initCoverLogoScrollTrigger(coverLogo, countdown) {
         
         // Reset when scrolling back up past trigger
         coverLogo.style.opacity = "1";
+        coverLogo.style.pointerEvents = "auto"; // Re-enable when visible
         lastOpacity = 1;
         
         // Also reset countdown

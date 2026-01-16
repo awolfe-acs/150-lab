@@ -161,7 +161,11 @@ export function initVideo() {
     // Setup the click handler to lazy-load YouTube when user clicks
     const overlay = document.querySelector('.video-start-overlay');
     if (overlay) {
-      overlay.addEventListener('click', function handleOverlayClick() {
+      overlay.addEventListener('click', function handleOverlayClick(event) {
+        // Prevent any default behavior that might cause page refresh
+        event.preventDefault();
+        event.stopPropagation();
+        
         // Play UI click sound if audio is not muted
         if (!window.audioMuted && window.playUIClickSound) {
           try {
@@ -182,25 +186,38 @@ export function initVideo() {
           window.backgroundAudio.volume = 0.001;
         }
         
+        // Start overlay fade out immediately for better UX
+        overlay.classList.add('hidden');
+        
         // Load the YouTube iframe (lazy loading)
         loadYouTubeIframe();
         
-        // Wait a short moment for iframe to start loading, then init API
-        // The iframe src now has autoplay=1, so it will play automatically
-        setTimeout(() => {
-          initYouTubeAPI(() => {
-            // Player is ready and video will autoplay due to autoplay=1 in src
-            logger.log('[video.js] YouTube player initialized after lazy load');
-          });
-        }, 100);
+        // Wait for iframe to load before initializing player
+        // Using iframe load event instead of arbitrary timeout
+        const iframe = document.getElementById('youtube-video-iframe');
+        if (iframe) {
+          const initPlayer = () => {
+            initYouTubeAPI(() => {
+              logger.log('[video.js] YouTube player initialized after lazy load');
+            });
+          };
+          
+          // If iframe already has src loaded, init immediately
+          // Otherwise wait for load event
+          if (iframe.src && iframe.contentWindow) {
+            // Give iframe a moment to be ready
+            setTimeout(initPlayer, 200);
+          } else {
+            iframe.addEventListener('load', initPlayer, { once: true });
+            // Fallback timeout in case load event doesn't fire
+            setTimeout(initPlayer, 1000);
+          }
+        }
         
-        // Start overlay fade out
+        // Remove overlay from DOM after fade animation
         setTimeout(() => {
-          overlay.classList.add('hidden');
-          setTimeout(() => {
-            overlay.remove();
-          }, 400);
-        }, 150);
+          overlay.remove();
+        }, 400);
         
         // Remove this click handler since it's one-time
         overlay.removeEventListener('click', handleOverlayClick);
