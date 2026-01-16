@@ -698,7 +698,7 @@ export function initVideo() {
   const progressFill = progressBar.querySelector(".progress-bar-fill");
   progressFill.style.cssText = `
     height: 100%;
-    background: rgba(251, 225, 57, 0.9);
+    background:rgba(111, 237, 238, 0.88);
     width: 0%;
     transition: width 0.1s linear;
     pointer-events: none;
@@ -713,7 +713,7 @@ export function initVideo() {
     transform: translate(-50%, -50%);
     width: 8px;
     height: 8px;
-    background: rgba(251, 225, 57, 1);
+    background: rgba(111, 237, 238, 1);
     border-radius: 50%;
     cursor: pointer;
     opacity: 0;
