@@ -3,6 +3,48 @@ import videoUrl from "../../public/video/acs-150-compressed.mp4?url";
 import posterUrl from "../../public/images/anniversary-video-poster.jpg?url";
 import logger from "./utils/logger.js";
 
+// ============================================================================
+// GLOBAL ERROR PROTECTION
+// Catch errors from AEM's SDI tracking code to prevent them from breaking scroll
+// ============================================================================
+(function setupGlobalErrorProtection() {
+  // Store original error handler
+  const originalOnError = window.onerror;
+  
+  // Override global error handler to catch SDI tracking errors
+  window.onerror = function(message, source, lineno, colno, error) {
+    // Check if this is an SDI tracking error
+    const isSDIError = message && (
+      message.includes('Media') ||
+      message.includes('_sdi') ||
+      message.includes('sc.s()')
+    );
+    
+    if (isSDIError) {
+      logger.warn('[video.js] Caught SDI tracking error (suppressed):', message);
+      return true; // Prevent error from propagating
+    }
+    
+    // Call original handler for other errors
+    if (originalOnError) {
+      return originalOnError.call(window, message, source, lineno, colno, error);
+    }
+    return false;
+  };
+  
+  // Also handle unhandled promise rejections from tracking code
+  window.addEventListener('unhandledrejection', function(event) {
+    const reason = event.reason;
+    if (reason && reason.message && (
+      reason.message.includes('Media') ||
+      reason.message.includes('_sdi')
+    )) {
+      logger.warn('[video.js] Caught SDI promise rejection (suppressed):', reason.message);
+      event.preventDefault();
+    }
+  });
+})();
+
 // Flag to indicate when sound toggle is triggered by video slider
 let videoSliderTriggeredUnmute = false;
 
@@ -13,51 +55,66 @@ let youtubePlayerInitialized = false; // Prevent duplicate initialization
 
 // Initialize YouTube API - now called only when user interacts
 function initYouTubeAPI(onReady) {
-  // Prevent duplicate initialization
-  if (youtubePlayerInitialized) {
-    logger.log('YouTube player already initialized, skipping');
-    if (onReady) onReady();
-    return;
-  }
-  
-  // Check if YouTube Player API is already loaded
-  if (window.YT && window.YT.Player) {
-    logger.log('YouTube API already loaded, initializing player immediately');
-    initPlayer();
-    if (onReady) onReady();
-    return;
-  }
-  
-  // Check if API is already loading
-  if (window.onYouTubeIframeAPIReady) {
-    logger.log('YouTube API is loading, chaining our callback');
-    // API is loading, chain our callback
-    const originalCallback = window.onYouTubeIframeAPIReady;
+  try {
+    // Prevent duplicate initialization
+    if (youtubePlayerInitialized) {
+      logger.log('YouTube player already initialized, skipping');
+      if (onReady) onReady();
+      return;
+    }
+    
+    // Check if YouTube Player API is already loaded
+    if (window.YT && window.YT.Player) {
+      logger.log('YouTube API already loaded, initializing player immediately');
+      initPlayer();
+      if (onReady) onReady();
+      return;
+    }
+    
+    // Check if API is already loading
+    if (window.onYouTubeIframeAPIReady) {
+      logger.log('YouTube API is loading, chaining our callback');
+      // API is loading, chain our callback
+      const originalCallback = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        try {
+          if (typeof originalCallback === 'function') {
+            originalCallback();
+          }
+        } catch (e) {
+          logger.warn('Error in chained onYouTubeIframeAPIReady callback:', e);
+        }
+        if (!youtubePlayerInitialized) {
+          initPlayer();
+        }
+        if (onReady) onReady();
+      };
+      return;
+    }
+    
+    // Load YouTube IFrame API for the first time
+    logger.log('Loading YouTube API for the first time');
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    if (firstScriptTag && firstScriptTag.parentNode) {
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    } else {
+      document.head.appendChild(tag);
+    }
+
+    // Set up callback for when API loads
     window.onYouTubeIframeAPIReady = () => {
-      originalCallback();
+      logger.log('YouTube API ready, initializing player');
       if (!youtubePlayerInitialized) {
         initPlayer();
       }
       if (onReady) onReady();
     };
-    return;
+  } catch (error) {
+    logger.error('Error in initYouTubeAPI:', error);
+    if (onReady) onReady(); // Still call callback to prevent hanging
   }
-  
-  // Load YouTube IFrame API for the first time
-  logger.log('Loading YouTube API for the first time');
-  const tag = document.createElement('script');
-  tag.src = 'https://www.youtube.com/iframe_api';
-  const firstScriptTag = document.getElementsByTagName('script')[0];
-  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-  // Set up callback for when API loads
-  window.onYouTubeIframeAPIReady = () => {
-    logger.log('YouTube API ready, initializing player');
-    if (!youtubePlayerInitialized) {
-      initPlayer();
-    }
-    if (onReady) onReady();
-  };
 }
 
 // Load the YouTube iframe src from data-src (lazy loading)
@@ -275,62 +332,115 @@ export function initVideo() {
         event.preventDefault();
         event.stopPropagation();
         
-        // Play UI click sound if audio is not muted
-        if (!window.audioMuted && window.playUIClickSound) {
-          try {
-            window.playUIClickSound();
-          } catch (e) {
-            logger.warn('Could not play UI click sound:', e);
+        // Wrap everything in try-catch to prevent AEM tracking errors from breaking the page
+        try {
+          // Play UI click sound if audio is not muted
+          if (!window.audioMuted && window.playUIClickSound) {
+            try {
+              window.playUIClickSound();
+            } catch (e) {
+              logger.warn('Could not play UI click sound:', e);
+            }
           }
-        }
-        
-        // IMMEDIATE audio fade out on click
-        logger.log('[video.js] Overlay clicked, fading out audio immediately');
-        if (window.cancelActiveFade) window.cancelActiveFade();
-        if (window.fadeBackgroundAudio) {
-          window.fadeBackgroundAudio(0.001, 1000, () => {
-            logger.log('[video.js] Background audio ducked (vol 0.001) via overlay click');
-          });
-        } else if (window.backgroundAudio) {
-          window.backgroundAudio.volume = 0.001;
-        }
-        
-        // Start overlay fade out immediately for better UX
-        overlay.classList.add('hidden');
-        
-        // Load the YouTube iframe (lazy loading)
-        loadYouTubeIframe();
-        
-        // Wait for iframe to load before initializing player
-        // Using iframe load event instead of arbitrary timeout
-        const iframe = document.getElementById('youtube-video-iframe');
-        if (iframe) {
-          const doInitPlayer = () => {
-            initYouTubeAPI(() => {
-              logger.log('[video.js] YouTube player initialized after lazy load');
-              // Clean up any blocking divs that YouTube might create
-              removeYouTubeBlockingDivs();
-            });
-          };
           
-          // If iframe already has src loaded, init immediately
-          // Otherwise wait for load event
-          if (iframe.src && iframe.contentWindow) {
-            // Give iframe a moment to be ready
-            setTimeout(doInitPlayer, 200);
-          } else {
-            iframe.addEventListener('load', doInitPlayer, { once: true });
-            // Fallback timeout in case load event doesn't fire
-            setTimeout(doInitPlayer, 1000);
+          // IMMEDIATE audio fade out on click
+          logger.log('[video.js] Overlay clicked, fading out audio immediately');
+          try {
+            if (window.cancelActiveFade) window.cancelActiveFade();
+            if (window.fadeBackgroundAudio) {
+              window.fadeBackgroundAudio(0.001, 1000, () => {
+                logger.log('[video.js] Background audio ducked (vol 0.001) via overlay click');
+              });
+            } else if (window.backgroundAudio) {
+              window.backgroundAudio.volume = 0.001;
+            }
+          } catch (audioError) {
+            logger.warn('Audio fade error (non-critical):', audioError);
           }
+          
+          // Start overlay fade out immediately for better UX
+          overlay.classList.add('hidden');
+          
+          // Load the YouTube iframe (lazy loading)
+          loadYouTubeIframe();
+          
+          // Wait for iframe to load before initializing player
+          // Using iframe load event instead of arbitrary timeout
+          const iframe = document.getElementById('youtube-video-iframe');
+          if (iframe) {
+            const doInitPlayer = () => {
+              try {
+                initYouTubeAPI(() => {
+                  logger.log('[video.js] YouTube player initialized after lazy load');
+                  // Clean up any blocking divs that YouTube might create
+                  removeYouTubeBlockingDivs();
+                });
+              } catch (initError) {
+                logger.error('YouTube player init error:', initError);
+              }
+            };
+            
+            // If iframe already has src loaded, init immediately
+            // Otherwise wait for load event
+            if (iframe.src && iframe.contentWindow) {
+              // Give iframe a moment to be ready
+              setTimeout(doInitPlayer, 200);
+            } else {
+              iframe.addEventListener('load', doInitPlayer, { once: true });
+              // Fallback timeout in case load event doesn't fire
+              setTimeout(doInitPlayer, 1000);
+            }
+          }
+          
+          // Remove overlay from DOM after fade animation
+          setTimeout(() => {
+            try {
+              overlay.remove();
+              // Also clean up any blocking divs after overlay is removed
+              removeYouTubeBlockingDivs();
+            } catch (removeError) {
+              logger.warn('Overlay remove error:', removeError);
+            }
+          }, 400);
+          
+          // SAFEGUARD: Ensure Lenis and ScrollTrigger remain functional
+          // This prevents AEM tracking errors from breaking scroll
+          setTimeout(() => {
+            try {
+              // Ensure Lenis is still running
+              if (window.lenis && typeof window.lenis.start === 'function') {
+                window.lenis.start();
+                logger.log('[video.js] Ensured Lenis is running after video click');
+              }
+              
+              // Refresh ScrollTrigger to ensure it's in sync
+              if (window.ScrollTrigger && typeof window.ScrollTrigger.refresh === 'function') {
+                window.ScrollTrigger.refresh();
+                logger.log('[video.js] Refreshed ScrollTrigger after video click');
+              }
+            } catch (scrollError) {
+              logger.warn('Scroll safeguard error:', scrollError);
+            }
+          }, 500);
+          
+        } catch (clickError) {
+          // Critical: Don't let any error break the page
+          logger.error('Video overlay click error (caught to prevent page break):', clickError);
+          
+          // Emergency: Try to restore scroll functionality even if there was an error
+          setTimeout(() => {
+            try {
+              if (window.lenis && typeof window.lenis.start === 'function') {
+                window.lenis.start();
+              }
+              if (window.ScrollTrigger && typeof window.ScrollTrigger.refresh === 'function') {
+                window.ScrollTrigger.refresh();
+              }
+            } catch (e) {
+              // Silent fail
+            }
+          }, 100);
         }
-        
-        // Remove overlay from DOM after fade animation
-        setTimeout(() => {
-          overlay.remove();
-          // Also clean up any blocking divs after overlay is removed
-          removeYouTubeBlockingDivs();
-        }, 400);
         
         // Remove this click handler since it's one-time
         overlay.removeEventListener('click', handleOverlayClick);
