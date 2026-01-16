@@ -1,5 +1,5 @@
 // Import video and poster as assets
-import videoUrl from "../../public/video/acs-150-compressed.mp4?url";
+import videoUrl from "../../public/video/acs-150-compressed-2.mp4?url";
 import posterUrl from "../../public/images/ACS150-promo-cover.jpg?url";
 import logger from "./utils/logger.js";
 
