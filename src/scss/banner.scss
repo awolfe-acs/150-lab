@@ -1,41 +1,63 @@
 // Banner-specific styles
 @use './utilities' as *;
 
+// Layout integration styles
+div[data-testid="layout-globalbanner"] {
+  position: relative;
+  z-index: 1;
+}
+
+body:not(:has(.menu__link.open)):not(:has(.menu.showit)) div[data-testid="layout-globalbanner"] {
+  z-index: 20;
+}
+
+.alert-banner__special {
+  opacity: 1;
+  
+  .container {
+    padding: 0 !important;
+  }
+}
+
+.alert-banner__special .container,
+#anniversary-banner-container {
+  height: 64px;
+}
 
 #anniversary-banner-container {
   position: relative;
   width: 100%;
-  height: 50px;
+  
+  * {
+    font-family: "acs-clarity";
+  }
   
   .anniversary-banner-link {
     position: absolute;
-    top:0;
-    left:0;
-    right:0;
-    bottom:0;
-    text-decoration: none!important;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    text-decoration: none !important;
     overflow: hidden;
     display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: center;
     padding: 0 40px;
-    //border-bottom:8px solid #fff;
+    transition: filter 0.24s ease;
+    
+    &:hover {
+      filter: brightness(1.05);
+    }
   }
   
   // Background image
-  //background-image: url('/public/images/banner-bg.jpg');
-  //background:linear-gradient(to right, #056BF3, #412BFD);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  transition: filter 0.4s ease;
-  &:hover {
-    filter:brightness(1.04);
-  }
 
   @media (min-width: 1600px) {
-    //background-image: url('/public/images/banner-bg-2.jpg');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -48,8 +70,9 @@
   @media (max-width: 768px) {
     padding: 0 16px;
   }
-  @media (max-width:640px) {
-    height:60px;
+  
+  @media (max-width: 640px) {
+    height: 60px;
   }
 }
 
@@ -62,11 +85,11 @@
   align-items: center;
   justify-content: flex-start;
   gap: 48px;
-  width: 1170px;
+  width: 100%;
   max-width: 100%;
-  margin:0 auto;
-  text-decoration:none!important;
-  color:white!important;
+  margin: 0 auto;
+  text-decoration: none !important;
+  color: white !important;
 
   @media (max-width: 1200px) {
     gap: 32px;
@@ -75,24 +98,40 @@
   @media (max-width: 768px) {
     gap: 24px;
   }
-  @media (max-width:640px) {
-    justify-content:space-between;
-    padding:0 8px;
+  
+  @media (max-width: 640px) {
+    justify-content: space-between;
+    padding: 0 8px;
   }
-
 }
 
-// 150 Mark Logo
+// 150 Mark Logo and Message
 .banner-logo {
   flex: 0 0 auto;
   height: 40px;
   display: flex;
   align-items: center;
+  gap: 16px;
 
   img {
     height: 100%;
     width: auto;
     display: block;
+  }
+  
+  .banner-message {
+    font-size: 14px;
+    font-weight: 400;
+    color: #fff;
+    white-space: nowrap;
+    
+    @media (max-width: 768px) {
+      font-size: 12px;
+    }
+    
+    @media (max-width: 640px) {
+      display: none;
+    }
   }
 
   @media (max-width: 768px) {
@@ -160,7 +199,7 @@
   .number {
     display: block;
     font-size: 32px;
-    font-weight: 500;
+    font-weight: 400;
     white-space: nowrap;
     user-select: none;
     line-height: 1;
@@ -214,35 +253,27 @@
     gap: 8px;
   }
 
-  .countdown-title {
-    font-size: 13px;
-    font-family: "acs-clarity", "stolzl", sans-serif;
-    font-weight: 300;
-    text-align: left;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+  .banner-hashtag {
+    font-size: 14px;
+    font-weight: 700;
     color: #fff;
-    white-space: nowrap;
+    margin-right: auto;
+    letter-spacing: 0.5px;
 
     @media (max-width: 1024px) {
-      font-size: 11px;
-      display:none;
-    }
-
-    @media (max-width: 768px) {
       display: none;
     }
   }
 
-  .acsbutton-secondary, .acsbutton-mobile {
-    &:hover {
-
-    }
-  }
   .acsbutton-secondary {
     background-color: #fff;
     color: #1a1a1a;
     border-color: #fff;
+    
+    &:not(:hover) {
+      color: #fff;
+      background-color: transparent;
+    }
 
     @media (max-width: 640px) {
       &:not(.acsbutton-mobile) {
@@ -255,17 +286,28 @@
     display: none;
     width: 24px;
     height: 24px;
-    aspect-ratio:1/1;
-    min-width:24px;
+    aspect-ratio: 1/1;
+    min-width: 24px;
     padding: 0;
     border-radius: 50%;
-    background-color: #fff;
-    color: #1a1a1a;
+    background-color: transparent;
+    color: #fff;
     border: 2px solid #fff;
-    transform:translateY(-1px);
+    transform: translateY(-1px);
+    transition: all 0.24s ease;
+
     svg {
       width: 16px;
       height: 16px;
+      
+      path {
+        stroke: currentColor;
+      }
+    }
+    
+    &:hover {
+      background-color: #fff;
+      color: #251F20;
     }
 
     @media (max-width: 640px) {

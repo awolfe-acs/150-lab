@@ -21,11 +21,7 @@ nav {
     justify-content: space-between;
     gap: 32px;
 
-    @media (max-width:1200px) and (min-width:$desktop-viewport) {
-        padding: 16px;
-    }
-
-    @media (max-width:$desktop-viewport) {
+    @media (max-width:1280px) {
         flex-direction: column;
         height: auto;
         justify-content: flex-start;
@@ -42,7 +38,7 @@ nav {
 
     &.active {
         top: 16px;
-        z-index: 1000;
+        z-index: 5000;
         opacity: 1;
     }
 
@@ -59,7 +55,10 @@ nav {
     .nav-items {
         justify-content:flex-start;
         gap: 32px;
-        @media (min-width:$desktop-viewport) {
+        @media (min-width:1281px) and (max-width:1366px) {
+            gap: 24px;
+        }
+        @media (min-width:1281px) {
             max-width:calc(100vw - 336px);
             overflow:hidden;
         }
@@ -67,7 +66,7 @@ nav {
             gap: 54px;
         }
 
-        @media (max-width:$desktop-viewport) {
+        @media (max-width:1280px) {
             flex-direction: column;
             gap: calc(8px + 1vw);
         }
@@ -83,23 +82,17 @@ nav {
             //font-weight:500;
             //letter-spacing:0.54px;
             //color: #111;
-
             white-space: nowrap;
 
             &:hover {
-                color: #0029cf;
+                color: #412BFD;
             }
 
             @media (min-width:$large-desktop-viewport) {
                 //font-size: 16px;
             }
 
-            @media (max-width:1200px) and (min-width:$desktop-viewport) {
-                font-size: 13px;
-            }
-
-            @media (max-width:$desktop-viewport) {
-                font-size: calc(14px + 2vw);
+            @media (max-width:1280px) {
                 font-size: 16px;
             }
 
@@ -143,7 +136,7 @@ nav {
             transform: scale(0.9);
         }
 
-        @media (max-width:$desktop-viewport) {
+        @media (max-width:1280px) {
             position: absolute;
             top: 24px;
             right: 24px;
