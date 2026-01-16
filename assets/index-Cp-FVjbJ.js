@@ -589,7 +589,7 @@ vec4 sRGBTransferEOTF( in vec4 value ) {
 }
 vec4 sRGBTransferOETF( in vec4 value ) {
 	return vec4( mix( pow( value.rgb, vec3( 0.41666 ) ) * 1.055 - vec3( 0.055 ), value.rgb * 12.92, vec3( lessThanEqual( value.rgb, vec3( 0.0031308 ) ) ) ), value.a );
-}`,eS=`#ifdef USE_ENVMAP
+}`,e1=`#ifdef USE_ENVMAP
 	#ifdef ENV_WORLDPOS
 		vec3 cameraToFrag;
 		if ( isOrthographic ) {
@@ -618,7 +618,7 @@ vec4 sRGBTransferOETF( in vec4 value ) {
 	#elif defined( ENVMAP_BLENDING_ADD )
 		outgoingLight += envColor.xyz * specularStrength * reflectivity;
 	#endif
-#endif`,tS=`#ifdef USE_ENVMAP
+#endif`,t1=`#ifdef USE_ENVMAP
 	uniform float envMapIntensity;
 	uniform float flipEnvMap;
 	uniform mat3 envMapRotation;
@@ -627,7 +627,7 @@ vec4 sRGBTransferOETF( in vec4 value ) {
 	#else
 		uniform sampler2D envMap;
 	#endif
-#endif`,nS=`#ifdef USE_ENVMAP
+#endif`,n1=`#ifdef USE_ENVMAP
 	uniform float reflectivity;
 	#if defined( USE_BUMPMAP ) || defined( USE_NORMALMAP ) || defined( PHONG ) || defined( LAMBERT )
 		#define ENV_WORLDPOS
@@ -638,7 +638,7 @@ vec4 sRGBTransferOETF( in vec4 value ) {
 	#else
 		varying vec3 vReflect;
 	#endif
-#endif`,iS=`#ifdef USE_ENVMAP
+#endif`,i1=`#ifdef USE_ENVMAP
 	#if defined( USE_BUMPMAP ) || defined( USE_NORMALMAP ) || defined( PHONG ) || defined( LAMBERT )
 		#define ENV_WORLDPOS
 	#endif
@@ -649,7 +649,7 @@ vec4 sRGBTransferOETF( in vec4 value ) {
 		varying vec3 vReflect;
 		uniform float refractionRatio;
 	#endif
-#endif`,rS=`#ifdef USE_ENVMAP
+#endif`,r1=`#ifdef USE_ENVMAP
 	#ifdef ENV_WORLDPOS
 		vWorldPosition = worldPosition.xyz;
 	#else
@@ -666,18 +666,18 @@ vec4 sRGBTransferOETF( in vec4 value ) {
 			vReflect = refract( cameraToVertex, worldNormal, refractionRatio );
 		#endif
 	#endif
-#endif`,oS=`#ifdef USE_FOG
+#endif`,o1=`#ifdef USE_FOG
 	vFogDepth = - mvPosition.z;
-#endif`,sS=`#ifdef USE_FOG
+#endif`,s1=`#ifdef USE_FOG
 	varying float vFogDepth;
-#endif`,aS=`#ifdef USE_FOG
+#endif`,a1=`#ifdef USE_FOG
 	#ifdef FOG_EXP2
 		float fogFactor = 1.0 - exp( - fogDensity * fogDensity * vFogDepth * vFogDepth );
 	#else
 		float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );
 	#endif
 	gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );
-#endif`,lS=`#ifdef USE_FOG
+#endif`,l1=`#ifdef USE_FOG
 	uniform vec3 fogColor;
 	varying float vFogDepth;
 	#ifdef FOG_EXP2
@@ -686,7 +686,7 @@ vec4 sRGBTransferOETF( in vec4 value ) {
 		uniform float fogNear;
 		uniform float fogFar;
 	#endif
-#endif`,cS=`#ifdef USE_GRADIENTMAP
+#endif`,c1=`#ifdef USE_GRADIENTMAP
 	uniform sampler2D gradientMap;
 #endif
 vec3 getGradientIrradiance( vec3 normal, vec3 lightDirection ) {
@@ -698,12 +698,12 @@ vec3 getGradientIrradiance( vec3 normal, vec3 lightDirection ) {
 		vec2 fw = fwidth( coord ) * 0.5;
 		return mix( vec3( 0.7 ), vec3( 1.0 ), smoothstep( 0.7 - fw.x, 0.7 + fw.x, coord.x ) );
 	#endif
-}`,dS=`#ifdef USE_LIGHTMAP
+}`,d1=`#ifdef USE_LIGHTMAP
 	uniform sampler2D lightMap;
 	uniform float lightMapIntensity;
-#endif`,uS=`LambertMaterial material;
+#endif`,u1=`LambertMaterial material;
 material.diffuseColor = diffuseColor.rgb;
-material.specularStrength = specularStrength;`,fS=`varying vec3 vViewPosition;
+material.specularStrength = specularStrength;`,f1=`varying vec3 vViewPosition;
 struct LambertMaterial {
 	vec3 diffuseColor;
 	float specularStrength;
@@ -717,7 +717,7 @@ void RE_IndirectDiffuse_Lambert( const in vec3 irradiance, const in vec3 geometr
 	reflectedLight.indirectDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );
 }
 #define RE_Direct				RE_Direct_Lambert
-#define RE_IndirectDiffuse		RE_IndirectDiffuse_Lambert`,hS=`uniform bool receiveShadow;
+#define RE_IndirectDiffuse		RE_IndirectDiffuse_Lambert`,h1=`uniform bool receiveShadow;
 uniform vec3 ambientLightColor;
 #if defined( USE_LIGHT_PROBES )
 	uniform vec3 lightProbe[ 9 ];
@@ -833,7 +833,7 @@ float getSpotAttenuation( const in float coneCosine, const in float penumbraCosi
 		vec3 irradiance = mix( hemiLight.groundColor, hemiLight.skyColor, hemiDiffuseWeight );
 		return irradiance;
 	}
-#endif`,pS=`#ifdef USE_ENVMAP
+#endif`,p1=`#ifdef USE_ENVMAP
 	vec3 getIBLIrradiance( const in vec3 normal ) {
 		#ifdef ENVMAP_TYPE_CUBE_UV
 			vec3 worldNormal = inverseTransformDirection( normal, viewMatrix );
@@ -866,8 +866,8 @@ float getSpotAttenuation( const in float coneCosine, const in float penumbraCosi
 			#endif
 		}
 	#endif
-#endif`,mS=`ToonMaterial material;
-material.diffuseColor = diffuseColor.rgb;`,gS=`varying vec3 vViewPosition;
+#endif`,m1=`ToonMaterial material;
+material.diffuseColor = diffuseColor.rgb;`,g1=`varying vec3 vViewPosition;
 struct ToonMaterial {
 	vec3 diffuseColor;
 };
@@ -879,11 +879,11 @@ void RE_IndirectDiffuse_Toon( const in vec3 irradiance, const in vec3 geometryPo
 	reflectedLight.indirectDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );
 }
 #define RE_Direct				RE_Direct_Toon
-#define RE_IndirectDiffuse		RE_IndirectDiffuse_Toon`,_S=`BlinnPhongMaterial material;
+#define RE_IndirectDiffuse		RE_IndirectDiffuse_Toon`,_1=`BlinnPhongMaterial material;
 material.diffuseColor = diffuseColor.rgb;
 material.specularColor = specular;
 material.specularShininess = shininess;
-material.specularStrength = specularStrength;`,vS=`varying vec3 vViewPosition;
+material.specularStrength = specularStrength;`,v1=`varying vec3 vViewPosition;
 struct BlinnPhongMaterial {
 	vec3 diffuseColor;
 	vec3 specularColor;
@@ -900,7 +900,7 @@ void RE_IndirectDiffuse_BlinnPhong( const in vec3 irradiance, const in vec3 geom
 	reflectedLight.indirectDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );
 }
 #define RE_Direct				RE_Direct_BlinnPhong
-#define RE_IndirectDiffuse		RE_IndirectDiffuse_BlinnPhong`,xS=`PhysicalMaterial material;
+#define RE_IndirectDiffuse		RE_IndirectDiffuse_BlinnPhong`,x1=`PhysicalMaterial material;
 material.diffuseColor = diffuseColor.rgb * ( 1.0 - metalnessFactor );
 vec3 dxy = max( abs( dFdx( nonPerturbedNormal ) ), abs( dFdy( nonPerturbedNormal ) ) );
 float geometryRoughness = max( max( dxy.x, dxy.y ), dxy.z );
@@ -986,7 +986,7 @@ material.roughness = min( material.roughness, 1.0 );
 	material.alphaT = mix( pow2( material.roughness ), 1.0, pow2( material.anisotropy ) );
 	material.anisotropyT = tbn[ 0 ] * anisotropyV.x + tbn[ 1 ] * anisotropyV.y;
 	material.anisotropyB = tbn[ 1 ] * anisotropyV.x - tbn[ 0 ] * anisotropyV.y;
-#endif`,yS=`uniform sampler2D dfgLUT;
+#endif`,y1=`uniform sampler2D dfgLUT;
 struct PhysicalMaterial {
 	vec3 diffuseColor;
 	float roughness;
@@ -1302,7 +1302,7 @@ void RE_IndirectSpecular_Physical( const in vec3 radiance, const in vec3 irradia
 #define RE_IndirectSpecular		RE_IndirectSpecular_Physical
 float computeSpecularOcclusion( const in float dotNV, const in float ambientOcclusion, const in float roughness ) {
 	return saturate( pow( dotNV + ambientOcclusion, exp2( - 16.0 * roughness - 1.0 ) ) - 1.0 + ambientOcclusion );
-}`,bS=`
+}`,b1=`
 vec3 geometryPosition = - vViewPosition;
 vec3 geometryNormal = normal;
 vec3 geometryViewDir = ( isOrthographic ) ? vec3( 0, 0, 1 ) : normalize( vViewPosition );
@@ -1417,7 +1417,7 @@ IncidentLight directLight;
 #if defined( RE_IndirectSpecular )
 	vec3 radiance = vec3( 0.0 );
 	vec3 clearcoatRadiance = vec3( 0.0 );
-#endif`,wS=`#if defined( RE_IndirectDiffuse )
+#endif`,w1=`#if defined( RE_IndirectDiffuse )
 	#ifdef USE_LIGHTMAP
 		vec4 lightMapTexel = texture2D( lightMap, vLightMapUv );
 		vec3 lightMapIrradiance = lightMapTexel.rgb * lightMapIntensity;
@@ -1436,32 +1436,32 @@ IncidentLight directLight;
 	#ifdef USE_CLEARCOAT
 		clearcoatRadiance += getIBLRadiance( geometryViewDir, geometryClearcoatNormal, material.clearcoatRoughness );
 	#endif
-#endif`,SS=`#if defined( RE_IndirectDiffuse )
+#endif`,S1=`#if defined( RE_IndirectDiffuse )
 	RE_IndirectDiffuse( irradiance, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight );
 #endif
 #if defined( RE_IndirectSpecular )
 	RE_IndirectSpecular( radiance, iblIrradiance, clearcoatRadiance, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight );
-#endif`,MS=`#if defined( USE_LOGARITHMIC_DEPTH_BUFFER )
+#endif`,M1=`#if defined( USE_LOGARITHMIC_DEPTH_BUFFER )
 	gl_FragDepth = vIsPerspective == 0.0 ? gl_FragCoord.z : log2( vFragDepth ) * logDepthBufFC * 0.5;
-#endif`,TS=`#if defined( USE_LOGARITHMIC_DEPTH_BUFFER )
+#endif`,T1=`#if defined( USE_LOGARITHMIC_DEPTH_BUFFER )
 	uniform float logDepthBufFC;
 	varying float vFragDepth;
 	varying float vIsPerspective;
-#endif`,ES=`#ifdef USE_LOGARITHMIC_DEPTH_BUFFER
+#endif`,E1=`#ifdef USE_LOGARITHMIC_DEPTH_BUFFER
 	varying float vFragDepth;
 	varying float vIsPerspective;
-#endif`,AS=`#ifdef USE_LOGARITHMIC_DEPTH_BUFFER
+#endif`,A1=`#ifdef USE_LOGARITHMIC_DEPTH_BUFFER
 	vFragDepth = 1.0 + gl_Position.w;
 	vIsPerspective = float( isPerspectiveMatrix( projectionMatrix ) );
-#endif`,CS=`#ifdef USE_MAP
+#endif`,C1=`#ifdef USE_MAP
 	vec4 sampledDiffuseColor = texture2D( map, vMapUv );
 	#ifdef DECODE_VIDEO_TEXTURE
 		sampledDiffuseColor = sRGBTransferEOTF( sampledDiffuseColor );
 	#endif
 	diffuseColor *= sampledDiffuseColor;
-#endif`,RS=`#ifdef USE_MAP
+#endif`,R1=`#ifdef USE_MAP
 	uniform sampler2D map;
-#endif`,PS=`#if defined( USE_MAP ) || defined( USE_ALPHAMAP )
+#endif`,P1=`#if defined( USE_MAP ) || defined( USE_ALPHAMAP )
 	#if defined( USE_POINTS_UV )
 		vec2 uv = vUv;
 	#else
@@ -1473,7 +1473,7 @@ IncidentLight directLight;
 #endif
 #ifdef USE_ALPHAMAP
 	diffuseColor.a *= texture2D( alphaMap, uv ).g;
-#endif`,LS=`#if defined( USE_POINTS_UV )
+#endif`,L1=`#if defined( USE_POINTS_UV )
 	varying vec2 vUv;
 #else
 	#if defined( USE_MAP ) || defined( USE_ALPHAMAP )
@@ -1485,19 +1485,19 @@ IncidentLight directLight;
 #endif
 #ifdef USE_ALPHAMAP
 	uniform sampler2D alphaMap;
-#endif`,DS=`float metalnessFactor = metalness;
+#endif`,D1=`float metalnessFactor = metalness;
 #ifdef USE_METALNESSMAP
 	vec4 texelMetalness = texture2D( metalnessMap, vMetalnessMapUv );
 	metalnessFactor *= texelMetalness.b;
-#endif`,IS=`#ifdef USE_METALNESSMAP
+#endif`,I1=`#ifdef USE_METALNESSMAP
 	uniform sampler2D metalnessMap;
-#endif`,FS=`#ifdef USE_INSTANCING_MORPH
+#endif`,F1=`#ifdef USE_INSTANCING_MORPH
 	float morphTargetInfluences[ MORPHTARGETS_COUNT ];
 	float morphTargetBaseInfluence = texelFetch( morphTexture, ivec2( 0, gl_InstanceID ), 0 ).r;
 	for ( int i = 0; i < MORPHTARGETS_COUNT; i ++ ) {
 		morphTargetInfluences[i] =  texelFetch( morphTexture, ivec2( i + 1, gl_InstanceID ), 0 ).r;
 	}
-#endif`,OS=`#if defined( USE_MORPHCOLORS )
+#endif`,O1=`#if defined( USE_MORPHCOLORS )
 	vColor *= morphTargetBaseInfluence;
 	for ( int i = 0; i < MORPHTARGETS_COUNT; i ++ ) {
 		#if defined( USE_COLOR_ALPHA )
@@ -1506,12 +1506,12 @@ IncidentLight directLight;
 			if ( morphTargetInfluences[ i ] != 0.0 ) vColor += getMorph( gl_VertexID, i, 2 ).rgb * morphTargetInfluences[ i ];
 		#endif
 	}
-#endif`,NS=`#ifdef USE_MORPHNORMALS
+#endif`,N1=`#ifdef USE_MORPHNORMALS
 	objectNormal *= morphTargetBaseInfluence;
 	for ( int i = 0; i < MORPHTARGETS_COUNT; i ++ ) {
 		if ( morphTargetInfluences[ i ] != 0.0 ) objectNormal += getMorph( gl_VertexID, i, 1 ).xyz * morphTargetInfluences[ i ];
 	}
-#endif`,kS=`#ifdef USE_MORPHTARGETS
+#endif`,k1=`#ifdef USE_MORPHTARGETS
 	#ifndef USE_INSTANCING_MORPH
 		uniform float morphTargetBaseInfluence;
 		uniform float morphTargetInfluences[ MORPHTARGETS_COUNT ];
@@ -1525,12 +1525,12 @@ IncidentLight directLight;
 		ivec3 morphUV = ivec3( x, y, morphTargetIndex );
 		return texelFetch( morphTargetsTexture, morphUV, 0 );
 	}
-#endif`,US=`#ifdef USE_MORPHTARGETS
+#endif`,U1=`#ifdef USE_MORPHTARGETS
 	transformed *= morphTargetBaseInfluence;
 	for ( int i = 0; i < MORPHTARGETS_COUNT; i ++ ) {
 		if ( morphTargetInfluences[ i ] != 0.0 ) transformed += getMorph( gl_VertexID, i, 0 ).xyz * morphTargetInfluences[ i ];
 	}
-#endif`,BS=`float faceDirection = gl_FrontFacing ? 1.0 : - 1.0;
+#endif`,B1=`float faceDirection = gl_FrontFacing ? 1.0 : - 1.0;
 #ifdef FLAT_SHADED
 	vec3 fdx = dFdx( vViewPosition );
 	vec3 fdy = dFdy( vViewPosition );
@@ -1571,7 +1571,7 @@ IncidentLight directLight;
 		tbn2[1] *= faceDirection;
 	#endif
 #endif
-vec3 nonPerturbedNormal = normal;`,zS=`#ifdef USE_NORMALMAP_OBJECTSPACE
+vec3 nonPerturbedNormal = normal;`,z1=`#ifdef USE_NORMALMAP_OBJECTSPACE
 	normal = texture2D( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;
 	#ifdef FLIP_SIDED
 		normal = - normal;
@@ -1586,25 +1586,25 @@ vec3 nonPerturbedNormal = normal;`,zS=`#ifdef USE_NORMALMAP_OBJECTSPACE
 	normal = normalize( tbn * mapN );
 #elif defined( USE_BUMPMAP )
 	normal = perturbNormalArb( - vViewPosition, normal, dHdxy_fwd(), faceDirection );
-#endif`,VS=`#ifndef FLAT_SHADED
+#endif`,V1=`#ifndef FLAT_SHADED
 	varying vec3 vNormal;
 	#ifdef USE_TANGENT
 		varying vec3 vTangent;
 		varying vec3 vBitangent;
 	#endif
-#endif`,HS=`#ifndef FLAT_SHADED
+#endif`,H1=`#ifndef FLAT_SHADED
 	varying vec3 vNormal;
 	#ifdef USE_TANGENT
 		varying vec3 vTangent;
 		varying vec3 vBitangent;
 	#endif
-#endif`,GS=`#ifndef FLAT_SHADED
+#endif`,G1=`#ifndef FLAT_SHADED
 	vNormal = normalize( transformedNormal );
 	#ifdef USE_TANGENT
 		vTangent = normalize( transformedTangent );
 		vBitangent = normalize( cross( vNormal, vTangent ) * tangent.w );
 	#endif
-#endif`,WS=`#ifdef USE_NORMALMAP
+#endif`,W1=`#ifdef USE_NORMALMAP
 	uniform sampler2D normalMap;
 	uniform vec2 normalScale;
 #endif
@@ -1626,13 +1626,13 @@ vec3 nonPerturbedNormal = normal;`,zS=`#ifdef USE_NORMALMAP_OBJECTSPACE
 		float scale = ( det == 0.0 ) ? 0.0 : inversesqrt( det );
 		return mat3( T * scale, B * scale, N );
 	}
-#endif`,XS=`#ifdef USE_CLEARCOAT
+#endif`,X1=`#ifdef USE_CLEARCOAT
 	vec3 clearcoatNormal = nonPerturbedNormal;
-#endif`,qS=`#ifdef USE_CLEARCOAT_NORMALMAP
+#endif`,q1=`#ifdef USE_CLEARCOAT_NORMALMAP
 	vec3 clearcoatMapN = texture2D( clearcoatNormalMap, vClearcoatNormalMapUv ).xyz * 2.0 - 1.0;
 	clearcoatMapN.xy *= clearcoatNormalScale;
 	clearcoatNormal = normalize( tbn2 * clearcoatMapN );
-#endif`,YS=`#ifdef USE_CLEARCOATMAP
+#endif`,Y1=`#ifdef USE_CLEARCOATMAP
 	uniform sampler2D clearcoatMap;
 #endif
 #ifdef USE_CLEARCOAT_NORMALMAP
@@ -1641,18 +1641,18 @@ vec3 nonPerturbedNormal = normal;`,zS=`#ifdef USE_NORMALMAP_OBJECTSPACE
 #endif
 #ifdef USE_CLEARCOAT_ROUGHNESSMAP
 	uniform sampler2D clearcoatRoughnessMap;
-#endif`,$S=`#ifdef USE_IRIDESCENCEMAP
+#endif`,$1=`#ifdef USE_IRIDESCENCEMAP
 	uniform sampler2D iridescenceMap;
 #endif
 #ifdef USE_IRIDESCENCE_THICKNESSMAP
 	uniform sampler2D iridescenceThicknessMap;
-#endif`,jS=`#ifdef OPAQUE
+#endif`,j1=`#ifdef OPAQUE
 diffuseColor.a = 1.0;
 #endif
 #ifdef USE_TRANSMISSION
 diffuseColor.a *= material.transmissionAlpha;
 #endif
-gl_FragColor = vec4( outgoingLight, diffuseColor.a );`,KS=`vec3 packNormalToRGB( const in vec3 normal ) {
+gl_FragColor = vec4( outgoingLight, diffuseColor.a );`,K1=`vec3 packNormalToRGB( const in vec3 normal ) {
 	return normalize( normal ) * 0.5 + 0.5;
 }
 vec3 unpackRGBToNormal( const in vec3 rgb ) {
@@ -1721,9 +1721,9 @@ float viewZToPerspectiveDepth( const in float viewZ, const in float near, const 
 }
 float perspectiveDepthToViewZ( const in float depth, const in float near, const in float far ) {
 	return ( near * far ) / ( ( far - near ) * depth - far );
-}`,ZS=`#ifdef PREMULTIPLIED_ALPHA
+}`,Z1=`#ifdef PREMULTIPLIED_ALPHA
 	gl_FragColor.rgb *= gl_FragColor.a;
-#endif`,JS=`vec4 mvPosition = vec4( transformed, 1.0 );
+#endif`,J1=`vec4 mvPosition = vec4( transformed, 1.0 );
 #ifdef USE_BATCHING
 	mvPosition = batchingMatrix * mvPosition;
 #endif
@@ -1731,22 +1731,22 @@ float perspectiveDepthToViewZ( const in float depth, const in float near, const 
 	mvPosition = instanceMatrix * mvPosition;
 #endif
 mvPosition = modelViewMatrix * mvPosition;
-gl_Position = projectionMatrix * mvPosition;`,QS=`#ifdef DITHERING
+gl_Position = projectionMatrix * mvPosition;`,Q1=`#ifdef DITHERING
 	gl_FragColor.rgb = dithering( gl_FragColor.rgb );
-#endif`,e1=`#ifdef DITHERING
+#endif`,eS=`#ifdef DITHERING
 	vec3 dithering( vec3 color ) {
 		float grid_position = rand( gl_FragCoord.xy );
 		vec3 dither_shift_RGB = vec3( 0.25 / 255.0, -0.25 / 255.0, 0.25 / 255.0 );
 		dither_shift_RGB = mix( 2.0 * dither_shift_RGB, -2.0 * dither_shift_RGB, grid_position );
 		return color + dither_shift_RGB;
 	}
-#endif`,t1=`float roughnessFactor = roughness;
+#endif`,tS=`float roughnessFactor = roughness;
 #ifdef USE_ROUGHNESSMAP
 	vec4 texelRoughness = texture2D( roughnessMap, vRoughnessMapUv );
 	roughnessFactor *= texelRoughness.g;
-#endif`,n1=`#ifdef USE_ROUGHNESSMAP
+#endif`,nS=`#ifdef USE_ROUGHNESSMAP
 	uniform sampler2D roughnessMap;
-#endif`,i1=`#if NUM_SPOT_LIGHT_COORDS > 0
+#endif`,iS=`#if NUM_SPOT_LIGHT_COORDS > 0
 	varying vec4 vSpotLightCoord[ NUM_SPOT_LIGHT_COORDS ];
 #endif
 #if NUM_SPOT_LIGHT_MAPS > 0
@@ -1941,7 +1941,7 @@ gl_Position = projectionMatrix * mvPosition;`,QS=`#ifdef DITHERING
 		}
 		return mix( 1.0, shadow, shadowIntensity );
 	}
-#endif`,r1=`#if NUM_SPOT_LIGHT_COORDS > 0
+#endif`,rS=`#if NUM_SPOT_LIGHT_COORDS > 0
 	uniform mat4 spotLightMatrix[ NUM_SPOT_LIGHT_COORDS ];
 	varying vec4 vSpotLightCoord[ NUM_SPOT_LIGHT_COORDS ];
 #endif
@@ -1982,7 +1982,7 @@ gl_Position = projectionMatrix * mvPosition;`,QS=`#ifdef DITHERING
 		};
 		uniform PointLightShadow pointLightShadows[ NUM_POINT_LIGHT_SHADOWS ];
 	#endif
-#endif`,o1=`#if ( defined( USE_SHADOWMAP ) && ( NUM_DIR_LIGHT_SHADOWS > 0 || NUM_POINT_LIGHT_SHADOWS > 0 ) ) || ( NUM_SPOT_LIGHT_COORDS > 0 )
+#endif`,oS=`#if ( defined( USE_SHADOWMAP ) && ( NUM_DIR_LIGHT_SHADOWS > 0 || NUM_POINT_LIGHT_SHADOWS > 0 ) ) || ( NUM_SPOT_LIGHT_COORDS > 0 )
 	vec3 shadowWorldNormal = inverseTransformDirection( transformedNormal, viewMatrix );
 	vec4 shadowWorldPosition;
 #endif
@@ -2014,7 +2014,7 @@ gl_Position = projectionMatrix * mvPosition;`,QS=`#ifdef DITHERING
 		vSpotLightCoord[ i ] = spotLightMatrix[ i ] * shadowWorldPosition;
 	}
 	#pragma unroll_loop_end
-#endif`,s1=`float getShadowMask() {
+#endif`,sS=`float getShadowMask() {
 	float shadow = 1.0;
 	#ifdef USE_SHADOWMAP
 	#if NUM_DIR_LIGHT_SHADOWS > 0
@@ -2046,12 +2046,12 @@ gl_Position = projectionMatrix * mvPosition;`,QS=`#ifdef DITHERING
 	#endif
 	#endif
 	return shadow;
-}`,a1=`#ifdef USE_SKINNING
+}`,aS=`#ifdef USE_SKINNING
 	mat4 boneMatX = getBoneMatrix( skinIndex.x );
 	mat4 boneMatY = getBoneMatrix( skinIndex.y );
 	mat4 boneMatZ = getBoneMatrix( skinIndex.z );
 	mat4 boneMatW = getBoneMatrix( skinIndex.w );
-#endif`,l1=`#ifdef USE_SKINNING
+#endif`,lS=`#ifdef USE_SKINNING
 	uniform mat4 bindMatrix;
 	uniform mat4 bindMatrixInverse;
 	uniform highp sampler2D boneTexture;
@@ -2066,7 +2066,7 @@ gl_Position = projectionMatrix * mvPosition;`,QS=`#ifdef DITHERING
 		vec4 v4 = texelFetch( boneTexture, ivec2( x + 3, y ), 0 );
 		return mat4( v1, v2, v3, v4 );
 	}
-#endif`,c1=`#ifdef USE_SKINNING
+#endif`,cS=`#ifdef USE_SKINNING
 	vec4 skinVertex = bindMatrix * vec4( transformed, 1.0 );
 	vec4 skinned = vec4( 0.0 );
 	skinned += boneMatX * skinVertex * skinWeight.x;
@@ -2074,7 +2074,7 @@ gl_Position = projectionMatrix * mvPosition;`,QS=`#ifdef DITHERING
 	skinned += boneMatZ * skinVertex * skinWeight.z;
 	skinned += boneMatW * skinVertex * skinWeight.w;
 	transformed = ( bindMatrixInverse * skinned ).xyz;
-#endif`,d1=`#ifdef USE_SKINNING
+#endif`,dS=`#ifdef USE_SKINNING
 	mat4 skinMatrix = mat4( 0.0 );
 	skinMatrix += skinWeight.x * boneMatX;
 	skinMatrix += skinWeight.y * boneMatY;
@@ -2085,17 +2085,17 @@ gl_Position = projectionMatrix * mvPosition;`,QS=`#ifdef DITHERING
 	#ifdef USE_TANGENT
 		objectTangent = vec4( skinMatrix * vec4( objectTangent, 0.0 ) ).xyz;
 	#endif
-#endif`,u1=`float specularStrength;
+#endif`,uS=`float specularStrength;
 #ifdef USE_SPECULARMAP
 	vec4 texelSpecular = texture2D( specularMap, vSpecularMapUv );
 	specularStrength = texelSpecular.r;
 #else
 	specularStrength = 1.0;
-#endif`,f1=`#ifdef USE_SPECULARMAP
+#endif`,fS=`#ifdef USE_SPECULARMAP
 	uniform sampler2D specularMap;
-#endif`,h1=`#if defined( TONE_MAPPING )
+#endif`,hS=`#if defined( TONE_MAPPING )
 	gl_FragColor.rgb = toneMapping( gl_FragColor.rgb );
-#endif`,p1=`#ifndef saturate
+#endif`,pS=`#ifndef saturate
 #define saturate( a ) clamp( a, 0.0, 1.0 )
 #endif
 uniform float toneMappingExposure;
@@ -2192,7 +2192,7 @@ vec3 NeutralToneMapping( vec3 color ) {
 	float g = 1. - 1. / ( Desaturation * ( peak - newPeak ) + 1. );
 	return mix( color, vec3( newPeak ), g );
 }
-vec3 CustomToneMapping( vec3 color ) { return color; }`,m1=`#ifdef USE_TRANSMISSION
+vec3 CustomToneMapping( vec3 color ) { return color; }`,mS=`#ifdef USE_TRANSMISSION
 	material.transmission = transmission;
 	material.transmissionAlpha = 1.0;
 	material.thickness = thickness;
@@ -2213,7 +2213,7 @@ vec3 CustomToneMapping( vec3 color ) { return color; }`,m1=`#ifdef USE_TRANSMISS
 		material.attenuationColor, material.attenuationDistance );
 	material.transmissionAlpha = mix( material.transmissionAlpha, transmitted.a, material.transmission );
 	totalDiffuse = mix( totalDiffuse, transmitted.rgb, material.transmission );
-#endif`,g1=`#ifdef USE_TRANSMISSION
+#endif`,gS=`#ifdef USE_TRANSMISSION
 	uniform float transmission;
 	uniform float thickness;
 	uniform float attenuationDistance;
@@ -2339,7 +2339,7 @@ vec3 CustomToneMapping( vec3 color ) { return color; }`,m1=`#ifdef USE_TRANSMISS
 		float transmittanceFactor = ( transmittance.r + transmittance.g + transmittance.b ) / 3.0;
 		return vec4( ( 1.0 - F ) * attenuatedColor, 1.0 - ( 1.0 - transmittedLight.a ) * transmittanceFactor );
 	}
-#endif`,_1=`#if defined( USE_UV ) || defined( USE_ANISOTROPY )
+#endif`,_S=`#if defined( USE_UV ) || defined( USE_ANISOTROPY )
 	varying vec2 vUv;
 #endif
 #ifdef USE_MAP
@@ -2409,7 +2409,7 @@ vec3 CustomToneMapping( vec3 color ) { return color; }`,m1=`#ifdef USE_TRANSMISS
 #ifdef USE_THICKNESSMAP
 	uniform mat3 thicknessMapTransform;
 	varying vec2 vThicknessMapUv;
-#endif`,v1=`#if defined( USE_UV ) || defined( USE_ANISOTROPY )
+#endif`,vS=`#if defined( USE_UV ) || defined( USE_ANISOTROPY )
 	varying vec2 vUv;
 #endif
 #ifdef USE_MAP
@@ -2503,7 +2503,7 @@ vec3 CustomToneMapping( vec3 color ) { return color; }`,m1=`#ifdef USE_TRANSMISS
 #ifdef USE_THICKNESSMAP
 	uniform mat3 thicknessMapTransform;
 	varying vec2 vThicknessMapUv;
-#endif`,x1=`#if defined( USE_UV ) || defined( USE_ANISOTROPY )
+#endif`,xS=`#if defined( USE_UV ) || defined( USE_ANISOTROPY )
 	vUv = vec3( uv, 1 ).xy;
 #endif
 #ifdef USE_MAP
@@ -2574,7 +2574,7 @@ vec3 CustomToneMapping( vec3 color ) { return color; }`,m1=`#ifdef USE_TRANSMISS
 #endif
 #ifdef USE_THICKNESSMAP
 	vThicknessMapUv = ( thicknessMapTransform * vec3( THICKNESSMAP_UV, 1 ) ).xy;
-#endif`,y1=`#if defined( USE_ENVMAP ) || defined( DISTANCE ) || defined ( USE_SHADOWMAP ) || defined ( USE_TRANSMISSION ) || NUM_SPOT_LIGHT_COORDS > 0
+#endif`,yS=`#if defined( USE_ENVMAP ) || defined( DISTANCE ) || defined ( USE_SHADOWMAP ) || defined ( USE_TRANSMISSION ) || NUM_SPOT_LIGHT_COORDS > 0
 	vec4 worldPosition = vec4( transformed, 1.0 );
 	#ifdef USE_BATCHING
 		worldPosition = batchingMatrix * worldPosition;
@@ -2583,12 +2583,12 @@ vec3 CustomToneMapping( vec3 color ) { return color; }`,m1=`#ifdef USE_TRANSMISS
 		worldPosition = instanceMatrix * worldPosition;
 	#endif
 	worldPosition = modelMatrix * worldPosition;
-#endif`;const b1=`varying vec2 vUv;
+#endif`;const bS=`varying vec2 vUv;
 uniform mat3 uvTransform;
 void main() {
 	vUv = ( uvTransform * vec3( uv, 1 ) ).xy;
 	gl_Position = vec4( position.xy, 1.0, 1.0 );
-}`,w1=`uniform sampler2D t2D;
+}`,wS=`uniform sampler2D t2D;
 uniform float backgroundIntensity;
 varying vec2 vUv;
 void main() {
@@ -2600,14 +2600,14 @@ void main() {
 	gl_FragColor = texColor;
 	#include <tonemapping_fragment>
 	#include <colorspace_fragment>
-}`,S1=`varying vec3 vWorldDirection;
+}`,SS=`varying vec3 vWorldDirection;
 #include <common>
 void main() {
 	vWorldDirection = transformDirection( position, modelMatrix );
 	#include <begin_vertex>
 	#include <project_vertex>
 	gl_Position.z = gl_Position.w;
-}`,M1=`#ifdef ENVMAP_TYPE_CUBE
+}`,MS=`#ifdef ENVMAP_TYPE_CUBE
 	uniform samplerCube envMap;
 #elif defined( ENVMAP_TYPE_CUBE_UV )
 	uniform sampler2D envMap;
@@ -2630,14 +2630,14 @@ void main() {
 	gl_FragColor = texColor;
 	#include <tonemapping_fragment>
 	#include <colorspace_fragment>
-}`,T1=`varying vec3 vWorldDirection;
+}`,TS=`varying vec3 vWorldDirection;
 #include <common>
 void main() {
 	vWorldDirection = transformDirection( position, modelMatrix );
 	#include <begin_vertex>
 	#include <project_vertex>
 	gl_Position.z = gl_Position.w;
-}`,E1=`uniform samplerCube tCube;
+}`,ES=`uniform samplerCube tCube;
 uniform float tFlip;
 uniform float opacity;
 varying vec3 vWorldDirection;
@@ -2647,7 +2647,7 @@ void main() {
 	gl_FragColor.a *= opacity;
 	#include <tonemapping_fragment>
 	#include <colorspace_fragment>
-}`,A1=`#include <common>
+}`,AS=`#include <common>
 #include <batching_pars_vertex>
 #include <uv_pars_vertex>
 #include <displacementmap_pars_vertex>
@@ -2674,7 +2674,7 @@ void main() {
 	#include <logdepthbuf_vertex>
 	#include <clipping_planes_vertex>
 	vHighPrecisionZW = gl_Position.zw;
-}`,C1=`#if DEPTH_PACKING == 3200
+}`,CS=`#if DEPTH_PACKING == 3200
 	uniform float opacity;
 #endif
 #include <common>
@@ -2712,7 +2712,7 @@ void main() {
 	#elif DEPTH_PACKING == 3203
 		gl_FragColor = vec4( packDepthToRG( fragCoordZ ), 0.0, 1.0 );
 	#endif
-}`,R1=`#define DISTANCE
+}`,RS=`#define DISTANCE
 varying vec3 vWorldPosition;
 #include <common>
 #include <batching_pars_vertex>
@@ -2739,7 +2739,7 @@ void main() {
 	#include <worldpos_vertex>
 	#include <clipping_planes_vertex>
 	vWorldPosition = worldPosition.xyz;
-}`,P1=`#define DISTANCE
+}`,PS=`#define DISTANCE
 uniform vec3 referencePosition;
 uniform float nearDistance;
 uniform float farDistance;
@@ -2763,13 +2763,13 @@ void main () {
 	dist = ( dist - nearDistance ) / ( farDistance - nearDistance );
 	dist = saturate( dist );
 	gl_FragColor = packDepthToRGBA( dist );
-}`,L1=`varying vec3 vWorldDirection;
+}`,LS=`varying vec3 vWorldDirection;
 #include <common>
 void main() {
 	vWorldDirection = transformDirection( position, modelMatrix );
 	#include <begin_vertex>
 	#include <project_vertex>
-}`,D1=`uniform sampler2D tEquirect;
+}`,DS=`uniform sampler2D tEquirect;
 varying vec3 vWorldDirection;
 #include <common>
 void main() {
@@ -2778,7 +2778,7 @@ void main() {
 	gl_FragColor = texture2D( tEquirect, sampleUV );
 	#include <tonemapping_fragment>
 	#include <colorspace_fragment>
-}`,I1=`uniform float scale;
+}`,IS=`uniform float scale;
 attribute float lineDistance;
 varying float vLineDistance;
 #include <common>
@@ -2800,7 +2800,7 @@ void main() {
 	#include <logdepthbuf_vertex>
 	#include <clipping_planes_vertex>
 	#include <fog_vertex>
-}`,F1=`uniform vec3 diffuse;
+}`,FS=`uniform vec3 diffuse;
 uniform float opacity;
 uniform float dashSize;
 uniform float totalSize;
@@ -2828,7 +2828,7 @@ void main() {
 	#include <colorspace_fragment>
 	#include <fog_fragment>
 	#include <premultiplied_alpha_fragment>
-}`,O1=`#include <common>
+}`,OS=`#include <common>
 #include <batching_pars_vertex>
 #include <uv_pars_vertex>
 #include <envmap_pars_vertex>
@@ -2860,7 +2860,7 @@ void main() {
 	#include <worldpos_vertex>
 	#include <envmap_vertex>
 	#include <fog_vertex>
-}`,N1=`uniform vec3 diffuse;
+}`,NS=`uniform vec3 diffuse;
 uniform float opacity;
 #ifndef FLAT_SHADED
 	varying vec3 vNormal;
@@ -2908,7 +2908,7 @@ void main() {
 	#include <fog_fragment>
 	#include <premultiplied_alpha_fragment>
 	#include <dithering_fragment>
-}`,k1=`#define LAMBERT
+}`,kS=`#define LAMBERT
 varying vec3 vViewPosition;
 #include <common>
 #include <batching_pars_vertex>
@@ -2947,7 +2947,7 @@ void main() {
 	#include <envmap_vertex>
 	#include <shadowmap_vertex>
 	#include <fog_vertex>
-}`,U1=`#define LAMBERT
+}`,US=`#define LAMBERT
 uniform vec3 diffuse;
 uniform vec3 emissive;
 uniform float opacity;
@@ -3004,7 +3004,7 @@ void main() {
 	#include <fog_fragment>
 	#include <premultiplied_alpha_fragment>
 	#include <dithering_fragment>
-}`,B1=`#define MATCAP
+}`,BS=`#define MATCAP
 varying vec3 vViewPosition;
 #include <common>
 #include <batching_pars_vertex>
@@ -3038,7 +3038,7 @@ void main() {
 	#include <clipping_planes_vertex>
 	#include <fog_vertex>
 	vViewPosition = - mvPosition.xyz;
-}`,z1=`#define MATCAP
+}`,zS=`#define MATCAP
 uniform vec3 diffuse;
 uniform float opacity;
 uniform sampler2D matcap;
@@ -3084,7 +3084,7 @@ void main() {
 	#include <fog_fragment>
 	#include <premultiplied_alpha_fragment>
 	#include <dithering_fragment>
-}`,V1=`#define NORMAL
+}`,VS=`#define NORMAL
 #if defined( FLAT_SHADED ) || defined( USE_BUMPMAP ) || defined( USE_NORMALMAP_TANGENTSPACE )
 	varying vec3 vViewPosition;
 #endif
@@ -3117,7 +3117,7 @@ void main() {
 #if defined( FLAT_SHADED ) || defined( USE_BUMPMAP ) || defined( USE_NORMALMAP_TANGENTSPACE )
 	vViewPosition = - mvPosition.xyz;
 #endif
-}`,H1=`#define NORMAL
+}`,HS=`#define NORMAL
 uniform float opacity;
 #if defined( FLAT_SHADED ) || defined( USE_BUMPMAP ) || defined( USE_NORMALMAP_TANGENTSPACE )
 	varying vec3 vViewPosition;
@@ -3139,7 +3139,7 @@ void main() {
 	#ifdef OPAQUE
 		gl_FragColor.a = 1.0;
 	#endif
-}`,G1=`#define PHONG
+}`,GS=`#define PHONG
 varying vec3 vViewPosition;
 #include <common>
 #include <batching_pars_vertex>
@@ -3178,7 +3178,7 @@ void main() {
 	#include <envmap_vertex>
 	#include <shadowmap_vertex>
 	#include <fog_vertex>
-}`,W1=`#define PHONG
+}`,WS=`#define PHONG
 uniform vec3 diffuse;
 uniform vec3 emissive;
 uniform vec3 specular;
@@ -3237,7 +3237,7 @@ void main() {
 	#include <fog_fragment>
 	#include <premultiplied_alpha_fragment>
 	#include <dithering_fragment>
-}`,X1=`#define STANDARD
+}`,XS=`#define STANDARD
 varying vec3 vViewPosition;
 #ifdef USE_TRANSMISSION
 	varying vec3 vWorldPosition;
@@ -3280,7 +3280,7 @@ void main() {
 #ifdef USE_TRANSMISSION
 	vWorldPosition = worldPosition.xyz;
 #endif
-}`,q1=`#define STANDARD
+}`,qS=`#define STANDARD
 #ifdef PHYSICAL
 	#define IOR
 	#define USE_SPECULAR
@@ -3405,7 +3405,7 @@ void main() {
 	#include <fog_fragment>
 	#include <premultiplied_alpha_fragment>
 	#include <dithering_fragment>
-}`,Y1=`#define TOON
+}`,YS=`#define TOON
 varying vec3 vViewPosition;
 #include <common>
 #include <batching_pars_vertex>
@@ -3442,7 +3442,7 @@ void main() {
 	#include <worldpos_vertex>
 	#include <shadowmap_vertex>
 	#include <fog_vertex>
-}`,$1=`#define TOON
+}`,$S=`#define TOON
 uniform vec3 diffuse;
 uniform vec3 emissive;
 uniform float opacity;
@@ -3495,7 +3495,7 @@ void main() {
 	#include <fog_fragment>
 	#include <premultiplied_alpha_fragment>
 	#include <dithering_fragment>
-}`,j1=`uniform float size;
+}`,jS=`uniform float size;
 uniform float scale;
 #include <common>
 #include <color_pars_vertex>
@@ -3526,7 +3526,7 @@ void main() {
 	#include <clipping_planes_vertex>
 	#include <worldpos_vertex>
 	#include <fog_vertex>
-}`,K1=`uniform vec3 diffuse;
+}`,KS=`uniform vec3 diffuse;
 uniform float opacity;
 #include <common>
 #include <color_pars_fragment>
@@ -3551,7 +3551,7 @@ void main() {
 	#include <colorspace_fragment>
 	#include <fog_fragment>
 	#include <premultiplied_alpha_fragment>
-}`,Z1=`#include <common>
+}`,ZS=`#include <common>
 #include <batching_pars_vertex>
 #include <fog_pars_vertex>
 #include <morphtarget_pars_vertex>
@@ -3574,7 +3574,7 @@ void main() {
 	#include <worldpos_vertex>
 	#include <shadowmap_vertex>
 	#include <fog_vertex>
-}`,J1=`uniform vec3 color;
+}`,JS=`uniform vec3 color;
 uniform float opacity;
 #include <common>
 #include <packing>
@@ -3590,7 +3590,7 @@ void main() {
 	#include <tonemapping_fragment>
 	#include <colorspace_fragment>
 	#include <fog_fragment>
-}`,Q1=`uniform float rotation;
+}`,QS=`uniform float rotation;
 uniform vec2 center;
 #include <common>
 #include <uv_pars_vertex>
@@ -3639,7 +3639,7 @@ void main() {
 	#include <tonemapping_fragment>
 	#include <colorspace_fragment>
 	#include <fog_fragment>
-}`,Pt={alphahash_fragment:ww,alphahash_pars_fragment:Sw,alphamap_fragment:Mw,alphamap_pars_fragment:Tw,alphatest_fragment:Ew,alphatest_pars_fragment:Aw,aomap_fragment:Cw,aomap_pars_fragment:Rw,batching_pars_vertex:Pw,batching_vertex:Lw,begin_vertex:Dw,beginnormal_vertex:Iw,bsdfs:Fw,iridescence_fragment:Ow,bumpmap_pars_fragment:Nw,clipping_planes_fragment:kw,clipping_planes_pars_fragment:Uw,clipping_planes_pars_vertex:Bw,clipping_planes_vertex:zw,color_fragment:Vw,color_pars_fragment:Hw,color_pars_vertex:Gw,color_vertex:Ww,common:Xw,cube_uv_reflection_fragment:qw,defaultnormal_vertex:Yw,displacementmap_pars_vertex:$w,displacementmap_vertex:jw,emissivemap_fragment:Kw,emissivemap_pars_fragment:Zw,colorspace_fragment:Jw,colorspace_pars_fragment:Qw,envmap_fragment:eS,envmap_common_pars_fragment:tS,envmap_pars_fragment:nS,envmap_pars_vertex:iS,envmap_physical_pars_fragment:pS,envmap_vertex:rS,fog_vertex:oS,fog_pars_vertex:sS,fog_fragment:aS,fog_pars_fragment:lS,gradientmap_pars_fragment:cS,lightmap_pars_fragment:dS,lights_lambert_fragment:uS,lights_lambert_pars_fragment:fS,lights_pars_begin:hS,lights_toon_fragment:mS,lights_toon_pars_fragment:gS,lights_phong_fragment:_S,lights_phong_pars_fragment:vS,lights_physical_fragment:xS,lights_physical_pars_fragment:yS,lights_fragment_begin:bS,lights_fragment_maps:wS,lights_fragment_end:SS,logdepthbuf_fragment:MS,logdepthbuf_pars_fragment:TS,logdepthbuf_pars_vertex:ES,logdepthbuf_vertex:AS,map_fragment:CS,map_pars_fragment:RS,map_particle_fragment:PS,map_particle_pars_fragment:LS,metalnessmap_fragment:DS,metalnessmap_pars_fragment:IS,morphinstance_vertex:FS,morphcolor_vertex:OS,morphnormal_vertex:NS,morphtarget_pars_vertex:kS,morphtarget_vertex:US,normal_fragment_begin:BS,normal_fragment_maps:zS,normal_pars_fragment:VS,normal_pars_vertex:HS,normal_vertex:GS,normalmap_pars_fragment:WS,clearcoat_normal_fragment_begin:XS,clearcoat_normal_fragment_maps:qS,clearcoat_pars_fragment:YS,iridescence_pars_fragment:$S,opaque_fragment:jS,packing:KS,premultiplied_alpha_fragment:ZS,project_vertex:JS,dithering_fragment:QS,dithering_pars_fragment:e1,roughnessmap_fragment:t1,roughnessmap_pars_fragment:n1,shadowmap_pars_fragment:i1,shadowmap_pars_vertex:r1,shadowmap_vertex:o1,shadowmask_pars_fragment:s1,skinbase_vertex:a1,skinning_pars_vertex:l1,skinning_vertex:c1,skinnormal_vertex:d1,specularmap_fragment:u1,specularmap_pars_fragment:f1,tonemapping_fragment:h1,tonemapping_pars_fragment:p1,transmission_fragment:m1,transmission_pars_fragment:g1,uv_pars_fragment:_1,uv_pars_vertex:v1,uv_vertex:x1,worldpos_vertex:y1,background_vert:b1,background_frag:w1,backgroundCube_vert:S1,backgroundCube_frag:M1,cube_vert:T1,cube_frag:E1,depth_vert:A1,depth_frag:C1,distanceRGBA_vert:R1,distanceRGBA_frag:P1,equirect_vert:L1,equirect_frag:D1,linedashed_vert:I1,linedashed_frag:F1,meshbasic_vert:O1,meshbasic_frag:N1,meshlambert_vert:k1,meshlambert_frag:U1,meshmatcap_vert:B1,meshmatcap_frag:z1,meshnormal_vert:V1,meshnormal_frag:H1,meshphong_vert:G1,meshphong_frag:W1,meshphysical_vert:X1,meshphysical_frag:q1,meshtoon_vert:Y1,meshtoon_frag:$1,points_vert:j1,points_frag:K1,shadow_vert:Z1,shadow_frag:J1,sprite_vert:Q1,sprite_frag:eM},Ke={common:{diffuse:{value:new et(16777215)},opacity:{value:1},map:{value:null},mapTransform:{value:new Ct},alphaMap:{value:null},alphaMapTransform:{value:new Ct},alphaTest:{value:0}},specularmap:{specularMap:{value:null},specularMapTransform:{value:new Ct}},envmap:{envMap:{value:null},envMapRotation:{value:new Ct},flipEnvMap:{value:-1},reflectivity:{value:1},ior:{value:1.5},refractionRatio:{value:.98},dfgLUT:{value:null}},aomap:{aoMap:{value:null},aoMapIntensity:{value:1},aoMapTransform:{value:new Ct}},lightmap:{lightMap:{value:null},lightMapIntensity:{value:1},lightMapTransform:{value:new Ct}},bumpmap:{bumpMap:{value:null},bumpMapTransform:{value:new Ct},bumpScale:{value:1}},normalmap:{normalMap:{value:null},normalMapTransform:{value:new Ct},normalScale:{value:new Vt(1,1)}},displacementmap:{displacementMap:{value:null},displacementMapTransform:{value:new Ct},displacementScale:{value:1},displacementBias:{value:0}},emissivemap:{emissiveMap:{value:null},emissiveMapTransform:{value:new Ct}},metalnessmap:{metalnessMap:{value:null},metalnessMapTransform:{value:new Ct}},roughnessmap:{roughnessMap:{value:null},roughnessMapTransform:{value:new Ct}},gradientmap:{gradientMap:{value:null}},fog:{fogDensity:{value:25e-5},fogNear:{value:1},fogFar:{value:2e3},fogColor:{value:new et(16777215)}},lights:{ambientLightColor:{value:[]},lightProbe:{value:[]},directionalLights:{value:[],properties:{direction:{},color:{}}},directionalLightShadows:{value:[],properties:{shadowIntensity:1,shadowBias:{},shadowNormalBias:{},shadowRadius:{},shadowMapSize:{}}},directionalShadowMap:{value:[]},directionalShadowMatrix:{value:[]},spotLights:{value:[],properties:{color:{},position:{},direction:{},distance:{},coneCos:{},penumbraCos:{},decay:{}}},spotLightShadows:{value:[],properties:{shadowIntensity:1,shadowBias:{},shadowNormalBias:{},shadowRadius:{},shadowMapSize:{}}},spotLightMap:{value:[]},spotShadowMap:{value:[]},spotLightMatrix:{value:[]},pointLights:{value:[],properties:{color:{},position:{},decay:{},distance:{}}},pointLightShadows:{value:[],properties:{shadowIntensity:1,shadowBias:{},shadowNormalBias:{},shadowRadius:{},shadowMapSize:{},shadowCameraNear:{},shadowCameraFar:{}}},pointShadowMap:{value:[]},pointShadowMatrix:{value:[]},hemisphereLights:{value:[],properties:{direction:{},skyColor:{},groundColor:{}}},rectAreaLights:{value:[],properties:{color:{},position:{},width:{},height:{}}},ltc_1:{value:null},ltc_2:{value:null}},points:{diffuse:{value:new et(16777215)},opacity:{value:1},size:{value:1},scale:{value:1},map:{value:null},alphaMap:{value:null},alphaMapTransform:{value:new Ct},alphaTest:{value:0},uvTransform:{value:new Ct}},sprite:{diffuse:{value:new et(16777215)},opacity:{value:1},center:{value:new Vt(.5,.5)},rotation:{value:0},map:{value:null},mapTransform:{value:new Ct},alphaMap:{value:null},alphaMapTransform:{value:new Ct},alphaTest:{value:0}}},xr={basic:{uniforms:si([Ke.common,Ke.specularmap,Ke.envmap,Ke.aomap,Ke.lightmap,Ke.fog]),vertexShader:Pt.meshbasic_vert,fragmentShader:Pt.meshbasic_frag},lambert:{uniforms:si([Ke.common,Ke.specularmap,Ke.envmap,Ke.aomap,Ke.lightmap,Ke.emissivemap,Ke.bumpmap,Ke.normalmap,Ke.displacementmap,Ke.fog,Ke.lights,{emissive:{value:new et(0)}}]),vertexShader:Pt.meshlambert_vert,fragmentShader:Pt.meshlambert_frag},phong:{uniforms:si([Ke.common,Ke.specularmap,Ke.envmap,Ke.aomap,Ke.lightmap,Ke.emissivemap,Ke.bumpmap,Ke.normalmap,Ke.displacementmap,Ke.fog,Ke.lights,{emissive:{value:new et(0)},specular:{value:new et(1118481)},shininess:{value:30}}]),vertexShader:Pt.meshphong_vert,fragmentShader:Pt.meshphong_frag},standard:{uniforms:si([Ke.common,Ke.envmap,Ke.aomap,Ke.lightmap,Ke.emissivemap,Ke.bumpmap,Ke.normalmap,Ke.displacementmap,Ke.roughnessmap,Ke.metalnessmap,Ke.fog,Ke.lights,{emissive:{value:new et(0)},roughness:{value:1},metalness:{value:0},envMapIntensity:{value:1}}]),vertexShader:Pt.meshphysical_vert,fragmentShader:Pt.meshphysical_frag},toon:{uniforms:si([Ke.common,Ke.aomap,Ke.lightmap,Ke.emissivemap,Ke.bumpmap,Ke.normalmap,Ke.displacementmap,Ke.gradientmap,Ke.fog,Ke.lights,{emissive:{value:new et(0)}}]),vertexShader:Pt.meshtoon_vert,fragmentShader:Pt.meshtoon_frag},matcap:{uniforms:si([Ke.common,Ke.bumpmap,Ke.normalmap,Ke.displacementmap,Ke.fog,{matcap:{value:null}}]),vertexShader:Pt.meshmatcap_vert,fragmentShader:Pt.meshmatcap_frag},points:{uniforms:si([Ke.points,Ke.fog]),vertexShader:Pt.points_vert,fragmentShader:Pt.points_frag},dashed:{uniforms:si([Ke.common,Ke.fog,{scale:{value:1},dashSize:{value:1},totalSize:{value:2}}]),vertexShader:Pt.linedashed_vert,fragmentShader:Pt.linedashed_frag},depth:{uniforms:si([Ke.common,Ke.displacementmap]),vertexShader:Pt.depth_vert,fragmentShader:Pt.depth_frag},normal:{uniforms:si([Ke.common,Ke.bumpmap,Ke.normalmap,Ke.displacementmap,{opacity:{value:1}}]),vertexShader:Pt.meshnormal_vert,fragmentShader:Pt.meshnormal_frag},sprite:{uniforms:si([Ke.sprite,Ke.fog]),vertexShader:Pt.sprite_vert,fragmentShader:Pt.sprite_frag},background:{uniforms:{uvTransform:{value:new Ct},t2D:{value:null},backgroundIntensity:{value:1}},vertexShader:Pt.background_vert,fragmentShader:Pt.background_frag},backgroundCube:{uniforms:{envMap:{value:null},flipEnvMap:{value:-1},backgroundBlurriness:{value:0},backgroundIntensity:{value:1},backgroundRotation:{value:new Ct}},vertexShader:Pt.backgroundCube_vert,fragmentShader:Pt.backgroundCube_frag},cube:{uniforms:{tCube:{value:null},tFlip:{value:-1},opacity:{value:1}},vertexShader:Pt.cube_vert,fragmentShader:Pt.cube_frag},equirect:{uniforms:{tEquirect:{value:null}},vertexShader:Pt.equirect_vert,fragmentShader:Pt.equirect_frag},distanceRGBA:{uniforms:si([Ke.common,Ke.displacementmap,{referencePosition:{value:new te},nearDistance:{value:1},farDistance:{value:1e3}}]),vertexShader:Pt.distanceRGBA_vert,fragmentShader:Pt.distanceRGBA_frag},shadow:{uniforms:si([Ke.lights,Ke.fog,{color:{value:new et(0)},opacity:{value:1}}]),vertexShader:Pt.shadow_vert,fragmentShader:Pt.shadow_frag}};xr.physical={uniforms:si([xr.standard.uniforms,{clearcoat:{value:0},clearcoatMap:{value:null},clearcoatMapTransform:{value:new Ct},clearcoatNormalMap:{value:null},clearcoatNormalMapTransform:{value:new Ct},clearcoatNormalScale:{value:new Vt(1,1)},clearcoatRoughness:{value:0},clearcoatRoughnessMap:{value:null},clearcoatRoughnessMapTransform:{value:new Ct},dispersion:{value:0},iridescence:{value:0},iridescenceMap:{value:null},iridescenceMapTransform:{value:new Ct},iridescenceIOR:{value:1.3},iridescenceThicknessMinimum:{value:100},iridescenceThicknessMaximum:{value:400},iridescenceThicknessMap:{value:null},iridescenceThicknessMapTransform:{value:new Ct},sheen:{value:0},sheenColor:{value:new et(0)},sheenColorMap:{value:null},sheenColorMapTransform:{value:new Ct},sheenRoughness:{value:1},sheenRoughnessMap:{value:null},sheenRoughnessMapTransform:{value:new Ct},transmission:{value:0},transmissionMap:{value:null},transmissionMapTransform:{value:new Ct},transmissionSamplerSize:{value:new Vt},transmissionSamplerMap:{value:null},thickness:{value:0},thicknessMap:{value:null},thicknessMapTransform:{value:new Ct},attenuationDistance:{value:0},attenuationColor:{value:new et(0)},specularColor:{value:new et(1,1,1)},specularColorMap:{value:null},specularColorMapTransform:{value:new Ct},specularIntensity:{value:1},specularIntensityMap:{value:null},specularIntensityMapTransform:{value:new Ct},anisotropyVector:{value:new Vt},anisotropyMap:{value:null},anisotropyMapTransform:{value:new Ct}}]),vertexShader:Pt.meshphysical_vert,fragmentShader:Pt.meshphysical_frag};const Xc={r:0,b:0,g:0},Zo=new Dr,tM=new Lt;function nM(r,e,t,n,i,o,s){const a=new et(0);let l=o===!0?0:1,c,d,u=null,f=0,h=null;function _(v){let y=v.isScene===!0?v.background:null;return y&&y.isTexture&&(y=(v.backgroundBlurriness>0?t:e).get(y)),y}function g(v){let y=!1;const T=_(v);T===null?p(a,l):T&&T.isColor&&(p(T,1),y=!0);const S=r.xr.getEnvironmentBlendMode();S==="additive"?n.buffers.color.setClear(0,0,0,1,s):S==="alpha-blend"&&n.buffers.color.setClear(0,0,0,0,s),(r.autoClear||y)&&(n.buffers.depth.setTest(!0),n.buffers.depth.setMask(!0),n.buffers.color.setMask(!0),r.clear(r.autoClearColor,r.autoClearDepth,r.autoClearStencil))}function m(v,y){const T=_(y);T&&(T.isCubeTexture||T.mapping===nu)?(d===void 0&&(d=new gi(new gc(1,1,1),new pi({name:"BackgroundCubeMaterial",uniforms:Oa(xr.backgroundCube.uniforms),vertexShader:xr.backgroundCube.vertexShader,fragmentShader:xr.backgroundCube.fragmentShader,side:xi,depthTest:!1,depthWrite:!1,fog:!1,allowOverride:!1})),d.geometry.deleteAttribute("normal"),d.geometry.deleteAttribute("uv"),d.onBeforeRender=function(S,A,P){this.matrixWorld.copyPosition(P.matrixWorld)},Object.defineProperty(d.material,"envMap",{get:function(){return this.uniforms.envMap.value}}),i.update(d)),Zo.copy(y.backgroundRotation),Zo.x*=-1,Zo.y*=-1,Zo.z*=-1,T.isCubeTexture&&T.isRenderTargetTexture===!1&&(Zo.y*=-1,Zo.z*=-1),d.material.uniforms.envMap.value=T,d.material.uniforms.flipEnvMap.value=T.isCubeTexture&&T.isRenderTargetTexture===!1?-1:1,d.material.uniforms.backgroundBlurriness.value=y.backgroundBlurriness,d.material.uniforms.backgroundIntensity.value=y.backgroundIntensity,d.material.uniforms.backgroundRotation.value.setFromMatrix4(tM.makeRotationFromEuler(Zo)),d.material.toneMapped=Wt.getTransfer(T.colorSpace)!==on,(u!==T||f!==T.version||h!==r.toneMapping)&&(d.material.needsUpdate=!0,u=T,f=T.version,h=r.toneMapping),d.layers.enableAll(),v.unshift(d,d.geometry,d.material,0,0,null)):T&&T.isTexture&&(c===void 0&&(c=new gi(new nr(2,2),new pi({name:"BackgroundMaterial",uniforms:Oa(xr.background.uniforms),vertexShader:xr.background.vertexShader,fragmentShader:xr.background.fragmentShader,side:ro,depthTest:!1,depthWrite:!1,fog:!1,allowOverride:!1})),c.geometry.deleteAttribute("normal"),Object.defineProperty(c.material,"map",{get:function(){return this.uniforms.t2D.value}}),i.update(c)),c.material.uniforms.t2D.value=T,c.material.uniforms.backgroundIntensity.value=y.backgroundIntensity,c.material.toneMapped=Wt.getTransfer(T.colorSpace)!==on,T.matrixAutoUpdate===!0&&T.updateMatrix(),c.material.uniforms.uvTransform.value.copy(T.matrix),(u!==T||f!==T.version||h!==r.toneMapping)&&(c.material.needsUpdate=!0,u=T,f=T.version,h=r.toneMapping),c.layers.enableAll(),v.unshift(c,c.geometry,c.material,0,0,null))}function p(v,y){v.getRGB(Xc,__(r)),n.buffers.color.setClear(Xc.r,Xc.g,Xc.b,y,s)}function x(){d!==void 0&&(d.geometry.dispose(),d.material.dispose(),d=void 0),c!==void 0&&(c.geometry.dispose(),c.material.dispose(),c=void 0)}return{getClearColor:function(){return a},setClearColor:function(v,y=1){a.set(v),l=y,p(a,l)},getClearAlpha:function(){return l},setClearAlpha:function(v){l=v,p(a,l)},render:g,addToRenderList:m,dispose:x}}function iM(r,e){const t=r.getParameter(r.MAX_VERTEX_ATTRIBS),n={},i=f(null);let o=i,s=!1;function a(b,R,I,H,Z){let V=!1;const ne=u(H,I,R);o!==ne&&(o=ne,c(o.object)),V=h(b,H,I,Z),V&&_(b,H,I,Z),Z!==null&&e.update(Z,r.ELEMENT_ARRAY_BUFFER),(V||s)&&(s=!1,y(b,R,I,H),Z!==null&&r.bindBuffer(r.ELEMENT_ARRAY_BUFFER,e.get(Z).buffer))}function l(){return r.createVertexArray()}function c(b){return r.bindVertexArray(b)}function d(b){return r.deleteVertexArray(b)}function u(b,R,I){const H=I.wireframe===!0;let Z=n[b.id];Z===void 0&&(Z={},n[b.id]=Z);let V=Z[R.id];V===void 0&&(V={},Z[R.id]=V);let ne=V[H];return ne===void 0&&(ne=f(l()),V[H]=ne),ne}function f(b){const R=[],I=[],H=[];for(let Z=0;Z<t;Z++)R[Z]=0,I[Z]=0,H[Z]=0;return{geometry:null,program:null,wireframe:!1,newAttributes:R,enabledAttributes:I,attributeDivisors:H,object:b,attributes:{},index:null}}function h(b,R,I,H){const Z=o.attributes,V=R.attributes;let ne=0;const ie=I.getAttributes();for(const U in ie)if(ie[U].location>=0){const k=Z[U];let he=V[U];if(he===void 0&&(U==="instanceMatrix"&&b.instanceMatrix&&(he=b.instanceMatrix),U==="instanceColor"&&b.instanceColor&&(he=b.instanceColor)),k===void 0||k.attribute!==he||he&&k.data!==he.data)return!0;ne++}return o.attributesNum!==ne||o.index!==H}function _(b,R,I,H){const Z={},V=R.attributes;let ne=0;const ie=I.getAttributes();for(const U in ie)if(ie[U].location>=0){let k=V[U];k===void 0&&(U==="instanceMatrix"&&b.instanceMatrix&&(k=b.instanceMatrix),U==="instanceColor"&&b.instanceColor&&(k=b.instanceColor));const he={};he.attribute=k,k&&k.data&&(he.data=k.data),Z[U]=he,ne++}o.attributes=Z,o.attributesNum=ne,o.index=H}function g(){const b=o.newAttributes;for(let R=0,I=b.length;R<I;R++)b[R]=0}function m(b){p(b,0)}function p(b,R){const I=o.newAttributes,H=o.enabledAttributes,Z=o.attributeDivisors;I[b]=1,H[b]===0&&(r.enableVertexAttribArray(b),H[b]=1),Z[b]!==R&&(r.vertexAttribDivisor(b,R),Z[b]=R)}function x(){const b=o.newAttributes,R=o.enabledAttributes;for(let I=0,H=R.length;I<H;I++)R[I]!==b[I]&&(r.disableVertexAttribArray(I),R[I]=0)}function v(b,R,I,H,Z,V,ne){ne===!0?r.vertexAttribIPointer(b,R,I,Z,V):r.vertexAttribPointer(b,R,I,H,Z,V)}function y(b,R,I,H){g();const Z=H.attributes,V=I.getAttributes(),ne=R.defaultAttributeValues;for(const ie in V){const U=V[ie];if(U.location>=0){let le=Z[ie];if(le===void 0&&(ie==="instanceMatrix"&&b.instanceMatrix&&(le=b.instanceMatrix),ie==="instanceColor"&&b.instanceColor&&(le=b.instanceColor)),le!==void 0){const k=le.normalized,he=le.itemSize,D=e.get(le);if(D===void 0)continue;const at=D.buffer,Ze=D.type,lt=D.bytesPerElement,W=Ze===r.INT||Ze===r.UNSIGNED_INT||le.gpuType===ap;if(le.isInterleavedBufferAttribute){const oe=le.data,J=oe.stride,Ne=le.offset;if(oe.isInstancedInterleavedBuffer){for(let Ie=0;Ie<U.locationSize;Ie++)p(U.location+Ie,oe.meshPerAttribute);b.isInstancedMesh!==!0&&H._maxInstanceCount===void 0&&(H._maxInstanceCount=oe.meshPerAttribute*oe.count)}else for(let Ie=0;Ie<U.locationSize;Ie++)m(U.location+Ie);r.bindBuffer(r.ARRAY_BUFFER,at);for(let Ie=0;Ie<U.locationSize;Ie++)v(U.location+Ie,he/U.locationSize,Ze,k,J*lt,(Ne+he/U.locationSize*Ie)*lt,W)}else{if(le.isInstancedBufferAttribute){for(let oe=0;oe<U.locationSize;oe++)p(U.location+oe,le.meshPerAttribute);b.isInstancedMesh!==!0&&H._maxInstanceCount===void 0&&(H._maxInstanceCount=le.meshPerAttribute*le.count)}else for(let oe=0;oe<U.locationSize;oe++)m(U.location+oe);r.bindBuffer(r.ARRAY_BUFFER,at);for(let oe=0;oe<U.locationSize;oe++)v(U.location+oe,he/U.locationSize,Ze,k,he*lt,he/U.locationSize*oe*lt,W)}}else if(ne!==void 0){const k=ne[ie];if(k!==void 0)switch(k.length){case 2:r.vertexAttrib2fv(U.location,k);break;case 3:r.vertexAttrib3fv(U.location,k);break;case 4:r.vertexAttrib4fv(U.location,k);break;default:r.vertexAttrib1fv(U.location,k)}}}}x()}function T(){P();for(const b in n){const R=n[b];for(const I in R){const H=R[I];for(const Z in H)d(H[Z].object),delete H[Z];delete R[I]}delete n[b]}}function S(b){if(n[b.id]===void 0)return;const R=n[b.id];for(const I in R){const H=R[I];for(const Z in H)d(H[Z].object),delete H[Z];delete R[I]}delete n[b.id]}function A(b){for(const R in n){const I=n[R];if(I[b.id]===void 0)continue;const H=I[b.id];for(const Z in H)d(H[Z].object),delete H[Z];delete I[b.id]}}function P(){w(),s=!0,o!==i&&(o=i,c(o.object))}function w(){i.geometry=null,i.program=null,i.wireframe=!1}return{setup:a,reset:P,resetDefaultState:w,dispose:T,releaseStatesOfGeometry:S,releaseStatesOfProgram:A,initAttributes:g,enableAttribute:m,disableUnusedAttributes:x}}function rM(r,e,t){let n;function i(c){n=c}function o(c,d){r.drawArrays(n,c,d),t.update(d,n,1)}function s(c,d,u){u!==0&&(r.drawArraysInstanced(n,c,d,u),t.update(d,n,u))}function a(c,d,u){if(u===0)return;e.get("WEBGL_multi_draw").multiDrawArraysWEBGL(n,c,0,d,0,u);let h=0;for(let _=0;_<u;_++)h+=d[_];t.update(h,n,1)}function l(c,d,u,f){if(u===0)return;const h=e.get("WEBGL_multi_draw");if(h===null)for(let _=0;_<c.length;_++)s(c[_],d[_],f[_]);else{h.multiDrawArraysInstancedWEBGL(n,c,0,d,0,f,0,u);let _=0;for(let g=0;g<u;g++)_+=d[g]*f[g];t.update(_,n,1)}}this.setMode=i,this.render=o,this.renderInstances=s,this.renderMultiDraw=a,this.renderMultiDrawInstances=l}function oM(r,e,t,n){let i;function o(){if(i!==void 0)return i;if(e.has("EXT_texture_filter_anisotropic")===!0){const A=e.get("EXT_texture_filter_anisotropic");i=r.getParameter(A.MAX_TEXTURE_MAX_ANISOTROPY_EXT)}else i=0;return i}function s(A){return!(A!==qi&&n.convert(A)!==r.getParameter(r.IMPLEMENTATION_COLOR_READ_FORMAT))}function a(A){const P=A===qa&&(e.has("EXT_color_buffer_half_float")||e.has("EXT_color_buffer_float"));return!(A!==Lr&&n.convert(A)!==r.getParameter(r.IMPLEMENTATION_COLOR_READ_TYPE)&&A!==sr&&!P)}function l(A){if(A==="highp"){if(r.getShaderPrecisionFormat(r.VERTEX_SHADER,r.HIGH_FLOAT).precision>0&&r.getShaderPrecisionFormat(r.FRAGMENT_SHADER,r.HIGH_FLOAT).precision>0)return"highp";A="mediump"}return A==="mediump"&&r.getShaderPrecisionFormat(r.VERTEX_SHADER,r.MEDIUM_FLOAT).precision>0&&r.getShaderPrecisionFormat(r.FRAGMENT_SHADER,r.MEDIUM_FLOAT).precision>0?"mediump":"lowp"}let c=t.precision!==void 0?t.precision:"highp";const d=l(c);d!==c&&(ht("WebGLRenderer:",c,"not supported, using",d,"instead."),c=d);const u=t.logarithmicDepthBuffer===!0,f=t.reversedDepthBuffer===!0&&e.has("EXT_clip_control"),h=r.getParameter(r.MAX_TEXTURE_IMAGE_UNITS),_=r.getParameter(r.MAX_VERTEX_TEXTURE_IMAGE_UNITS),g=r.getParameter(r.MAX_TEXTURE_SIZE),m=r.getParameter(r.MAX_CUBE_MAP_TEXTURE_SIZE),p=r.getParameter(r.MAX_VERTEX_ATTRIBS),x=r.getParameter(r.MAX_VERTEX_UNIFORM_VECTORS),v=r.getParameter(r.MAX_VARYING_VECTORS),y=r.getParameter(r.MAX_FRAGMENT_UNIFORM_VECTORS),T=_>0,S=r.getParameter(r.MAX_SAMPLES);return{isWebGL2:!0,getMaxAnisotropy:o,getMaxPrecision:l,textureFormatReadable:s,textureTypeReadable:a,precision:c,logarithmicDepthBuffer:u,reversedDepthBuffer:f,maxTextures:h,maxVertexTextures:_,maxTextureSize:g,maxCubemapSize:m,maxAttributes:p,maxVertexUniforms:x,maxVaryings:v,maxFragmentUniforms:y,vertexTextures:T,maxSamples:S}}function sM(r){const e=this;let t=null,n=0,i=!1,o=!1;const s=new is,a=new Ct,l={value:null,needsUpdate:!1};this.uniform=l,this.numPlanes=0,this.numIntersection=0,this.init=function(u,f){const h=u.length!==0||f||n!==0||i;return i=f,n=u.length,h},this.beginShadows=function(){o=!0,d(null)},this.endShadows=function(){o=!1},this.setGlobalState=function(u,f){t=d(u,f,0)},this.setState=function(u,f,h){const _=u.clippingPlanes,g=u.clipIntersection,m=u.clipShadows,p=r.get(u);if(!i||_===null||_.length===0||o&&!m)o?d(null):c();else{const x=o?0:n,v=x*4;let y=p.clippingState||null;l.value=y,y=d(_,f,v,h);for(let T=0;T!==v;++T)y[T]=t[T];p.clippingState=y,this.numIntersection=g?this.numPlanes:0,this.numPlanes+=x}};function c(){l.value!==t&&(l.value=t,l.needsUpdate=n>0),e.numPlanes=n,e.numIntersection=0}function d(u,f,h,_){const g=u!==null?u.length:0;let m=null;if(g!==0){if(m=l.value,_!==!0||m===null){const p=h+g*4,x=f.matrixWorldInverse;a.getNormalMatrix(x),(m===null||m.length<p)&&(m=new Float32Array(p));for(let v=0,y=h;v!==g;++v,y+=4)s.copy(u[v]).applyMatrix4(x,a),s.normal.toArray(m,y),m[y+3]=s.constant}l.value=m,l.needsUpdate=!0}return e.numPlanes=g,e.numIntersection=0,m}}function aM(r){let e=new WeakMap;function t(s,a){return a===kf?s.mapping=La:a===Uf&&(s.mapping=Da),s}function n(s){if(s&&s.isTexture){const a=s.mapping;if(a===kf||a===Uf)if(e.has(s)){const l=e.get(s).texture;return t(l,s.mapping)}else{const l=s.image;if(l&&l.height>0){const c=new Rb(l.height);return c.fromEquirectangularTexture(r,s),e.set(s,c),s.addEventListener("dispose",i),t(c.texture,s.mapping)}else return null}}return s}function i(s){const a=s.target;a.removeEventListener("dispose",i);const l=e.get(a);l!==void 0&&(e.delete(a),l.dispose())}function o(){e=new WeakMap}return{get:n,dispose:o}}const So=4,t0=[.125,.215,.35,.446,.526,.582],ls=20,lM=512,ol=new su,n0=new et;let Yu=null,$u=0,ju=0,Ku=!1;const cM=new te;class i0{constructor(e){this._renderer=e,this._pingPongRenderTarget=null,this._lodMax=0,this._cubeSize=0,this._sizeLods=[],this._sigmas=[],this._lodMeshes=[],this._backgroundBox=null,this._cubemapMaterial=null,this._equirectMaterial=null,this._blurMaterial=null,this._ggxMaterial=null}fromScene(e,t=0,n=.1,i=100,o={}){const{size:s=256,position:a=cM}=o;Yu=this._renderer.getRenderTarget(),$u=this._renderer.getActiveCubeFace(),ju=this._renderer.getActiveMipmapLevel(),Ku=this._renderer.xr.enabled,this._renderer.xr.enabled=!1,this._setSize(s);const l=this._allocateTargets();return l.depthBuffer=!0,this._sceneToCubeUV(e,n,i,l,a),t>0&&this._blur(l,0,0,t),this._applyPMREM(l),this._cleanup(l),l}fromEquirectangular(e,t=null){return this._fromTexture(e,t)}fromCubemap(e,t=null){return this._fromTexture(e,t)}compileCubemapShader(){this._cubemapMaterial===null&&(this._cubemapMaterial=s0(),this._compileMaterial(this._cubemapMaterial))}compileEquirectangularShader(){this._equirectMaterial===null&&(this._equirectMaterial=o0(),this._compileMaterial(this._equirectMaterial))}dispose(){this._dispose(),this._cubemapMaterial!==null&&this._cubemapMaterial.dispose(),this._equirectMaterial!==null&&this._equirectMaterial.dispose(),this._backgroundBox!==null&&(this._backgroundBox.geometry.dispose(),this._backgroundBox.material.dispose())}_setSize(e){this._lodMax=Math.floor(Math.log2(e)),this._cubeSize=Math.pow(2,this._lodMax)}_dispose(){this._blurMaterial!==null&&this._blurMaterial.dispose(),this._ggxMaterial!==null&&this._ggxMaterial.dispose(),this._pingPongRenderTarget!==null&&this._pingPongRenderTarget.dispose();for(let e=0;e<this._lodMeshes.length;e++)this._lodMeshes[e].geometry.dispose()}_cleanup(e){this._renderer.setRenderTarget(Yu,$u,ju),this._renderer.xr.enabled=Ku,e.scissorTest=!1,ta(e,0,0,e.width,e.height)}_fromTexture(e,t){e.mapping===La||e.mapping===Da?this._setSize(e.image.length===0?16:e.image[0].width||e.image[0].image.width):this._setSize(e.image.width/4),Yu=this._renderer.getRenderTarget(),$u=this._renderer.getActiveCubeFace(),ju=this._renderer.getActiveMipmapLevel(),Ku=this._renderer.xr.enabled,this._renderer.xr.enabled=!1;const n=t||this._allocateTargets();return this._textureToCubeUV(e,n),this._applyPMREM(n),this._cleanup(n),n}_allocateTargets(){const e=3*Math.max(this._cubeSize,112),t=4*this._cubeSize,n={magFilter:hi,minFilter:hi,generateMipmaps:!1,type:qa,format:qi,colorSpace:ei,depthBuffer:!1},i=r0(e,t,n);if(this._pingPongRenderTarget===null||this._pingPongRenderTarget.width!==e||this._pingPongRenderTarget.height!==t){this._pingPongRenderTarget!==null&&this._dispose(),this._pingPongRenderTarget=r0(e,t,n);const{_lodMax:o}=this;({lodMeshes:this._lodMeshes,sizeLods:this._sizeLods,sigmas:this._sigmas}=dM(o)),this._blurMaterial=fM(o,e,t)}return i}_compileMaterial(e){const t=new gi(new ti,e);this._renderer.compile(t,ol)}_sceneToCubeUV(e,t,n,i,o){const l=new Kn(90,1,t,n),c=[1,-1,1,1,1,1],d=[1,1,1,-1,-1,-1],u=this._renderer,f=u.autoClear,h=u.toneMapping;u.getClearColor(n0),u.toneMapping=Do,u.autoClear=!1,u.state.buffers.depth.getReversed()&&(u.setRenderTarget(i),u.clearDepth(),u.setRenderTarget(null)),this._backgroundBox===null&&(this._backgroundBox=new gi(new gc,new cs({name:"PMREM.Background",side:xi,depthWrite:!1,depthTest:!1})));const g=this._backgroundBox,m=g.material;let p=!1;const x=e.background;x?x.isColor&&(m.color.copy(x),e.background=null,p=!0):(m.color.copy(n0),p=!0);for(let v=0;v<6;v++){const y=v%3;y===0?(l.up.set(0,c[v],0),l.position.set(o.x,o.y,o.z),l.lookAt(o.x+d[v],o.y,o.z)):y===1?(l.up.set(0,0,c[v]),l.position.set(o.x,o.y,o.z),l.lookAt(o.x,o.y+d[v],o.z)):(l.up.set(0,c[v],0),l.position.set(o.x,o.y,o.z),l.lookAt(o.x,o.y,o.z+d[v]));const T=this._cubeSize;ta(i,y*T,v>2?T:0,T,T),u.setRenderTarget(i),p&&u.render(g,l),u.render(e,l)}u.toneMapping=h,u.autoClear=f,e.background=x}_textureToCubeUV(e,t){const n=this._renderer,i=e.mapping===La||e.mapping===Da;i?(this._cubemapMaterial===null&&(this._cubemapMaterial=s0()),this._cubemapMaterial.uniforms.flipEnvMap.value=e.isRenderTargetTexture===!1?-1:1):this._equirectMaterial===null&&(this._equirectMaterial=o0());const o=i?this._cubemapMaterial:this._equirectMaterial,s=this._lodMeshes[0];s.material=o;const a=o.uniforms;a.envMap.value=e;const l=this._cubeSize;ta(t,0,0,3*l,2*l),n.setRenderTarget(t),n.render(s,ol)}_applyPMREM(e){const t=this._renderer,n=t.autoClear;t.autoClear=!1;const i=this._lodMeshes.length;for(let o=1;o<i;o++)this._applyGGXFilter(e,o-1,o);t.autoClear=n}_applyGGXFilter(e,t,n){const i=this._renderer,o=this._pingPongRenderTarget;if(this._ggxMaterial===null){const x=3*Math.max(this._cubeSize,16),v=4*this._cubeSize;this._ggxMaterial=uM(this._lodMax,x,v)}const s=this._ggxMaterial,a=this._lodMeshes[n];a.material=s;const l=s.uniforms,c=n/(this._lodMeshes.length-1),d=t/(this._lodMeshes.length-1),u=Math.sqrt(c*c-d*d),f=.05+c*.95,h=u*f,{_lodMax:_}=this,g=this._sizeLods[n],m=3*g*(n>_-So?n-_+So:0),p=4*(this._cubeSize-g);l.envMap.value=e.texture,l.roughness.value=h,l.mipInt.value=_-t,ta(o,m,p,3*g,2*g),i.setRenderTarget(o),i.render(a,ol),l.envMap.value=o.texture,l.roughness.value=0,l.mipInt.value=_-n,ta(e,m,p,3*g,2*g),i.setRenderTarget(e),i.render(a,ol)}_blur(e,t,n,i,o){const s=this._pingPongRenderTarget;this._halfBlur(e,s,t,n,i,"latitudinal",o),this._halfBlur(s,e,n,n,i,"longitudinal",o)}_halfBlur(e,t,n,i,o,s,a){const l=this._renderer,c=this._blurMaterial;s!=="latitudinal"&&s!=="longitudinal"&&Ut("blur direction must be either latitudinal or longitudinal!");const d=3,u=this._lodMeshes[i];u.material=c;const f=c.uniforms,h=this._sizeLods[n]-1,_=isFinite(o)?Math.PI/(2*h):2*Math.PI/(2*ls-1),g=o/_,m=isFinite(o)?1+Math.floor(d*g):ls;m>ls&&ht(`sigmaRadians, ${o}, is too large and will clip, as it requested ${m} samples when the maximum is set to ${ls}`);const p=[];let x=0;for(let A=0;A<ls;++A){const P=A/g,w=Math.exp(-P*P/2);p.push(w),A===0?x+=w:A<m&&(x+=2*w)}for(let A=0;A<p.length;A++)p[A]=p[A]/x;f.envMap.value=e.texture,f.samples.value=m,f.weights.value=p,f.latitudinal.value=s==="latitudinal",a&&(f.poleAxis.value=a);const{_lodMax:v}=this;f.dTheta.value=_,f.mipInt.value=v-n;const y=this._sizeLods[i],T=3*y*(i>v-So?i-v+So:0),S=4*(this._cubeSize-y);ta(t,T,S,3*y,2*y),l.setRenderTarget(t),l.render(u,ol)}}function dM(r){const e=[],t=[],n=[];let i=r;const o=r-So+1+t0.length;for(let s=0;s<o;s++){const a=Math.pow(2,i);e.push(a);let l=1/a;s>r-So?l=t0[s-r+So-1]:s===0&&(l=0),t.push(l);const c=1/(a-2),d=-c,u=1+c,f=[d,d,u,d,u,u,d,d,u,u,d,u],h=6,_=6,g=3,m=2,p=1,x=new Float32Array(g*_*h),v=new Float32Array(m*_*h),y=new Float32Array(p*_*h);for(let S=0;S<h;S++){const A=S%3*2/3-1,P=S>2?0:-1,w=[A,P,0,A+2/3,P,0,A+2/3,P+1,0,A,P,0,A+2/3,P+1,0,A,P+1,0];x.set(w,g*_*S),v.set(f,m*_*S);const b=[S,S,S,S,S,S];y.set(b,p*_*S)}const T=new ti;T.setAttribute("position",new ln(x,g)),T.setAttribute("uv",new ln(v,m)),T.setAttribute("faceIndex",new ln(y,p)),n.push(new gi(T,null)),i>So&&i--}return{lodMeshes:n,sizeLods:e,sigmas:t}}function r0(r,e,t){const n=new Ts(r,e,t);return n.texture.mapping=nu,n.texture.name="PMREM.cubeUv",n.scissorTest=!0,n}function ta(r,e,t,n,i){r.viewport.set(e,t,n,i),r.scissor.set(e,t,n,i)}function uM(r,e,t){return new pi({name:"PMREMGGXConvolution",defines:{GGX_SAMPLES:lM,CUBEUV_TEXEL_WIDTH:1/e,CUBEUV_TEXEL_HEIGHT:1/t,CUBEUV_MAX_MIP:`${r}.0`},uniforms:{envMap:{value:null},roughness:{value:0},mipInt:{value:0}},vertexShader:au(),fragmentShader:`
+}`,Pt={alphahash_fragment:ww,alphahash_pars_fragment:Sw,alphamap_fragment:Mw,alphamap_pars_fragment:Tw,alphatest_fragment:Ew,alphatest_pars_fragment:Aw,aomap_fragment:Cw,aomap_pars_fragment:Rw,batching_pars_vertex:Pw,batching_vertex:Lw,begin_vertex:Dw,beginnormal_vertex:Iw,bsdfs:Fw,iridescence_fragment:Ow,bumpmap_pars_fragment:Nw,clipping_planes_fragment:kw,clipping_planes_pars_fragment:Uw,clipping_planes_pars_vertex:Bw,clipping_planes_vertex:zw,color_fragment:Vw,color_pars_fragment:Hw,color_pars_vertex:Gw,color_vertex:Ww,common:Xw,cube_uv_reflection_fragment:qw,defaultnormal_vertex:Yw,displacementmap_pars_vertex:$w,displacementmap_vertex:jw,emissivemap_fragment:Kw,emissivemap_pars_fragment:Zw,colorspace_fragment:Jw,colorspace_pars_fragment:Qw,envmap_fragment:e1,envmap_common_pars_fragment:t1,envmap_pars_fragment:n1,envmap_pars_vertex:i1,envmap_physical_pars_fragment:p1,envmap_vertex:r1,fog_vertex:o1,fog_pars_vertex:s1,fog_fragment:a1,fog_pars_fragment:l1,gradientmap_pars_fragment:c1,lightmap_pars_fragment:d1,lights_lambert_fragment:u1,lights_lambert_pars_fragment:f1,lights_pars_begin:h1,lights_toon_fragment:m1,lights_toon_pars_fragment:g1,lights_phong_fragment:_1,lights_phong_pars_fragment:v1,lights_physical_fragment:x1,lights_physical_pars_fragment:y1,lights_fragment_begin:b1,lights_fragment_maps:w1,lights_fragment_end:S1,logdepthbuf_fragment:M1,logdepthbuf_pars_fragment:T1,logdepthbuf_pars_vertex:E1,logdepthbuf_vertex:A1,map_fragment:C1,map_pars_fragment:R1,map_particle_fragment:P1,map_particle_pars_fragment:L1,metalnessmap_fragment:D1,metalnessmap_pars_fragment:I1,morphinstance_vertex:F1,morphcolor_vertex:O1,morphnormal_vertex:N1,morphtarget_pars_vertex:k1,morphtarget_vertex:U1,normal_fragment_begin:B1,normal_fragment_maps:z1,normal_pars_fragment:V1,normal_pars_vertex:H1,normal_vertex:G1,normalmap_pars_fragment:W1,clearcoat_normal_fragment_begin:X1,clearcoat_normal_fragment_maps:q1,clearcoat_pars_fragment:Y1,iridescence_pars_fragment:$1,opaque_fragment:j1,packing:K1,premultiplied_alpha_fragment:Z1,project_vertex:J1,dithering_fragment:Q1,dithering_pars_fragment:eS,roughnessmap_fragment:tS,roughnessmap_pars_fragment:nS,shadowmap_pars_fragment:iS,shadowmap_pars_vertex:rS,shadowmap_vertex:oS,shadowmask_pars_fragment:sS,skinbase_vertex:aS,skinning_pars_vertex:lS,skinning_vertex:cS,skinnormal_vertex:dS,specularmap_fragment:uS,specularmap_pars_fragment:fS,tonemapping_fragment:hS,tonemapping_pars_fragment:pS,transmission_fragment:mS,transmission_pars_fragment:gS,uv_pars_fragment:_S,uv_pars_vertex:vS,uv_vertex:xS,worldpos_vertex:yS,background_vert:bS,background_frag:wS,backgroundCube_vert:SS,backgroundCube_frag:MS,cube_vert:TS,cube_frag:ES,depth_vert:AS,depth_frag:CS,distanceRGBA_vert:RS,distanceRGBA_frag:PS,equirect_vert:LS,equirect_frag:DS,linedashed_vert:IS,linedashed_frag:FS,meshbasic_vert:OS,meshbasic_frag:NS,meshlambert_vert:kS,meshlambert_frag:US,meshmatcap_vert:BS,meshmatcap_frag:zS,meshnormal_vert:VS,meshnormal_frag:HS,meshphong_vert:GS,meshphong_frag:WS,meshphysical_vert:XS,meshphysical_frag:qS,meshtoon_vert:YS,meshtoon_frag:$S,points_vert:jS,points_frag:KS,shadow_vert:ZS,shadow_frag:JS,sprite_vert:QS,sprite_frag:eM},Ke={common:{diffuse:{value:new et(16777215)},opacity:{value:1},map:{value:null},mapTransform:{value:new Ct},alphaMap:{value:null},alphaMapTransform:{value:new Ct},alphaTest:{value:0}},specularmap:{specularMap:{value:null},specularMapTransform:{value:new Ct}},envmap:{envMap:{value:null},envMapRotation:{value:new Ct},flipEnvMap:{value:-1},reflectivity:{value:1},ior:{value:1.5},refractionRatio:{value:.98},dfgLUT:{value:null}},aomap:{aoMap:{value:null},aoMapIntensity:{value:1},aoMapTransform:{value:new Ct}},lightmap:{lightMap:{value:null},lightMapIntensity:{value:1},lightMapTransform:{value:new Ct}},bumpmap:{bumpMap:{value:null},bumpMapTransform:{value:new Ct},bumpScale:{value:1}},normalmap:{normalMap:{value:null},normalMapTransform:{value:new Ct},normalScale:{value:new Vt(1,1)}},displacementmap:{displacementMap:{value:null},displacementMapTransform:{value:new Ct},displacementScale:{value:1},displacementBias:{value:0}},emissivemap:{emissiveMap:{value:null},emissiveMapTransform:{value:new Ct}},metalnessmap:{metalnessMap:{value:null},metalnessMapTransform:{value:new Ct}},roughnessmap:{roughnessMap:{value:null},roughnessMapTransform:{value:new Ct}},gradientmap:{gradientMap:{value:null}},fog:{fogDensity:{value:25e-5},fogNear:{value:1},fogFar:{value:2e3},fogColor:{value:new et(16777215)}},lights:{ambientLightColor:{value:[]},lightProbe:{value:[]},directionalLights:{value:[],properties:{direction:{},color:{}}},directionalLightShadows:{value:[],properties:{shadowIntensity:1,shadowBias:{},shadowNormalBias:{},shadowRadius:{},shadowMapSize:{}}},directionalShadowMap:{value:[]},directionalShadowMatrix:{value:[]},spotLights:{value:[],properties:{color:{},position:{},direction:{},distance:{},coneCos:{},penumbraCos:{},decay:{}}},spotLightShadows:{value:[],properties:{shadowIntensity:1,shadowBias:{},shadowNormalBias:{},shadowRadius:{},shadowMapSize:{}}},spotLightMap:{value:[]},spotShadowMap:{value:[]},spotLightMatrix:{value:[]},pointLights:{value:[],properties:{color:{},position:{},decay:{},distance:{}}},pointLightShadows:{value:[],properties:{shadowIntensity:1,shadowBias:{},shadowNormalBias:{},shadowRadius:{},shadowMapSize:{},shadowCameraNear:{},shadowCameraFar:{}}},pointShadowMap:{value:[]},pointShadowMatrix:{value:[]},hemisphereLights:{value:[],properties:{direction:{},skyColor:{},groundColor:{}}},rectAreaLights:{value:[],properties:{color:{},position:{},width:{},height:{}}},ltc_1:{value:null},ltc_2:{value:null}},points:{diffuse:{value:new et(16777215)},opacity:{value:1},size:{value:1},scale:{value:1},map:{value:null},alphaMap:{value:null},alphaMapTransform:{value:new Ct},alphaTest:{value:0},uvTransform:{value:new Ct}},sprite:{diffuse:{value:new et(16777215)},opacity:{value:1},center:{value:new Vt(.5,.5)},rotation:{value:0},map:{value:null},mapTransform:{value:new Ct},alphaMap:{value:null},alphaMapTransform:{value:new Ct},alphaTest:{value:0}}},xr={basic:{uniforms:si([Ke.common,Ke.specularmap,Ke.envmap,Ke.aomap,Ke.lightmap,Ke.fog]),vertexShader:Pt.meshbasic_vert,fragmentShader:Pt.meshbasic_frag},lambert:{uniforms:si([Ke.common,Ke.specularmap,Ke.envmap,Ke.aomap,Ke.lightmap,Ke.emissivemap,Ke.bumpmap,Ke.normalmap,Ke.displacementmap,Ke.fog,Ke.lights,{emissive:{value:new et(0)}}]),vertexShader:Pt.meshlambert_vert,fragmentShader:Pt.meshlambert_frag},phong:{uniforms:si([Ke.common,Ke.specularmap,Ke.envmap,Ke.aomap,Ke.lightmap,Ke.emissivemap,Ke.bumpmap,Ke.normalmap,Ke.displacementmap,Ke.fog,Ke.lights,{emissive:{value:new et(0)},specular:{value:new et(1118481)},shininess:{value:30}}]),vertexShader:Pt.meshphong_vert,fragmentShader:Pt.meshphong_frag},standard:{uniforms:si([Ke.common,Ke.envmap,Ke.aomap,Ke.lightmap,Ke.emissivemap,Ke.bumpmap,Ke.normalmap,Ke.displacementmap,Ke.roughnessmap,Ke.metalnessmap,Ke.fog,Ke.lights,{emissive:{value:new et(0)},roughness:{value:1},metalness:{value:0},envMapIntensity:{value:1}}]),vertexShader:Pt.meshphysical_vert,fragmentShader:Pt.meshphysical_frag},toon:{uniforms:si([Ke.common,Ke.aomap,Ke.lightmap,Ke.emissivemap,Ke.bumpmap,Ke.normalmap,Ke.displacementmap,Ke.gradientmap,Ke.fog,Ke.lights,{emissive:{value:new et(0)}}]),vertexShader:Pt.meshtoon_vert,fragmentShader:Pt.meshtoon_frag},matcap:{uniforms:si([Ke.common,Ke.bumpmap,Ke.normalmap,Ke.displacementmap,Ke.fog,{matcap:{value:null}}]),vertexShader:Pt.meshmatcap_vert,fragmentShader:Pt.meshmatcap_frag},points:{uniforms:si([Ke.points,Ke.fog]),vertexShader:Pt.points_vert,fragmentShader:Pt.points_frag},dashed:{uniforms:si([Ke.common,Ke.fog,{scale:{value:1},dashSize:{value:1},totalSize:{value:2}}]),vertexShader:Pt.linedashed_vert,fragmentShader:Pt.linedashed_frag},depth:{uniforms:si([Ke.common,Ke.displacementmap]),vertexShader:Pt.depth_vert,fragmentShader:Pt.depth_frag},normal:{uniforms:si([Ke.common,Ke.bumpmap,Ke.normalmap,Ke.displacementmap,{opacity:{value:1}}]),vertexShader:Pt.meshnormal_vert,fragmentShader:Pt.meshnormal_frag},sprite:{uniforms:si([Ke.sprite,Ke.fog]),vertexShader:Pt.sprite_vert,fragmentShader:Pt.sprite_frag},background:{uniforms:{uvTransform:{value:new Ct},t2D:{value:null},backgroundIntensity:{value:1}},vertexShader:Pt.background_vert,fragmentShader:Pt.background_frag},backgroundCube:{uniforms:{envMap:{value:null},flipEnvMap:{value:-1},backgroundBlurriness:{value:0},backgroundIntensity:{value:1},backgroundRotation:{value:new Ct}},vertexShader:Pt.backgroundCube_vert,fragmentShader:Pt.backgroundCube_frag},cube:{uniforms:{tCube:{value:null},tFlip:{value:-1},opacity:{value:1}},vertexShader:Pt.cube_vert,fragmentShader:Pt.cube_frag},equirect:{uniforms:{tEquirect:{value:null}},vertexShader:Pt.equirect_vert,fragmentShader:Pt.equirect_frag},distanceRGBA:{uniforms:si([Ke.common,Ke.displacementmap,{referencePosition:{value:new te},nearDistance:{value:1},farDistance:{value:1e3}}]),vertexShader:Pt.distanceRGBA_vert,fragmentShader:Pt.distanceRGBA_frag},shadow:{uniforms:si([Ke.lights,Ke.fog,{color:{value:new et(0)},opacity:{value:1}}]),vertexShader:Pt.shadow_vert,fragmentShader:Pt.shadow_frag}};xr.physical={uniforms:si([xr.standard.uniforms,{clearcoat:{value:0},clearcoatMap:{value:null},clearcoatMapTransform:{value:new Ct},clearcoatNormalMap:{value:null},clearcoatNormalMapTransform:{value:new Ct},clearcoatNormalScale:{value:new Vt(1,1)},clearcoatRoughness:{value:0},clearcoatRoughnessMap:{value:null},clearcoatRoughnessMapTransform:{value:new Ct},dispersion:{value:0},iridescence:{value:0},iridescenceMap:{value:null},iridescenceMapTransform:{value:new Ct},iridescenceIOR:{value:1.3},iridescenceThicknessMinimum:{value:100},iridescenceThicknessMaximum:{value:400},iridescenceThicknessMap:{value:null},iridescenceThicknessMapTransform:{value:new Ct},sheen:{value:0},sheenColor:{value:new et(0)},sheenColorMap:{value:null},sheenColorMapTransform:{value:new Ct},sheenRoughness:{value:1},sheenRoughnessMap:{value:null},sheenRoughnessMapTransform:{value:new Ct},transmission:{value:0},transmissionMap:{value:null},transmissionMapTransform:{value:new Ct},transmissionSamplerSize:{value:new Vt},transmissionSamplerMap:{value:null},thickness:{value:0},thicknessMap:{value:null},thicknessMapTransform:{value:new Ct},attenuationDistance:{value:0},attenuationColor:{value:new et(0)},specularColor:{value:new et(1,1,1)},specularColorMap:{value:null},specularColorMapTransform:{value:new Ct},specularIntensity:{value:1},specularIntensityMap:{value:null},specularIntensityMapTransform:{value:new Ct},anisotropyVector:{value:new Vt},anisotropyMap:{value:null},anisotropyMapTransform:{value:new Ct}}]),vertexShader:Pt.meshphysical_vert,fragmentShader:Pt.meshphysical_frag};const Xc={r:0,b:0,g:0},Zo=new Dr,tM=new Lt;function nM(r,e,t,n,i,o,s){const a=new et(0);let l=o===!0?0:1,c,d,u=null,f=0,h=null;function _(v){let y=v.isScene===!0?v.background:null;return y&&y.isTexture&&(y=(v.backgroundBlurriness>0?t:e).get(y)),y}function g(v){let y=!1;const T=_(v);T===null?p(a,l):T&&T.isColor&&(p(T,1),y=!0);const S=r.xr.getEnvironmentBlendMode();S==="additive"?n.buffers.color.setClear(0,0,0,1,s):S==="alpha-blend"&&n.buffers.color.setClear(0,0,0,0,s),(r.autoClear||y)&&(n.buffers.depth.setTest(!0),n.buffers.depth.setMask(!0),n.buffers.color.setMask(!0),r.clear(r.autoClearColor,r.autoClearDepth,r.autoClearStencil))}function m(v,y){const T=_(y);T&&(T.isCubeTexture||T.mapping===nu)?(d===void 0&&(d=new gi(new gc(1,1,1),new pi({name:"BackgroundCubeMaterial",uniforms:Oa(xr.backgroundCube.uniforms),vertexShader:xr.backgroundCube.vertexShader,fragmentShader:xr.backgroundCube.fragmentShader,side:xi,depthTest:!1,depthWrite:!1,fog:!1,allowOverride:!1})),d.geometry.deleteAttribute("normal"),d.geometry.deleteAttribute("uv"),d.onBeforeRender=function(S,A,P){this.matrixWorld.copyPosition(P.matrixWorld)},Object.defineProperty(d.material,"envMap",{get:function(){return this.uniforms.envMap.value}}),i.update(d)),Zo.copy(y.backgroundRotation),Zo.x*=-1,Zo.y*=-1,Zo.z*=-1,T.isCubeTexture&&T.isRenderTargetTexture===!1&&(Zo.y*=-1,Zo.z*=-1),d.material.uniforms.envMap.value=T,d.material.uniforms.flipEnvMap.value=T.isCubeTexture&&T.isRenderTargetTexture===!1?-1:1,d.material.uniforms.backgroundBlurriness.value=y.backgroundBlurriness,d.material.uniforms.backgroundIntensity.value=y.backgroundIntensity,d.material.uniforms.backgroundRotation.value.setFromMatrix4(tM.makeRotationFromEuler(Zo)),d.material.toneMapped=Wt.getTransfer(T.colorSpace)!==on,(u!==T||f!==T.version||h!==r.toneMapping)&&(d.material.needsUpdate=!0,u=T,f=T.version,h=r.toneMapping),d.layers.enableAll(),v.unshift(d,d.geometry,d.material,0,0,null)):T&&T.isTexture&&(c===void 0&&(c=new gi(new nr(2,2),new pi({name:"BackgroundMaterial",uniforms:Oa(xr.background.uniforms),vertexShader:xr.background.vertexShader,fragmentShader:xr.background.fragmentShader,side:ro,depthTest:!1,depthWrite:!1,fog:!1,allowOverride:!1})),c.geometry.deleteAttribute("normal"),Object.defineProperty(c.material,"map",{get:function(){return this.uniforms.t2D.value}}),i.update(c)),c.material.uniforms.t2D.value=T,c.material.uniforms.backgroundIntensity.value=y.backgroundIntensity,c.material.toneMapped=Wt.getTransfer(T.colorSpace)!==on,T.matrixAutoUpdate===!0&&T.updateMatrix(),c.material.uniforms.uvTransform.value.copy(T.matrix),(u!==T||f!==T.version||h!==r.toneMapping)&&(c.material.needsUpdate=!0,u=T,f=T.version,h=r.toneMapping),c.layers.enableAll(),v.unshift(c,c.geometry,c.material,0,0,null))}function p(v,y){v.getRGB(Xc,__(r)),n.buffers.color.setClear(Xc.r,Xc.g,Xc.b,y,s)}function x(){d!==void 0&&(d.geometry.dispose(),d.material.dispose(),d=void 0),c!==void 0&&(c.geometry.dispose(),c.material.dispose(),c=void 0)}return{getClearColor:function(){return a},setClearColor:function(v,y=1){a.set(v),l=y,p(a,l)},getClearAlpha:function(){return l},setClearAlpha:function(v){l=v,p(a,l)},render:g,addToRenderList:m,dispose:x}}function iM(r,e){const t=r.getParameter(r.MAX_VERTEX_ATTRIBS),n={},i=f(null);let o=i,s=!1;function a(b,R,I,H,Z){let V=!1;const ne=u(H,I,R);o!==ne&&(o=ne,c(o.object)),V=h(b,H,I,Z),V&&_(b,H,I,Z),Z!==null&&e.update(Z,r.ELEMENT_ARRAY_BUFFER),(V||s)&&(s=!1,y(b,R,I,H),Z!==null&&r.bindBuffer(r.ELEMENT_ARRAY_BUFFER,e.get(Z).buffer))}function l(){return r.createVertexArray()}function c(b){return r.bindVertexArray(b)}function d(b){return r.deleteVertexArray(b)}function u(b,R,I){const H=I.wireframe===!0;let Z=n[b.id];Z===void 0&&(Z={},n[b.id]=Z);let V=Z[R.id];V===void 0&&(V={},Z[R.id]=V);let ne=V[H];return ne===void 0&&(ne=f(l()),V[H]=ne),ne}function f(b){const R=[],I=[],H=[];for(let Z=0;Z<t;Z++)R[Z]=0,I[Z]=0,H[Z]=0;return{geometry:null,program:null,wireframe:!1,newAttributes:R,enabledAttributes:I,attributeDivisors:H,object:b,attributes:{},index:null}}function h(b,R,I,H){const Z=o.attributes,V=R.attributes;let ne=0;const ie=I.getAttributes();for(const U in ie)if(ie[U].location>=0){const k=Z[U];let he=V[U];if(he===void 0&&(U==="instanceMatrix"&&b.instanceMatrix&&(he=b.instanceMatrix),U==="instanceColor"&&b.instanceColor&&(he=b.instanceColor)),k===void 0||k.attribute!==he||he&&k.data!==he.data)return!0;ne++}return o.attributesNum!==ne||o.index!==H}function _(b,R,I,H){const Z={},V=R.attributes;let ne=0;const ie=I.getAttributes();for(const U in ie)if(ie[U].location>=0){let k=V[U];k===void 0&&(U==="instanceMatrix"&&b.instanceMatrix&&(k=b.instanceMatrix),U==="instanceColor"&&b.instanceColor&&(k=b.instanceColor));const he={};he.attribute=k,k&&k.data&&(he.data=k.data),Z[U]=he,ne++}o.attributes=Z,o.attributesNum=ne,o.index=H}function g(){const b=o.newAttributes;for(let R=0,I=b.length;R<I;R++)b[R]=0}function m(b){p(b,0)}function p(b,R){const I=o.newAttributes,H=o.enabledAttributes,Z=o.attributeDivisors;I[b]=1,H[b]===0&&(r.enableVertexAttribArray(b),H[b]=1),Z[b]!==R&&(r.vertexAttribDivisor(b,R),Z[b]=R)}function x(){const b=o.newAttributes,R=o.enabledAttributes;for(let I=0,H=R.length;I<H;I++)R[I]!==b[I]&&(r.disableVertexAttribArray(I),R[I]=0)}function v(b,R,I,H,Z,V,ne){ne===!0?r.vertexAttribIPointer(b,R,I,Z,V):r.vertexAttribPointer(b,R,I,H,Z,V)}function y(b,R,I,H){g();const Z=H.attributes,V=I.getAttributes(),ne=R.defaultAttributeValues;for(const ie in V){const U=V[ie];if(U.location>=0){let le=Z[ie];if(le===void 0&&(ie==="instanceMatrix"&&b.instanceMatrix&&(le=b.instanceMatrix),ie==="instanceColor"&&b.instanceColor&&(le=b.instanceColor)),le!==void 0){const k=le.normalized,he=le.itemSize,D=e.get(le);if(D===void 0)continue;const at=D.buffer,Ze=D.type,lt=D.bytesPerElement,W=Ze===r.INT||Ze===r.UNSIGNED_INT||le.gpuType===ap;if(le.isInterleavedBufferAttribute){const oe=le.data,J=oe.stride,Ne=le.offset;if(oe.isInstancedInterleavedBuffer){for(let Ie=0;Ie<U.locationSize;Ie++)p(U.location+Ie,oe.meshPerAttribute);b.isInstancedMesh!==!0&&H._maxInstanceCount===void 0&&(H._maxInstanceCount=oe.meshPerAttribute*oe.count)}else for(let Ie=0;Ie<U.locationSize;Ie++)m(U.location+Ie);r.bindBuffer(r.ARRAY_BUFFER,at);for(let Ie=0;Ie<U.locationSize;Ie++)v(U.location+Ie,he/U.locationSize,Ze,k,J*lt,(Ne+he/U.locationSize*Ie)*lt,W)}else{if(le.isInstancedBufferAttribute){for(let oe=0;oe<U.locationSize;oe++)p(U.location+oe,le.meshPerAttribute);b.isInstancedMesh!==!0&&H._maxInstanceCount===void 0&&(H._maxInstanceCount=le.meshPerAttribute*le.count)}else for(let oe=0;oe<U.locationSize;oe++)m(U.location+oe);r.bindBuffer(r.ARRAY_BUFFER,at);for(let oe=0;oe<U.locationSize;oe++)v(U.location+oe,he/U.locationSize,Ze,k,he*lt,he/U.locationSize*oe*lt,W)}}else if(ne!==void 0){const k=ne[ie];if(k!==void 0)switch(k.length){case 2:r.vertexAttrib2fv(U.location,k);break;case 3:r.vertexAttrib3fv(U.location,k);break;case 4:r.vertexAttrib4fv(U.location,k);break;default:r.vertexAttrib1fv(U.location,k)}}}}x()}function T(){P();for(const b in n){const R=n[b];for(const I in R){const H=R[I];for(const Z in H)d(H[Z].object),delete H[Z];delete R[I]}delete n[b]}}function S(b){if(n[b.id]===void 0)return;const R=n[b.id];for(const I in R){const H=R[I];for(const Z in H)d(H[Z].object),delete H[Z];delete R[I]}delete n[b.id]}function A(b){for(const R in n){const I=n[R];if(I[b.id]===void 0)continue;const H=I[b.id];for(const Z in H)d(H[Z].object),delete H[Z];delete I[b.id]}}function P(){w(),s=!0,o!==i&&(o=i,c(o.object))}function w(){i.geometry=null,i.program=null,i.wireframe=!1}return{setup:a,reset:P,resetDefaultState:w,dispose:T,releaseStatesOfGeometry:S,releaseStatesOfProgram:A,initAttributes:g,enableAttribute:m,disableUnusedAttributes:x}}function rM(r,e,t){let n;function i(c){n=c}function o(c,d){r.drawArrays(n,c,d),t.update(d,n,1)}function s(c,d,u){u!==0&&(r.drawArraysInstanced(n,c,d,u),t.update(d,n,u))}function a(c,d,u){if(u===0)return;e.get("WEBGL_multi_draw").multiDrawArraysWEBGL(n,c,0,d,0,u);let h=0;for(let _=0;_<u;_++)h+=d[_];t.update(h,n,1)}function l(c,d,u,f){if(u===0)return;const h=e.get("WEBGL_multi_draw");if(h===null)for(let _=0;_<c.length;_++)s(c[_],d[_],f[_]);else{h.multiDrawArraysInstancedWEBGL(n,c,0,d,0,f,0,u);let _=0;for(let g=0;g<u;g++)_+=d[g]*f[g];t.update(_,n,1)}}this.setMode=i,this.render=o,this.renderInstances=s,this.renderMultiDraw=a,this.renderMultiDrawInstances=l}function oM(r,e,t,n){let i;function o(){if(i!==void 0)return i;if(e.has("EXT_texture_filter_anisotropic")===!0){const A=e.get("EXT_texture_filter_anisotropic");i=r.getParameter(A.MAX_TEXTURE_MAX_ANISOTROPY_EXT)}else i=0;return i}function s(A){return!(A!==qi&&n.convert(A)!==r.getParameter(r.IMPLEMENTATION_COLOR_READ_FORMAT))}function a(A){const P=A===qa&&(e.has("EXT_color_buffer_half_float")||e.has("EXT_color_buffer_float"));return!(A!==Lr&&n.convert(A)!==r.getParameter(r.IMPLEMENTATION_COLOR_READ_TYPE)&&A!==sr&&!P)}function l(A){if(A==="highp"){if(r.getShaderPrecisionFormat(r.VERTEX_SHADER,r.HIGH_FLOAT).precision>0&&r.getShaderPrecisionFormat(r.FRAGMENT_SHADER,r.HIGH_FLOAT).precision>0)return"highp";A="mediump"}return A==="mediump"&&r.getShaderPrecisionFormat(r.VERTEX_SHADER,r.MEDIUM_FLOAT).precision>0&&r.getShaderPrecisionFormat(r.FRAGMENT_SHADER,r.MEDIUM_FLOAT).precision>0?"mediump":"lowp"}let c=t.precision!==void 0?t.precision:"highp";const d=l(c);d!==c&&(ht("WebGLRenderer:",c,"not supported, using",d,"instead."),c=d);const u=t.logarithmicDepthBuffer===!0,f=t.reversedDepthBuffer===!0&&e.has("EXT_clip_control"),h=r.getParameter(r.MAX_TEXTURE_IMAGE_UNITS),_=r.getParameter(r.MAX_VERTEX_TEXTURE_IMAGE_UNITS),g=r.getParameter(r.MAX_TEXTURE_SIZE),m=r.getParameter(r.MAX_CUBE_MAP_TEXTURE_SIZE),p=r.getParameter(r.MAX_VERTEX_ATTRIBS),x=r.getParameter(r.MAX_VERTEX_UNIFORM_VECTORS),v=r.getParameter(r.MAX_VARYING_VECTORS),y=r.getParameter(r.MAX_FRAGMENT_UNIFORM_VECTORS),T=_>0,S=r.getParameter(r.MAX_SAMPLES);return{isWebGL2:!0,getMaxAnisotropy:o,getMaxPrecision:l,textureFormatReadable:s,textureTypeReadable:a,precision:c,logarithmicDepthBuffer:u,reversedDepthBuffer:f,maxTextures:h,maxVertexTextures:_,maxTextureSize:g,maxCubemapSize:m,maxAttributes:p,maxVertexUniforms:x,maxVaryings:v,maxFragmentUniforms:y,vertexTextures:T,maxSamples:S}}function sM(r){const e=this;let t=null,n=0,i=!1,o=!1;const s=new is,a=new Ct,l={value:null,needsUpdate:!1};this.uniform=l,this.numPlanes=0,this.numIntersection=0,this.init=function(u,f){const h=u.length!==0||f||n!==0||i;return i=f,n=u.length,h},this.beginShadows=function(){o=!0,d(null)},this.endShadows=function(){o=!1},this.setGlobalState=function(u,f){t=d(u,f,0)},this.setState=function(u,f,h){const _=u.clippingPlanes,g=u.clipIntersection,m=u.clipShadows,p=r.get(u);if(!i||_===null||_.length===0||o&&!m)o?d(null):c();else{const x=o?0:n,v=x*4;let y=p.clippingState||null;l.value=y,y=d(_,f,v,h);for(let T=0;T!==v;++T)y[T]=t[T];p.clippingState=y,this.numIntersection=g?this.numPlanes:0,this.numPlanes+=x}};function c(){l.value!==t&&(l.value=t,l.needsUpdate=n>0),e.numPlanes=n,e.numIntersection=0}function d(u,f,h,_){const g=u!==null?u.length:0;let m=null;if(g!==0){if(m=l.value,_!==!0||m===null){const p=h+g*4,x=f.matrixWorldInverse;a.getNormalMatrix(x),(m===null||m.length<p)&&(m=new Float32Array(p));for(let v=0,y=h;v!==g;++v,y+=4)s.copy(u[v]).applyMatrix4(x,a),s.normal.toArray(m,y),m[y+3]=s.constant}l.value=m,l.needsUpdate=!0}return e.numPlanes=g,e.numIntersection=0,m}}function aM(r){let e=new WeakMap;function t(s,a){return a===kf?s.mapping=La:a===Uf&&(s.mapping=Da),s}function n(s){if(s&&s.isTexture){const a=s.mapping;if(a===kf||a===Uf)if(e.has(s)){const l=e.get(s).texture;return t(l,s.mapping)}else{const l=s.image;if(l&&l.height>0){const c=new Rb(l.height);return c.fromEquirectangularTexture(r,s),e.set(s,c),s.addEventListener("dispose",i),t(c.texture,s.mapping)}else return null}}return s}function i(s){const a=s.target;a.removeEventListener("dispose",i);const l=e.get(a);l!==void 0&&(e.delete(a),l.dispose())}function o(){e=new WeakMap}return{get:n,dispose:o}}const So=4,t0=[.125,.215,.35,.446,.526,.582],ls=20,lM=512,ol=new su,n0=new et;let Yu=null,$u=0,ju=0,Ku=!1;const cM=new te;class i0{constructor(e){this._renderer=e,this._pingPongRenderTarget=null,this._lodMax=0,this._cubeSize=0,this._sizeLods=[],this._sigmas=[],this._lodMeshes=[],this._backgroundBox=null,this._cubemapMaterial=null,this._equirectMaterial=null,this._blurMaterial=null,this._ggxMaterial=null}fromScene(e,t=0,n=.1,i=100,o={}){const{size:s=256,position:a=cM}=o;Yu=this._renderer.getRenderTarget(),$u=this._renderer.getActiveCubeFace(),ju=this._renderer.getActiveMipmapLevel(),Ku=this._renderer.xr.enabled,this._renderer.xr.enabled=!1,this._setSize(s);const l=this._allocateTargets();return l.depthBuffer=!0,this._sceneToCubeUV(e,n,i,l,a),t>0&&this._blur(l,0,0,t),this._applyPMREM(l),this._cleanup(l),l}fromEquirectangular(e,t=null){return this._fromTexture(e,t)}fromCubemap(e,t=null){return this._fromTexture(e,t)}compileCubemapShader(){this._cubemapMaterial===null&&(this._cubemapMaterial=s0(),this._compileMaterial(this._cubemapMaterial))}compileEquirectangularShader(){this._equirectMaterial===null&&(this._equirectMaterial=o0(),this._compileMaterial(this._equirectMaterial))}dispose(){this._dispose(),this._cubemapMaterial!==null&&this._cubemapMaterial.dispose(),this._equirectMaterial!==null&&this._equirectMaterial.dispose(),this._backgroundBox!==null&&(this._backgroundBox.geometry.dispose(),this._backgroundBox.material.dispose())}_setSize(e){this._lodMax=Math.floor(Math.log2(e)),this._cubeSize=Math.pow(2,this._lodMax)}_dispose(){this._blurMaterial!==null&&this._blurMaterial.dispose(),this._ggxMaterial!==null&&this._ggxMaterial.dispose(),this._pingPongRenderTarget!==null&&this._pingPongRenderTarget.dispose();for(let e=0;e<this._lodMeshes.length;e++)this._lodMeshes[e].geometry.dispose()}_cleanup(e){this._renderer.setRenderTarget(Yu,$u,ju),this._renderer.xr.enabled=Ku,e.scissorTest=!1,ta(e,0,0,e.width,e.height)}_fromTexture(e,t){e.mapping===La||e.mapping===Da?this._setSize(e.image.length===0?16:e.image[0].width||e.image[0].image.width):this._setSize(e.image.width/4),Yu=this._renderer.getRenderTarget(),$u=this._renderer.getActiveCubeFace(),ju=this._renderer.getActiveMipmapLevel(),Ku=this._renderer.xr.enabled,this._renderer.xr.enabled=!1;const n=t||this._allocateTargets();return this._textureToCubeUV(e,n),this._applyPMREM(n),this._cleanup(n),n}_allocateTargets(){const e=3*Math.max(this._cubeSize,112),t=4*this._cubeSize,n={magFilter:hi,minFilter:hi,generateMipmaps:!1,type:qa,format:qi,colorSpace:ei,depthBuffer:!1},i=r0(e,t,n);if(this._pingPongRenderTarget===null||this._pingPongRenderTarget.width!==e||this._pingPongRenderTarget.height!==t){this._pingPongRenderTarget!==null&&this._dispose(),this._pingPongRenderTarget=r0(e,t,n);const{_lodMax:o}=this;({lodMeshes:this._lodMeshes,sizeLods:this._sizeLods,sigmas:this._sigmas}=dM(o)),this._blurMaterial=fM(o,e,t)}return i}_compileMaterial(e){const t=new gi(new ti,e);this._renderer.compile(t,ol)}_sceneToCubeUV(e,t,n,i,o){const l=new Kn(90,1,t,n),c=[1,-1,1,1,1,1],d=[1,1,1,-1,-1,-1],u=this._renderer,f=u.autoClear,h=u.toneMapping;u.getClearColor(n0),u.toneMapping=Do,u.autoClear=!1,u.state.buffers.depth.getReversed()&&(u.setRenderTarget(i),u.clearDepth(),u.setRenderTarget(null)),this._backgroundBox===null&&(this._backgroundBox=new gi(new gc,new cs({name:"PMREM.Background",side:xi,depthWrite:!1,depthTest:!1})));const g=this._backgroundBox,m=g.material;let p=!1;const x=e.background;x?x.isColor&&(m.color.copy(x),e.background=null,p=!0):(m.color.copy(n0),p=!0);for(let v=0;v<6;v++){const y=v%3;y===0?(l.up.set(0,c[v],0),l.position.set(o.x,o.y,o.z),l.lookAt(o.x+d[v],o.y,o.z)):y===1?(l.up.set(0,0,c[v]),l.position.set(o.x,o.y,o.z),l.lookAt(o.x,o.y+d[v],o.z)):(l.up.set(0,c[v],0),l.position.set(o.x,o.y,o.z),l.lookAt(o.x,o.y,o.z+d[v]));const T=this._cubeSize;ta(i,y*T,v>2?T:0,T,T),u.setRenderTarget(i),p&&u.render(g,l),u.render(e,l)}u.toneMapping=h,u.autoClear=f,e.background=x}_textureToCubeUV(e,t){const n=this._renderer,i=e.mapping===La||e.mapping===Da;i?(this._cubemapMaterial===null&&(this._cubemapMaterial=s0()),this._cubemapMaterial.uniforms.flipEnvMap.value=e.isRenderTargetTexture===!1?-1:1):this._equirectMaterial===null&&(this._equirectMaterial=o0());const o=i?this._cubemapMaterial:this._equirectMaterial,s=this._lodMeshes[0];s.material=o;const a=o.uniforms;a.envMap.value=e;const l=this._cubeSize;ta(t,0,0,3*l,2*l),n.setRenderTarget(t),n.render(s,ol)}_applyPMREM(e){const t=this._renderer,n=t.autoClear;t.autoClear=!1;const i=this._lodMeshes.length;for(let o=1;o<i;o++)this._applyGGXFilter(e,o-1,o);t.autoClear=n}_applyGGXFilter(e,t,n){const i=this._renderer,o=this._pingPongRenderTarget;if(this._ggxMaterial===null){const x=3*Math.max(this._cubeSize,16),v=4*this._cubeSize;this._ggxMaterial=uM(this._lodMax,x,v)}const s=this._ggxMaterial,a=this._lodMeshes[n];a.material=s;const l=s.uniforms,c=n/(this._lodMeshes.length-1),d=t/(this._lodMeshes.length-1),u=Math.sqrt(c*c-d*d),f=.05+c*.95,h=u*f,{_lodMax:_}=this,g=this._sizeLods[n],m=3*g*(n>_-So?n-_+So:0),p=4*(this._cubeSize-g);l.envMap.value=e.texture,l.roughness.value=h,l.mipInt.value=_-t,ta(o,m,p,3*g,2*g),i.setRenderTarget(o),i.render(a,ol),l.envMap.value=o.texture,l.roughness.value=0,l.mipInt.value=_-n,ta(e,m,p,3*g,2*g),i.setRenderTarget(e),i.render(a,ol)}_blur(e,t,n,i,o){const s=this._pingPongRenderTarget;this._halfBlur(e,s,t,n,i,"latitudinal",o),this._halfBlur(s,e,n,n,i,"longitudinal",o)}_halfBlur(e,t,n,i,o,s,a){const l=this._renderer,c=this._blurMaterial;s!=="latitudinal"&&s!=="longitudinal"&&Ut("blur direction must be either latitudinal or longitudinal!");const d=3,u=this._lodMeshes[i];u.material=c;const f=c.uniforms,h=this._sizeLods[n]-1,_=isFinite(o)?Math.PI/(2*h):2*Math.PI/(2*ls-1),g=o/_,m=isFinite(o)?1+Math.floor(d*g):ls;m>ls&&ht(`sigmaRadians, ${o}, is too large and will clip, as it requested ${m} samples when the maximum is set to ${ls}`);const p=[];let x=0;for(let A=0;A<ls;++A){const P=A/g,w=Math.exp(-P*P/2);p.push(w),A===0?x+=w:A<m&&(x+=2*w)}for(let A=0;A<p.length;A++)p[A]=p[A]/x;f.envMap.value=e.texture,f.samples.value=m,f.weights.value=p,f.latitudinal.value=s==="latitudinal",a&&(f.poleAxis.value=a);const{_lodMax:v}=this;f.dTheta.value=_,f.mipInt.value=v-n;const y=this._sizeLods[i],T=3*y*(i>v-So?i-v+So:0),S=4*(this._cubeSize-y);ta(t,T,S,3*y,2*y),l.setRenderTarget(t),l.render(u,ol)}}function dM(r){const e=[],t=[],n=[];let i=r;const o=r-So+1+t0.length;for(let s=0;s<o;s++){const a=Math.pow(2,i);e.push(a);let l=1/a;s>r-So?l=t0[s-r+So-1]:s===0&&(l=0),t.push(l);const c=1/(a-2),d=-c,u=1+c,f=[d,d,u,d,u,u,d,d,u,u,d,u],h=6,_=6,g=3,m=2,p=1,x=new Float32Array(g*_*h),v=new Float32Array(m*_*h),y=new Float32Array(p*_*h);for(let S=0;S<h;S++){const A=S%3*2/3-1,P=S>2?0:-1,w=[A,P,0,A+2/3,P,0,A+2/3,P+1,0,A,P,0,A+2/3,P+1,0,A,P+1,0];x.set(w,g*_*S),v.set(f,m*_*S);const b=[S,S,S,S,S,S];y.set(b,p*_*S)}const T=new ti;T.setAttribute("position",new ln(x,g)),T.setAttribute("uv",new ln(v,m)),T.setAttribute("faceIndex",new ln(y,p)),n.push(new gi(T,null)),i>So&&i--}return{lodMeshes:n,sizeLods:e,sigmas:t}}function r0(r,e,t){const n=new Ts(r,e,t);return n.texture.mapping=nu,n.texture.name="PMREM.cubeUv",n.scissorTest=!0,n}function ta(r,e,t,n,i){r.viewport.set(e,t,n,i),r.scissor.set(e,t,n,i)}function uM(r,e,t){return new pi({name:"PMREMGGXConvolution",defines:{GGX_SAMPLES:lM,CUBEUV_TEXEL_WIDTH:1/e,CUBEUV_TEXEL_HEIGHT:1/t,CUBEUV_MAX_MIP:`${r}.0`},uniforms:{envMap:{value:null},roughness:{value:0},mipInt:{value:0}},vertexShader:au(),fragmentShader:`
 
 			precision mediump float;
 			precision mediump int;
@@ -4935,7 +4935,7 @@ void main() {
     cursor: pointer;
   `;const m=_.querySelector(".progress-bar-fill");m.style.cssText=`
     height: 100%;
-    background: rgba(251, 225, 57, 0.9);
+    background:rgba(111, 237, 238, 0.88);
     width: 0%;
     transition: width 0.1s linear;
     pointer-events: none;
@@ -4946,7 +4946,7 @@ void main() {
     transform: translate(-50%, -50%);
     width: 8px;
     height: 8px;
-    background: rgba(251, 225, 57, 1);
+    background: rgba(111, 237, 238, 1);
     border-radius: 50%;
     cursor: pointer;
     opacity: 0;
