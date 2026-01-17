@@ -666,7 +666,11 @@ html {
 
 
 #shaderBackground {
-  filter: hue-rotate(0deg) !important;
+  //filter: hue-rotate(0deg) !important;
+  @media (max-width:$desktop-viewport) {
+    min-height:100lvh!important;
+    height:100lvh!important;
+  }
 }
 
 

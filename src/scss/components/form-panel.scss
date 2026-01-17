@@ -13,8 +13,8 @@
     backdrop-filter: blur(20px);
     background:rgba(0,0,0,0.95);
     margin-bottom:20svh;
-    @media (min-width:$desktop-viewport) {
-        //max-width: calc(100% - 200px);
+    @media (max-width:$desktop-viewport) {
+        margin-bottom:4svh;
     }
 
 
