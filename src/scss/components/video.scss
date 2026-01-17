@@ -73,7 +73,9 @@ video {
     z-index: 1;
     width: 100% !important;
     min-width: 100% !important;
-
+    @media (max-width:$mobile-viewport) {
+        border-radius: 16px!important;
+    }
     &.scale-active {
         box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
     }
@@ -111,7 +113,9 @@ iframe {
     transition: opacity 0.4s ease;
     border-radius: 32px;
     overflow: hidden;
-
+    @media (max-width:$mobile-viewport) {
+        border-radius: 16px!important;
+    }
     // Darken overlay on hover
     &::before {
         content: '';
@@ -125,6 +129,9 @@ iframe {
         z-index: 1;
         border-radius: 32px;
         overflow: hidden;
+        @media (max-width:$mobile-viewport) {
+            border-radius: 16px!important;
+        }
     }
 
     &:hover {
@@ -215,6 +222,9 @@ iframe {
     transition: 0.3s ease;
     border-radius: 32px;
     overflow: hidden;
+    @media (max-width:$mobile-viewport) {
+        border-radius: 16px!important;
+    }
     &:hover {
         background: rgba(0, 0, 0, 0.4);
 
@@ -321,11 +331,17 @@ iframe {
 .preview-video {
     border-radius: 32px;
     overflow:hidden;
+    @media (max-width:$mobile-viewport) {
+        border-radius: 16px!important;
+    }
 }
 
 #youtube-video-wrapper {
     border-radius: 32px;
-    overflow: hidden;
+    overflow: hidden;   
+    @media (max-width:$mobile-viewport) {
+        border-radius: 16px!important;
+    }
     .video-wrapper {
         > div {
             display:none!important;
