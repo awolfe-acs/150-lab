@@ -2,6 +2,18 @@
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 
+// Helper to get mobile scroll container config for ScrollTrigger
+// On mobile, #app is the scroll container; on desktop, use default (window)
+const getScrollerConfig = () => {
+  if (window.isMobileScrollMode && window.mobileScrollContainer) {
+    return {
+      scroller: window.mobileScrollContainer,
+      pinType: 'transform' // CRITICAL: Must use transform pinning for custom scroller
+    };
+  }
+  return {}; // Empty = use defaults (window scroller)
+};
+
 // Animate video scale from small to full size while scrolling
 export function animateVideoScale() {
   const videoWrapper = document.querySelector("#video .video-wrapper");
@@ -30,6 +42,7 @@ export function animateVideoScale() {
         scrub: true,
         markers: false,
         invalidateOnRefresh: true,
+        ...getScrollerConfig(), // Mobile scroll container support
         onUpdate: (self) => {
           // Add/remove class based on progress
           if (self.progress > 0.8) {
@@ -55,6 +68,7 @@ export function animateVideoScale() {
       end: "bottom top",
       markers: false,
       invalidateOnRefresh: true,
+      ...getScrollerConfig(), // Mobile scroll container support
       onEnter: () => {
         // Enable pointer events after video is mostly revealed
         gsap.set(videoSection, {
@@ -80,6 +94,7 @@ export function animateVideoScale() {
       anticipatePin: 1, // Helps prevent jittering
       markers: false, // Set to true for debugging
       id: "video-pin", // Add an ID for easier debugging
+      ...getScrollerConfig(), // Mobile scroll container support - CRITICAL for proper unpinning
     });
   }
 }
