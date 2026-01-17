@@ -38,9 +38,10 @@
         }
 
         @media (max-width:$mobile-viewport) {
-            width: 100%;
-            max-width: 100%;
-            border-radius: 0;
+            width: calc(100% - 32px)!important;
+            max-width: calc(100% - 32px)!important;
+            margin: 0 20px;
+            border-radius: 16px!important;
         }
 
         .mejs__container, .mejs__inner, .mejs__mediaelement, #anniversary-video {

@@ -254,27 +254,39 @@ document.addEventListener("DOMContentLoaded", () => {
   const isMobileOptimized = isTouchDevice && isSmallViewport;
 
   // Configure Lenis based on device type
-  const lenisConfig = {
-    autoRaf: true,
-    infinite: false,
-    syncTouch: true, // Enable touch scrolling
-  };
+  let lenisConfig;
 
   if (isMobileOptimized) {
-    // Mobile: Use native scrolling feel (no easing, minimal smoothing)
-    console.log('[Lenis] Mobile optimization enabled - native scroll feel');
-    lenisConfig.smoothWheel = false; // Disable smooth wheel on mobile
-    lenisConfig.touchInertiaMultiplier = 1; // Minimal inertia for native feel
-    lenisConfig.duration = 0; // No duration = instant/native
-    lenisConfig.easing = (t) => t; // Linear easing = no easing
+    // MOBILE: Completely disable Lenis smooth scrolling - use native browser scroll
+    // This prevents the erratic/inconsistent touch scrolling behavior
+    console.log('[Lenis] Mobile detected - using native browser scroll (Lenis disabled for touch)');
+    lenisConfig = {
+      autoRaf: true,
+      infinite: false,
+      syncTouch: false,        // CRITICAL: Don't intercept touch events
+      syncTouchLerp: 1,        // No lerping for touch
+      touchMultiplier: 0,      // Disable touch multiplier
+      wheelMultiplier: 1,      // Keep wheel normal (for hybrid devices)
+      smoothWheel: false,      // Disable smooth wheel on mobile
+      duration: 0,             // No duration = instant/native
+      easing: (t) => t,        // Linear easing = no easing
+    };
   } else {
-    // Desktop: Keep smooth scrolling
+    // Desktop: Keep smooth scrolling with Lenis
     console.log('[Lenis] Desktop mode - smooth scrolling enabled');
-    lenisConfig.smoothWheel = true;
-    lenisConfig.touchInertiaMultiplier = 35;
-    lenisConfig.duration = 1.2;
-    lenisConfig.easing = (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t));
+    lenisConfig = {
+      autoRaf: true,
+      infinite: false,
+      syncTouch: true,
+      smoothWheel: true,
+      touchInertiaMultiplier: 35,
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+    };
   }
+  
+  // Store mobile state globally for other modules to reference
+  window.isMobileOptimized = isMobileOptimized;
 
   // Always create the Lenis instance, but only start it on main pages
   window.lenis = new Lenis(lenisConfig);

@@ -490,6 +490,13 @@ html {
     h4 {
       position: relative;
       z-index: 1;
+      
+      @media (max-width:$mobile-viewport) {
+        width: calc(100% - 40px);
+        margin: 0 auto;
+        padding: 0 20px;
+        box-sizing: border-box;
+      }
     }
 
     &:after {

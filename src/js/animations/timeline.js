@@ -1664,7 +1664,7 @@ export function initTimelineAnimation() {
       start: 'center center', // When message reaches middle of viewport
       end: `+=${totalPinDistance}`, // Scroll distance: 33vh hold + expansion
       pin: true,
-      scrub: 1,
+      scrub: isMobile() ? 1.5 : 1, // Higher on mobile for controlled touch scrolling
       anticipatePin: 1,
       invalidateOnRefresh: true, // Force recalculation on resize
       onRefresh: (self) => {
@@ -2200,9 +2200,10 @@ export function initTimelineAnimation() {
       start: 'top top',
       end: () => `+=${getTotalScrollDistance()}`, // Function to recalculate on resize
       pin: timelineContainer,
-      // PERFORMANCE: Lower scrub values = more responsive, higher = more smooth but laggy
-      // 0.1-0.2 for snappy response, 0.5-1 for smooth but sluggish
-      scrub: isMobile() ? 0.15 : 0.2, // Much snappier - prioritize responsiveness
+      // PERFORMANCE: Lower scrub values = more responsive, higher = more smooth but controlled
+      // Desktop: 0.2 for snappy response
+      // Mobile: 1.0 for controlled touch scrolling (prevents zooming through sections)
+      scrub: isMobile() ? 1.0 : 0.2,
       anticipatePin: 1,
       invalidateOnRefresh: true,
       onRefresh: (self) => {
