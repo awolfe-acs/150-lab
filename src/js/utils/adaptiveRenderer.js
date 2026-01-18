@@ -17,6 +17,7 @@ export class AdaptiveRenderer {
     this.animateCallback = animateCallback;
     // Always cap at 60fps max - visual speed is controlled separately
     this.targetFPS = Math.min(targetFPS, 60);
+    this.baseTargetFPS = this.targetFPS; // Store original for restoration
     this.frameInterval = 1000 / this.targetFPS;
     this.lastFrameTime = 0;
     this.isVisible = true;
@@ -39,9 +40,37 @@ export class AdaptiveRenderer {
     this.currentCanvasId = 'shaderBackground';
     this.observers = new Map(); // Store multiple observers
     
+    // Scroll-aware throttling
+    this.isScrolling = false;
+    this.isMobile = performanceDetector.isMobile();
+    this.scrollThrottleFPS = this.isMobile ? 30 : 45; // Reduced FPS during scroll
+    
     this.setupVisibilityObserver(this.currentCanvasId);
     this.setupPageVisibilityListener();
     this.setupDegradationListener();
+    this.setupScrollListener();
+  }
+  
+  /**
+   * Listen for scroll state changes to throttle during scroll
+   */
+  setupScrollListener() {
+    performanceDetector.onScrollStateChange(({ isScrolling }) => {
+      this.isScrolling = isScrolling;
+      
+      // On mobile, reduce FPS during scroll for better scrolling performance
+      // Also apply scroll throttling when degraded to 30fps (already at minimum)
+      if (this.isMobile) {
+        if (isScrolling) {
+          // Use the lower of scrollThrottleFPS and baseTargetFPS
+          const scrollFps = Math.min(this.scrollThrottleFPS, this.baseTargetFPS);
+          this.setTargetFPS(scrollFps);
+        } else {
+          // Restore to base target FPS (which may have been capped at 30)
+          this.setTargetFPS(this.baseTargetFPS);
+        }
+      }
+    });
   }
   
   /**
@@ -58,12 +87,36 @@ export class AdaptiveRenderer {
     
     // Listen for adaptive FPS cap changes
     performanceDetector.onFpsCapChange((info) => {
-      if (this.isDegraded) return; // Don't override degradation
-      
       logger.log(`[Adaptive Renderer] Received FPS cap signal: ${info.cap}fps (${info.reason})`);
       
-      // Only apply cap if it's lower than current target
-      if (info.cap < this.targetFPS) {
+      // Handle UPGRADE from 30fps to higher
+      if (info.reason === 'performance_improved' && info.cap > this.baseTargetFPS) {
+        logger.log(`[Adaptive Renderer] Performance improved - upgrading from ${this.baseTargetFPS}fps to ${info.cap}fps`);
+        this.baseTargetFPS = info.cap;
+        this.isDegraded = false;
+        this.scrollThrottleFPS = this.isMobile ? 30 : 45; // Restore normal scroll throttle
+        if (!this.isScrolling) {
+          this.setTargetFPS(info.cap);
+        }
+        return;
+      }
+      
+      // Update base target FPS to respect the cap (downgrade)
+      // This ensures scroll restore goes back to the capped value, not original
+      if (info.cap < this.baseTargetFPS) {
+        this.baseTargetFPS = info.cap;
+        logger.log(`[Adaptive Renderer] Updated base target FPS to ${info.cap}fps`);
+      }
+      
+      // For 30fps cap, also update scroll throttle to match
+      if (info.cap === 30) {
+        this.scrollThrottleFPS = 30;
+        this.isDegraded = true; // Treat 30fps cap as degraded state
+      }
+      
+      // Apply cap if it's lower than current target and not currently scrolling
+      // (if scrolling, let the scroll handler manage FPS)
+      if (info.cap < this.targetFPS && !this.isScrolling) {
         this.setTargetFPS(info.cap);
       }
     });

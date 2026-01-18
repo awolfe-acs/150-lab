@@ -500,6 +500,7 @@ html {
 
 #video-travel-area {
   margin-top: -20svh; // Slight negative margin to tighten spacing after intro text
+  pointer-events:none!important;
   @media (min-width:$desktop-viewport) {
     margin-bottom: -8svh;
   }

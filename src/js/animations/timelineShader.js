@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import logger from '../utils/logger.js';
+import performanceDetector from '../utils/performanceDetector.js';
 
 export function initTimelineShader() {
   const canvas = document.querySelector('#timeline-shader-bg');
@@ -8,12 +9,19 @@ export function initTimelineShader() {
     return;
   }
 
+  // Get performance settings for mobile optimization
+  const perfSettings = performanceDetector.getSettings();
+  const isMobile = performanceDetector.isMobile();
+  
+  // Use performance-based dot counts for mobile
+  const dotCounts = perfSettings.timelineShaderDotCount || { x: 98, y: 54 };
+
   // Configuration Parameters
   const params = {
-    dotCountX: 98, // Number of dots along X
-    dotCountY: 54,  // Number of dots along Y
+    dotCountX: dotCounts.x, // Reduced on mobile for performance
+    dotCountY: dotCounts.y, // Reduced on mobile for performance
     spacing: 0.8,   // Spacing between dots
-    dotSize: 10.0,   // Size of each dot
+    dotSize: isMobile ? 8.0 : 10.0,   // Size of each dot (smaller on mobile)
     waveSpeed: 0.32,
     waveFrequencyX: 0.16,
     waveFrequencyY: 0.32,
@@ -110,14 +118,16 @@ export function initTimelineShader() {
   const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
   camera.position.z = params.cameraZ;
 
-  // Renderer
+  // Renderer with mobile-optimized settings
   const renderer = new THREE.WebGLRenderer({
     canvas: canvas,
     alpha: true,
-    antialias: false // Disabled to save memory on framebuffers
+    antialias: false, // Disabled to save memory on framebuffers
+    powerPreference: isMobile ? 'low-power' : 'default'
   });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25)); // Reduced from 1.5 to save memory
+  // Use even lower pixel ratio on mobile for better performance
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.0 : 1.25));
   
   // Set initial canvas element dimensions to match viewport
   canvas.style.width = `${window.innerWidth}px`;
@@ -230,17 +240,61 @@ export function initTimelineShader() {
   
   scene.add(points);
 
-  // Animation Loop - NO FPS CAP for smooth scroll-based parameter transitions
-  // The shader params are interpolated during scroll (2000-2026 era), so it needs
-  // full refresh rate for smooth visual transitions
+  // Animation Loop with FPS throttling for mobile optimization
+  // Use adaptive FPS based on scroll state: full FPS when scrolling for smooth params,
+  // throttled FPS when idle to save battery
   const clock = new THREE.Clock();
   let animationId;
   let isPaused = false;
+  let isVisible = true;
+  let isScrolling = false;
+  
+  // FPS throttling configuration
+  const targetFPS = isMobile ? 45 : 60;
+  const idleFPS = isMobile ? 30 : 45; // Lower FPS when not scrolling
+  let currentTargetFPS = targetFPS;
+  let frameInterval = 1000 / currentTargetFPS;
+  let lastFrameTime = 0;
+  
+  // Subscribe to scroll state changes
+  performanceDetector.onScrollStateChange(({ isScrolling: scrolling }) => {
+    isScrolling = scrolling;
+    // During scroll, keep higher FPS for smooth param transitions
+    // When idle, reduce FPS to save performance
+    currentTargetFPS = scrolling ? targetFPS : idleFPS;
+    frameInterval = 1000 / currentTargetFPS;
+  });
+  
+  // Set up visibility observer
+  const visibilityObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      isVisible = entry.isIntersecting;
+      if (isVisible && isPaused) {
+        // Resume if we became visible while paused
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '50px' });
+  visibilityObserver.observe(canvas);
 
   function animate() {
     if (isPaused) return;
     
     animationId = requestAnimationFrame(animate);
+    
+    const currentTime = performance.now();
+    const deltaTime = currentTime - lastFrameTime;
+    
+    // FPS throttling - skip frame if not enough time has passed
+    if (deltaTime < frameInterval) {
+      return;
+    }
+    
+    // Skip rendering if not visible or page is hidden
+    if (!isVisible || document.hidden) {
+      return;
+    }
+    
+    lastFrameTime = currentTime - (deltaTime % frameInterval);
     
     const elapsedTime = clock.getElapsedTime();
     material.uniforms.uTime.value = elapsedTime * params.waveSpeed;
@@ -254,7 +308,11 @@ export function initTimelineShader() {
     material.uniforms.uFadeIntensity.value = params.fadeIntensity;
     
     // Apply ocean bobbing (entire plane Y-axis movement)
-    const bobbingOffset = Math.sin(elapsedTime * params.bobbingSpeed) * params.bobbingAmplitude;
+    // On mobile during scroll, simplify bobbing calculation
+    let bobbingOffset = 0;
+    if (!isMobile || !isScrolling) {
+      bobbingOffset = Math.sin(elapsedTime * params.bobbingSpeed) * params.bobbingAmplitude;
+    }
     points.position.set(
       params.positionX,
       params.positionY + bobbingOffset,
@@ -294,6 +352,7 @@ export function initTimelineShader() {
       isPaused = true;
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', onWindowResize);
+      visibilityObserver.disconnect();
     },
     resume: () => {
       if (isPaused) {
@@ -304,12 +363,18 @@ export function initTimelineShader() {
         onWindowResize();
         
         clock.start(); // Reset clock on resume
+        lastFrameTime = performance.now(); // Reset frame timing
         // Start animation loop
         requestAnimationFrame(animate);
       }
     },
     updateParams: (newParams) => {
       Object.assign(params, newParams);
+    },
+    // Expose for external performance tuning
+    setTargetFPS: (fps) => {
+      currentTargetFPS = fps;
+      frameInterval = 1000 / fps;
     }
   };
 }

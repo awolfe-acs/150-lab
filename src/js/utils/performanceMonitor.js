@@ -289,18 +289,28 @@ export class PerformanceMonitor {
           // Calculate average
           const avgFps = Math.round(independentFpsHistory.reduce((a, b) => a + b, 0) / independentFpsHistory.length);
           
-          // Color code based on performance
+          // Color code based on performance relative to cap
+          // Adjust thresholds based on current cap for meaningful feedback
           let color = '#0f0'; // Green for good
-          if (independentFps < 30) {
+          const effectiveCap = currentCap || 60;
+          const goodThreshold = effectiveCap * 0.8; // 80% of cap is good
+          const warnThreshold = effectiveCap * 0.5; // 50% of cap is warning
+          
+          if (independentFps < warnThreshold) {
             color = '#f00'; // Red for bad
-          } else if (independentFps < 50) {
+          } else if (independentFps < goodThreshold) {
             color = '#ff0'; // Yellow for warning
           }
           
           counter.style.color = color;
           
-          // Show FPS cap if set
-          const capText = currentCap ? ` <span style="color: #0af; font-size: 9px;">cap:${currentCap}</span>` : '';
+          // Show FPS cap with color coding (orange for 30fps degraded mode)
+          let capText = '';
+          if (currentCap) {
+            const capColor = currentCap === 30 ? '#f80' : '#0af';
+            const capLabel = currentCap === 30 ? 'cap:30 (degraded)' : `cap:${currentCap}`;
+            capText = ` <span style="color: ${capColor}; font-size: 9px;">${capLabel}</span>`;
+          }
           counter.innerHTML = `${independentFps} FPS <span style="color: #888; font-size: 9px;">(avg: ${avgFps})</span>${capText}`;
         }
         

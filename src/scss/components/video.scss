@@ -5,7 +5,7 @@
     margin-top: auto;
     align-self: flex-end;
     position: relative;
-
+    pointer-events:none!important;
     .video-progress-bar {
         .progress-bar-fill {
             transition: width 0.1s linear;
@@ -31,7 +31,10 @@
         border-radius: 32px;
         overflow: hidden;
         transition: opacity 0.4s ease;
-
+        pointer-events:auto!important;
+        *, *::before, *::after {
+            pointer-events:auto!important;
+        }
         @media (min-width:$desktop-viewport) and (max-width:1440px) {
             width: calc(100% - 200px);
             max-width: min(calc(100% - 200px), calc((100svh - 80px) * 16 / 9));

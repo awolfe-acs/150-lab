@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { createTimelineSphereSystem, updateMorphingSphere, resizeSphereSystem } from './timelineSphere.js';
 import { createTimelineDotPlane } from './timelineDotPlane.js';
+import performanceDetector from '../utils/performanceDetector.js';
 
 export class TimelineScene {
   constructor() {
@@ -17,6 +18,22 @@ export class TimelineScene {
     this.dotPlane = null;
     this.clock = new THREE.Clock();
     this.isAnimating = false;
+    
+    // Mobile-optimized rendering
+    this.isMobile = performanceDetector.isMobile();
+    this.isScrolling = false;
+    
+    // FPS throttling
+    this.targetFPS = this.isMobile ? 45 : 60;
+    this.scrollFPS = this.isMobile ? 30 : 45;
+    this.frameInterval = 1000 / this.targetFPS;
+    this.lastFrameTime = 0;
+    
+    // Subscribe to scroll state changes
+    performanceDetector.onScrollStateChange(({ isScrolling }) => {
+      this.isScrolling = isScrolling;
+      this.frameInterval = 1000 / (isScrolling ? this.scrollFPS : this.targetFPS);
+    });
 
     this.init();
   }
@@ -34,14 +51,16 @@ export class TimelineScene {
     );
     this.camera.position.set(0, 0, 3); // Position from reference
 
-    // Create renderer
+    // Create renderer with mobile-optimized settings
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
       alpha: true,
-      antialias: true
+      antialias: !this.isMobile, // Disable antialiasing on mobile for performance
+      powerPreference: this.isMobile ? 'low-power' : 'default'
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Lower pixel ratio on mobile for better performance
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMobile ? 1.25 : 2));
 
     // Add lights for the glass sphere (required for MeshPhysicalMaterial)
     const pointLight = new THREE.PointLight(0xffffff, 1);
@@ -80,6 +99,21 @@ export class TimelineScene {
     if (!this.isAnimating) return;
 
     requestAnimationFrame(() => this.animate());
+    
+    const currentTime = performance.now();
+    const deltaTime = currentTime - this.lastFrameTime;
+    
+    // FPS throttling - skip frame if not enough time has passed
+    if (deltaTime < this.frameInterval) {
+      return;
+    }
+    
+    // Skip rendering if page is hidden
+    if (document.hidden) {
+      return;
+    }
+    
+    this.lastFrameTime = currentTime - (deltaTime % this.frameInterval);
 
     const elapsedTime = this.clock.getElapsedTime();
 

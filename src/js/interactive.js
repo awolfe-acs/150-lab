@@ -1,6 +1,7 @@
 import Globe from "globe.gl";
 import { createClient } from "@supabase/supabase-js";
 import logger from "./utils/logger.js";
+import performanceDetector from "./utils/performanceDetector.js";
 
 // Supabase configuration
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://uttarkvvcusvhawpgvvrc.supabase.co";
@@ -175,8 +176,38 @@ function isKnownLandException(lat, lng) {
 }
 
 // Enhanced pin animation with blue-purple-teal color cycling
+// FPS throttling for better scroll performance
+let pinAnimationLastFrameTime = 0;
+const pinAnimationIsMobile = performanceDetector.isMobile();
+const pinAnimationTargetFPS = pinAnimationIsMobile ? 30 : 60;
+let pinAnimationFrameInterval = 1000 / pinAnimationTargetFPS;
+
+// Subscribe to scroll state changes for adaptive throttling
+performanceDetector.onScrollStateChange(({ isScrolling }) => {
+  // During scroll, reduce pin animation FPS to prioritize scrolling
+  const scrollFPS = pinAnimationIsMobile ? 15 : 30;
+  pinAnimationFrameInterval = 1000 / (isScrolling ? scrollFPS : pinAnimationTargetFPS);
+});
+
 function animatePins() {
   if (!globe) return;
+  
+  requestAnimationFrame(animatePins);
+  
+  // FPS throttling
+  const currentFrameTime = performance.now();
+  const deltaTime = currentFrameTime - pinAnimationLastFrameTime;
+  
+  if (deltaTime < pinAnimationFrameInterval) {
+    return;
+  }
+  
+  // Skip if page is hidden
+  if (document.hidden) {
+    return;
+  }
+  
+  pinAnimationLastFrameTime = currentFrameTime - (deltaTime % pinAnimationFrameInterval);
 
   const currentTime = Date.now() * 0.001; // Convert to seconds
 
@@ -228,8 +259,6 @@ function animatePins() {
 
   // Static altitude - no floating animation to maintain consistent height
   globe.pointAltitude(0.06);
-
-  requestAnimationFrame(animatePins);
 }
 
 // Add CSS glow effects to enhance pin visuals

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import logger from '../utils/logger.js';
+import performanceDetector from '../utils/performanceDetector.js';
 
 export function initCoverOrb() {
   const canvas = document.querySelector('#timeline-cover-canvas');
@@ -15,6 +16,9 @@ export function initCoverOrb() {
   }
   
   window.coverOrbInitialized = true;
+  
+  // Mobile optimization settings
+  const isMobile = performanceDetector.isMobile();
 
   // Scene setup
   const scene = new THREE.Scene();
@@ -23,14 +27,16 @@ export function initCoverOrb() {
   const camera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
   camera.position.z = 3.5;
 
-  // Renderer setup
+  // Renderer setup with mobile optimizations
   const renderer = new THREE.WebGLRenderer({
     canvas: canvas,
     alpha: true,
-    antialias: true
+    antialias: !isMobile, // Disable antialiasing on mobile
+    powerPreference: isMobile ? 'low-power' : 'default'
   });
   renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  // Lower pixel ratio on mobile for better performance
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.25 : 2));
 
   // Default Parameters (tuned for desired look)
   const params = {
@@ -245,8 +251,9 @@ export function initCoverOrb() {
     transparent: true
   });
 
-  // Geometry
-  const geometry = new THREE.SphereGeometry(1, 128, 128);
+  // Geometry - reduced segments on mobile for better performance
+  const sphereSegments = isMobile ? 64 : 128;
+  const geometry = new THREE.SphereGeometry(1, sphereSegments, sphereSegments);
   const orb = new THREE.Mesh(geometry, material);
   scene.add(orb);
 
@@ -298,15 +305,45 @@ export function initCoverOrb() {
   // Start checking for GUI after a delay to ensure main GUI is initialized
   setTimeout(setupGUI, 1500);
 
-  // Animation Loop
+  // Animation Loop with FPS throttling
   const clock = new THREE.Clock();
   let animationId;
   let isPaused = false;
+  let isScrolling = false;
+  
+  // FPS throttling
+  const targetFPS = isMobile ? 45 : 60;
+  const scrollFPS = isMobile ? 30 : 45;
+  let currentFPS = targetFPS;
+  let frameInterval = 1000 / currentFPS;
+  let lastFrameTime = 0;
+  
+  // Subscribe to scroll state changes
+  performanceDetector.onScrollStateChange(({ isScrolling: scrolling }) => {
+    isScrolling = scrolling;
+    currentFPS = scrolling ? scrollFPS : targetFPS;
+    frameInterval = 1000 / currentFPS;
+  });
   
   const animate = () => {
     if (isPaused) return;
     
     animationId = requestAnimationFrame(animate);
+    
+    const currentTime = performance.now();
+    const deltaTime = currentTime - lastFrameTime;
+    
+    // FPS throttling - skip frame if not enough time has passed
+    if (deltaTime < frameInterval) {
+      return;
+    }
+    
+    // Skip rendering if page is hidden
+    if (document.hidden) {
+      return;
+    }
+    
+    lastFrameTime = currentTime - (deltaTime % frameInterval);
     
     const elapsedTime = clock.getElapsedTime();
     material.uniforms.uTime.value = elapsedTime;

@@ -8,6 +8,7 @@ import { AdaptiveRenderer } from "./utils/adaptiveRenderer.js";
 import { PerformanceMonitor } from "./utils/performanceMonitor.js";
 import memoryManager from "./utils/memoryManager.js";
 import aemModeDetector from "./utils/aemModeDetector.js";
+import mobileFilmGrain from "./utils/mobileFilmGrain.js";
 import logger from "./utils/logger.js";
 
 // Helper function to get preloaded asset URL or fallback
@@ -1145,6 +1146,11 @@ export async function initShaderBackground() {
       window.shaderBackgroundRenderer.pause();
     }
     
+    // Stop mobile film grain if running
+    if (performanceDetector.isMobile()) {
+      mobileFilmGrain.destroy();
+    }
+    
     // Dispose all tracked resources
     const disposed = memoryManager.disposeAll();
     logger.log(`[Background] Disposed ${disposed} Three.js resources`);
@@ -1628,11 +1634,12 @@ export async function initShaderBackground() {
     bottomWaveSpeed: { value: 0.0 }, // Controls the speed of the bottom wave animation
     bottomWaveOffset: { value: -2.207 }, // Controls the horizontal offset of the bottom wave
     // Film noise parameters
-    filmNoiseIntensity: { value: 0.056 }, // Controls the intensity of the film noise
+    // On mobile, disable shader-based film grain and use lightweight CSS overlay instead
+    filmNoiseIntensity: { value: performanceDetector.isMobile() ? 0.0 : 0.056 }, // Disabled on mobile
     filmNoiseSpeed: { value: 0.0000028 }, // Controls the speed of the film noise animation was 00001
     filmGrainSize: { value: 6.0 }, // Controls the size of the film grain
     filmScratchIntensity: { value: 0.0 }, // Controls the intensity of film scratches
-    filmGrainEnabled: { value: true }, // Enable/disable film grain for performance
+    filmGrainEnabled: { value: !performanceDetector.isMobile() }, // Disabled on mobile - uses CSS overlay instead
     // Lighting parameters
     lightDirection: { value: new THREE.Vector3(0.5, 0.5, 1.0).normalize() },
     ambientLight: { value: 0.6 }, // Ambient light intensity
@@ -1646,6 +1653,15 @@ export async function initShaderBackground() {
     xOffset: { value: -0.104 },
   };
   const uniforms = window.uniforms; // Keep local reference for backwards compatibility
+
+  // Start mobile film grain overlay if on mobile
+  // This provides a lightweight 24fps film grain effect without shader overhead
+  if (performanceDetector.isMobile()) {
+    mobileFilmGrain.setIntensity(0.06); // Visible grain
+    mobileFilmGrain.setOpacity(1.0); // Full opacity for sharp, visible effect
+    mobileFilmGrain.start();
+    logger.log('[Background Init] Using lightweight mobile film grain overlay at 24fps');
+  }
 
   // Enhanced vertex shader with larger displacement
   const vertexShader = `
@@ -4497,13 +4513,52 @@ export async function initShaderBackground() {
   // Create reusable color object to avoid creating new objects in animation loop
   const reusableBaseColor = new THREE.Color();
   
-  // Separate animation loop for particles
+  // Mobile-optimized particle animation state
+  // Use performanceDetector's isMobile() result (already computed during detection)
+  const isMobileForParticles = performanceDetector.isMobile();
+  let isCurrentlyScrolling = false;
+  let particleAnimationId = null;
+  
+  // FPS throttling for particle animation
+  const particleTargetFPS = isMobileForParticles ? 30 : 60;
+  const particleIdleFPS = isMobileForParticles ? 20 : 30; // Very low when not actively scrolling
+  let particleFrameInterval = 1000 / particleTargetFPS;
+  let lastParticleFrameTime = 0;
+  let twinkleSkipCounter = 0;
+  const twinkleSkipInterval = isMobileForParticles ? 3 : 1; // Update twinkle every N frames on mobile
+  
+  // Subscribe to scroll state changes for performance optimization
+  performanceDetector.onScrollStateChange(({ isScrolling }) => {
+    isCurrentlyScrolling = isScrolling;
+    // Adjust particle FPS based on scroll state
+    // During scroll on mobile, prioritize main render loop, reduce particle updates
+    particleFrameInterval = 1000 / (isScrolling && isMobileForParticles ? particleIdleFPS : particleTargetFPS);
+  });
+  
+  // Separate animation loop for particles with FPS throttling
   function animateParticles() {
+    particleAnimationId = requestAnimationFrame(animateParticles);
+    
+    const currentTime = performance.now();
+    const deltaTime = currentTime - lastParticleFrameTime;
+    
+    // FPS throttling - skip frame if not enough time has passed
+    if (deltaTime < particleFrameInterval) {
+      return;
+    }
+    
+    // Skip updates if page is hidden
+    if (document.hidden) {
+      return;
+    }
+    
+    lastParticleFrameTime = currentTime - (deltaTime % particleFrameInterval);
+    
     const positions = particleGeometry.attributes.position.array;
     const colors = particleGeometry.attributes.color.array;
     const sizes = particleGeometry.attributes.size ? particleGeometry.attributes.size.array : null;
 
-    // Update twinkle time
+    // Update twinkle time (but skip actual twinkle calculation during scroll on mobile)
     twinkleTime += 0.01;
 
     // Calculate scroll delta for smooth movement with easing
@@ -4514,6 +4569,9 @@ export async function initShaderBackground() {
     lastScrollY = scrollY * (1 - scrollObj.damping) + lastScrollY * scrollObj.damping;
 
     // Only update particle positions if movement is not paused
+    // On mobile during scroll, skip position float updates (scroll parallax still works)
+    const skipFloatUpdates = isMobileForParticles && isCurrentlyScrolling && perfSettings.skipParticleUpdatesOnScroll;
+    
     if (!window.particlesMovementPaused) {
       for (let i = 0; i < particleCount; i++) {
         const i3 = i * 3;
@@ -4521,16 +4579,20 @@ export async function initShaderBackground() {
         // Get the size ratio for this particle (if sizes exist)
         const sizeRatio = sizes ? (sizes[i] - scrollObj.sizeMin) / (scrollObj.sizeMax - scrollObj.sizeMin) : 0.5;
 
-        // Adjust float speed based on size - smaller particles move more slowly
-        const particleFloatSpeed = scrollObj.floatSpeed * (0.5 + sizeRatio * 0.5);
+        // Skip float movement during scroll on mobile for performance
+        if (!skipFloatUpdates) {
+          // Adjust float speed based on size - smaller particles move more slowly
+          const particleFloatSpeed = scrollObj.floatSpeed * (0.5 + sizeRatio * 0.5);
 
-        // Update positions with float speed applied
-        positions[i3] += particleVelocities[i3] * particleFloatSpeed;
-        positions[i3 + 1] += particleVelocities[i3 + 1] * particleFloatSpeed;
-        positions[i3 + 2] += particleVelocities[i3 + 2] * particleFloatSpeed;
+          // Update positions with float speed applied
+          positions[i3] += particleVelocities[i3] * particleFloatSpeed;
+          positions[i3 + 1] += particleVelocities[i3 + 1] * particleFloatSpeed;
+          positions[i3 + 2] += particleVelocities[i3 + 2] * particleFloatSpeed;
+        }
 
         // Move particles up based on scroll with size-based parallax effect
         // Larger particles (appearing closer) move faster
+        // This still runs during scroll for responsive feel
         positions[i3 + 1] += scrollDelta * (0.5 + sizeRatio * 0.5);
 
         // Bounce off horizontal boundaries
@@ -4560,36 +4622,54 @@ export async function initShaderBackground() {
       particleGeometry.attributes.position.needsUpdate = true;
     }
 
-    // Always update colors for twinkle effect, even when movement is paused
-    // This ensures a smooth transition when particles become visible again
-    // Reuse the color object instead of creating new ones (critical for memory performance)
-    reusableBaseColor.set(particleColorObj.color);
+    // Twinkle effect optimization: skip on mobile during scroll, or throttle updates
+    twinkleSkipCounter++;
+    const shouldUpdateTwinkle = !isCurrentlyScrolling || !isMobileForParticles || 
+                                 (twinkleSkipCounter >= twinkleSkipInterval);
     
-    for (let i = 0; i < particleCount; i++) {
-      const i3 = i * 3;
+    if (shouldUpdateTwinkle) {
+      twinkleSkipCounter = 0;
+      
+      // Always update colors for twinkle effect, even when movement is paused
+      // This ensures a smooth transition when particles become visible again
+      // Reuse the color object instead of creating new ones (critical for memory performance)
+      reusableBaseColor.set(particleColorObj.color);
+      
+      for (let i = 0; i < particleCount; i++) {
+        const i3 = i * 3;
 
-      // Get the size ratio for this particle (if sizes exist)
-      const sizeRatio = sizes ? (sizes[i] - scrollObj.sizeMin) / (scrollObj.sizeMax - scrollObj.sizeMin) : 0.5;
+        // Get the size ratio for this particle (if sizes exist)
+        const sizeRatio = sizes ? (sizes[i] - scrollObj.sizeMin) / (scrollObj.sizeMax - scrollObj.sizeMin) : 0.5;
 
-      // Add twinkle effect - subtle brightness variation over time
-      const twinkleFactor = 0.2 * Math.sin(twinkleTime + i * 0.1) + 0.9; // Increased from 0.15/0.85 to 0.2/0.9
+        // Add twinkle effect - subtle brightness variation over time
+        const twinkleFactor = 0.2 * Math.sin(twinkleTime + i * 0.1) + 0.9;
 
-      // Apply size-based brightness - larger particles are brighter
-      const sizeBrightness = 0.8 + sizeRatio * 0.6; // Increased from 0.6/0.4 to 0.8/0.6
+        // Apply size-based brightness - larger particles are brighter
+        const sizeBrightness = 0.8 + sizeRatio * 0.6;
 
-      colors[i3] = reusableBaseColor.r * twinkleFactor * sizeBrightness;
-      colors[i3 + 1] = reusableBaseColor.g * twinkleFactor * sizeBrightness;
-      colors[i3 + 2] = reusableBaseColor.b * twinkleFactor * sizeBrightness;
+        colors[i3] = reusableBaseColor.r * twinkleFactor * sizeBrightness;
+        colors[i3 + 1] = reusableBaseColor.g * twinkleFactor * sizeBrightness;
+        colors[i3 + 2] = reusableBaseColor.b * twinkleFactor * sizeBrightness;
+      }
+
+      particleGeometry.attributes.color.needsUpdate = true;
     }
-
-    particleGeometry.attributes.color.needsUpdate = true;
-    requestAnimationFrame(animateParticles);
   }
 
   // Start particle animation
   animateParticles();
 
   // Main shader animation loop using adaptive renderer
+  // Mobile-specific: track scroll state for additional optimizations
+  const isMobileBackground = performanceDetector.isMobile();
+  let isBackgroundScrolling = false;
+  
+  if (isMobileBackground) {
+    performanceDetector.onScrollStateChange(({ isScrolling }) => {
+      isBackgroundScrolling = isScrolling;
+    });
+  }
+  
   function animate(deltaTime) {
     // Check if timeline has paused the background for performance
     if (window.backgroundPaused) {
@@ -4605,7 +4685,11 @@ export async function initShaderBackground() {
     }
 
     // Update shader uniforms with slower speed
-    uniforms.time.value += 0.001; // Reduced from 0.01 to 0.001
+    // On mobile during scroll, use even slower animation for better performance
+    const timeIncrement = isMobileBackground 
+      ? (isBackgroundScrolling ? 0.0002 : 0.0005) // Much slower on mobile, especially during scroll
+      : 0.001;
+    uniforms.time.value += timeIncrement;
 
     // Check if we've been above Phase 3 trigger too long and stabilize effects to prevent weird behavior
     // This applies when we're above the #events section trigger point (Phase 1 or Phase 2)

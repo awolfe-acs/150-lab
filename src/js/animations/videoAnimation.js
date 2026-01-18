@@ -21,22 +21,7 @@ export function animateVideoScale() {
   const videoTravelArea = document.querySelector("#video-travel-area");
 
   if (videoWrapper && videoSection && videoTravelArea) {
-    // On mobile, skip the scale/opacity animation entirely - just show the video normally
-    // The pinning-based animation doesn't work well without pinning
-    if (window.isMobileOptimized) {
-      gsap.set(videoWrapper, {
-        scale: 1,
-        opacity: 1,
-        transformOrigin: "center center",
-      });
-      gsap.set(videoSection, {
-        pointerEvents: "auto",
-      });
-      videoWrapper.classList.add("scale-active");
-      return; // Exit early - no ScrollTrigger animations needed on mobile
-    }
-
-    // DESKTOP: Set initial scale and disable pointer events
+    // Set initial scale and disable pointer events
     gsap.set(videoWrapper, {
       scale: 0.4,
       opacity: 0,
@@ -99,20 +84,24 @@ export function animateVideoScale() {
     });
 
     // Create a pin animation that pins the video when it reaches the top of the viewport
-    // SKIP on mobile - pinning causes the page to get permanently stuck
-    if (!window.isMobileOptimized) {
-      ScrollTrigger.create({
-        trigger: "#video",
-        start: "top top", // Start pinning when the top of #video reaches the top of the viewport
-        endTrigger: "#video-travel-area", // Use video-travel-area as the end trigger
-        end: "bottom bottom", // End pinning when the bottom of video-travel-area reaches the bottom of viewport
-        pin: true, // Pin the video section
-        pinSpacing: false, // Don't add extra space for the pinned element
-        anticipatePin: 1, // Helps prevent jittering
-        markers: false, // Set to true for debugging
-        id: "video-pin", // Add an ID for easier debugging
-        ...getScrollerConfig(), // Mobile scroll container support - CRITICAL for proper unpinning
-      });
-    }
+    // On mobile: use shorter pin duration and add onLeaveBack to prevent getting stuck
+    ScrollTrigger.create({
+      trigger: "#video",
+      start: "top top", // Start pinning when the top of #video reaches the top of the viewport
+      endTrigger: "#video-travel-area", // Use video-travel-area as the end trigger
+      end: window.isMobileOptimized ? "bottom 80%" : "bottom bottom", // Shorter pin on mobile to prevent sticking
+      pin: true, // Pin the video section
+      pinSpacing: false, // Don't add extra space for the pinned element
+      anticipatePin: 1, // Helps prevent jittering
+      markers: false, // Set to true for debugging
+      id: "video-pin", // Add an ID for easier debugging
+      ...getScrollerConfig(), // Mobile scroll container support - CRITICAL for proper unpinning
+      onLeaveBack: (self) => {
+        // Reset transform when scrolling back up - prevents getting stuck
+        if (self.pin) {
+          self.pin.style.transform = "translate3d(0px, 0px, 0px)";
+        }
+      },
+    });
   }
 }

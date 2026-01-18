@@ -20,6 +20,7 @@ class PerformanceDetector {
     this.fpsHistory = [];
     this.fpsHistoryMaxLength = 120; // 2 minutes of samples at 1/sec
     this.lowFpsStreak = 0;
+    this.highFpsStreak = 0; // Track good performance for potential upgrades
     this.lowFpsStreakThreshold = 8; // Need 8 consecutive seconds of low FPS to confirm low-end
     this.degradationCallbacks = [];
     
@@ -37,6 +38,13 @@ class PerformanceDetector {
     this.independentLastTime = 0;
     this.independentMeasurementStarted = false;
     
+    // Scroll state tracking for performance optimization
+    this.isScrolling = false;
+    this.scrollTimeout = null;
+    this.scrollThrottleMs = 150; // How long to wait after scroll ends
+    this.scrollCallbacks = [];
+    this.lastScrollTime = 0;
+    
     this.metrics = {
       isMobile: false,
       isLowEnd: false,
@@ -48,6 +56,76 @@ class PerformanceDetector {
       screenSize: window.innerWidth * window.innerHeight,
       gpuTier: null,
     };
+    
+    // Set up scroll monitoring
+    this.setupScrollMonitoring();
+  }
+  
+  /**
+   * Monitor scroll state for performance optimization
+   * Fires callbacks when scroll starts/stops
+   */
+  setupScrollMonitoring() {
+    const handleScroll = () => {
+      const now = performance.now();
+      const wasScrolling = this.isScrolling;
+      this.isScrolling = true;
+      this.lastScrollTime = now;
+      
+      // Notify listeners that scroll started
+      if (!wasScrolling) {
+        this.notifyScrollState(true);
+      }
+      
+      // Clear existing timeout
+      if (this.scrollTimeout) {
+        clearTimeout(this.scrollTimeout);
+      }
+      
+      // Set timeout to detect scroll end
+      this.scrollTimeout = setTimeout(() => {
+        this.isScrolling = false;
+        this.notifyScrollState(false);
+      }, this.scrollThrottleMs);
+    };
+    
+    // Listen on both window and potential mobile scroll container
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    // Also listen for touch events on mobile
+    if ('ontouchstart' in window) {
+      window.addEventListener('touchmove', handleScroll, { passive: true });
+    }
+  }
+  
+  /**
+   * Notify all scroll state listeners
+   */
+  notifyScrollState(isScrolling) {
+    this.scrollCallbacks.forEach(callback => {
+      try {
+        callback({ isScrolling, timestamp: performance.now() });
+      } catch (e) {
+        logger.warn('[Performance Detector] Scroll callback error:', e);
+      }
+    });
+  }
+  
+  /**
+   * Register callback for scroll state changes
+   * @param {Function} callback - Called with { isScrolling: boolean, timestamp: number }
+   */
+  onScrollStateChange(callback) {
+    if (typeof callback === 'function') {
+      this.scrollCallbacks.push(callback);
+    }
+  }
+  
+  /**
+   * Check if currently scrolling
+   */
+  getIsScrolling() {
+    return this.isScrolling;
   }
 
   /**
@@ -282,34 +360,43 @@ class PerformanceDetector {
   getSettings() {
     // Use confirmed tier if available, otherwise preliminary tier
     const effectiveTier = this.confirmedTier || this.tier || 'medium';
+    const isMobile = this.metrics.isMobile;
     
     const settings = {
       high: {
-        particleCount: 100,
-        pixelRatio: Math.min(window.devicePixelRatio, 1.5),
+        particleCount: isMobile ? 40 : 100,
+        pixelRatio: Math.min(window.devicePixelRatio, isMobile ? 1.25 : 1.5),
         antialias: false,
         shadowsEnabled: false,
-        shaderQuality: 'high',
-        globeQuality: 'high',
-        mouseParticles: true,
-        targetFPS: 60, // Always 60fps max - visual speed is independent
+        shaderQuality: isMobile ? 'medium' : 'high',
+        globeQuality: isMobile ? 'medium' : 'high',
+        mouseParticles: !isMobile,
+        targetFPS: 60,
         enablePostProcessing: false,
-        maxLights: 3,
+        maxLights: isMobile ? 2 : 3,
+        // Mobile-specific settings
+        timelineShaderDotCount: isMobile ? { x: 48, y: 27 } : { x: 98, y: 54 },
+        skipParticleUpdatesOnScroll: isMobile,
+        scrollThrottleFPS: isMobile ? 30 : 60,
       },
       medium: {
-        particleCount: 50,
-        pixelRatio: Math.min(window.devicePixelRatio, 1.25),
+        particleCount: isMobile ? 25 : 50,
+        pixelRatio: Math.min(window.devicePixelRatio, isMobile ? 1.0 : 1.25),
         antialias: false,
         shadowsEnabled: false,
         shaderQuality: 'medium',
         globeQuality: 'medium',
-        mouseParticles: !this.metrics.isMobile,
-        targetFPS: 60, // Start at 60fps - let runtime monitoring downgrade if needed
+        mouseParticles: false,
+        targetFPS: 60,
         enablePostProcessing: false,
         maxLights: 2,
+        // Mobile-specific settings
+        timelineShaderDotCount: isMobile ? { x: 36, y: 20 } : { x: 72, y: 40 },
+        skipParticleUpdatesOnScroll: isMobile,
+        scrollThrottleFPS: isMobile ? 30 : 45,
       },
       low: {
-        particleCount: 30,
+        particleCount: isMobile ? 15 : 30,
         pixelRatio: 1,
         antialias: false,
         shadowsEnabled: false,
@@ -320,10 +407,32 @@ class PerformanceDetector {
         targetFPS: this.runtimeValidated && this.confirmedTier === 'low' ? 30 : 60,
         enablePostProcessing: false,
         maxLights: 1,
+        // Mobile-specific settings
+        timelineShaderDotCount: isMobile ? { x: 24, y: 14 } : { x: 48, y: 27 },
+        skipParticleUpdatesOnScroll: true,
+        scrollThrottleFPS: 30,
       },
     };
     
     return settings[effectiveTier];
+  }
+  
+  /**
+   * Get scroll-optimized settings
+   * Returns reduced-quality settings to use during active scrolling
+   */
+  getScrollSettings() {
+    const baseSettings = this.getSettings();
+    const isMobile = this.metrics.isMobile;
+    
+    return {
+      ...baseSettings,
+      // During scroll, use more aggressive throttling
+      targetFPS: isMobile ? 30 : 45,
+      skipParticleTwinkle: true,
+      skipParticleMovement: isMobile,
+      reduceShaderComplexity: isMobile,
+    };
   }
   
   /**
@@ -417,12 +526,61 @@ class PerformanceDetector {
       sampleCount: this.independentFpsHistory.length
     });
     
-    // Simple logic: if we've seen FPS > 100, cap at 120; otherwise 60
+    // Three-tier FPS cap logic:
+    // - 120fps: High refresh rate displays (averaging > 90fps or seen > 100fps)
+    // - 60fps: Standard devices (averaging > 40fps)
+    // - 30fps: Only for truly struggling devices (averaging < 40fps persistently)
     if (this.maxFpsSeen > 100 || avgFps > 90) {
       this.setFpsCap(120, 'high_refresh_detected');
-    } else {
+    } else if (avgFps >= 40) {
+      // Most devices should get 60fps cap - only downgrade to 30 if truly struggling
       this.setFpsCap(60, 'standard_refresh');
+    } else if (avgFps >= 15) {
+      // Device is struggling - cap at 30fps for consistent, smooth experience
+      // Only apply 30fps cap if truly averaging below 40fps
+      logger.log(`[Performance Detector] Low FPS detected (avg: ${Math.round(avgFps)}fps) - capping at 30fps for consistency`);
+      this.setFpsCap(30, 'low_performance_detected');
+    } else {
+      // Extremely low FPS - still cap at 30, will trigger degradation
+      this.setFpsCap(30, 'very_low_performance');
     }
+  }
+  
+  /**
+   * Re-evaluate FPS cap based on current performance
+   * Can both downgrade AND upgrade based on sustained performance
+   */
+  reevaluateFpsCap() {
+    if (!this.fpsCap) return false;
+    
+    const avgFps = this.getAverageFps(15);
+    
+    // UPGRADE: If at 30fps cap but averaging >= 50fps, upgrade to 60fps
+    // Requires sustained good performance to prevent flip-flopping
+    if (this.fpsCap === 30 && avgFps >= 50) {
+      logger.log(`[Performance Detector] Upgrading FPS cap: avg ${avgFps}fps with 30fps cap -> 60fps cap`);
+      this.setFpsCap(60, 'performance_improved');
+      // Reset degradation state since performance has improved
+      this.isDegraded = false;
+      return true;
+    }
+    
+    // DOWNGRADE: If averaging below 40fps with a 60fps cap, downgrade to 30fps
+    // Only downgrade if persistently below threshold
+    if (this.fpsCap === 60 && avgFps < 40 && avgFps >= 15) {
+      logger.log(`[Performance Detector] Downgrading FPS cap: avg ${avgFps}fps with 60fps cap -> 30fps cap`);
+      this.setFpsCap(30, 'runtime_degradation');
+      return true;
+    }
+    
+    // DOWNGRADE: If averaging below 50fps with a 120fps cap, downgrade to 60fps
+    if (this.fpsCap === 120 && avgFps < 50) {
+      logger.log(`[Performance Detector] Downgrading FPS cap: avg ${avgFps}fps with 120fps cap -> 60fps cap`);
+      this.setFpsCap(60, 'runtime_degradation');
+      return true;
+    }
+    
+    return false;
   }
   
   /**
@@ -497,22 +655,41 @@ class PerformanceDetector {
   }
   
   /**
-   * Evaluate if we have persistent evidence of poor performance
-   * Only triggers degradation after consistent, sustained poor FPS
+   * Evaluate if we have persistent evidence of poor or improved performance
+   * Can trigger both degradation and upgrades based on sustained performance
    */
   evaluatePerformance(currentFps) {
     // Skip evaluation during initial warmup (first 3 seconds)
     if (this.fpsHistory.length < 3) return;
     
-    const targetFps = 60;
-    const lowFpsThreshold = targetFps * 0.7; // Below 42fps is considered struggling
-    const veryLowFpsThreshold = targetFps * 0.5; // Below 30fps is critically low
+    // Use current FPS cap as reference, defaulting to 60
+    const targetFps = this.fpsCap || 60;
+    const lowFpsThreshold = targetFps * 0.7; // Below 70% of target is struggling
+    const veryLowFpsThreshold = targetFps * 0.5; // Below 50% of target is critically low
+    const goodFpsThreshold = 50; // Above this is good performance
     
     if (currentFps < lowFpsThreshold) {
       this.lowFpsStreak++;
+      this.highFpsStreak = 0; // Reset good performance streak
     } else {
       // Reset streak on good frame - we don't want spikes to affect us
       this.lowFpsStreak = Math.max(0, this.lowFpsStreak - 2); // Decay slowly
+      
+      // Track good performance for potential upgrade
+      if (currentFps >= goodFpsThreshold) {
+        this.highFpsStreak = (this.highFpsStreak || 0) + 1;
+      }
+    }
+    
+    // Check if we should downgrade FPS cap (every 5 seconds of low FPS)
+    if (this.lowFpsStreak >= 5 && this.lowFpsStreak % 5 === 0) {
+      this.reevaluateFpsCap();
+    }
+    
+    // Check if we should UPGRADE FPS cap (every 10 seconds of good FPS)
+    // Only check upgrade if we're currently at 30fps cap
+    if (this.fpsCap === 30 && this.highFpsStreak >= 10 && this.highFpsStreak % 10 === 0) {
+      this.reevaluateFpsCap();
     }
     
     // Only confirm degradation after persistent poor performance
@@ -538,6 +715,11 @@ class PerformanceDetector {
     
     this.runtimeValidated = true;
     this.confirmedTier = 'low';
+    
+    // Set FPS cap to 30 for consistent performance
+    if (this.fpsCap !== 30) {
+      this.setFpsCap(30, 'confirmed_low_end_device');
+    }
     
     // Notify any listeners that degradation should occur
     this.degradationCallbacks.forEach(callback => {
