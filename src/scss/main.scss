@@ -175,6 +175,10 @@ html {
       touch-action: manipulation;
       -webkit-overflow-scrolling: touch;
       overflow-x: hidden;
+      min-width:calc(100vw + 5px)!important;
+      @media (max-width:$desktop-viewport) {
+        min-width:100vw!important;
+      }
     }
   }
 
