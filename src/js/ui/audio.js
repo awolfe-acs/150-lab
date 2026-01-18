@@ -34,6 +34,43 @@ const clickDebounceMs = 50; // Prevent multiple clicks within 50ms
 let currentFadeAnimationId = null;
 let activeFadeTimeout = null;
 
+// SAFARI FIX: Singleton AudioContext - Safari limits the number of AudioContexts
+// Creating multiple instances can cause audio to fail after several plays
+let sharedAudioContext = null;
+
+// Safari detection
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+// Get or create the shared AudioContext (singleton pattern)
+function getSharedAudioContext() {
+  if (!sharedAudioContext) {
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) {
+        sharedAudioContext = new AudioContextClass();
+        logger.log('[audio.js] Created shared AudioContext');
+      }
+    } catch (e) {
+      logger.warn('[audio.js] Could not create AudioContext:', e);
+    }
+  }
+  return sharedAudioContext;
+}
+
+// Resume the shared AudioContext (SAFARI FIX: must be called from user gesture)
+async function resumeAudioContext() {
+  const ctx = getSharedAudioContext();
+  if (ctx && ctx.state === 'suspended') {
+    try {
+      await ctx.resume();
+      logger.log('[audio.js] AudioContext resumed, state:', ctx.state);
+    } catch (e) {
+      logger.warn('[audio.js] Could not resume AudioContext:', e);
+    }
+  }
+  return ctx;
+}
+
 // Initialize UI click sound
 function initializeUIClickSound() {
   if (!uiClickSound) {
@@ -111,7 +148,7 @@ const playUIClickSound = () => {
 };
 
 // Robust function to resume background audio
-function resumeBackgroundAudio() {
+async function resumeBackgroundAudio() {
   logger.log('[audio.js] resumeBackgroundAudio called');
   
   if (!backgroundAudioInstance || audioMuted) {
@@ -121,55 +158,51 @@ function resumeBackgroundAudio() {
   
   cancelActiveFade();
   
-  // Resume AudioContext if suspended (critical for some browsers)
-  if (window.AudioContext || window.webkitAudioContext) {
-    try {
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioContext.state === 'suspended') {
-        logger.log('[audio.js] Resuming suspended audio context');
-        audioContext.resume();
-      }
-    } catch (e) {
-      logger.warn('[audio.js] Error accessing AudioContext:', e);
-    }
-  }
+  // SAFARI FIX: Use shared AudioContext instead of creating a new one
+  // This prevents Safari from running out of AudioContext slots
+  await resumeAudioContext();
   
   // Always set start volume for fade (if currently very low, start from near 0)
   if (backgroundAudioInstance.volume < 0.01) {
     backgroundAudioInstance.volume = 0.001;
   }
   
+  // SAFARI FIX: For Safari, ensure the audio element is in a good state
+  if (isSafari) {
+    // Safari sometimes needs the currentTime reset to work properly
+    if (backgroundAudioInstance.paused && backgroundAudioInstance.currentTime > 0) {
+      logger.log('[audio.js] Safari: Audio was paused, ensuring good state');
+    }
+  }
+  
   // Force play() even if we think we're playing - this ensures the browser acknowledges the active state
   // and returns a Promise we can handle
-  const playPromise = backgroundAudioInstance.play();
-  
-  if (playPromise !== undefined) {
-    playPromise
-      .then(() => {
-        logger.log('[audio.js] Audio play confirmed, fading in to 0.22');
-        fadeBackgroundAudio(0.22, 1000);
-      })
-      .catch((error) => {
-        logger.warn('[audio.js] Audio play blocked:', error);
-        
-        // Setup one-time click listener for fallback
-        const resumeOnClick = () => {
-          logger.log('[audio.js] User clicked, retrying audio resume');
-          if (backgroundAudioInstance && !audioMuted) {
-            backgroundAudioInstance.play()
-              .then(() => {
-                fadeBackgroundAudio(0.22, 1000);
-                document.removeEventListener('click', resumeOnClick);
-              })
-              .catch(e => logger.error('[audio.js] Retry failed:', e));
-          }
-        };
-        document.addEventListener('click', resumeOnClick, { once: true });
-      });
-  } else {
-    // If play() didn't return a promise (very old browsers), just fade in
-    logger.log('[audio.js] Play promise undefined, fading in');
+  try {
+    await backgroundAudioInstance.play();
+    logger.log('[audio.js] Audio play confirmed, fading in to 0.22');
     fadeBackgroundAudio(0.22, 1000);
+  } catch (error) {
+    logger.warn('[audio.js] Audio play blocked:', error);
+    
+    // SAFARI FIX: Safari is stricter about user gestures
+    // Setup one-time click/touchend listener for fallback (touchend for iOS Safari)
+    const resumeOnInteraction = async () => {
+      logger.log('[audio.js] User interacted, retrying audio resume');
+      if (backgroundAudioInstance && !audioMuted) {
+        try {
+          // Resume AudioContext first (this is the user gesture)
+          await resumeAudioContext();
+          await backgroundAudioInstance.play();
+          fadeBackgroundAudio(0.22, 1000);
+        } catch (e) {
+          logger.error('[audio.js] Retry failed:', e);
+        }
+      }
+      document.removeEventListener('click', resumeOnInteraction);
+      document.removeEventListener('touchend', resumeOnInteraction);
+    };
+    document.addEventListener('click', resumeOnInteraction, { once: true });
+    document.addEventListener('touchend', resumeOnInteraction, { once: true, passive: true });
   }
 }
 
@@ -662,16 +695,12 @@ function playBackgroundAudioWhenReady(fromEnterButton = false) {
     // Play the audio at 22% volume
     backgroundAudioInstance.volume = 0.22;
 
-    // Create a user gesture for Safari if needed
+    // SAFARI FIX: Resume shared AudioContext if needed (uses singleton, not new instance)
     if (fromEnterButton) {
-      try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const source = audioContext.createBufferSource();
-        source.connect(audioContext.destination);
-        source.start(0);
-      } catch (e) {
-        logger.warn("Could not create audio context:", e);
-      }
+      // This is called from a user gesture (enter button click), so we can resume
+      resumeAudioContext().catch(e => {
+        logger.warn("Could not resume audio context:", e);
+      });
     }
 
     backgroundAudioInstance
@@ -1132,18 +1161,12 @@ export function setupSoundToggle() {
           } else if (audioInitialized && backgroundAudioInstance) {
             // Unmute the audio only if it was previously initialized
             
-            // Resume AudioContext if suspended (critical for some browsers)
-            if (window.AudioContext || window.webkitAudioContext) {
-              try {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                if (audioContext.state === 'suspended') {
-                  logger.log('[audio.js] Resuming suspended audio context on unmute');
-                  audioContext.resume();
-                }
-              } catch (e) {
-                logger.warn('[audio.js] Error accessing AudioContext on unmute:', e);
-              }
-            }
+            // SAFARI FIX: Use shared AudioContext (this click is a user gesture, so it can resume)
+            resumeAudioContext().then(() => {
+              logger.log('[audio.js] AudioContext resumed on unmute');
+            }).catch(e => {
+              logger.warn('[audio.js] Error resuming AudioContext on unmute:', e);
+            });
             
             // Set volume before playing
             backgroundAudioInstance.volume = 0.22;
@@ -1152,19 +1175,24 @@ export function setupSoundToggle() {
             // Browser state can be unpredictable (auto-suspend, context issues)
             // Calling play() on already-playing audio is harmless
             logger.log('[audio.js] Unmuting - attempting to play audio');
-            backgroundAudioInstance.play().then(() => {
-              logger.log('[audio.js] Audio resumed successfully on unmute');
-            }).catch((error) => {
-              logger.warn("Audio play was prevented on unmute:", error);
+            
+            // SAFARI FIX: Wrap in async IIFE to properly await the AudioContext resume
+            (async () => {
+              try {
+                await backgroundAudioInstance.play();
+                logger.log('[audio.js] Audio resumed successfully on unmute');
+              } catch (error) {
+                logger.warn("Audio play was prevented on unmute:", error);
 
-              // If play failed, mark as not initialized so it can be retried
-              audioInitialized = false;
+                // If play failed, mark as not initialized so it can be retried
+                audioInitialized = false;
 
-              // Only try to replay if enter was clicked previously
-              if (enterButtonClicked) {
-                playBackgroundAudio(true);
+                // Only try to replay if enter was clicked previously
+                if (enterButtonClicked) {
+                  playBackgroundAudio(true);
+                }
               }
-            });
+            })();
           }
         }
       }

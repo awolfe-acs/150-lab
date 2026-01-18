@@ -259,6 +259,9 @@ export function initCoverArea() {
   // DELAY: Wait for shader background to fade in first (CSS takes ~0.8s)
   // This ensures: Shader -> App -> Logo -> Countdown -> Button
   const tl = gsap.timeline({ delay: 0.6 });
+  
+  // Get the initial loader to hide it when app fades in
+  const initialLoader = document.querySelector("#initial-loader");
 
   // First, fade in #app from opacity 0 to 1
   if (app) {
@@ -268,6 +271,16 @@ export function initCoverArea() {
         opacity: 1,
         duration: 0.6,
         ease: "power2.out",
+        onStart: () => {
+          // Hide the loader when app starts fading in
+          if (initialLoader) {
+            initialLoader.classList.add("hidden");
+            // Remove from DOM after fade transition
+            setTimeout(() => {
+              initialLoader.remove();
+            }, 400);
+          }
+        },
       }
     );
   }

@@ -7,6 +7,9 @@ const videoUrl = `${assetBasePath}/video/acs-150-compressed-3.mp4`;
 const posterUrl = `${assetBasePath}/images/ACS150-promo-cover.jpg`;
 import logger from "./utils/logger.js";
 
+// SAFARI DETECTION: Safari has unique audio/video behavior
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
 // Flag to indicate when sound toggle is triggered by video slider
 let videoSliderTriggeredUnmute = false;
 
@@ -488,6 +491,10 @@ export function initVideo() {
     
     // Change preload to metadata to start buffering
     videoElement.preload = "metadata";
+    
+    // SAFARI FIX: Explicitly call load() to start loading the video
+    // Safari sometimes doesn't start loading just from setting src
+    videoElement.load();
     
     // After a short delay, upgrade to auto for smoother playback
     setTimeout(() => {
@@ -997,6 +1004,11 @@ export function initVideo() {
 
   // Handle play/pause
   const handlePlayPause = () => {
+    // SAFARI FIX: Prevent multiple rapid clicks
+    if (overlay.classList.contains("loading")) {
+      return;
+    }
+    
     if (videoElement.paused) {
       // Clear any existing fade timeout
       if (scrollAwayFadeTimeout) {
@@ -1008,13 +1020,55 @@ export function initVideo() {
       if (!videoSourceLoaded) {
         logger.log("[video.js] User clicked play before lazy load, loading immediately");
         loadVideoSource();
-        // Wait for enough data to play
-        videoElement.addEventListener('canplay', function onCanPlay() {
-          videoElement.removeEventListener('canplay', onCanPlay);
-          playVideo();
-        }, { once: true });
         // Show loading state on overlay
         overlay.classList.add("loading");
+        
+        // SAFARI FIX: Use 'canplaythrough' instead of 'canplay' for better compatibility
+        // Also add a timeout fallback in case the event doesn't fire
+        const onCanPlayThrough = () => {
+          videoElement.removeEventListener('canplaythrough', onCanPlayThrough);
+          videoElement.removeEventListener('canplay', onCanPlay);
+          clearTimeout(playTimeout);
+          playVideo();
+        };
+        const onCanPlay = () => {
+          videoElement.removeEventListener('canplaythrough', onCanPlayThrough);
+          videoElement.removeEventListener('canplay', onCanPlay);
+          clearTimeout(playTimeout);
+          playVideo();
+        };
+        
+        videoElement.addEventListener('canplaythrough', onCanPlayThrough, { once: true });
+        videoElement.addEventListener('canplay', onCanPlay, { once: true });
+        
+        // Fallback timeout for Safari (3 seconds)
+        const playTimeout = setTimeout(() => {
+          videoElement.removeEventListener('canplaythrough', onCanPlayThrough);
+          videoElement.removeEventListener('canplay', onCanPlay);
+          logger.log("[video.js] Timeout reached, attempting to play anyway");
+          playVideo();
+        }, 3000);
+        
+        return;
+      }
+
+      // SAFARI FIX: Check if video has enough data to play
+      // readyState: 0=HAVE_NOTHING, 1=HAVE_METADATA, 2=HAVE_CURRENT_DATA, 3=HAVE_FUTURE_DATA, 4=HAVE_ENOUGH_DATA
+      if (videoElement.readyState < 2) {
+        logger.log("[video.js] Video not ready, waiting for data...");
+        overlay.classList.add("loading");
+        
+        const onDataReady = () => {
+          videoElement.removeEventListener('canplay', onDataReady);
+          videoElement.removeEventListener('loadeddata', onDataReady);
+          playVideo();
+        };
+        
+        videoElement.addEventListener('canplay', onDataReady, { once: true });
+        videoElement.addEventListener('loadeddata', onDataReady, { once: true });
+        
+        // Also try to trigger load
+        videoElement.load();
         return;
       }
 
@@ -1025,14 +1079,19 @@ export function initVideo() {
   };
   
   // Extracted play logic for reuse
-  const playVideo = () => {
+  // SAFARI FIX: Handle play() promise properly - Safari requires this
+  const playVideo = async () => {
     overlay.classList.remove("loading");
-    videoElement.play();
-    overlay.classList.add("hidden");
+    
+    if (isSafari) {
+      logger.log("[video.js] Safari detected - using Safari-compatible playback");
+    }
+    
     // Fade out background music and ensure video audio is playing
     if (window.backgroundAudio) {
       fadeAudio(window.backgroundAudio, 0);
     }
+    
     // Restore original volume or set based on global audio state
     if (window.audioMuted) {
       videoElement.volume = 0;
@@ -1042,15 +1101,82 @@ export function initVideo() {
       videoElement.muted = false;
       videoElement.volume = originalVideoVolume;
     }
-    // Update slider after setting volume
-    updateSlider();
-    // Ensure smooth updates are started
-    startSmoothUpdates();
+    
+    try {
+      // SAFARI FIX: play() returns a promise that must be handled
+      // Safari will reject the promise if autoplay policy isn't met
+      await videoElement.play();
+      overlay.classList.add("hidden");
+      // Update slider after setting volume
+      updateSlider();
+      // Ensure smooth updates are started
+      startSmoothUpdates();
+      logger.log("[video.js] Video playback started successfully");
+    } catch (error) {
+      logger.warn("[video.js] Play failed (Safari autoplay policy?):", error);
+      // SAFARI FIX: If play fails, try playing muted first
+      // This is a common Safari workaround
+      try {
+        videoElement.muted = true;
+        await videoElement.play();
+        overlay.classList.add("hidden");
+        // Show a message or indicator that video is muted
+        logger.log("[video.js] Playing muted due to autoplay policy");
+        updateSlider();
+        startSmoothUpdates();
+        
+        // SAFARI FIX: For Safari, add a one-time interaction listener to unmute
+        if (isSafari && !window.audioMuted) {
+          const unmuteOnInteraction = () => {
+            if (videoElement && !videoElement.paused && videoElement.muted) {
+              videoElement.muted = false;
+              videoElement.volume = originalVideoVolume;
+              updateSlider();
+              logger.log("[video.js] Safari: Unmuted video after user interaction");
+            }
+            document.removeEventListener('click', unmuteOnInteraction);
+            document.removeEventListener('touchend', unmuteOnInteraction);
+          };
+          document.addEventListener('click', unmuteOnInteraction, { once: true });
+          document.addEventListener('touchend', unmuteOnInteraction, { once: true, passive: true });
+        }
+      } catch (mutedError) {
+        logger.error("[video.js] Play failed even when muted:", mutedError);
+        overlay.classList.remove("hidden");
+      }
+    }
   };
 
+  // SAFARI FIX: Track last interaction to prevent double-firing
+  let lastInteractionTime = 0;
+  const INTERACTION_DEBOUNCE_MS = 300;
+  
+  const debouncedPlayPause = (e) => {
+    const now = Date.now();
+    if (now - lastInteractionTime < INTERACTION_DEBOUNCE_MS) {
+      logger.log('[video.js] Debounced duplicate play/pause trigger');
+      return;
+    }
+    lastInteractionTime = now;
+    handlePlayPause();
+  };
+  
   // Add click handlers
-  overlay.addEventListener("click", handlePlayPause);
-  videoElement.addEventListener("click", handlePlayPause);
+  overlay.addEventListener("click", debouncedPlayPause);
+  videoElement.addEventListener("click", debouncedPlayPause);
+  
+  // SAFARI iOS FIX: Add touch event handlers
+  // Safari iOS sometimes doesn't trigger click events properly on video elements
+  // Using debounced handler to prevent double-firing when both touchend and click fire
+  overlay.addEventListener("touchend", (e) => {
+    e.preventDefault(); // Prevent synthetic click
+    debouncedPlayPause(e);
+  }, { passive: false });
+  
+  videoElement.addEventListener("touchend", (e) => {
+    e.preventDefault();
+    debouncedPlayPause(e);
+  }, { passive: false });
 
   // Handle video end
   videoElement.addEventListener("ended", () => {

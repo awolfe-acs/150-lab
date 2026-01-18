@@ -1099,11 +1099,13 @@ export async function initShaderBackground() {
   const initialHeight = getTrueViewportHeight();
 
   // Set canvas to fill the viewport and position it fixed in the background
+  // SAFARI FIX: Use explicit pixel values instead of CSS viewport units
+  // Safari can have issues with 100vw/100svh on canvas elements causing stretching
   canvas.style.position = "fixed";
   canvas.style.top = "0";
   canvas.style.left = "0";
-  canvas.style.width = "100vw";
-  canvas.style.height = "100svh";
+  canvas.style.width = `${initialWidth}px`;
+  canvas.style.height = `${initialHeight}px`;
   canvas.style.zIndex = "-1"; // Place behind other content
 
   // MOBILE SHADER WIDENING: On mobile (< 640px), stretch the shader background to 150vw
@@ -5028,6 +5030,11 @@ export async function initShaderBackground() {
     const width = window.innerWidth;
     const height = getTrueViewportHeight();
 
+    // SAFARI FIX: Update canvas CSS dimensions with explicit pixel values
+    // Safari can have issues with viewport units on canvas elements
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+
     // Update canvas and renderer size
     renderer.setSize(width, height);
 
@@ -5140,6 +5147,11 @@ export async function initShaderBackground() {
   function handleResize() {
     const width = window.innerWidth;
     const height = getTrueViewportHeight();
+    
+    // SAFARI FIX: Update canvas CSS dimensions with explicit pixel values
+    // Safari can have issues with viewport units on canvas elements
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
     
     // Update mobile shader widening based on viewport width
     const isMobileWidth = width < 640;
