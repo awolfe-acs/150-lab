@@ -1,57 +1,61 @@
 /**
  * Mobile Film Grain Overlay
  * A lightweight, performance-optimized film grain effect for mobile devices.
- * Uses a small canvas texture that updates at 24fps (cinematic framerate)
- * and is overlaid via CSS blend modes for minimal GPU impact.
+ * 
+ * PERFORMANCE OPTIMIZATION:
+ * Instead of generating frames on-the-fly with expensive toDataURL() calls,
+ * this version pre-generates a set of frames at initialization and cycles
+ * through them using CSS animation. This eliminates the main performance
+ * bottleneck (toDataURL + style recalculation every frame).
  */
 
 import logger from './logger.js';
-import performanceDetector from './performanceDetector.js';
 
 class MobileFilmGrain {
   constructor() {
-    this.canvas = null;
-    this.ctx = null;
     this.overlay = null;
     this.isRunning = false;
-    this.intervalId = null;
+    this.frameIndex = 0;
+    this.animationFrameId = null;
     
-    this.targetFPS = 16;
+    // Target visual FPS (how fast the grain appears to animate)
+    this.targetFPS = 8; // Slightly faster than 6fps for more natural look
     this.frameInterval = 1000 / this.targetFPS;
+    this.lastFrameTime = 0;
+    
+    // Pre-generated frames as data URLs
+    this.frames = [];
+    this.frameCount = 4; // Only need a few frames for film grain effect
     
     // Grain settings
-    this.grainIntensity = 0.64; // Strong visible grain for cinematic look
-    this.grainSize = 1.5; // Smaller size = higher resolution appearance
-    this.opacity = 0.8; 
+    this.grainIntensity = 0.5;
+    this.grainSize = 1.0;
+    this.opacity = 0.25; // Slightly reduced for performance
     
-    // Higher resolution texture for sharper grain
-    this.textureWidth = 512;
-    this.textureHeight = 512;
+    // Texture dimensions - smaller = faster
+    this.textureWidth = 48; // Reduced from 64
+    this.textureHeight = 48;
     
-    // Pre-generate noise values for faster updates
+    // Noise buffer for fast generation
     this.noiseBuffer = null;
-    this.noiseBufferSize = 512 * 512;
-    
-    // Frame counter for distinct frame-to-frame changes
-    this.frameCount = 0;
+    this.noiseBufferSize = 256 * 256;
   }
 
   /**
    * Initialize the film grain overlay
    */
   init() {
-    if (this.canvas) return; // Already initialized
+    if (this.overlay) return; // Already initialized
     
-    // Create canvas for generating grain texture
-    this.canvas = document.createElement('canvas');
-    this.canvas.width = this.textureWidth;
-    this.canvas.height = this.textureHeight;
-    this.ctx = this.canvas.getContext('2d', { 
-      alpha: true,
-      willReadFrequently: false 
-    });
+    const startTime = performance.now();
     
-    // Create overlay element
+    // Pre-generate noise buffer
+    this.generateNoiseBuffer();
+    
+    // Pre-generate all frames upfront (one-time cost)
+    this.preGenerateFrames();
+    
+    // Create overlay element with first frame
     this.overlay = document.createElement('div');
     this.overlay.id = 'mobile-film-grain';
     this.overlay.style.cssText = `
@@ -66,27 +70,28 @@ class MobileFilmGrain {
       mix-blend-mode: overlay;
       background-repeat: repeat;
       background-size: ${Math.round(this.textureWidth * this.grainSize)}px ${Math.round(this.textureHeight * this.grainSize)}px;
-      will-change: background-image;
       image-rendering: pixelated;
     `;
     
-    // Pre-generate noise buffer
-    this.generateNoiseBuffer();
+    // Set initial frame
+    if (this.frames.length > 0) {
+      this.overlay.style.backgroundImage = `url(${this.frames[0]})`;
+    }
     
     // Add to DOM - insert right before #shaderBackground
     const shaderBackground = document.getElementById('shaderBackground');
     if (shaderBackground && shaderBackground.parentNode) {
       shaderBackground.parentNode.insertBefore(this.overlay, shaderBackground);
-      logger.log('[Mobile Film Grain] Initialized (inserted before #shaderBackground)');
     } else {
-      // Fallback to body if shaderBackground not found
       document.body.appendChild(this.overlay);
-      logger.log('[Mobile Film Grain] Initialized (appended to body - shaderBackground not found)');
     }
+    
+    const initTime = performance.now() - startTime;
+    logger.log(`[Mobile Film Grain] Initialized in ${initTime.toFixed(1)}ms with ${this.frameCount} pre-generated frames`);
   }
 
   /**
-   * Pre-generate a buffer of random values for fast noise updates
+   * Pre-generate a buffer of random values
    */
   generateNoiseBuffer() {
     this.noiseBuffer = new Uint8Array(this.noiseBufferSize);
@@ -96,68 +101,75 @@ class MobileFilmGrain {
   }
 
   /**
-   * Generate a new grain texture frame
-   * Uses distinct random patterns each frame for authentic 24fps film look
+   * Pre-generate all frames at initialization
+   * This is the key optimization - expensive toDataURL calls happen once,
+   * not every frame during runtime
    */
-  generateGrainFrame() {
-    if (!this.ctx || !this.noiseBuffer) return;
+  preGenerateFrames() {
+    const canvas = document.createElement('canvas');
+    canvas.width = this.textureWidth;
+    canvas.height = this.textureHeight;
+    const ctx = canvas.getContext('2d', { alpha: true });
     
-    const imageData = this.ctx.createImageData(this.textureWidth, this.textureHeight);
-    const data = imageData.data;
     const intensity = this.grainIntensity * 255;
+    const pixelCount = this.textureWidth * this.textureHeight;
     
-    // Use frame count to create distinct, non-repeating patterns
-    // This gives the characteristic "flickery" 24fps film grain look
-    this.frameCount++;
-    const frameSeed = this.frameCount * 7919; // Prime number for good distribution
-    
-    // Generate completely fresh noise each frame for authentic film grain
-    for (let i = 0; i < this.textureWidth * this.textureHeight; i++) {
-      const idx = i * 4;
+    for (let frame = 0; frame < this.frameCount; frame++) {
+      const imageData = ctx.createImageData(this.textureWidth, this.textureHeight);
+      const data = imageData.data;
       
-      // Mix pre-computed buffer with frame-specific randomness for distinct frames
-      const bufferIdx = (i + frameSeed) % this.noiseBufferSize;
-      const baseNoise = this.noiseBuffer[bufferIdx];
+      // Use different offset for each frame to create distinct patterns
+      const frameSeed = frame * 7919;
       
-      // Add per-frame randomness for more organic, flickery grain
-      const frameNoise = ((baseNoise * 31 + frameSeed) % 256);
-      const noise = (frameNoise - 128) * (intensity / 128);
+      for (let i = 0; i < pixelCount; i++) {
+        const idx = i * 4;
+        const bufferIdx = (i + frameSeed) % this.noiseBufferSize;
+        const baseNoise = this.noiseBuffer[bufferIdx];
+        const frameNoise = ((baseNoise * 31 + frameSeed) % 256);
+        const noise = (frameNoise - 128) * (intensity / 128);
+        
+        data[idx] = 128 + noise;     // R
+        data[idx + 1] = 128 + noise; // G
+        data[idx + 2] = 128 + noise; // B
+        data[idx + 3] = 120;         // Alpha
+      }
       
-      // Apply noise to RGB (grayscale grain)
-      data[idx] = 128 + noise;     // R
-      data[idx + 1] = 128 + noise; // G
-      data[idx + 2] = 128 + noise; // B
-      data[idx + 3] = 140;         // Alpha (strong visible grain)
+      ctx.putImageData(imageData, 0, 0);
+      
+      // Store frame as data URL (expensive, but only done once)
+      this.frames.push(canvas.toDataURL('image/png'));
     }
     
-    this.ctx.putImageData(imageData, 0, 0);
-    
-    // Update overlay background
-    this.overlay.style.backgroundImage = `url(${this.canvas.toDataURL('image/png')})`;
+    // Clear the canvas reference
+    canvas.width = 0;
+    canvas.height = 0;
   }
 
   /**
-   * Animation loop running at strict 24fps using setInterval
-   * Using setInterval instead of RAF ensures consistent 24fps regardless of display refresh rate
+   * Animation loop - just cycles through pre-generated frames
+   * Much faster than generating frames on-the-fly
    */
-  animate() {
-    // Use setInterval for precise 24fps timing
-    // This ensures the grain updates exactly 24 times per second
-    // regardless of the device's refresh rate (60hz, 120hz, etc.)
-    this.intervalId = setInterval(() => {
-      if (!this.isRunning) {
-        clearInterval(this.intervalId);
-        return;
-      }
-      
-      // Skip if page is hidden
-      if (document.hidden) {
-        return;
-      }
-      
-      // Generate new grain frame
-      this.generateGrainFrame();
-    }, this.frameInterval); // 41.67ms = 24fps
+  animate(currentTime) {
+    if (!this.isRunning) return;
+    
+    this.animationFrameId = requestAnimationFrame((time) => this.animate(time));
+    
+    // Skip if page is hidden
+    if (document.hidden) return;
+    
+    // Check if enough time has passed for next frame
+    const elapsed = currentTime - this.lastFrameTime;
+    if (elapsed < this.frameInterval) return;
+    
+    this.lastFrameTime = currentTime - (elapsed % this.frameInterval);
+    
+    // Cycle to next frame
+    this.frameIndex = (this.frameIndex + 1) % this.frameCount;
+    
+    // Update background image (just a string reference, very fast)
+    if (this.overlay && this.frames[this.frameIndex]) {
+      this.overlay.style.backgroundImage = `url(${this.frames[this.frameIndex]})`;
+    }
   }
 
   /**
@@ -168,9 +180,10 @@ class MobileFilmGrain {
     
     this.init();
     this.isRunning = true;
-    this.animate();
+    this.lastFrameTime = performance.now();
+    this.animationFrameId = requestAnimationFrame((time) => this.animate(time));
     
-    logger.log(`[Mobile Film Grain] Started at ${this.targetFPS}fps (${this.frameInterval.toFixed(1)}ms interval)`);
+    logger.log(`[Mobile Film Grain] Started at ~${this.targetFPS}fps`);
   }
 
   /**
@@ -178,9 +191,27 @@ class MobileFilmGrain {
    */
   stop() {
     this.isRunning = false;
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+  }
+
+  /**
+   * Pause during scroll for better performance
+   */
+  pauseForScroll() {
+    if (this.overlay) {
+      this.overlay.style.display = 'none';
+    }
+  }
+
+  /**
+   * Resume after scroll
+   */
+  resumeAfterScroll() {
+    if (this.overlay) {
+      this.overlay.style.display = 'block';
     }
   }
 
@@ -229,9 +260,8 @@ class MobileFilmGrain {
       this.overlay.parentNode.removeChild(this.overlay);
     }
     
-    this.canvas = null;
-    this.ctx = null;
     this.overlay = null;
+    this.frames = [];
     this.noiseBuffer = null;
     
     logger.log('[Mobile Film Grain] Destroyed');

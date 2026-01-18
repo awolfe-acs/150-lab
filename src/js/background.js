@@ -423,6 +423,17 @@ export async function initShaderBackground() {
       },
     });
 
+    // PERFORMANCE: Pre-create color objects outside the scroll callback to avoid GC pressure
+    // Creating new THREE.Color objects every frame was causing major performance issues
+    const phase0to1_phase0Color1 = new THREE.Color("#e2e2e2");
+    const phase0to1_phase0Color2 = new THREE.Color("#515151");
+    const phase0to1_phase1Color1 = new THREE.Color("#32c2d6");
+    const phase0to1_phase1Color2 = new THREE.Color("#004199");
+    const phase0to1_tempColor1 = new THREE.Color();
+    const phase0to1_tempColor2 = new THREE.Color();
+    let phase0to1_lastProgress = -1;
+    let phase0to1_coverAreaOverlay = null; // Cache DOM element
+    
     // Create a ScrollTrigger to transition from phase 0 to phase 1 colors when entering #hero-travel-area
     gsap.timeline({
       scrollTrigger: {
@@ -436,23 +447,20 @@ export async function initShaderBackground() {
           if (!uniforms || !uniforms.color1 || !uniforms.color2) return;
 
           // Get the current progress from start to end (0 to 1)
-          const progress = self.progress;
+          // Round to 3 decimal places to reduce micro-updates
+          const progress = Math.round(self.progress * 1000) / 1000;
+          
+          // PERFORMANCE: Skip if progress hasn't changed significantly
+          if (progress === phase0to1_lastProgress) return;
+          phase0to1_lastProgress = progress;
 
-          // Phase 0 initial colors (cover area)
-          const phase0Color1 = new THREE.Color("#e2e2e2");
-          const phase0Color2 = new THREE.Color("#515151");
-
-          // Phase 1 target colors (original)
-          const phase1Color1 = new THREE.Color("#32c2d6");
-          const phase1Color2 = new THREE.Color("#004199");
-
-          // Interpolate between phase 0 and phase 1 colors
-          const currentColor1 = phase0Color1.clone().lerp(phase1Color1, progress);
-          const currentColor2 = phase0Color2.clone().lerp(phase1Color2, progress);
+          // Interpolate between phase 0 and phase 1 colors using pre-created objects
+          phase0to1_tempColor1.copy(phase0to1_phase0Color1).lerp(phase0to1_phase1Color1, progress);
+          phase0to1_tempColor2.copy(phase0to1_phase0Color2).lerp(phase0to1_phase1Color2, progress);
 
           // Apply the interpolated colors to the shader
-          uniforms.color1.value.copy(currentColor1);
-          uniforms.color2.value.copy(currentColor2);
+          uniforms.color1.value.copy(phase0to1_tempColor1);
+          uniforms.color2.value.copy(phase0to1_tempColor2);
 
           // Update color phase based on progress
           if (progress > 0.9) {
@@ -466,25 +474,42 @@ export async function initShaderBackground() {
           // Mark that we're in special colors mode during transition
           window.specialColorsActive = true;
 
-          // Update the GUI to reflect the current interpolated colors
-          updateColorGUI();
-          updateWaveGUI();
+          // REMOVED: updateColorGUI() and updateWaveGUI() - these are expensive DOM operations
+          // that should not be called every frame. They're only needed for dev tools.
 
           // Simultaneously fade out the cover area overlay and increase saturation
-          const coverAreaOverlay = document.querySelector("#cover-area-overlay");
-          if (coverAreaOverlay) {
+          // Cache the DOM element lookup
+          if (!phase0to1_coverAreaOverlay) {
+            phase0to1_coverAreaOverlay = document.querySelector("#cover-area-overlay");
+          }
+          if (phase0to1_coverAreaOverlay) {
             // Fade from opacity 1 to 0 as we progress
             const overlayOpacity = 1 - progress;
             // Increase saturation from 1 to 2.2 as we progress
             const saturation = 1 + progress * 1.2; // 1 + (1 * 1.2) = 2.2
 
-            coverAreaOverlay.style.opacity = overlayOpacity;
-            coverAreaOverlay.style.filter = `saturate(${saturation})`;
+            phase0to1_coverAreaOverlay.style.opacity = overlayOpacity;
+            phase0to1_coverAreaOverlay.style.filter = `saturate(${saturation})`;
           }
         },
       },
     });
 
+    // PERFORMANCE: Pre-create color objects for phase 1->2 transition
+    // Creating new THREE.Color objects every frame was causing major GC pressure
+    const phase1to2_phase1Color1 = new THREE.Color("#32c2d6");
+    const phase1to2_phase1Color2 = new THREE.Color("#004199");
+    const phase1to2_phase1_5Color1 = new THREE.Color("#B225B1");
+    const phase1to2_phase1_5Color2 = new THREE.Color("#FCC72D");
+    const phase1to2_phase2Color1 = new THREE.Color("#DA281C");
+    const phase1to2_phase2Color2 = new THREE.Color("#FCC72D");
+    const phase1to2_tempColor1 = new THREE.Color();
+    const phase1to2_tempColor2 = new THREE.Color();
+    let phase1to2_lastProgress = -1;
+    let phase1to2_coverAreaOverlay = null; // Cache DOM element
+    let phase1to2_shaderBackground = null; // Cache DOM element
+    let phase1to2_hueRotateCleared = false; // Track if we've already cleared hue-rotate
+    
     // Create a ScrollTrigger to transition from phase 1 to phase 2 colors during #hero-travel-area
     gsap.timeline({
       scrollTrigger: {
@@ -498,61 +523,55 @@ export async function initShaderBackground() {
           if (!uniforms || !uniforms.color1 || !uniforms.color2) return;
 
           // Get the current progress from start to end (0 to 1)
-          const progress = self.progress;
+          // Round to 3 decimal places to reduce micro-updates
+          const progress = Math.round(self.progress * 1000) / 1000;
+          
+          // PERFORMANCE: Skip if progress hasn't changed significantly
+          if (progress === phase1to2_lastProgress) return;
+          phase1to2_lastProgress = progress;
 
-          // Phase 1 initial colors (now coming from phase 0->1 transition)
-          const phase1Color1 = new THREE.Color("#32c2d6");
-          const phase1Color2 = new THREE.Color("#004199");
-
-          // Phase 1.5 intermediate colors (to avoid muddy transition)
-          const phase1_5Color1 = new THREE.Color("#B225B1");
-          const phase1_5Color2 = new THREE.Color("#FCC72D");
-
-          // Phase 2 target colors
-          const phase2Color1 = new THREE.Color("#DA281C");
-          const phase2Color2 = new THREE.Color("#FCC72D");
-
-          // Three-stage interpolation to avoid muddy colors
-          // Color1 reaches phase 1.5 at 20% progress (50% earlier than color2)
-          // Color2 reaches phase 1.5 at 40% progress (original timing)
-          let currentColor1, currentColor2;
-
-          // Handle Color1 timing (reaches phase 1.5 at 40% progress - delayed from 28%)
+          // Three-stage interpolation to avoid muddy colors using pre-created objects
+          // Handle Color1 timing (reaches phase 1.5 at 40% progress)
           if (progress <= 0.4) {
-            // First 40% for color1: stay at phase 1 color (extended persistence)
-            currentColor1 = phase1Color1.clone();
+            // First 40% for color1: stay at phase 1 color
+            phase1to2_tempColor1.copy(phase1to2_phase1Color1);
           } else if (progress <= 0.8) {
-            // From 40% to 80%: interpolate from phase 1 to phase 1.5 (delayed start)
-            const color1FirstStageProgress = (progress - 0.4) / (0.8 - 0.4); // Map 0.40-0.80 to 0-1
-            currentColor1 = phase1Color1.clone().lerp(phase1_5Color1, color1FirstStageProgress);
+            // From 40% to 80%: interpolate from phase 1 to phase 1.5
+            const color1FirstStageProgress = (progress - 0.4) / 0.4;
+            phase1to2_tempColor1.copy(phase1to2_phase1Color1).lerp(phase1to2_phase1_5Color1, color1FirstStageProgress);
           } else {
             // Final 20% (0.80-1): quick transition from phase 1.5 to phase 2
-            const color1FinalStageProgress = (progress - 0.8) / 0.2; // Map 0.80-1 to 0-1
-            currentColor1 = phase1_5Color1.clone().lerp(phase2Color1, color1FinalStageProgress);
+            const color1FinalStageProgress = (progress - 0.8) / 0.2;
+            phase1to2_tempColor1.copy(phase1to2_phase1_5Color1).lerp(phase1to2_phase2Color1, color1FinalStageProgress);
           }
 
-          // Handle Color2 timing (persists in phase 1 even longer, starts transition at ~60%)
+          // Handle Color2 timing (persists in phase 1 longer, starts at 60%)
           if (progress <= 0.6) {
-            // First 60% for color2: stay at phase 1 color (extended persistence)
-            currentColor2 = phase1Color2.clone();
+            // First 60% for color2: stay at phase 1 color
+            phase1to2_tempColor2.copy(phase1to2_phase1Color2);
           } else if (progress <= 0.8) {
-            // From 60% to 80%: interpolate from phase 1 to phase 1.5 (delayed start)
-            const color2FirstStageProgress = (progress - 0.6) / (0.8 - 0.6); // Map 0.60-0.80 to 0-1
-            currentColor2 = phase1Color2.clone().lerp(phase1_5Color2, color2FirstStageProgress);
+            // From 60% to 80%: interpolate from phase 1 to phase 1.5
+            const color2FirstStageProgress = (progress - 0.6) / 0.2;
+            phase1to2_tempColor2.copy(phase1to2_phase1Color2).lerp(phase1to2_phase1_5Color2, color2FirstStageProgress);
           } else {
             // Final 20% (0.80-1): quick transition from phase 1.5 to phase 2
-            const color2FinalStageProgress = (progress - 0.8) / 0.2; // Map 0.80-1 to 0-1
-            currentColor2 = phase1_5Color2.clone().lerp(phase2Color2, color2FinalStageProgress);
+            const color2FinalStageProgress = (progress - 0.8) / 0.2;
+            phase1to2_tempColor2.copy(phase1to2_phase1_5Color2).lerp(phase1to2_phase2Color2, color2FinalStageProgress);
           }
 
           // Apply the interpolated colors to the shader
-          uniforms.color1.value.copy(currentColor1);
-          uniforms.color2.value.copy(currentColor2);
+          uniforms.color1.value.copy(phase1to2_tempColor1);
+          uniforms.color2.value.copy(phase1to2_tempColor2);
 
-          // Remove any hue-rotate filter since we're using direct color interpolation
-          const shaderBackground = document.getElementById("shaderBackground");
-          if (shaderBackground) {
-            shaderBackground.style.filter = "hue-rotate(0deg)";
+          // PERFORMANCE: Only clear hue-rotate once, not every frame
+          if (!phase1to2_hueRotateCleared) {
+            if (!phase1to2_shaderBackground) {
+              phase1to2_shaderBackground = document.getElementById("shaderBackground");
+            }
+            if (phase1to2_shaderBackground) {
+              phase1to2_shaderBackground.style.filter = "hue-rotate(0deg)";
+              phase1to2_hueRotateCleared = true;
+            }
           }
 
           // Mark that we're transitioning between phases
@@ -561,7 +580,7 @@ export async function initShaderBackground() {
           } else if (progress < 0.1) {
             window.colorPhase = 1;
           } else {
-            window.colorPhase = 1.5; // Transitioning between phases
+            window.colorPhase = 1.5;
           }
 
           // Reset phase 1 timer since we've entered transition
@@ -569,27 +588,31 @@ export async function initShaderBackground() {
           window.specialColorsActive = true;
 
           // Handle cover area overlay fade-in as we leave phase 1 colors
-          const coverAreaOverlay = document.querySelector("#cover-area-overlay");
-          if (coverAreaOverlay) {
-            // Start fading in the overlay at 30% progress (when colors start changing more noticeably)
-            // Reach max opacity (0.5) at 100% progress (when we reach #video-travel-area)
+          // Cache DOM element lookup
+          if (!phase1to2_coverAreaOverlay) {
+            phase1to2_coverAreaOverlay = document.querySelector("#cover-area-overlay");
+          }
+          if (phase1to2_coverAreaOverlay) {
+            // Start fading in the overlay at 30% progress
             let overlayOpacity = 0;
             if (progress >= 0.3) {
-              // Map progress from 30%-100% to opacity 0-0.5
-              const fadeInProgress = (progress - 0.3) / (1.0 - 0.3); // Map 0.30-1.0 to 0-1
+              const fadeInProgress = (progress - 0.3) / 0.7;
               overlayOpacity = Math.min(0.5, fadeInProgress * 0.5);
             }
 
             // Maintain saturation increase as colors change
-            const saturation = 1 + progress * 1.2; // 1 + (1 * 1.2) = 2.2
+            const saturation = 1 + progress * 1.2;
 
-            coverAreaOverlay.style.opacity = overlayOpacity;
-            coverAreaOverlay.style.filter = `saturate(${saturation})`;
+            phase1to2_coverAreaOverlay.style.opacity = overlayOpacity;
+            phase1to2_coverAreaOverlay.style.filter = `saturate(${saturation})`;
           }
 
-          // Update the GUI to reflect the current interpolated colors
-          updateColorGUI();
-          updateWaveGUI();
+          // REMOVED: updateColorGUI() and updateWaveGUI() - expensive DOM operations
+          // that should not run every frame
+        },
+        onLeaveBack: () => {
+          // Reset hue-rotate flag when scrolling back up
+          phase1to2_hueRotateCleared = false;
         },
       },
     });
@@ -917,9 +940,7 @@ export async function initShaderBackground() {
 
                 window.specialColorsActive = true;
 
-                updateColorGUI();
-                updateLightingGUI();
-                updateWaveGUI();
+                // REMOVED: GUI updates - expensive DOM operations that shouldn't run every scroll frame
               } else if (window.colorPhase === 2) {
               // We're in phase two, maintain phase two special colors
               // Use the phase 2 colors (red and purple)
@@ -929,10 +950,7 @@ export async function initShaderBackground() {
               // Wave parameters are now managed by their respective scroll triggers
               window.specialColorsActive = true;
 
-              // Update the GUI to reflect the phase two colors
-              updateColorGUI();
-              updateLightingGUI();
-              updateWaveGUI();
+              // REMOVED: GUI updates - expensive DOM operations that shouldn't run every scroll frame
             } else if (window.colorPhase === 1) {
               // We're in phase one, maintain phase one special colors
               // Use the actual default phase 1 colors
@@ -941,10 +959,7 @@ export async function initShaderBackground() {
               // Wave parameters are now managed by their respective scroll triggers
               window.specialColorsActive = true;
 
-              // Update the GUI to reflect the phase one colors
-              updateColorGUI();
-              updateLightingGUI();
-              updateWaveGUI();
+              // REMOVED: GUI updates - expensive DOM operations that shouldn't run every scroll frame
             } else {
               // We're in phase zero, maintain phase zero colors
               // Use the actual default phase 0 colors
@@ -953,14 +968,10 @@ export async function initShaderBackground() {
               // Wave parameters are now managed by their respective scroll triggers
               window.specialColorsActive = true;
 
-              // Update the GUI to reflect the phase zero colors
-              updateColorGUI();
-              updateLightingGUI();
-              updateWaveGUI();
+              // REMOVED: GUI updates - expensive DOM operations that shouldn't run every scroll frame
             }
 
-            // Update the GUI if it exists
-            updateColorDarknessGUI();
+            // REMOVED: updateColorDarknessGUI() - expensive GUI update shouldn't run every scroll frame
           }
         },
       },
@@ -1095,10 +1106,26 @@ export async function initShaderBackground() {
   canvas.style.height = "100svh";
   canvas.style.zIndex = "-1"; // Place behind other content
 
-  // Force hardware acceleration to prevent address bar issues
-  canvas.style.transform = "translateZ(0)";
+  // MOBILE SHADER WIDENING: On mobile (< 640px), stretch the shader background to 150vw
+  // This creates a wider wave effect while the globe will be counter-scaled to stay undistorted
+  const isMobileWidthInit = window.innerWidth < 640;
+  const MOBILE_SHADER_SCALE_INIT = 1.5; // 150vw = 1.5x viewport width
+  
+  if (isMobileWidthInit) {
+    // Stretch canvas horizontally and center it
+    canvas.style.transform = `translateZ(0) scaleX(${MOBILE_SHADER_SCALE_INIT})`;
+    canvas.style.transformOrigin = "center center";
+    logger.log(`[Background Init] Mobile shader widening enabled: ${MOBILE_SHADER_SCALE_INIT}x width`);
+    console.log(`%c[ShaderBackground] Mobile widening ACTIVE - CSS scaleX(${MOBILE_SHADER_SCALE_INIT})`, 'color: orange; font-weight: bold');
+  } else {
+    // Force hardware acceleration to prevent address bar issues
+    canvas.style.transform = "translateZ(0)";
+  }
   canvas.style.transformStyle = "preserve-3d";
   canvas.style.willChange = "transform";
+  
+  // Store the mobile scale for globe compensation
+  window._mobileShaderScale = isMobileWidthInit ? MOBILE_SHADER_SCALE_INIT : 1;
 
   // Create the WebGL renderer with error handling and performance settings
   let renderer;
@@ -1429,6 +1456,60 @@ export async function initShaderBackground() {
 
   let globeModel;
   
+  // Store the "logical" uniform scale (what the globe SHOULD appear as visually)
+  // This is separate from the actual scale applied which may have compensation
+  let globeLogicalScale = 1;
+  
+  /**
+   * Helper function to apply scale to globe with mobile shader compensation
+   * On mobile (< 640px), the canvas is CSS-scaled 1.5x horizontally for wider waves.
+   * To keep the globe undistorted, we apply an inverse scaleX compensation.
+   * 
+   * The CSS transform scaleX(1.5) stretches the entire canvas output.
+   * To maintain a perfect 1:1 sphere, we must squish the X scale by 1/1.5.
+   */
+  function applyGlobeScale(scale) {
+    if (!globeModel) return;
+    
+    // Store the logical scale
+    globeLogicalScale = scale;
+    
+    const vw = window.innerWidth;
+    const shaderScale = window._mobileShaderScale || 1;
+    const isMobileShaderWide = vw < 640 && shaderScale > 1;
+    
+    if (isMobileShaderWide) {
+      // Compensate for CSS horizontal scaling by squishing the globe's X scale
+      // CSS transform scaleX(1.5) will stretch the output back, making it circular
+      // Example: If shaderScale = 1.5, compensation = 1/1.5 = 0.6667
+      // Final visual X scale after CSS: (scale * 0.6667) * 1.5 = scale (perfect circle)
+      const compensation = 1 / shaderScale;
+      
+      // Apply non-uniform scale: X is compressed, Y and Z remain normal
+      const xScale = scale * compensation;
+      globeModel.scale.set(xScale, scale, scale);
+      
+      // Debug output to browser console
+      console.log(`%c[Globe Compensation] shaderScale: ${shaderScale}, compensation: ${compensation.toFixed(4)}`, 'color: cyan; font-weight: bold');
+      console.log(`%c[Globe Compensation] Applied scale - X: ${xScale.toFixed(2)}, Y: ${scale.toFixed(2)}, Z: ${scale.toFixed(2)}`, 'color: cyan');
+      console.log(`%c[Globe Compensation] Visual after CSS: X: ${(xScale * shaderScale).toFixed(2)}, Y: ${scale.toFixed(2)} (should match)`, 'color: lime');
+      
+      logger.log(`[Globe] Logical scale: ${scale.toFixed(2)}, Applied X: ${xScale.toFixed(2)} (comp: ${compensation.toFixed(4)})`);
+    } else {
+      // Normal uniform scaling
+      globeModel.scale.set(scale, scale, scale);
+    }
+  }
+  
+  /**
+   * Force reapply the current globe scale with compensation
+   * Call this after any changes that might affect the mobile shader scaling
+   */
+  function reapplyGlobeScale() {
+    if (!globeModel || globeLogicalScale <= 0) return;
+    applyGlobeScale(globeLogicalScale);
+  }
+  
   // For low-end devices, defer globe loading using requestIdleCallback
   const shouldDeferGlobeLoading = performanceTier === 'low' || performanceDetector.isAEMEmbedded();
 
@@ -1478,9 +1559,21 @@ export async function initShaderBackground() {
     if (globeParams.responsive) {
       // Use responsive sizing
       updateGlobeSize();
+      
+      // Force reapply scale compensation after a short delay to ensure CSS transform is applied
+      // This handles any timing issues between globe load and CSS transform application
+      const vw = window.innerWidth;
+      if (vw < 640 && window._mobileShaderScale > 1) {
+        setTimeout(() => {
+          if (globeModel) {
+            reapplyGlobeScale();
+            logger.log(`[Globe] Reapplied scale compensation after delay`);
+          }
+        }, 100);
+      }
     } else {
-      // Use fixed scale
-      globeModel.scale.set(globeParams.scale, globeParams.scale, globeParams.scale);
+      // Use fixed scale with mobile compensation
+      applyGlobeScale(globeParams.scale);
 
       // Position behind the bottom wave
       positionGlobeBehindBottomWave();
@@ -1655,12 +1748,23 @@ export async function initShaderBackground() {
   const uniforms = window.uniforms; // Keep local reference for backwards compatibility
 
   // Start mobile film grain overlay if on mobile
-  // This provides a lightweight 24fps film grain effect without shader overhead
+  // This provides a lightweight film grain effect without shader overhead
+  // Pre-generates frames at init to avoid expensive toDataURL calls during runtime
   if (performanceDetector.isMobile()) {
     mobileFilmGrain.setIntensity(0.06); // Visible grain
-    mobileFilmGrain.setOpacity(1.0); // Full opacity for sharp, visible effect
+    mobileFilmGrain.setOpacity(0.8); // Reduced opacity for subtle effect
     mobileFilmGrain.start();
-    logger.log('[Background Init] Using lightweight mobile film grain overlay at 24fps');
+    
+    // PERFORMANCE: Pause film grain during scroll to reduce compositor work
+    performanceDetector.onScrollStateChange(({ isScrolling }) => {
+      if (isScrolling) {
+        mobileFilmGrain.pauseForScroll();
+      } else {
+        mobileFilmGrain.resumeAfterScroll();
+      }
+    });
+    
+    logger.log('[Background Init] Using lightweight mobile film grain with scroll-pause optimization');
   }
 
   // Enhanced vertex shader with larger displacement
@@ -2795,8 +2899,8 @@ export async function initShaderBackground() {
       if (globeModel) {
         // Update the base scale value when manually changed
         globeParams.baseScale = value;
-        // Apply the scale
-        globeModel.scale.set(value, value, value);
+        // Apply the scale with mobile compensation
+        applyGlobeScale(value);
       }
     });
 
@@ -2807,7 +2911,7 @@ export async function initShaderBackground() {
     .onChange((value) => {
       // If responsive is toggled off, reset to the current base scale
       if (!value && globeModel) {
-        globeModel.scale.set(globeParams.baseScale, globeParams.baseScale, globeParams.baseScale);
+        applyGlobeScale(globeParams.baseScale);
       } else if (value) {
         // If toggled on, immediately apply responsive scaling
         updateGlobeSize();
@@ -2850,9 +2954,10 @@ export async function initShaderBackground() {
     const vw = window.innerWidth;
     const svh = window.innerHeight;
 
-    // Check if we're in mobile viewport (640px or less)
-    if (vw <= 640) {
-      // Set the Y position to 0 for mobile viewports to center it
+    // Check if we're in mobile viewport (768px or less)
+    // This includes mobile (≤640px) and small tablet (640-768px)
+    if (vw <= 768) {
+      // Set the Y position to 0 for mobile and small tablet viewports to center it
       globeModel.position.y = 0;
       globeModel.position.z = -10; // Keep Z position consistent
 
@@ -2870,8 +2975,8 @@ export async function initShaderBackground() {
       return;
     }
 
-    // Check if we're in tablet viewport (between 640px and 1024px)
-    if (vw > 640 && vw <= 1024) {
+    // Check if we're in tablet viewport (between 768px and 1024px)
+    if (vw > 768 && vw <= 1024) {
       // Set a more centered Y position for tablet viewports
       // Position it higher than the mobile position to be more centered
       const centeredYPosition = 192; // More centered than the mobile 192
@@ -2925,7 +3030,7 @@ export async function initShaderBackground() {
     if (vw > 1024) {
       // For desktop, use fixed scale of 40
       const desktopScale = 40;
-      globeModel.scale.set(desktopScale, desktopScale, desktopScale);
+      applyGlobeScale(desktopScale);
 
       // Update GUI slider without triggering onChange
       for (let i = 0; i < globeFolder.__controllers.length; i++) {
@@ -2941,13 +3046,13 @@ export async function initShaderBackground() {
     }
 
     // For mobile and tablet (≤ 1024px), keep the responsive calculation
-    // Calculate target width - 90vw for tablet, 120vw (33% larger) for mobile
+    // Calculate target width - 90vw for larger tablet, 120vw for mobile and small tablet (≤768px)
     let targetWidth;
-    if (vw <= 640) {
-      // Mobile: 90vw * 1.33 = 120vw (33% larger)
-      targetWidth = vw * 1.2; // 120% of viewport width for mobile
+    if (vw <= 768) {
+      // Mobile and small tablet (≤768px): 120% of viewport width
+      targetWidth = vw * 1.2; // 120% of viewport width
     } else {
-      // Tablet: keep original 90vw
+      // Larger tablet (768-1024px): keep original 90vw
       targetWidth = vw * 0.9;
     }
 
@@ -2985,8 +3090,8 @@ export async function initShaderBackground() {
       // Calculate the needed scale
       const newScale = targetWorldWidth / modelWidth;
 
-      // Apply the new scale
-      globeModel.scale.set(newScale, newScale, newScale);
+      // Apply the new scale with mobile compensation
+      applyGlobeScale(newScale);
 
       // Update GUI slider without triggering onChange
       for (let i = 0; i < globeFolder.__controllers.length; i++) {
@@ -3380,6 +3485,11 @@ export async function initShaderBackground() {
   }
 
   // Convert to ShaderMaterial to support custom size attribute
+  // Initial aspect compensation for mobile shader widening
+  const initialAspectCompensation = (window.innerWidth < 640 && window._mobileShaderScale > 1) 
+    ? (1 / window._mobileShaderScale) 
+    : 1.0;
+  
   const customParticleMaterial = new THREE.ShaderMaterial({
     uniforms: {
       baseSize: { value: 6.0 },
@@ -3388,6 +3498,7 @@ export async function initShaderBackground() {
       brightness: { value: 1.4 },
       haloStrength: { value: 1.4 }, // Control halo intensity
       haloSize: { value: 1.3 }, // Control halo size relative to particle
+      aspectCompensation: { value: initialAspectCompensation }, // Compensate for CSS scaleX stretch
     },
     vertexShader: `
       attribute vec3 color;
@@ -3416,17 +3527,27 @@ export async function initShaderBackground() {
       uniform float opacity;
       uniform float brightness;
       uniform float haloStrength;
+      uniform float aspectCompensation; // 1.0 = no compensation, < 1.0 = squish X to counteract CSS stretch
       
       varying vec3 vColor;
       varying float vSize;
       
       void main() {
-        // Calculate distance from center of point (in 0-1 range)
-        vec2 centeredUV = gl_PointCoord - 0.5;
-        float dist = length(centeredUV) * 2.0; // 0 at center, 1 at edge
+        // Compensate for CSS scaleX stretch by squishing UV coordinates in X
+        // When CSS applies scaleX(1.5), we need to use aspectCompensation = 0.667
+        // This makes the particle appear circular despite the stretched canvas
+        vec2 compensatedUV = gl_PointCoord - 0.5;
+        compensatedUV.x *= (1.0 / aspectCompensation); // Stretch X in UV space to counteract CSS squish
         
-        // Sample the texture
-        vec4 texColor = texture2D(map, gl_PointCoord);
+        // Calculate distance from center using compensated coordinates
+        float dist = length(compensatedUV) * 2.0; // 0 at center, 1 at edge
+        
+        // Sample the texture with compensated UVs
+        vec2 texUV = compensatedUV + 0.5;
+        vec4 texColor = texture2D(map, texUV);
+        
+        // Discard pixels outside the circular area (important for stretched particles)
+        if (dist > 1.0) discard;
         
         // Apply color, opacity and brightness
         vec3 brightColor = vColor * brightness;
@@ -3463,6 +3584,30 @@ export async function initShaderBackground() {
   particleSystem.frustumCulled = true;
   // Add to particle scene instead of main scene
   particleScene.add(particleSystem);
+  
+  // Apply X-axis compensation for mobile shader widening (same as globe)
+  // This prevents particles from appearing horizontally stretched
+  // Updates both the system scale (for positions) and shader uniform (for particle shapes)
+  function applyParticleSystemCompensation() {
+    const vw = window.innerWidth;
+    const shaderScale = window._mobileShaderScale || 1;
+    const isMobileShaderWide = vw < 640 && shaderScale > 1;
+    
+    if (isMobileShaderWide) {
+      const compensation = 1 / shaderScale; // 1/1.5 = 0.667
+      // Scale positions (so particles are in correct screen locations)
+      particleSystem.scale.set(compensation, 1, 1);
+      // Update shader uniform (so individual particle shapes are circular, not stretched)
+      customParticleMaterial.uniforms.aspectCompensation.value = compensation;
+      console.log(`%c[Particles] Applied compensation: scale=${compensation.toFixed(4)}, shader=${compensation.toFixed(4)}`, 'color: cyan');
+    } else {
+      particleSystem.scale.set(1, 1, 1);
+      customParticleMaterial.uniforms.aspectCompensation.value = 1.0;
+    }
+  }
+  
+  // Apply initial compensation
+  applyParticleSystemCompensation();
 
   // Add particle controls to GUI
   const particleFolder = gui.addFolder("Particle System");
@@ -3755,6 +3900,7 @@ export async function initShaderBackground() {
   memoryManager.track(mouseParticleGeometry, 'geometry'); // Track for cleanup
 
   // Create material for mouse particles (clone and modify existing material)
+  // Use same initial aspect compensation as main particles
   const mouseParticleMaterial = new THREE.ShaderMaterial({
     uniforms: {
       baseSize: { value: mouseParticleParams.baseSize },
@@ -3762,6 +3908,7 @@ export async function initShaderBackground() {
       brightness: { value: 1.4 },
       haloStrength: { value: 1.4 },
       haloSize: { value: 1.3 },
+      aspectCompensation: { value: initialAspectCompensation }, // Compensate for CSS scaleX stretch
     },
     vertexShader: `
       attribute vec3 color;
@@ -3791,17 +3938,25 @@ export async function initShaderBackground() {
       uniform sampler2D map;
       uniform float brightness;
       uniform float haloStrength;
+      uniform float aspectCompensation;
       
       varying vec3 vColor;
       varying float vOpacity;
       
       void main() {
-        // Calculate distance from center of point (in 0-1 range)
-        vec2 centeredUV = gl_PointCoord - 0.5;
-        float dist = length(centeredUV) * 2.0;
+        // Compensate for CSS scaleX stretch by adjusting UV coordinates
+        vec2 compensatedUV = gl_PointCoord - 0.5;
+        compensatedUV.x *= (1.0 / aspectCompensation);
         
-        // Sample the texture
-        vec4 texColor = texture2D(map, gl_PointCoord);
+        // Calculate distance using compensated coordinates
+        float dist = length(compensatedUV) * 2.0;
+        
+        // Sample the texture with compensated UVs
+        vec2 texUV = compensatedUV + 0.5;
+        vec4 texColor = texture2D(map, texUV);
+        
+        // Discard pixels outside the circular area
+        if (dist > 1.0) discard;
         
         // Apply color and brightness
         vec3 brightColor = vColor * brightness;
@@ -3836,6 +3991,28 @@ export async function initShaderBackground() {
   // Mouse particle system
   const mouseParticleSystem = new THREE.Points(mouseParticleGeometry, mouseParticleMaterial);
   particleScene.add(mouseParticleSystem); // Add to same particle scene
+  
+  // Apply X-axis compensation for mobile shader widening (same as main particles)
+  // Updates both the system scale (for positions) and shader uniform (for particle shapes)
+  function applyMouseParticleCompensation() {
+    const vw = window.innerWidth;
+    const shaderScale = window._mobileShaderScale || 1;
+    const isMobileShaderWide = vw < 640 && shaderScale > 1;
+    
+    if (isMobileShaderWide) {
+      const compensation = 1 / shaderScale; // 1/1.5 = 0.667
+      // Scale positions
+      mouseParticleSystem.scale.set(compensation, 1, 1);
+      // Update shader uniform for circular particle shapes
+      mouseParticleMaterial.uniforms.aspectCompensation.value = compensation;
+    } else {
+      mouseParticleSystem.scale.set(1, 1, 1);
+      mouseParticleMaterial.uniforms.aspectCompensation.value = 1.0;
+    }
+  }
+  
+  // Apply initial compensation
+  applyMouseParticleCompensation();
 
   // Function to convert mouse coordinates to world coordinates
   function mouseToWorldCoords(mouseX, mouseY) {
@@ -4685,9 +4862,10 @@ export async function initShaderBackground() {
     }
 
     // Update shader uniforms with slower speed
-    // On mobile during scroll, use even slower animation for better performance
+    // On mobile during scroll, use minimal animation for better performance
+    // Shader time drives wave animations - slower = less GPU work
     const timeIncrement = isMobileBackground 
-      ? (isBackgroundScrolling ? 0.0002 : 0.0005) // Much slower on mobile, especially during scroll
+      ? (isBackgroundScrolling ? 0.00005 : 0.0005) // Nearly frozen during scroll on mobile
       : 0.001;
     uniforms.time.value += timeIncrement;
 
@@ -4705,30 +4883,34 @@ export async function initShaderBackground() {
       }
     }
 
-    // Update mouse particles
-    animateMouseParticles();
+    // Update mouse particles (skip on mobile during scroll for performance)
+    if (!(isMobileBackground && isBackgroundScrolling)) {
+      animateMouseParticles();
+    }
 
     // Gradually fade in particles if needed - but only if not fully hidden by scrolling
-    if (!window.particlesFullyHidden && customParticleMaterial.uniforms.opacity.value < targetParticleOpacity) {
-      customParticleMaterial.uniforms.opacity.value += 0.001; // Slower, more elegant fade in
-      if (customParticleMaterial.uniforms.opacity.value > targetParticleOpacity) {
-        customParticleMaterial.uniforms.opacity.value = targetParticleOpacity;
+    // MOBILE PERFORMANCE: Skip fade updates during scroll (instant updates are fine)
+    const skipParticleOpacityUpdate = isMobileBackground && isBackgroundScrolling;
+    
+    if (!skipParticleOpacityUpdate) {
+      if (!window.particlesFullyHidden && customParticleMaterial.uniforms.opacity.value < targetParticleOpacity) {
+        customParticleMaterial.uniforms.opacity.value += 0.001; // Slower, more elegant fade in
+        if (customParticleMaterial.uniforms.opacity.value > targetParticleOpacity) {
+          customParticleMaterial.uniforms.opacity.value = targetParticleOpacity;
+        }
+      }
+
+      // Ensure particles stay hidden when they should be
+      if (window.particlesFullyHidden && customParticleMaterial.uniforms.opacity.value > 0) {
+        customParticleMaterial.uniforms.opacity.value = 0;
       }
     }
 
-    // Ensure particles stay hidden when they should be
-    if (window.particlesFullyHidden && customParticleMaterial.uniforms.opacity.value > 0) {
-      customParticleMaterial.uniforms.opacity.value = 0;
-    }
-
     // Update globe model rotation if auto-rotate is enabled
-    if (globeModel && globeParams.autoRotate && !globeParams.rotationPaused) {
-      // Determine which rotation speed to use based on scroll state
-      // COMMENTED OUT: Faster rotation during scroll - now uses constant base speed
-      // const rotationSpeed = isScrolling
-      //   ? globeParams.scrollRotateSpeed // Use faster speed when scrolling
-      //   : globeParams.baseRotateSpeed; // Use normal speed when not scrolling
-
+    // MOBILE PERFORMANCE: Skip globe rotation during scroll to reduce CPU/GPU work
+    const skipGlobeRotation = isMobileBackground && isBackgroundScrolling;
+    
+    if (globeModel && globeParams.autoRotate && !globeParams.rotationPaused && !skipGlobeRotation) {
       // Always use base rotation speed (no faster spinning during scroll)
       const rotationSpeed = globeParams.baseRotateSpeed;
 
@@ -4737,7 +4919,8 @@ export async function initShaderBackground() {
     }
 
     // Update overlay position to keep it in front of the camera
-    if (overlayMesh) {
+    // MOBILE PERFORMANCE: Skip overlay updates during scroll (position doesn't change much)
+    if (overlayMesh && !(isMobileBackground && isBackgroundScrolling)) {
       // Always ensure overlay remains perfectly flat
       overlayMesh.rotation.set(0, 0, 0);
       updateOverlayPosition();
@@ -4749,6 +4932,7 @@ export async function initShaderBackground() {
     renderer.render(scene, camera); // Render scene with background shader
 
     // 2. Then render particles on top of background (only if visible)
+    // Particles are always rendered (even during scroll) for visual continuity
     if (!window.particlesFullyHidden || (mouseParticles.length > 0 && mouseParticleParams.enabled)) {
       renderer.autoClear = false; // Don't clear after first render
       renderer.render(particleScene, camera); // Render particles including mouse particles
@@ -4951,9 +5135,36 @@ export async function initShaderBackground() {
   // Handle window resize with debouncing for better performance
   let resizeTimeout;
   let globeResizeTimeout; // Timeout specifically for globe resizing
+  const MOBILE_SHADER_SCALE_FACTOR = 1.5; // 150vw = 1.5x viewport width for mobile shader widening
+  
   function handleResize() {
     const width = window.innerWidth;
     const height = getTrueViewportHeight();
+    
+    // Update mobile shader widening based on viewport width
+    const isMobileWidth = width < 640;
+    const wasMobileWidth = window._mobileShaderScale && window._mobileShaderScale > 1;
+    
+    if (isMobileWidth && !wasMobileWidth) {
+      // Transitioned to mobile - apply shader widening
+      canvas.style.transform = `translateZ(0) scaleX(${MOBILE_SHADER_SCALE_FACTOR})`;
+      canvas.style.transformOrigin = "center center";
+      window._mobileShaderScale = MOBILE_SHADER_SCALE_FACTOR;
+      logger.log(`[Background Resize] Mobile shader widening enabled: ${MOBILE_SHADER_SCALE_FACTOR}x width`);
+      // Reapply compensation for globe and particles
+      reapplyGlobeScale();
+      applyParticleSystemCompensation();
+      applyMouseParticleCompensation();
+    } else if (!isMobileWidth && wasMobileWidth) {
+      // Transitioned from mobile - remove shader widening
+      canvas.style.transform = "translateZ(0)";
+      window._mobileShaderScale = 1;
+      logger.log('[Background Resize] Mobile shader widening disabled');
+      // Reapply compensation for globe and particles (remove compensation)
+      reapplyGlobeScale();
+      applyParticleSystemCompensation();
+      applyMouseParticleCompensation();
+    }
 
     // Update canvas and renderer size
     renderer.setSize(width, height);

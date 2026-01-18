@@ -14,7 +14,7 @@
     @media (max-width:1280px) {
         width: 480px;
         transform: translateX(0);
-        max-width: calc(100vw - 32px);
+        max-width: calc(100vw - 64px);
         margin-left: auto;
         margin-right: auto;
     }
@@ -178,7 +178,7 @@
                 right: 0;
                 bottom: 0;
                 height: 250px;
-                background: linear-gradient(to top, rgba(0, 0, 0, 0.52) 0%, rgba(0, 0, 0, 0) 100%);
+                background: linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 100%);
                 z-index: 1;
             }
 

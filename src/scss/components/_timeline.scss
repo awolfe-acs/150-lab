@@ -67,7 +67,7 @@ body.timeline-resizing {
   border-radius: 4px;
   // CSS custom property for decal opacity
   --decal-opacity: 0;
-  transition: opacity 0.05s;
+  transition: opacity 0.12s;
   // Decal image on pseudo-element for independent opacity control
   // WebGL Shader Background
   #timeline-shader-bg {
@@ -290,6 +290,9 @@ body.timeline-resizing {
       height: 100%;
       z-index: -1;
       pointer-events: none;
+      @media (max-width:$mobile-viewport) {
+        transform: translate(-50%, -50%) scale(0.94)!important;
+      }
     }
     div {
       user-select:none;
@@ -489,7 +492,7 @@ body.timeline-resizing {
     font-size:64px;
     left:calc(50% - 4px);
     bottom: calc(74px + max(env(safe-area-inset-bottom), var(--js-detected-nav-height, 0px)));
-    transform:translateX(-50%) scale(1);
+    transform:translateX(-50%) scale(1)!important;
     transform-origin:center center;
     letter-spacing:-1px;
   }

@@ -20,7 +20,8 @@ performanceDetector.onFpsCapChange((info) => {
 // Throttle state for expensive safety checks (getBoundingClientRect, getComputedStyle)
 // These cause layout thrashing if called every frame
 let lastSafetyCheckTime = 0;
-const SAFETY_CHECK_INTERVAL = 150; // Only run expensive checks every 150ms
+// MOBILE OPTIMIZATION: Increase interval on mobile to reduce layout thrashing
+const SAFETY_CHECK_INTERVAL = window.matchMedia("(max-width: 1024px)").matches ? 250 : 150;
 
 // Helper function to interpolate between two hex colors
 function interpolateColor(color1, color2, progress) {
@@ -143,6 +144,7 @@ export function initTimelineAnimation() {
   };
   
   // Function to IMMEDIATELY sync BG position to span (no lerp, instant)
+  // This bypasses the isTrackingSpan check and is safe for resize events
   const syncBgToSpanImmediate = () => {
     const pos = getSpanPosition();
     if (!pos || !timelineWindowBg) return false;
@@ -150,6 +152,9 @@ export function initTimelineAnimation() {
     // Update caches
     lastPosition = { ...pos };
     targetPosition = { ...pos };
+    
+    // Also update captured position for expansion animation
+    capturedPosition = { ...pos };
     
     // Apply position immediately
     timelineWindowBg.style.position = 'fixed';
@@ -159,6 +164,7 @@ export function initTimelineAnimation() {
     timelineWindowBg.style.height = `${pos.height}px`;
     timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
     timelineWindowBg.style.borderRadius = '4px';
+    timelineWindowBg.style.zIndex = '0';
     
     return true;
   };
@@ -316,8 +322,13 @@ export function initTimelineAnimation() {
   });
 
   // Update position only on resize
+  // Use syncBgToSpanImmediate for resize events as it bypasses tracking check
   const resizeObserver = new ResizeObserver(() => {
-    positionBgToSpan();
+    // Only sync if we're tracking (before timeline expansion)
+    // and not in timeline mode
+    if (isTrackingSpan && !document.body.classList.contains('in-timeline')) {
+      syncBgToSpanImmediate();
+    }
   });
   resizeObserver.observe(document.body);
 
@@ -325,6 +336,9 @@ export function initTimelineAnimation() {
   let rafId = null;
   let isContinuouslyTracking = false;
   let trackingFrameCount = 0; // Frame counter for throttling
+  
+  // MOBILE OPTIMIZATION: More aggressive throttling on mobile (every 5th frame vs 3rd)
+  const trackingFrameSkip = window.matchMedia("(max-width: 1024px)").matches ? 5 : 3;
   
   const startContinuousTracking = () => {
     if (isContinuouslyTracking) return; // Already tracking
@@ -335,10 +349,11 @@ export function initTimelineAnimation() {
     const trackLoop = () => {
       if (!isContinuouslyTracking) return;
       
-      // Throttle: Only update every 3rd frame to reduce layout thrashing
-      // This still provides smooth tracking (20fps at 60fps) but significantly reduces performance impact
+      // Throttle: Only update every Nth frame to reduce layout thrashing
+      // Mobile: every 5th frame (~12fps at 60fps) - still smooth enough for BG tracking
+      // Desktop: every 3rd frame (~20fps at 60fps)
       trackingFrameCount++;
-      if (trackingFrameCount % 3 === 0) {
+      if (trackingFrameCount % trackingFrameSkip === 0) {
         positionBgToSpan();
       }
       
@@ -1110,11 +1125,22 @@ export function initTimelineAnimation() {
   // Throttle state for updateScrubber - prevents excessive DOM queries
   let scrubberUpdateScheduled = false;
   let lastScrubberProgress = -1;
+  let scrubberFrameCount = 0;
+  
+  // MOBILE OPTIMIZATION: Higher progress threshold and frame skipping on mobile
+  const scrubberProgressThreshold = isMobile() ? 0.003 : 0.001;
+  const scrubberFrameSkip = isMobile() ? 2 : 1; // Skip every other frame on mobile
   
   // Helper to update scrubber based on decades (not individual events)
   const updateScrubber = (progress) => {
     // Skip if progress hasn't changed significantly (reduces redundant updates)
-    if (Math.abs(progress - lastScrubberProgress) < 0.001) return;
+    // MOBILE: Higher threshold for fewer updates
+    if (Math.abs(progress - lastScrubberProgress) < scrubberProgressThreshold) return;
+    
+    // MOBILE OPTIMIZATION: Frame skipping
+    scrubberFrameCount++;
+    if (scrubberFrameCount % scrubberFrameSkip !== 0) return;
+    
     lastScrubberProgress = progress;
     
     // RAF-based throttle: skip if update already scheduled
@@ -1157,19 +1183,22 @@ export function initTimelineAnimation() {
       activeMarkerIndex = markerLock.targetIndex;
       scrubberProgressValue = (2 * activeMarkerIndex + 1) / (2 * totalMarkers);
     } else {
-      // NEW APPROACH: Detect which .timeline-event is actually visible/centered in viewport
+      // Detect which .timeline-event is actually visible/centered in viewport
       // This provides accurate synchronization with what's actually on screen
+      const isMobileView = window.matchMedia("(max-width: 1024px)").matches;
       
       // Find the event that's most centered in the viewport
-      const isMobile = window.matchMedia("(max-width: 1024px)").matches;
-      const viewportCenter = isMobile ? window.innerHeight / 2 : window.innerWidth / 2;
+      // Note: getBoundingClientRect calls are already throttled via scrubber update throttling
+      const viewportCenter = isMobileView ? window.innerHeight / 2 : window.innerWidth / 2;
       let closestEvent = null;
       let closestDistance = Infinity;
       let closestEventGlobalIndex = -1;
       
       events.forEach((event, globalIndex) => {
         const rect = event.getBoundingClientRect();
-        const eventCenter = isMobile ? rect.top + (rect.height / 2) : rect.left + (rect.width / 2);
+        const eventCenter = isMobileView 
+          ? rect.top + (rect.height / 2) 
+          : rect.left + (rect.width / 2);
         const distanceFromCenter = Math.abs(eventCenter - viewportCenter);
         
         // Check if this event is closer to center than previous closest
@@ -2192,6 +2221,11 @@ export function initTimelineAnimation() {
   
   // Reusable interpolated params object to avoid allocation in scroll loop
   const interpolatedParams = {};
+  
+  // MOBILE OPTIMIZATION: Throttle shader interpolation updates
+  let shaderInterpolationFrameCount = 0;
+  const shaderInterpolationSkip = isMobile() ? 2 : 1; // Skip every other frame on mobile
+  let lastShaderProgress = -1;
 
   // Phase 2: Master timeline for all timeline animations (starts after get-involved-message pin)
   tl = gsap.timeline({
@@ -2258,13 +2292,19 @@ export function initTimelineAnimation() {
         const interpolationStart = 0.75;
         
         if (progress > interpolationStart && window.timelineShaderControls && window.timelineShaderControls.updateParams) {
+          // MOBILE OPTIMIZATION: Throttle shader interpolation updates
+          // Skip every other frame on mobile, but still update when progress changes significantly
+          shaderInterpolationFrameCount++;
+          const progressDelta = Math.abs(progress - lastShaderProgress);
+          const shouldUpdate = shaderInterpolationFrameCount % shaderInterpolationSkip === 0 || progressDelta > 0.01;
+          
+          if (!shouldUpdate) return;
+          lastShaderProgress = progress;
+          
           // Normalize t from 0 to 1 over the range [interpolationStart, 1.0]
           let t = (progress - interpolationStart) / (1.0 - interpolationStart);
           // Clamp t to [0, 1]
           t = Math.max(0, Math.min(1, t));
-          
-          // NO THROTTLE - shader transitions need full framerate for smooth scroll-based tweening
-          // The shader's visual interpolation during 2000-2026 scroll must be buttery smooth
           
           // Reuse interpolatedParams object to avoid allocation
           interpolatedParams.waveSpeed = shaderStartParams.waveSpeed + (shaderEndParams.waveSpeed - shaderStartParams.waveSpeed) * t;
@@ -3343,11 +3383,18 @@ export function initTimelineAnimation() {
   // Expose positioning function and state for resize handling
   window._timelinePositioning = {
     positionBgToSpan: positionBgToSpan,
+    // syncBgToSpanImmediate bypasses isTrackingSpan check - use for resize events
+    syncBgToSpanImmediate: syncBgToSpanImmediate,
     resetCapturedPosition: () => {
       capturedPosition = null;
       lastPosition = { top: 0, left: 0, width: 0, height: 0 };
       targetPosition = { top: 0, left: 0, width: 0, height: 0 };
-    }
+    },
+    // Expose isTrackingSpan state for resize handling
+    setTrackingSpan: (value) => {
+      isTrackingSpan = value;
+    },
+    getTrackingSpan: () => isTrackingSpan
   };
 
   // Store ScrollTrigger and markerLock references for resize handling
@@ -3482,6 +3529,10 @@ function restoreTimelinePosition(state) {
 let resizeDebounceTimer = null;
 let resizeStartTimer = null;
 
+// Track viewport dimensions to detect mobile address bar changes
+let lastViewportWidth = window.innerWidth;
+let lastViewportHeight = window.innerHeight;
+
 function handleResizeStart() {
   if (!resizeState.isResizing) {
     resizeState.isResizing = true;
@@ -3495,7 +3546,28 @@ function handleResizeStart() {
   }
 }
 
+// Detect if this is a mobile address bar resize (height change only, minimal width change)
+function isMobileAddressBarResize() {
+  const currentWidth = window.innerWidth;
+  const currentHeight = window.innerHeight;
+  
+  const widthChange = Math.abs(currentWidth - lastViewportWidth);
+  const heightChange = Math.abs(currentHeight - lastViewportHeight);
+  
+  // Address bar resize: significant height change (50-150px typical), minimal width change (<5px)
+  const isAddressBarResize = widthChange < 5 && heightChange > 40 && heightChange < 200;
+  
+  // Update tracked dimensions
+  lastViewportWidth = currentWidth;
+  lastViewportHeight = currentHeight;
+  
+  return isAddressBarResize;
+}
+
 function handleResizeEnd() {
+  // Detect if this is a mobile address bar resize
+  const isAddressBarChange = isMobileAddressBarResize();
+  
   // Update timeline shader canvas dimensions to match viewport
   const timelineShaderCanvas = document.querySelector('#timeline-shader-bg');
   if (timelineShaderCanvas) {
@@ -3505,7 +3577,8 @@ function handleResizeEnd() {
   
   // Regenerate minor nodes to recalculate their positions based on new viewport
   // This must happen BEFORE ScrollTrigger.refresh to ensure correct positioning
-  if (window._generateMinorNodes) {
+  // Skip for address bar changes (minor nodes don't need regeneration)
+  if (window._generateMinorNodes && !isAddressBarChange) {
     window._generateMinorNodes();
   }
   
@@ -3517,20 +3590,57 @@ function handleResizeEnd() {
     // Check if we're before the timeline or not in it yet
     const inTimeline = document.body.classList.contains('in-timeline');
     const timelineRect = timeline.getBoundingClientRect();
-    const isBeforeTimeline = timelineRect.top > window.innerHeight * 0.5;
+    // Use more lenient check - if timeline top is below 30% of viewport, we're likely before it
+    const isBeforeTimeline = timelineRect.top > window.innerHeight * 0.3;
     
     if (!inTimeline && isBeforeTimeline) {
       // We're before the timeline - reset captured position and re-sync with span
       logger.log('[Resize] Before timeline - resetting background position');
       window._timelinePositioning.resetCapturedPosition();
       
-      // Force immediate position update
+      // CRITICAL: Reset isTrackingSpan to true since we're before the timeline
+      // This was likely set to false during a previous scroll into expansion phase
+      if (window._timelinePositioning.setTrackingSpan) {
+        window._timelinePositioning.setTrackingSpan(true);
+      }
+      
+      // Force immediate position update using syncBgToSpanImmediate (bypasses tracking check)
       requestAnimationFrame(() => {
-        if (window._timelinePositioning.positionBgToSpan) {
-          window._timelinePositioning.positionBgToSpan();
+        if (window._timelinePositioning.syncBgToSpanImmediate) {
+          window._timelinePositioning.syncBgToSpanImmediate();
+        }
+      });
+    } else if (!inTimeline) {
+      // Not in timeline but also not clearly before it - still sync the background
+      // This handles edge cases during/after address bar changes
+      requestAnimationFrame(() => {
+        if (window._timelinePositioning.syncBgToSpanImmediate) {
+          window._timelinePositioning.syncBgToSpanImmediate();
         }
       });
     }
+  }
+  
+  // For mobile address bar changes, do a lightweight refresh
+  if (isAddressBarChange) {
+    logger.log('[Resize] Mobile address bar change detected - lightweight refresh');
+    
+    // Just update ScrollTrigger positions without full refresh
+    ScrollTrigger.update();
+    
+    // Sync background position again after update
+    requestAnimationFrame(() => {
+      if (window._timelinePositioning && window._timelinePositioning.syncBgToSpanImmediate) {
+        window._timelinePositioning.syncBgToSpanImmediate();
+      }
+      
+      // Clean up
+      document.body.classList.remove('timeline-resizing');
+      resizeState.isResizing = false;
+      resizeState.savedProgress = null;
+    });
+    
+    return; // Skip the heavy refresh logic for address bar changes
   }
   
   // First, refresh ScrollTrigger with invalidation to recalculate everything
@@ -3546,12 +3656,13 @@ function handleResizeEnd() {
       if (timeline && window._timelinePositioning) {
         const inTimeline = document.body.classList.contains('in-timeline');
         const timelineRect = timeline.getBoundingClientRect();
-        const isBeforeTimeline = timelineRect.top > window.innerHeight * 0.5;
+        const isBeforeTimeline = timelineRect.top > window.innerHeight * 0.3;
         
         if (!inTimeline && isBeforeTimeline) {
           logger.log('[Resize] Post-refresh: Re-syncing background position');
-          if (window._timelinePositioning.positionBgToSpan) {
-            window._timelinePositioning.positionBgToSpan();
+          // Use syncBgToSpanImmediate to bypass tracking check
+          if (window._timelinePositioning.syncBgToSpanImmediate) {
+            window._timelinePositioning.syncBgToSpanImmediate();
           }
         }
       }
@@ -3695,6 +3806,38 @@ window.addEventListener('resize', () => {
   // Debounce the end of resize
   resizeDebounceTimer = setTimeout(handleResizeEnd, 300);
 });
+
+// Mobile-specific: Listen to visualViewport for more reliable address bar detection
+// This fires more reliably than resize when address bar appears/disappears
+if (window.visualViewport) {
+  let visualViewportResizeTimer = null;
+  
+  window.visualViewport.addEventListener('resize', () => {
+    // Clear existing timer
+    clearTimeout(visualViewportResizeTimer);
+    
+    // Debounce to avoid too many updates
+    visualViewportResizeTimer = setTimeout(() => {
+      // Only process if we're not already in a full resize
+      if (!resizeState.isResizing && window._timelinePositioning) {
+        const inTimeline = document.body.classList.contains('in-timeline');
+        
+        if (!inTimeline) {
+          logger.log('[VisualViewport] Address bar change - syncing background');
+          
+          // Reset tracking state and sync position
+          if (window._timelinePositioning.setTrackingSpan) {
+            window._timelinePositioning.setTrackingSpan(true);
+          }
+          
+          if (window._timelinePositioning.syncBgToSpanImmediate) {
+            window._timelinePositioning.syncBgToSpanImmediate();
+          }
+        }
+      }
+    }, 100);
+  });
+}
 
 function manageBackgroundPause(progress) {
   // Pause background when fully in timeline (after fade-ins complete)

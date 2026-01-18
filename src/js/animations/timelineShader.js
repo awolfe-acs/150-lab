@@ -46,8 +46,9 @@ export function initTimelineShader() {
   // Expose params for debugging
   window.timelineShaderParams = params;
   
-  // Add Scale parameter
-  params.scale = 3.4;
+  // Add Scale parameter - responsive based on viewport width
+  // Use larger scale for wide viewports (> 1440px) to maintain visual density
+  params.scale = window.innerWidth > 1440 ? 6.0 : 3.4;
 
   // Add to dat.GUI if available
   // Wait a moment for GUI to be initialized if it's not yet available
@@ -126,8 +127,8 @@ export function initTimelineShader() {
     powerPreference: isMobile ? 'low-power' : 'default'
   });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  // Use even lower pixel ratio on mobile for better performance
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.0 : 1.25));
+  // Use even lower pixel ratio on mobile for better performance (0.75 for significant savings)
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 0.75 : 1.25));
   
   // Set initial canvas element dimensions to match viewport
   canvas.style.width = `${window.innerWidth}px`;
@@ -249,9 +250,9 @@ export function initTimelineShader() {
   let isVisible = true;
   let isScrolling = false;
   
-  // FPS throttling configuration
-  const targetFPS = isMobile ? 45 : 60;
-  const idleFPS = isMobile ? 30 : 45; // Lower FPS when not scrolling
+  // FPS throttling configuration - more aggressive on mobile for battery savings
+  const targetFPS = isMobile ? 30 : 60;  // 30fps on mobile (visually acceptable for dot field)
+  const idleFPS = isMobile ? 20 : 45;    // 20fps when idle on mobile (minimal motion)
   let currentTargetFPS = targetFPS;
   let frameInterval = 1000 / currentTargetFPS;
   let lastFrameTime = 0;
@@ -297,18 +298,29 @@ export function initTimelineShader() {
     lastFrameTime = currentTime - (deltaTime % frameInterval);
     
     const elapsedTime = clock.getElapsedTime();
-    material.uniforms.uTime.value = elapsedTime * params.waveSpeed;
+    
+    // MOBILE OPTIMIZATION: Reduce time update frequency during scroll
+    // This slows wave movement during scroll but maintains smooth appearance
+    if (isMobile && isScrolling) {
+      material.uniforms.uTime.value += 0.008; // Fixed slow increment during scroll
+    } else {
+      material.uniforms.uTime.value = elapsedTime * params.waveSpeed;
+    }
     
     // Update uniforms from params (interpolated by ScrollTrigger onUpdate)
-    material.uniforms.uFrequencyX.value = params.waveFrequencyX;
-    material.uniforms.uFrequencyY.value = params.waveFrequencyY;
-    material.uniforms.uAmplitude.value = params.waveAmplitude;
-    material.uniforms.uColor.value.set(params.color);
+    // MOBILE OPTIMIZATION: Skip some uniform updates during scroll (they don't change often)
+    if (!isMobile || !isScrolling) {
+      material.uniforms.uFrequencyX.value = params.waveFrequencyX;
+      material.uniforms.uFrequencyY.value = params.waveFrequencyY;
+      material.uniforms.uAmplitude.value = params.waveAmplitude;
+      material.uniforms.uColor.value.set(params.color);
+      material.uniforms.uFadeIntensity.value = params.fadeIntensity;
+    }
+    // Always update opacity (needed for fade transitions)
     material.uniforms.uOpacity.value = params.opacity;
-    material.uniforms.uFadeIntensity.value = params.fadeIntensity;
     
     // Apply ocean bobbing (entire plane Y-axis movement)
-    // On mobile during scroll, simplify bobbing calculation
+    // On mobile during scroll, skip bobbing entirely for performance
     let bobbingOffset = 0;
     if (!isMobile || !isScrolling) {
       bobbingOffset = Math.sin(elapsedTime * params.bobbingSpeed) * params.bobbingAmplitude;
@@ -319,12 +331,14 @@ export function initTimelineShader() {
       params.positionZ
     );
     
-    points.rotation.x = params.rotationX;
-    points.rotation.y = params.rotationY;
-    points.rotation.z = params.rotationZ;
-    
-    // Update scale dynamically
-    points.scale.set(params.scale, params.scale, params.scale);
+    // MOBILE OPTIMIZATION: Only update rotation/scale when not scrolling
+    // These rarely change during scroll anyway
+    if (!isMobile || !isScrolling) {
+      points.rotation.x = params.rotationX;
+      points.rotation.y = params.rotationY;
+      points.rotation.z = params.rotationZ;
+      points.scale.set(params.scale, params.scale, params.scale);
+    }
     
     renderer.render(scene, camera);
   }
@@ -339,6 +353,11 @@ export function initTimelineShader() {
     // Update canvas element dimensions to match full viewport
     canvas.style.width = `${window.innerWidth}px`;
     canvas.style.height = `${window.innerHeight}px`;
+    
+    // Update scale based on viewport width
+    // Use larger scale for wide viewports (> 1440px) to maintain visual density
+    params.scale = window.innerWidth > 1440 ? 6.0 : 3.4;
+    points.scale.set(params.scale, params.scale, params.scale);
   }
 
   window.addEventListener('resize', onWindowResize);

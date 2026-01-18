@@ -67,10 +67,9 @@ video {
     object-position: center;
     //box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
     transform-origin: center center;
-    will-change: transform, opacity;
+    //will-change: transform, opacity;
     transition: box-shadow 0.3s ease;
-    opacity: 0;
-    backdrop-filter: blur(10px);
+    //opacity: 0;
     margin: 0 auto;
     position: relative;
     z-index: 1;

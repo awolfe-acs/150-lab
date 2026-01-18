@@ -1,10 +1,16 @@
 // ui/audio.js
 // All audio loading, playback, and toggle logic
 
-import uiClickAudioUrl from "../../../public/audio/ui-click.mp3?url";
-import backgroundAudioUrl from "../../../public/audio/chemistry-3-final.mp3?url";
 import gsap from "gsap";
 import logger from "../utils/logger.js";
+
+// Audio URLs from public folder
+// In Vite, public folder assets are served from root path
+// For AEM builds, they're under /content/dam/acsorg/150/assets/
+const isAEMBuild = document.querySelector('script[src*="/content/dam/acsorg/150/"]') !== null;
+const assetBasePath = isAEMBuild ? "/content/dam/acsorg/150/assets" : "";
+const uiClickAudioUrl = `${assetBasePath}/audio/ui-click.mp3`;
+const backgroundAudioUrl = `${assetBasePath}/audio/chemistry-3-final.mp3`;
 
 // Internal module state
 let backgroundAudioInstance = null;
@@ -1125,22 +1131,40 @@ export function setupSoundToggle() {
             }
           } else if (audioInitialized && backgroundAudioInstance) {
             // Unmute the audio only if it was previously initialized
+            
+            // Resume AudioContext if suspended (critical for some browsers)
+            if (window.AudioContext || window.webkitAudioContext) {
+              try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioContext.state === 'suspended') {
+                  logger.log('[audio.js] Resuming suspended audio context on unmute');
+                  audioContext.resume();
+                }
+              } catch (e) {
+                logger.warn('[audio.js] Error accessing AudioContext on unmute:', e);
+              }
+            }
+            
+            // Set volume before playing
             backgroundAudioInstance.volume = 0.22;
 
-            // If audio was paused, restart it
-            if (backgroundAudioInstance.paused) {
-              backgroundAudioInstance.play().catch((error) => {
-                logger.warn("Audio play was prevented:", error);
+            // ALWAYS try to play when unmuting, regardless of paused state
+            // Browser state can be unpredictable (auto-suspend, context issues)
+            // Calling play() on already-playing audio is harmless
+            logger.log('[audio.js] Unmuting - attempting to play audio');
+            backgroundAudioInstance.play().then(() => {
+              logger.log('[audio.js] Audio resumed successfully on unmute');
+            }).catch((error) => {
+              logger.warn("Audio play was prevented on unmute:", error);
 
-                // If play failed, mark as not initialized so it can be retried
-                audioInitialized = false;
+              // If play failed, mark as not initialized so it can be retried
+              audioInitialized = false;
 
-                // Only try to replay if enter was clicked previously
-                if (enterButtonClicked) {
-                  playBackgroundAudio(true);
-                }
-              });
-            }
+              // Only try to replay if enter was clicked previously
+              if (enterButtonClicked) {
+                playBackgroundAudio(true);
+              }
+            });
           }
         }
       }

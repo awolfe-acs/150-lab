@@ -21,7 +21,7 @@ class PerformanceDetector {
     this.fpsHistoryMaxLength = 120; // 2 minutes of samples at 1/sec
     this.lowFpsStreak = 0;
     this.highFpsStreak = 0; // Track good performance for potential upgrades
-    this.lowFpsStreakThreshold = 8; // Need 8 consecutive seconds of low FPS to confirm low-end
+    this.lowFpsStreakThreshold = 6; // Need 6 consecutive seconds of critically low FPS to confirm low-end
     this.degradationCallbacks = [];
     
     // Adaptive FPS capping state
@@ -364,8 +364,9 @@ class PerformanceDetector {
     
     const settings = {
       high: {
-        particleCount: isMobile ? 40 : 100,
-        pixelRatio: Math.min(window.devicePixelRatio, isMobile ? 1.25 : 1.5),
+        // MOBILE: Reduced particle counts for better scroll performance
+        particleCount: isMobile ? 25 : 100, // Was 40, now 25 for mobile
+        pixelRatio: Math.min(window.devicePixelRatio, isMobile ? 1.0 : 1.5), // Was 1.25, now 1.0 for mobile
         antialias: false,
         shadowsEnabled: false,
         shaderQuality: isMobile ? 'medium' : 'high',
@@ -374,14 +375,14 @@ class PerformanceDetector {
         targetFPS: 60,
         enablePostProcessing: false,
         maxLights: isMobile ? 2 : 3,
-        // Mobile-specific settings
-        timelineShaderDotCount: isMobile ? { x: 48, y: 27 } : { x: 98, y: 54 },
+        // Mobile-specific settings - more aggressive
+        timelineShaderDotCount: isMobile ? { x: 36, y: 20 } : { x: 98, y: 54 }, // Was 48x27, now 36x20
         skipParticleUpdatesOnScroll: isMobile,
-        scrollThrottleFPS: isMobile ? 30 : 60,
+        scrollThrottleFPS: isMobile ? 24 : 60, // Was 30, now 24 for mobile
       },
       medium: {
-        particleCount: isMobile ? 25 : 50,
-        pixelRatio: Math.min(window.devicePixelRatio, isMobile ? 1.0 : 1.25),
+        particleCount: isMobile ? 32 : 64,
+        pixelRatio: Math.min(window.devicePixelRatio, isMobile ? 0.875 : 1.25), // Was 1.0, now 0.875 for mobile
         antialias: false,
         shadowsEnabled: false,
         shaderQuality: 'medium',
@@ -390,27 +391,27 @@ class PerformanceDetector {
         targetFPS: 60,
         enablePostProcessing: false,
         maxLights: 2,
-        // Mobile-specific settings
-        timelineShaderDotCount: isMobile ? { x: 36, y: 20 } : { x: 72, y: 40 },
+        // Mobile-specific settings - more aggressive
+        timelineShaderDotCount: isMobile ? { x: 24, y: 14 } : { x: 72, y: 40 }, // Was 36x20, now 24x14
         skipParticleUpdatesOnScroll: isMobile,
-        scrollThrottleFPS: isMobile ? 30 : 45,
+        scrollThrottleFPS: isMobile ? 20 : 45, // Was 30, now 20 for mobile
       },
       low: {
-        particleCount: isMobile ? 15 : 30,
-        pixelRatio: 1,
+        particleCount: isMobile ? 12 : 30, // Was 15, now 12 for mobile
+        pixelRatio: isMobile ? 0.5 : 1, // Was 1, now 0.5 for mobile
         antialias: false,
         shadowsEnabled: false,
         shaderQuality: 'low',
         globeQuality: 'low',
         mouseParticles: false,
-        // Only use 30fps if runtime-confirmed as truly low-end
-        targetFPS: this.runtimeValidated && this.confirmedTier === 'low' ? 30 : 60,
+        // Only use 40fps if runtime-confirmed as truly low-end
+        targetFPS: this.runtimeValidated && this.confirmedTier === 'low' ? 40 : 60,
         enablePostProcessing: false,
         maxLights: 1,
-        // Mobile-specific settings
-        timelineShaderDotCount: isMobile ? { x: 24, y: 14 } : { x: 48, y: 27 },
+        // Mobile-specific settings - most aggressive
+        timelineShaderDotCount: isMobile ? { x: 18, y: 10 } : { x: 48, y: 27 }, // Was 24x14, now 18x10
         skipParticleUpdatesOnScroll: true,
-        scrollThrottleFPS: 30,
+        scrollThrottleFPS: isMobile ? 15 : 30, // Was 30, now 15 for mobile
       },
     };
     
@@ -508,6 +509,10 @@ class PerformanceDetector {
   
   /**
    * Evaluate FPS cap using independent measurements (actual browser FPS)
+   * 
+   * IMPORTANT: Be VERY conservative about the 30fps cap.
+   * Only apply it if the device is truly struggling (avg < 30fps).
+   * Most devices should get 60fps, high-refresh devices get 120fps.
    */
   evaluateFpsCapFromIndependent() {
     if (this.fpsCap) return; // Already set
@@ -527,21 +532,27 @@ class PerformanceDetector {
     });
     
     // Three-tier FPS cap logic:
-    // - 120fps: High refresh rate displays (averaging > 90fps or seen > 100fps)
-    // - 60fps: Standard devices (averaging > 40fps)
-    // - 30fps: Only for truly struggling devices (averaging < 40fps persistently)
-    if (this.maxFpsSeen > 100 || avgFps > 90) {
+    // - 120fps: High refresh rate displays (seen > 100fps or averaging > 80fps)
+    // - 60fps: Standard devices (averaging >= 30fps or ever seen 50+ fps)
+    // - 30fps: ONLY for devices that can't even maintain 30fps average
+    //          This is an absolute last resort
+    
+    if (this.maxFpsSeen > 100 || avgFps > 80) {
+      // High refresh rate display detected
       this.setFpsCap(120, 'high_refresh_detected');
-    } else if (avgFps >= 40) {
-      // Most devices should get 60fps cap - only downgrade to 30 if truly struggling
+    } else if (avgFps >= 40 || this.maxFpsSeen >= 50) {
+      // Device can maintain at least 30fps average, or has shown 50+ capability
+      // Give it the full 60fps cap - it can handle it
       this.setFpsCap(60, 'standard_refresh');
     } else if (avgFps >= 15) {
-      // Device is struggling - cap at 30fps for consistent, smooth experience
-      // Only apply 30fps cap if truly averaging below 40fps
-      logger.log(`[Performance Detector] Low FPS detected (avg: ${Math.round(avgFps)}fps) - capping at 30fps for consistency`);
-      this.setFpsCap(30, 'low_performance_detected');
+      // Device is REALLY struggling - can't even average 30fps
+      // AND has never shown capability above 50fps
+      // Only now apply the 30fps cap as a last resort
+      logger.log(`[Performance Detector] Device truly struggling (avg: ${Math.round(avgFps)}fps, maxSeen: ${this.maxFpsSeen}) - capping at 30fps`);
+      this.setFpsCap(40, 'low_performance_detected');
     } else {
-      // Extremely low FPS - still cap at 30, will trigger degradation
+      // Extremely low FPS (< 15) - cap at 30, but this device may not work well
+      logger.log(`[Performance Detector] WARNING: Extremely low FPS (avg: ${Math.round(avgFps)}fps) - experience may be poor`);
       this.setFpsCap(30, 'very_low_performance');
     }
   }
@@ -549,32 +560,45 @@ class PerformanceDetector {
   /**
    * Re-evaluate FPS cap based on current performance
    * Can both downgrade AND upgrade based on sustained performance
+   * 
+   * Uses ABSOLUTE thresholds and requires VERIFIED averages before changing caps.
    */
   reevaluateFpsCap() {
     if (!this.fpsCap) return false;
     
-    const avgFps = this.getAverageFps(15);
+    // Get average from INDEPENDENT measurement (true FPS, not affected by throttling)
+    const avgFpsIndependent = this.getAverageFpsFromIndependent(15);
+    const avgFpsRenderer = this.getAverageFps(15);
     
-    // UPGRADE: If at 30fps cap but averaging >= 50fps, upgrade to 60fps
-    // Requires sustained good performance to prevent flip-flopping
-    if (this.fpsCap === 30 && avgFps >= 50) {
-      logger.log(`[Performance Detector] Upgrading FPS cap: avg ${avgFps}fps with 30fps cap -> 60fps cap`);
-      this.setFpsCap(60, 'performance_improved');
-      // Reset degradation state since performance has improved
-      this.isDegraded = false;
+    // Use independent FPS as the primary metric (it's not affected by our own throttling)
+    const avgFps = avgFpsIndependent;
+    
+    logger.log(`[Performance Detector] Re-evaluating FPS cap: independent avg ${avgFpsIndependent}fps, renderer avg ${avgFpsRenderer}fps, current cap ${this.fpsCap}fps, maxSeen ${this.maxFpsSeen}fps`);
+    
+    // UPGRADE: If at 30fps cap but averaging >= 45fps, upgrade to 60fps
+    // Also upgrade if we've ever seen 60+ FPS (device is capable)
+    if (this.fpsCap === 30) {
+      if (avgFps >= 45 || this.maxFpsSeen >= 60) {
+        logger.log(`[Performance Detector] Upgrading FPS cap: avg ${avgFps}fps, maxSeen ${this.maxFpsSeen}fps with 30fps cap -> 60fps cap`);
+        this.setFpsCap(60, 'performance_improved');
+        // Reset degradation state since performance has improved
+        this.isDegraded = false;
+        this.runtimeValidated = false; // Allow re-validation
+        this.confirmedTier = null;
+        return true;
+      }
+    }
+    
+    // DOWNGRADE to 30fps: Only if averaging BELOW 30fps persistently
+    // This is the LAST RESORT - device is truly struggling
+    if (this.fpsCap === 60 && avgFps < 30 && this.maxFpsSeen < 50) {
+      logger.log(`[Performance Detector] Downgrading FPS cap: avg ${avgFps}fps, maxSeen ${this.maxFpsSeen}fps with 60fps cap -> 30fps cap`);
+      this.setFpsCap(40, 'runtime_degradation');
       return true;
     }
     
-    // DOWNGRADE: If averaging below 40fps with a 60fps cap, downgrade to 30fps
-    // Only downgrade if persistently below threshold
-    if (this.fpsCap === 60 && avgFps < 40 && avgFps >= 15) {
-      logger.log(`[Performance Detector] Downgrading FPS cap: avg ${avgFps}fps with 60fps cap -> 30fps cap`);
-      this.setFpsCap(30, 'runtime_degradation');
-      return true;
-    }
-    
-    // DOWNGRADE: If averaging below 50fps with a 120fps cap, downgrade to 60fps
-    if (this.fpsCap === 120 && avgFps < 50) {
+    // DOWNGRADE 120 to 60: If averaging below 45fps with a 120fps cap
+    if (this.fpsCap === 120 && avgFps < 45) {
       logger.log(`[Performance Detector] Downgrading FPS cap: avg ${avgFps}fps with 120fps cap -> 60fps cap`);
       this.setFpsCap(60, 'runtime_degradation');
       return true;
@@ -657,68 +681,115 @@ class PerformanceDetector {
   /**
    * Evaluate if we have persistent evidence of poor or improved performance
    * Can trigger both degradation and upgrades based on sustained performance
+   * 
+   * IMPORTANT: Use ABSOLUTE thresholds, not percentages of cap.
+   * A device averaging 50+ FPS should NEVER be capped at 30fps.
    */
   evaluatePerformance(currentFps) {
-    // Skip evaluation during initial warmup (first 3 seconds)
-    if (this.fpsHistory.length < 3) return;
+    // Skip evaluation during initial warmup (first 5 seconds)
+    if (this.fpsHistory.length < 5) return;
     
-    // Use current FPS cap as reference, defaulting to 60
-    const targetFps = this.fpsCap || 60;
-    const lowFpsThreshold = targetFps * 0.7; // Below 70% of target is struggling
-    const veryLowFpsThreshold = targetFps * 0.5; // Below 50% of target is critically low
-    const goodFpsThreshold = 50; // Above this is good performance
+    // Use ABSOLUTE thresholds - these are fixed regardless of cap
+    // 30fps is the minimum for "usable" experience
+    // Below 25fps is genuinely struggling
+    const criticallyLowThreshold = 25; // Below this is definitely struggling
+    const lowFpsThreshold = 35; // Below this might need 30fps cap
+    const goodFpsThreshold = 50; // Above this is definitely good
     
-    if (currentFps < lowFpsThreshold) {
+    // Track streaks based on absolute thresholds
+    if (currentFps < criticallyLowThreshold) {
       this.lowFpsStreak++;
-      this.highFpsStreak = 0; // Reset good performance streak
+      this.highFpsStreak = 0;
+    } else if (currentFps >= goodFpsThreshold) {
+      // Good performance - reset low streak aggressively, build high streak
+      this.lowFpsStreak = Math.max(0, this.lowFpsStreak - 3);
+      this.highFpsStreak = (this.highFpsStreak || 0) + 1;
     } else {
-      // Reset streak on good frame - we don't want spikes to affect us
-      this.lowFpsStreak = Math.max(0, this.lowFpsStreak - 2); // Decay slowly
-      
-      // Track good performance for potential upgrade
-      if (currentFps >= goodFpsThreshold) {
-        this.highFpsStreak = (this.highFpsStreak || 0) + 1;
+      // Middle ground (25-50fps) - slowly decay both streaks
+      this.lowFpsStreak = Math.max(0, this.lowFpsStreak - 1);
+      this.highFpsStreak = Math.max(0, (this.highFpsStreak || 0) - 1);
+    }
+    
+    // Check if we should UPGRADE FPS cap (every 8 seconds of good FPS)
+    if (this.fpsCap === 40 && this.highFpsStreak >= 8) {
+      // Before upgrading, verify the AVERAGE is actually good
+      const avgFps = this.getAverageFpsFromIndependent(10);
+      if (avgFps >= 45) {
+        logger.log(`[Performance Detector] Upgrading from 30fps cap - avg: ${avgFps}fps, highStreak: ${this.highFpsStreak}`);
+        this.reevaluateFpsCap();
+        this.highFpsStreak = 0; // Reset after evaluation
       }
     }
     
-    // Check if we should downgrade FPS cap (every 5 seconds of low FPS)
-    if (this.lowFpsStreak >= 5 && this.lowFpsStreak % 5 === 0) {
-      this.reevaluateFpsCap();
+    // Check if we should downgrade FPS cap - be VERY conservative about this
+    // Only downgrade after 10+ seconds of critically low FPS
+    if (this.lowFpsStreak >= 10 && this.fpsCap !== 30) {
+      // Verify the AVERAGE is actually low before downgrading
+      const avgFps = this.getAverageFpsFromIndependent(15);
+      if (avgFps < 35) {
+        logger.log(`[Performance Detector] Downgrade evaluation - avg: ${avgFps}fps, lowStreak: ${this.lowFpsStreak}`);
+        this.reevaluateFpsCap();
+        this.lowFpsStreak = 0; // Reset after evaluation
+      } else {
+        // Average is fine, the low FPS samples were likely just spikes
+        logger.log(`[Performance Detector] Ignoring low FPS streak - avg FPS is ${avgFps}, which is acceptable`);
+        this.lowFpsStreak = 0; // Reset the streak since average is fine
+      }
     }
     
-    // Check if we should UPGRADE FPS cap (every 10 seconds of good FPS)
-    // Only check upgrade if we're currently at 30fps cap
-    if (this.fpsCap === 30 && this.highFpsStreak >= 10 && this.highFpsStreak % 10 === 0) {
-      this.reevaluateFpsCap();
-    }
-    
-    // Only confirm degradation after persistent poor performance
+    // Only confirm as truly low-end after VERY persistent poor performance
+    // AND verify the average is actually below threshold
     if (this.lowFpsStreak >= this.lowFpsStreakThreshold && !this.runtimeValidated) {
-      this.confirmLowEndDevice();
-    }
-    
-    // If we see very low FPS for extended period, it's definitely struggling
-    if (currentFps < veryLowFpsThreshold && this.lowFpsStreak >= 5) {
-      this.confirmLowEndDevice();
+      const avgFps = this.getAverageFpsFromIndependent(15);
+      if (avgFps < 35) {
+        this.confirmLowEndDevice();
+      } else {
+        // Average is acceptable - don't confirm as low-end
+        logger.log(`[Performance Detector] Not confirming low-end - avg FPS is ${avgFps}, which is acceptable`);
+        this.lowFpsStreak = Math.floor(this.lowFpsStreak / 2); // Reduce but don't fully reset
+      }
     }
   }
   
   /**
    * Confirm device as low-end after persistent evidence
    * This triggers the 30fps cap for the shader background
+   * 
+   * IMPORTANT: This now verifies the AVERAGE FPS is actually low
+   * before applying the 30fps cap. High-FPS devices should never
+   * be capped at 30fps even if they have occasional dips.
    */
   confirmLowEndDevice() {
     if (this.runtimeValidated && this.confirmedTier === 'low') return; // Already confirmed
     
+    // CRITICAL: Check the ACTUAL average FPS before confirming as low-end
+    // A device averaging 45+ FPS is NOT low-end, even with occasional dips
+    const avgFpsIndependent = this.getAverageFpsFromIndependent(15);
+    const avgFpsRenderer = this.getAverageFps(15);
+    
+    // Use the higher of the two averages (independent measurement is more accurate)
+    const bestAvgFps = Math.max(avgFpsIndependent, avgFpsRenderer);
+    
+    logger.log(`[Performance Detector] Low-end confirmation check - independent avg: ${avgFpsIndependent}fps, renderer avg: ${avgFpsRenderer}fps, maxEverSeen: ${this.maxFpsSeen}`);
+    
+    // If the device is averaging 40+ FPS or has ever shown 60+ FPS capability,
+    // it's NOT a low-end device - don't apply the 30fps cap
+    if (bestAvgFps >= 40 || this.maxFpsSeen >= 60) {
+      logger.log(`[Performance Detector] NOT confirming low-end - bestAvg: ${bestAvgFps}fps, maxSeen: ${this.maxFpsSeen}fps is good enough`);
+      // Reset the low FPS streak since this was a false positive
+      this.lowFpsStreak = 0;
+      return;
+    }
+    
     logger.log('[Performance Detector] Runtime validation: Device confirmed as low-end after persistent poor FPS');
-    logger.log(`[Performance Detector] FPS streak: ${this.lowFpsStreak}, History samples: ${this.fpsHistory.length}`);
+    logger.log(`[Performance Detector] FPS streak: ${this.lowFpsStreak}, History samples: ${this.fpsHistory.length}, Avg FPS: ${bestAvgFps}`);
     
     this.runtimeValidated = true;
     this.confirmedTier = 'low';
     
-    // Set FPS cap to 30 for consistent performance
-    if (this.fpsCap !== 30) {
-      this.setFpsCap(30, 'confirmed_low_end_device');
+    // Set FPS cap to 40 for consistent performance
+    if (this.fpsCap !== 40) {
+      this.setFpsCap(40, 'confirmed_low_end_device');
     }
     
     // Notify any listeners that degradation should occur
@@ -726,7 +797,7 @@ class PerformanceDetector {
       try {
         callback({
           tier: 'low',
-          targetFPS: 30,
+          targetFPS: 40,
           reason: 'persistent_low_fps'
         });
       } catch (e) {
@@ -745,12 +816,24 @@ class PerformanceDetector {
   }
   
   /**
-   * Get the average FPS from recent history
+   * Get the average FPS from recent history (renderer-reported FPS)
    */
   getAverageFps(sampleCount = 10) {
     if (this.fpsHistory.length === 0) return 60;
     
     const samples = this.fpsHistory.slice(-sampleCount);
+    const sum = samples.reduce((acc, s) => acc + s.fps, 0);
+    return Math.round(sum / samples.length);
+  }
+  
+  /**
+   * Get the average FPS from independent measurement history
+   * This is the TRUE browser FPS, not affected by renderer throttling
+   */
+  getAverageFpsFromIndependent(sampleCount = 10) {
+    if (this.independentFpsHistory.length === 0) return 60;
+    
+    const samples = this.independentFpsHistory.slice(-sampleCount);
     const sum = samples.reduce((acc, s) => acc + s.fps, 0);
     return Math.round(sum / samples.length);
   }
