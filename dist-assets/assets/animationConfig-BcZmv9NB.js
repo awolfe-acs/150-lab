@@ -1,0 +1,1 @@
+const e={heroYearObj:{year:2026},heroNumberTween:null,heroHeadingFadeScrollTrigger:null};function r(){e.heroYearObj.year=2026,e.heroNumberTween&&(e.heroNumberTween.kill(),e.heroNumberTween=null),e.heroHeadingFadeScrollTrigger&&(e.heroHeadingFadeScrollTrigger.kill(),e.heroHeadingFadeScrollTrigger=null)}export{e as animationState,r as resetAnimationState};

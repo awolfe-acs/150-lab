@@ -367,6 +367,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       
       await yieldToMain();
       
+      // Hero number countdown animation (2026 → 1876)
+      essential.hero.initHeroNumberCountdown();
+      
+      await yieldToMain();
+      
       essential.hero.initHeroPinning();
       essential.hero.setupHeroHeadingFadeAnimation();
       
