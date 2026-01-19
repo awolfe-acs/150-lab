@@ -53,8 +53,10 @@ export default defineConfig(({ mode, command }) => {
         output: {
           // Ensure ES module format for proper GSAP loading
           format: 'es',
-          // For banner mode, inline all dynamic imports to avoid loading issues
-          ...(mode === "banner" ? {
+          // For banner and standard (AEM) modes, inline all dynamic imports
+          // This avoids issues with AEM's published view not resolving chunk URLs correctly
+          // Dynamic imports work in author/preview but fail in published due to URL rewriting
+          ...((mode === "banner" || mode === "standard") ? {
             inlineDynamicImports: true,
           } : {}),
           // For banner mode, output JS and CSS to root, otherwise to assets/

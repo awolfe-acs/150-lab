@@ -1,406 +1,454 @@
-import Lenis from "lenis";
+// =============================================================================
+// CRITICAL PATH IMPORTS - Load these first for fastest initial paint
+// =============================================================================
 import "./scss/main.scss";
 import "lenis/dist/lenis.css";
-import { initShaderBackground } from "./js/background.js";
-import { initVideo } from "./js/video.js";
-import { initCountdown } from "./js/countdown.js";
-import { initDebug } from "./js/debug.js";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
-import { MorphSVGPlugin } from "gsap/MorphSVGPlugin";
-import SplitType from "split-type";
 
-// Import modular animation functions directly
-import {
-  setupHeroHeadingFadeAnimation,
-  initCoverArea,
-  initHeroAnimation,
-  initHeroNumberCountdown,
-  initHeroPinning,
-} from "./js/animations/hero.js";
-import { animateVideoScale } from "./js/animations/videoAnimation.js";
-import { initIntroTextAnimation } from "./js/animations/introText.js";
-import {
-  animateGetInvolvedText,
-  initGetInvolvedLogoAnimation,
-  animateSlidingCards,
-} from "./js/animations/getInvolved.js";
-import { initInfiniteMarqueeAnimation } from "./js/animations/marquee.js";
-import { initScrollRevealAnimation } from "./js/animations/scrollReveal.js";
-import { initTimelineAnimation } from "./js/animations/timeline.js";
-
-// Import UI functions
-import { preloadBackgroundAudio, setupUIClickSounds, setupSoundToggle } from "./js/ui/audio.js";
-import { initFancyButtonEffects } from "./js/ui/fancyButtons.js";
-import { updatePageNavigation } from "./js/ui/pageNavigation.js";
-import { initShareButtonOverlapDetection, initSharePanel } from "./js/ui/share.js";
-import { initEventListItemHover } from "./js/ui/eventListHover.js";
-
-// Import utilities
-import { initSplitLinesAnimation, initSplitCharsAnimation } from "./js/utils/splitText.js";
-import { initGlobalResizeHandler } from "./js/utils/globalHandlers.js";
-import { initAndroidNavAdjustments } from "./js/utils/android-nav.js";
-import aemModeDetector from "./js/utils/aemModeDetector.js";
-
-// Import config
-import { resetAnimationState } from "./js/config/animationConfig.js";
-
-// Register GSAP plugins globally
+// Register GSAP plugins immediately - needed for cover area
 gsap.registerPlugin(ScrollTrigger);
-gsap.registerPlugin(MorphSVGPlugin);
-gsap.registerPlugin(SplitType);
 
 // Make GSAP available globally for background.js
+// IMPORTANT: Explicitly expose ScrollTrigger as background.js uses window.gsap.ScrollTrigger
 window.gsap = gsap;
+window.gsap.ScrollTrigger = ScrollTrigger;
 
-// At the top of the file, add the debugMode flag
+// Signal that GSAP is ready (for dynamic imports that depend on it)
+window.gsapReady = true;
+
+// =============================================================================
+// POLYFILL: requestIdleCallback (Safari doesn't support it)
+// =============================================================================
+window.requestIdleCallback = window.requestIdleCallback || function(cb, options) {
+  const start = Date.now();
+  return setTimeout(() => {
+    cb({
+      didTimeout: false,
+      timeRemaining: () => Math.max(0, 50 - (Date.now() - start))
+    });
+  }, options?.timeout || 1);
+};
+
+// =============================================================================
+// DEFERRED IMPORTS - These load in parallel but don't block initial paint
+// =============================================================================
+// Use dynamic imports for non-critical modules to allow parallel loading
+const deferredModules = {
+  lenis: () => import("lenis"),
+  morphSVG: () => import("gsap/MorphSVGPlugin"),
+  splitType: () => import("split-type"),
+  background: () => import("./js/background.js"),
+  video: () => import("./js/video.js"),
+  countdown: () => import("./js/countdown.js"),
+  debug: () => import("./js/debug.js"),
+  hero: () => import("./js/animations/hero.js"),
+  videoAnimation: () => import("./js/animations/videoAnimation.js"),
+  introText: () => import("./js/animations/introText.js"),
+  getInvolved: () => import("./js/animations/getInvolved.js"),
+  marquee: () => import("./js/animations/marquee.js"),
+  scrollReveal: () => import("./js/animations/scrollReveal.js"),
+  timeline: () => import("./js/animations/timeline.js"),
+  audio: () => import("./js/ui/audio.js"),
+  fancyButtons: () => import("./js/ui/fancyButtons.js"),
+  pageNavigation: () => import("./js/ui/pageNavigation.js"),
+  share: () => import("./js/ui/share.js"),
+  eventListHover: () => import("./js/ui/eventListHover.js"),
+  splitText: () => import("./js/utils/splitText.js"),
+  globalHandlers: () => import("./js/utils/globalHandlers.js"),
+  androidNav: () => import("./js/utils/android-nav.js"),
+  aemModeDetector: () => import("./js/utils/aemModeDetector.js"),
+  animationConfig: () => import("./js/config/animationConfig.js"),
+};
+
+// Cache for loaded modules
+const loadedModules = {};
+
+// =============================================================================
+// CONFIGURATION
+// =============================================================================
 const debugMode = false;
-
-// Set your target date/time here
 const targetDate = new Date("2026-04-06T00:00:00").getTime();
 
-// Function to check if we're on the main 150 pages
+// =============================================================================
+// HELPER: Load a deferred module (cached)
+// =============================================================================
+async function loadModule(name) {
+  if (!loadedModules[name]) {
+    loadedModules[name] = await deferredModules[name]();
+  }
+  return loadedModules[name];
+}
+
+// =============================================================================
+// PAGE DETECTION
+// =============================================================================
 function isMainPage() {
   const currentUrl = window.location.href.toLowerCase();
   const pathname = window.location.pathname.toLowerCase();
 
-  // Check if editor.html or globe.html is in the URL - if so, return false
   if (currentUrl.includes("/editor.html/") || currentUrl.includes("globe.html")) {
-    console.log("Not on main page");
     return false;
   }
 
-  // Check if we're on index.html or one of the specified domains with /150
-  const isMainPagePattern =
+  return (
     currentUrl.includes("index.html") ||
     currentUrl.includes("acs.org/150") ||
     currentUrl.includes("localhost:5173") ||
     currentUrl.includes("192.168") ||
     currentUrl.includes("cmswwwdev.acs.org/150") ||
-    // AEM author and publish environments
     (currentUrl.includes("adobeaemcloud.com") && pathname.includes("/150")) ||
-    // GitHub Pages deployment - check for the specific pattern
-    (currentUrl.includes("awolfe-acs.github.io/150-lab") &&
-      (pathname === "/150-lab/" || pathname === "/150-lab/index.html")) ||
-    // General GitHub Pages pattern for other potential deployments
-    (currentUrl.includes("github.io/150-lab") && (pathname === "/150-lab/" || pathname === "/150-lab/index.html"));
-
-  return isMainPagePattern;
+    (currentUrl.includes("github.io/150-lab") && (pathname === "/150-lab/" || pathname === "/150-lab/index.html"))
+  );
 }
 
-// Initialize all animations directly from modules
-// Optimized for faster initial render - defers non-critical work
-function initAnimations() {
-  // Preload audio immediately - before anything else
-  preloadBackgroundAudio();
-
-  // Reset animation state using centralized function
-  resetAnimationState();
-
-  // CRITICAL: Initialize hero animations first (cover area visibility)
-  // These are the most visible elements on page load
-  initHeroAnimation();
+// =============================================================================
+// PHASE 1: CRITICAL PATH - Shader + Cover Area (runs immediately)
+// =============================================================================
+async function initCriticalPath(aemSettings) {
+  console.log('[Main] Phase 1: Critical path initialization');
   
-  // Defer heavy ScrollTrigger operations to next frame
-  // This allows the cover area to render immediately
+  // Start loading hero module immediately (needed for cover area)
+  const heroModule = await loadModule('hero');
+  
+  // Initialize cover area FIRST - this sets up the fade-in timeline
+  // The timeline has a built-in 0.6s delay for shader to fade in
+  heroModule.initCoverArea();
+  console.log('[Main] Cover area initialized');
+  
+  // Start shader background (no artificial delay - it has CSS fade-in)
+  if (aemSettings.enableBackground) {
+    try {
+      const bgModule = await loadModule('background');
+      await bgModule.initShaderBackground();
+      console.log('[Main] Shader background initialized');
+    } catch (error) {
+      console.error("Failed to initialize shader background:", error);
+      const aemModule = await loadModule('aemModeDetector');
+      aemModule.default.applyStaticBackground();
+    }
+  }
+}
+
+// =============================================================================
+// PHASE 2: SECONDARY ANIMATIONS - Hero number, countdown, pinning
+// =============================================================================
+async function initSecondaryAnimations() {
+  console.log('[Main] Phase 2: Secondary animations');
+  
+  const [heroModule, configModule, audioModule] = await Promise.all([
+    loadModule('hero'),
+    loadModule('animationConfig'),
+    loadModule('audio'),
+  ]);
+  
+  // Preload audio early
+  audioModule.preloadBackgroundAudio();
+  
+  // Reset animation state
+  configModule.resetAnimationState();
+  
+  // Initialize hero animations
+  heroModule.initHeroAnimation();
+  
+  // Defer heavy ScrollTrigger operations
   requestAnimationFrame(() => {
-    // Initial refresh and clear match media
     ScrollTrigger.refresh();
     ScrollTrigger.clearMatchMedia();
     
-    initHeroNumberCountdown();
-    initHeroPinning(); // This also handles intro-text pinning
-    setupHeroHeadingFadeAnimation();
+    heroModule.initHeroNumberCountdown();
+    heroModule.initHeroPinning();
+    heroModule.setupHeroHeadingFadeAnimation();
+  });
+}
 
-    // Initialize intro text animations
-    initIntroTextAnimation();
-
-    // Defer remaining animations to allow browser to paint
+// =============================================================================
+// PHASE 3: DEFERRED ANIMATIONS - Everything else (runs in background)
+// =============================================================================
+async function initDeferredAnimations() {
+  console.log('[Main] Phase 3: Deferred animations');
+  
+  // Load all remaining modules in parallel
+  const [
+    introTextModule,
+    videoAnimModule,
+    getInvolvedModule,
+    marqueeModule,
+    scrollRevealModule,
+    timelineModule,
+    audioModule,
+    fancyButtonsModule,
+    pageNavModule,
+    shareModule,
+    eventListModule,
+    splitTextModule,
+    globalHandlersModule,
+    androidNavModule,
+  ] = await Promise.all([
+    loadModule('introText'),
+    loadModule('videoAnimation'),
+    loadModule('getInvolved'),
+    loadModule('marquee'),
+    loadModule('scrollReveal'),
+    loadModule('timeline'),
+    loadModule('audio'),
+    loadModule('fancyButtons'),
+    loadModule('pageNavigation'),
+    loadModule('share'),
+    loadModule('eventListHover'),
+    loadModule('splitText'),
+    loadModule('globalHandlers'),
+    loadModule('androidNav'),
+  ]);
+  
+  // Initialize in batches with requestAnimationFrame to avoid jank
+  requestAnimationFrame(() => {
+    // Intro text
+    introTextModule.initIntroTextAnimation();
+    
     requestAnimationFrame(() => {
-      // Initialize other animations
-      animateVideoScale();
-      animateGetInvolvedText();
-      animateSlidingCards();
-      initGetInvolvedLogoAnimation();
-      initInfiniteMarqueeAnimation();
-      initScrollRevealAnimation();
+      // Video and get involved animations
+      videoAnimModule.animateVideoScale();
+      getInvolvedModule.animateGetInvolvedText();
+      getInvolvedModule.animateSlidingCards();
+      getInvolvedModule.initGetInvolvedLogoAnimation();
       
-      // Initialize timeline (heavy)
-      initTimelineAnimation();
-
-      // Initialize UI components
-      updatePageNavigation();
-      initFancyButtonEffects();
-      setupUIClickSounds();
-      setupSoundToggle();
-      initShareButtonOverlapDetection();
-      initSharePanel();
-      initEventListItemHover();
-
-      // Initialize split text animations
-      initSplitLinesAnimation(null);
-      initSplitCharsAnimation(null);
-
-      // Initialize global resize handler
-      initGlobalResizeHandler();
-      
-      // Initialize Android navigation bar adjustment
-      initAndroidNavAdjustments();
+      requestAnimationFrame(() => {
+        // Marquee and scroll reveal
+        marqueeModule.initInfiniteMarqueeAnimation();
+        scrollRevealModule.initScrollRevealAnimation();
+        
+        requestAnimationFrame(() => {
+          // Timeline (heavy)
+          timelineModule.initTimelineAnimation();
+          
+          requestAnimationFrame(() => {
+            // UI components
+            pageNavModule.updatePageNavigation();
+            fancyButtonsModule.initFancyButtonEffects();
+            audioModule.setupUIClickSounds();
+            audioModule.setupSoundToggle();
+            shareModule.initShareButtonOverlapDetection();
+            shareModule.initSharePanel();
+            eventListModule.initEventListItemHover();
+            
+            // Split text animations
+            splitTextModule.initSplitLinesAnimation(null);
+            splitTextModule.initSplitCharsAnimation(null);
+            
+            // Global handlers
+            globalHandlersModule.initGlobalResizeHandler();
+            androidNavModule.initAndroidNavAdjustments();
+            
+            console.log('[Main] All animations initialized');
+          });
+        });
+      });
     });
   });
+}
 
-  // Add menu button click handler
+// =============================================================================
+// MENU HANDLERS (lightweight, can be set up immediately)
+// =============================================================================
+function setupMenuHandlers() {
   const menuButton = document.querySelector("button.toggle-menu");
   if (menuButton) {
     menuButton.addEventListener("click", () => {
       const nav = document.querySelector("nav");
       const header = document.querySelector("header");
-
       if (nav) nav.classList.toggle("active");
       if (header) header.classList.toggle("nav-active");
     });
   }
 
-  // Add scroll direction detection and class toggling
-  let lastScrollTop = 0;
-  window.addEventListener("scroll", () => {
-    const currentScrollTop = window.scrollY;
-    const anniversaryHeader = document.querySelector("header.anniversary");
-
-    if (anniversaryHeader) {
-      if (currentScrollTop > lastScrollTop) {
-        // Scrolling down
-        anniversaryHeader.classList.remove("active");
-      } else {
-        // Scrolling up
-        anniversaryHeader.classList.add("active");
-      }
-    }
-
-    lastScrollTop = currentScrollTop;
-  });
-
-  // Add close menu button click handler
   const closeMenuButton = document.querySelector("button.close-toggle-menu");
   if (closeMenuButton) {
     closeMenuButton.addEventListener("click", () => {
       const nav = document.querySelector("nav");
       const header = document.querySelector("header");
-
       if (nav) nav.classList.remove("active");
       if (header) header.classList.remove("nav-active");
     });
   }
+
+  // Scroll direction detection
+  let lastScrollTop = 0;
+  window.addEventListener("scroll", () => {
+    const currentScrollTop = window.scrollY;
+    const anniversaryHeader = document.querySelector("header.anniversary");
+    if (anniversaryHeader) {
+      if (currentScrollTop > lastScrollTop) {
+        anniversaryHeader.classList.remove("active");
+      } else {
+        anniversaryHeader.classList.add("active");
+      }
+    }
+    lastScrollTop = currentScrollTop;
+  });
 }
 
-// Prevent browser from restoring scroll position on refresh
+// =============================================================================
+// SCROLL POSITION MANAGEMENT
+// =============================================================================
 if (history.scrollRestoration) {
   history.scrollRestoration = "manual";
 }
-
-// Force scroll to top immediately
 window.scrollTo(0, 0);
 
-// Also force scroll to top when the page is about to be unloaded (before refresh)
 window.addEventListener("beforeunload", () => {
   window.scrollTo(0, 0);
   sessionStorage.setItem("scrollToTop", "true");
 });
 
-// When window loads, force scroll back to top
 window.addEventListener("load", () => {
-  window.scrollTo({
-    top: 0,
-    left: 0,
-    behavior: "instant", // Use 'instant' instead of smooth for immediate effect
-  });
-
-  // Small delay to ensure scroll is applied after browser might try to restore position
-  setTimeout(() => {
-    window.scrollTo(0, 0);
-  }, 10);
+  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  setTimeout(() => window.scrollTo(0, 0), 10);
 });
 
-document.addEventListener("DOMContentLoaded", () => {
-  // Force scroll to top again when DOM is ready
-  window.scrollTo(0, 0);
-
-  // Detect AEM mode first
-  const aemMode = aemModeDetector.detect();
-  const aemSettings = aemModeDetector.getSettings();
+// =============================================================================
+// LENIS SETUP (deferred but needed before cover area)
+// =============================================================================
+async function setupLenis() {
+  const Lenis = (await loadModule('lenis')).default;
   
-  console.log('[Main] AEM Mode:', aemMode);
-  console.log('[Main] Settings:', aemSettings);
-
-  // Apply static background immediately if in fallback mode
-  if (aemSettings.showStaticBackground) {
-    aemModeDetector.applyStaticBackground();
-  }
-
-  // Show placeholder message in edit mode
-  if (aemSettings.showPlaceholderMessage) {
-    aemModeDetector.showPlaceholderMessage();
-  }
-
-  // Add mobile-specific device detection first
-  const isMobileDevice =
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-    window.innerWidth <= 768 ||
-    "ontouchstart" in window;
-
-  // Detect mobile/touch devices with viewport check for optimization
   const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   const isSmallViewport = window.innerWidth < 1024;
   const isMobileOptimized = isTouchDevice && isSmallViewport;
-
-  // Configure Lenis based on device type
-  let lenisConfig;
-
+  
+  window.isMobileOptimized = isMobileOptimized;
+  
+  const lenisConfig = isMobileOptimized ? {
+    autoRaf: true,
+    infinite: false,
+    syncTouch: false,
+    syncTouchLerp: 1,
+    touchMultiplier: 0,
+    wheelMultiplier: 1,
+    smoothWheel: false,
+    duration: 0,
+    easing: (t) => t,
+  } : {
+    autoRaf: true,
+    infinite: false,
+    syncTouch: true,
+    smoothWheel: true,
+    touchInertiaMultiplier: 35,
+    duration: 1.2,
+    easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+  };
+  
+  window.lenis = new Lenis(lenisConfig);
+  
   if (isMobileOptimized) {
-    // MOBILE: Completely disable Lenis smooth scrolling - use native browser scroll
-    // This prevents the erratic/inconsistent touch scrolling behavior
-    console.log('[Lenis] Mobile detected - using native browser scroll (Lenis disabled for touch)');
-    lenisConfig = {
-      autoRaf: true,
-      infinite: false,
-      syncTouch: false,        // CRITICAL: Don't intercept touch events
-      syncTouchLerp: 1,        // No lerping for touch
-      touchMultiplier: 0,      // Disable touch multiplier
-      wheelMultiplier: 1,      // Keep wheel normal (for hybrid devices)
-      smoothWheel: false,      // Disable smooth wheel on mobile
-      duration: 0,             // No duration = instant/native
-      easing: (t) => t,        // Linear easing = no easing
-    };
-  } else {
-    // Desktop: Keep smooth scrolling with Lenis
-    console.log('[Lenis] Desktop mode - smooth scrolling enabled');
-    lenisConfig = {
-      autoRaf: true,
-      infinite: false,
-      syncTouch: true,
-      smoothWheel: true,
-      touchInertiaMultiplier: 35,
-      duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-    };
+    window.addEventListener("resize", () => window.lenis?.resize());
   }
   
-  // Store mobile state globally for other modules to reference
-  window.isMobileOptimized = isMobileOptimized;
+  return isMobileOptimized;
+}
 
-  // Always create the Lenis instance, but only start it on main pages
-  window.lenis = new Lenis(lenisConfig);
-
-  // Check if we're on mobile device
-  const isMobile = isMobileDevice;
-
-  if (isMobile) {
-    // On mobile, ensure Lenis is configured for touch
-    console.log("Mobile device detected - optimizing for touch");
-    // Lenis will be started when the enter button is clicked or for non-main pages
-  } else {
-    // On desktop, stop scrolling initially (will be started by enter button)
-    console.log("Desktop device detected");
+// =============================================================================
+// MAIN INITIALIZATION - Phased loading for optimal perceived performance
+// =============================================================================
+document.addEventListener("DOMContentLoaded", async () => {
+  window.scrollTo(0, 0);
+  console.log('[Main] DOMContentLoaded - starting phased initialization');
+  
+  // ==========================================================================
+  // PHASE 0: Immediate setup (no async, no delays)
+  // ==========================================================================
+  setupMenuHandlers();
+  
+  // ==========================================================================
+  // PHASE 1: AEM Detection + Lenis (minimal, required for cover area)
+  // ==========================================================================
+  const aemModule = await loadModule('aemModeDetector');
+  const aemMode = aemModule.default.detect();
+  const aemSettings = aemModule.default.getSettings();
+  
+  console.log('[Main] AEM Mode:', aemMode);
+  
+  if (aemSettings.showStaticBackground) {
+    aemModule.default.applyStaticBackground();
   }
-
-  window.lenis.on("scroll", (e) => {
-    //console.log(e);
-  });
-
-  if (isMobileDevice) {
-    // Ensure touch events are properly handled
-    document.addEventListener(
-      "touchstart",
-      function (e) {
-        // Allow touch events to propagate normally
-        // Don't prevent default unless absolutely necessary
-      },
-      { passive: true }
-    );
-
-    document.addEventListener(
-      "touchmove",
-      function (e) {
-        // Allow touch move events to propagate normally for scrolling
-        // Only prevent default if we're trying to prevent horizontal scrolling
-        if (
-          Math.abs(e.touches[0].clientX - e.touches[0].clientY) > Math.abs(e.touches[0].clientY - e.touches[0].clientX)
-        ) {
-          // This is more horizontal than vertical, you might want to prevent it
-          // e.preventDefault();
-        }
-      },
-      { passive: false }
-    );
-
-    // Add a specific handler to ensure Lenis works on mobile
-    window.addEventListener("resize", () => {
-      if (window.lenis) {
-        window.lenis.resize();
-      }
-    });
+  if (aemSettings.showPlaceholderMessage) {
+    aemModule.default.showPlaceholderMessage();
   }
-
-  // Initialize countdown timer
-  initCountdown(targetDate);
-
-  // Initialize debug mode if enabled
-  if (debugMode) {
-    initDebug();
-  }
-
-  // Initialize shader background (only if not in fallback mode)
-  if (aemSettings.enableBackground) {
-    // Add a small delay to ensure canvas element is fully ready
-    setTimeout(async () => {
-      try {
-        await initShaderBackground();
-        console.log('[Main] Shader background initialized successfully');
-      } catch (error) {
-        console.error("Failed to initialize shader background:", error);
-        console.warn("Continuing without shader background...");
-        // Apply static background as fallback
-        aemModeDetector.applyStaticBackground();
-      }
-    }, 100);
-  } else {
-    console.log('[Main] Skipping shader background (AEM mode or fallback)');
-  }
-
-  // Only run animations and video on main pages
+  
+  // Setup Lenis (needed before cover area)
+  await setupLenis();
+  
+  // ==========================================================================
+  // PHASE 2: CRITICAL PATH - Cover area + Shader (visible immediately)
+  // This is what the user sees first - prioritize this!
+  // ==========================================================================
   if (isMainPage()) {
-    // Initialize cover area first
-    initCoverArea();
-
-    // Initialize animations (unless in fallback mode)
+    // Start critical path immediately - don't wait for anything else
+    await initCriticalPath(aemSettings);
+    
+    // ==========================================================================
+    // PHASE 3: Secondary animations (hero number, countdown, etc.)
+    // These enhance the cover area but aren't blocking
+    // ==========================================================================
     if (aemSettings.enableAnimations) {
-      initAnimations();
-      console.log('[Main] Animations initialized');
-    } else {
-      console.log('[Main] Skipping animations (AEM fallback mode)');
+      // Use requestIdleCallback if available, otherwise setTimeout
+      const scheduleSecondary = window.requestIdleCallback || ((cb) => setTimeout(cb, 1));
+      scheduleSecondary(() => {
+        initSecondaryAnimations();
+      }, { timeout: 100 });
     }
-
-    // Initialize video (unless disabled)
+    
+    // ==========================================================================
+    // PHASE 4: Deferred animations (everything else)
+    // These load in the background while user sees cover area
+    // ==========================================================================
+    if (aemSettings.enableAnimations) {
+      const scheduleDeferred = window.requestIdleCallback || ((cb) => setTimeout(cb, 1));
+      scheduleDeferred(() => {
+        initDeferredAnimations();
+      }, { timeout: 500 });
+    }
+    
+    // ==========================================================================
+    // PHASE 5: Video and other heavy content
+    // ==========================================================================
     if (aemSettings.enableVideo) {
-      initVideo();
-      console.log('[Main] Video initialized');
-    } else {
-      console.log('[Main] Skipping video (AEM fallback mode)');
+      const scheduleVideo = window.requestIdleCallback || ((cb) => setTimeout(cb, 1));
+      scheduleVideo(async () => {
+        const videoModule = await loadModule('video');
+        videoModule.initVideo();
+        console.log('[Main] Video initialized');
+      }, { timeout: 1000 });
     }
-
-    // On main pages, Lenis will be enabled when the enter-experience button is clicked
-    // (this happens in the cover area module)
+    
+    // Initialize countdown (lightweight)
+    const countdownModule = await loadModule('countdown');
+    countdownModule.initCountdown(targetDate);
+    
   } else {
     console.log("Running in lightweight mode - animations and video disabled");
-
-    // For non-main pages, we might want to start Lenis immediately
-    // Uncomment this if you want scrolling enabled on non-main pages
-    // window.lenis.start();
   }
-
-  // Final attempt to ensure we're at the top
+  
+  // Debug mode
+  if (debugMode) {
+    const debugModule = await loadModule('debug');
+    debugModule.initDebug();
+  }
+  
+  // Final scroll position reset
   setTimeout(() => {
     window.scrollTo(0, 0);
-    window.lenis.scrollTo(0, { immediate: true });
+    window.lenis?.scrollTo(0, { immediate: true });
   }, 100);
+  
+  // Register additional GSAP plugins in background (not needed for initial paint)
+  requestIdleCallback(async () => {
+    const [morphModule, splitModule] = await Promise.all([
+      loadModule('morphSVG'),
+      loadModule('splitType'),
+    ]);
+    gsap.registerPlugin(morphModule.MorphSVGPlugin);
+    gsap.registerPlugin(splitModule.default);
+    console.log('[Main] Additional GSAP plugins registered');
+  }, { timeout: 2000 });
 });

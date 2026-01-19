@@ -114,15 +114,8 @@ export async function initShaderBackground() {
   // Track which color phase we're in (0 = cover area, 1 = original, 2 = hero-travel-area, 3 = events section)
   window.colorPhase = 0;
 
-  // Use GSAP and ScrollTrigger from global scope (imported by main.js)
-  // Wait a bit to ensure main.js has finished initializing
-  setTimeout(() => {
-    if (typeof window.gsap !== "undefined") {
-      setupColorDarknessAnimation(window.gsap, window.gsap.ScrollTrigger);
-    } else {
-      logger.warn("GSAP not found on window object - ScrollTrigger animations may not work");
-    }
-  }, 200);
+  // NOTE: Color animations are initialized AFTER uniforms are created (see below)
+  // This ensures uniforms are available when ScrollTrigger callbacks run
 
   // Function to set up the color darkness animation with ScrollTrigger
   function setupColorDarknessAnimation(gsap, ScrollTrigger) {
@@ -434,10 +427,18 @@ export async function initShaderBackground() {
     let phase0to1_lastProgress = -1;
     let phase0to1_coverAreaOverlay = null; // Cache DOM element
     
+    // DEFENSIVE: Verify #hero-travel-area exists before creating ScrollTrigger
+    const heroTravelArea = document.querySelector("#hero-travel-area");
+    if (!heroTravelArea) {
+      logger.warn("[Background] #hero-travel-area not found - color animations will not work");
+      return;
+    }
+    logger.log("[Background] #hero-travel-area found, creating color ScrollTriggers");
+    
     // Create a ScrollTrigger to transition from phase 0 to phase 1 colors when entering #hero-travel-area
     gsap.timeline({
       scrollTrigger: {
-        trigger: "#hero-travel-area",
+        trigger: heroTravelArea, // Use DOM element reference instead of selector string
         start: "top bottom", // Start when hero-travel-area enters the bottom of viewport
         end: "top top", // End when hero-travel-area reaches the top of viewport
         scrub: true, // Bidirectional scrubbing effect, tied to scroll position
@@ -513,7 +514,7 @@ export async function initShaderBackground() {
     // Create a ScrollTrigger to transition from phase 1 to phase 2 colors during #hero-travel-area
     gsap.timeline({
       scrollTrigger: {
-        trigger: "#hero-travel-area",
+        trigger: heroTravelArea, // Use DOM element reference instead of selector string
         start: "top top", // Start when hero-travel-area reaches the top of viewport
         end: "bottom bottom", // End when hero-travel-area bottom reaches bottom of viewport
         scrub: true, // Bidirectional scrubbing effect, tied to scroll position
@@ -615,6 +616,15 @@ export async function initShaderBackground() {
           phase1to2_hueRotateCleared = false;
         },
       },
+    });
+    
+    // Refresh ScrollTrigger after creating color animations to ensure proper position calculation
+    // This is especially important for AEM builds where timing may differ
+    requestAnimationFrame(() => {
+      if (ScrollTrigger && typeof ScrollTrigger.refresh === 'function') {
+        ScrollTrigger.refresh();
+        logger.log("[Background] ScrollTrigger refreshed after color animation setup");
+      }
     });
 
     // Create a ScrollTrigger to maintain phase 2 colors when #video-travel-area is in view
@@ -1108,12 +1118,18 @@ export async function initShaderBackground() {
   canvas.style.height = `${initialHeight}px`;
   canvas.style.zIndex = "-1"; // Place behind other content
 
+  // SAFARI DETECTION: Safari has issues with CSS scaleX transforms on WebGL canvases
+  // causing the globe to appear stretched even with compensation
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  
   // MOBILE SHADER WIDENING: On mobile (< 640px), stretch the shader background to 150vw
   // This creates a wider wave effect while the globe will be counter-scaled to stay undistorted
+  // DISABLED ON SAFARI: Safari has rendering issues with scaleX on WebGL canvas
   const isMobileWidthInit = window.innerWidth < 640;
   const MOBILE_SHADER_SCALE_INIT = 1.5; // 150vw = 1.5x viewport width
+  const enableMobileWidening = isMobileWidthInit && !isSafari;
   
-  if (isMobileWidthInit) {
+  if (enableMobileWidening) {
     // Stretch canvas horizontally and center it
     canvas.style.transform = `translateZ(0) scaleX(${MOBILE_SHADER_SCALE_INIT})`;
     canvas.style.transformOrigin = "center center";
@@ -1122,12 +1138,17 @@ export async function initShaderBackground() {
   } else {
     // Force hardware acceleration to prevent address bar issues
     canvas.style.transform = "translateZ(0)";
+    if (isSafari && isMobileWidthInit) {
+      logger.log('[Background Init] Safari detected - mobile shader widening DISABLED to prevent stretch');
+    }
   }
   canvas.style.transformStyle = "preserve-3d";
   canvas.style.willChange = "transform";
   
   // Store the mobile scale for globe compensation
-  window._mobileShaderScale = isMobileWidthInit ? MOBILE_SHADER_SCALE_INIT : 1;
+  // Always 1 on Safari since we don't apply the widening
+  window._mobileShaderScale = enableMobileWidening ? MOBILE_SHADER_SCALE_INIT : 1;
+  window._isSafariBrowser = isSafari; // Store for use in resize handler
 
   // Create the WebGL renderer with error handling and performance settings
   let renderer;
@@ -1748,6 +1769,38 @@ export async function initShaderBackground() {
     xOffset: { value: -0.104 },
   };
   const uniforms = window.uniforms; // Keep local reference for backwards compatibility
+
+  // Initialize color animations now that uniforms are ready
+  // Uses GSAP and ScrollTrigger from global scope (imported by main.js)
+  const initColorAnimations = () => {
+    if (typeof window.gsap !== "undefined" && window.gsap.ScrollTrigger) {
+      logger.log("[Background] GSAP and ScrollTrigger ready, initializing color animations");
+      setupColorDarknessAnimation(window.gsap, window.gsap.ScrollTrigger);
+    } else {
+      logger.warn("GSAP or ScrollTrigger not found on window object - ScrollTrigger animations may not work");
+    }
+  };
+  
+  // Check if GSAP is already ready (main.js sets window.gsapReady = true)
+  if (window.gsapReady && window.gsap && window.gsap.ScrollTrigger) {
+    // GSAP is ready, initialize immediately
+    initColorAnimations();
+  } else {
+    // Wait for GSAP to be ready - use polling with increasing delays
+    let attempts = 0;
+    const maxAttempts = 20; // Max 2 seconds (20 * 100ms)
+    const checkGsap = () => {
+      attempts++;
+      if (window.gsapReady && window.gsap && window.gsap.ScrollTrigger) {
+        initColorAnimations();
+      } else if (attempts < maxAttempts) {
+        setTimeout(checkGsap, 100);
+      } else {
+        logger.error("[Background] GSAP not available after waiting - color animations disabled");
+      }
+    };
+    setTimeout(checkGsap, 50); // Start checking after 50ms
+  }
 
   // Start mobile film grain overlay if on mobile
   // This provides a lightweight film grain effect without shader overhead
@@ -5154,11 +5207,13 @@ export async function initShaderBackground() {
     canvas.style.height = `${height}px`;
     
     // Update mobile shader widening based on viewport width
+    // SKIP ON SAFARI: Safari has issues with CSS scaleX transforms on WebGL canvases
     const isMobileWidth = width < 640;
     const wasMobileWidth = window._mobileShaderScale && window._mobileShaderScale > 1;
+    const isSafariBrowser = window._isSafariBrowser;
     
-    if (isMobileWidth && !wasMobileWidth) {
-      // Transitioned to mobile - apply shader widening
+    if (isMobileWidth && !wasMobileWidth && !isSafariBrowser) {
+      // Transitioned to mobile - apply shader widening (not on Safari)
       canvas.style.transform = `translateZ(0) scaleX(${MOBILE_SHADER_SCALE_FACTOR})`;
       canvas.style.transformOrigin = "center center";
       window._mobileShaderScale = MOBILE_SHADER_SCALE_FACTOR;
