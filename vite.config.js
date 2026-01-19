@@ -2,6 +2,46 @@ import { defineConfig } from "vite";
 import { resolve } from "path";
 import fs from "fs";
 import path from "path";
+import zlib from "zlib";
+
+// Custom gzip plugin - creates .gz files alongside originals
+// These work with standard <script src=""> when server is configured to serve .gz
+function gzipPlugin(outputDir) {
+  return {
+    name: 'gzip-assets',
+    apply: 'build',
+    closeBundle() {
+      const compressFile = (filePath) => {
+        const content = fs.readFileSync(filePath);
+        const compressed = zlib.gzipSync(content, { level: 9 });
+        fs.writeFileSync(filePath + '.gz', compressed);
+        
+        const originalSize = (content.length / 1024).toFixed(2);
+        const compressedSize = (compressed.length / 1024).toFixed(2);
+        const ratio = ((1 - compressed.length / content.length) * 100).toFixed(1);
+        console.log(`  📦 ${path.basename(filePath)}: ${originalSize}KB → ${compressedSize}KB (${ratio}% smaller)`);
+      };
+      
+      const processDir = (dir) => {
+        if (!fs.existsSync(dir)) return;
+        
+        const files = fs.readdirSync(dir, { withFileTypes: true });
+        for (const file of files) {
+          const fullPath = path.join(dir, file.name);
+          if (file.isDirectory()) {
+            processDir(fullPath);
+          } else if (file.name.match(/\.(js|css|html|json|svg)$/)) {
+            compressFile(fullPath);
+          }
+        }
+      };
+      
+      console.log('\n🗜️  Creating gzipped versions...');
+      processDir(resolve(__dirname, outputDir));
+      console.log('✅ Gzip compression complete\n');
+    }
+  };
+}
 
 export default defineConfig(({ mode, command }) => {
   // Determine output directory based on mode
@@ -28,6 +68,13 @@ export default defineConfig(({ mode, command }) => {
     server: {
       host: true, // or use host: '0.0.0.0'
     },
+    // esbuild options for transformation and minification
+    esbuild: {
+      // Remove console.log in AEM production builds
+      drop: mode === 'standard' ? ['console', 'debugger'] : ['debugger'],
+      // Legal comments handling
+      legalComments: 'none',
+    },
     optimizeDeps: {
       // Pre-bundle GSAP to ensure it's available
       include: mode === "banner" ? ['gsap'] : undefined,
@@ -35,9 +82,12 @@ export default defineConfig(({ mode, command }) => {
     build: {
       outDir,
       cssCodeSplit: false,
-      minify: 'esbuild',
+      // Ensure minification is enabled
+      minify: true,
       // Ensure target is modern enough for ES modules
       target: mode === "banner" ? 'es2018' : 'es2020',
+      // Increase chunk size warning limit (we're optimizing differently)
+      chunkSizeWarningLimit: 600,
       commonjsOptions: {
         // Ensure proper handling of CommonJS modules like GSAP
         transformMixedEsModules: true,
@@ -106,68 +156,13 @@ export default defineConfig(({ mode, command }) => {
         apply: "build",
         generateBundle(options, bundle) {
           // Only run in build command (production builds) BUT NOT for banner mode
-          // Banner mode uses its own debugGUI flag
           if (command === "build" && mode !== "banner") {
-            // Find the main JS file in the bundle
             const jsFiles = Object.keys(bundle).filter((key) => key.endsWith(".js") && !key.includes("vendor"));
-
             if (jsFiles.length > 0) {
-              const mainJsFile = jsFiles[0];
-              const jsBundle = bundle[mainJsFile];
-
+              const jsBundle = bundle[jsFiles[0]];
               if (jsBundle && jsBundle.type === "chunk") {
-                // Prepend code to remove dat.GUI element
-                const removeGuiCode = `
-// Remove dat.GUI in production
-(function() {
-  const removeGui = () => {
-    // Target multiple possible dat.GUI selectors
-    const selectors = ['.dg.ac', '.dg', '[class*="dg"]'];
-    let removed = false;
-    
-    selectors.forEach(selector => {
-      const elements = document.querySelectorAll(selector);
-      elements.forEach(element => {
-        if (element && element.parentNode) {
-          element.parentNode.removeChild(element);
-          removed = true;
-        }
-      });
-    });
-    
-  };
-  
-  // Try to remove immediately
-  removeGui();
-  
-  // Also try after DOM is loaded
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', removeGui);
-  } else {
-    // DOM is already loaded, try again
-    removeGui();
-  }
-  
-  // Try after short delays to catch any delayed GUI creation
-  setTimeout(removeGui, 100);
-  setTimeout(removeGui, 500);
-  setTimeout(removeGui, 1000);
-  
-  // Also observe for any new GUI elements being added
-  if (typeof MutationObserver !== 'undefined') {
-    const observer = new MutationObserver(() => {
-      removeGui();
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    
-    // Stop observing after 5 seconds to avoid performance issues
-    setTimeout(() => observer.disconnect(), 5000);
-  }
-})();
-
-`;
-
-                // Prepend the GUI removal code to the main JS bundle
+                // Minified dat.GUI removal code
+                const removeGuiCode = `(function(){var r=function(){[".dg.ac",".dg",'[class*="dg"]'].forEach(function(s){document.querySelectorAll(s).forEach(function(e){e&&e.parentNode&&e.parentNode.removeChild(e)})})};r();document.readyState==="loading"?document.addEventListener("DOMContentLoaded",r):r();setTimeout(r,100);setTimeout(r,500);setTimeout(r,1e3);typeof MutationObserver!="undefined"&&function(){var o=new MutationObserver(r);o.observe(document.body,{childList:!0,subtree:!0});setTimeout(function(){return o.disconnect()},5e3)}()})();`;
                 jsBundle.code = removeGuiCode + jsBundle.code;
               }
             }
@@ -202,6 +197,23 @@ export default defineConfig(({ mode, command }) => {
               ${jsFile ? `<link rel="preload" href="${basePath}${jsFile}" as="script">` : ""}
             </head>`
           );
+        },
+      },
+      {
+        name: "html-transform-timeline-images",
+        transformIndexHtml(html, ctx) {
+          // Only transform for AEM standard build
+          if (mode !== "standard") return html;
+          
+          // Transform data-src paths for timeline images
+          // From: data-src="./public/images/timeline/..." or data-src="/public/images/timeline/..."
+          // To: data-src="/content/dam/acsorg/150/assets/images/timeline/..."
+          html = html.replace(
+            /data-src="\.?\/public\/images\/timeline\//g,
+            'data-src="/content/dam/acsorg/150/assets/images/timeline/'
+          );
+          
+          return html;
         },
       },
       {
@@ -550,6 +562,9 @@ For issues, check the browser console and verify WebGL support at https://get.we
           }
         },
       },
+      // Add gzip compression for AEM builds (creates .gz files alongside originals)
+      // Server must be configured to serve .gz files with Content-Encoding: gzip
+      ...(mode === "standard" ? [gzipPlugin(outDir)] : []),
     ],
   };
 });

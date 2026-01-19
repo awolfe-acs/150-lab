@@ -1,9 +1,10 @@
 // ui/eventListHover.js
 // Event list item hover interactions with pinned images
 
-import pacifichemEventImage from "../../../public/images/pacifichem-event1.jpg?url";
-import greenChemistryEventImage from "../../../public/images/green-chemistry-event2.jpg?url";
-import acsSpringMeetingEventImage from "../../../public/images/acs-spring-meeting-event3.jpg?url";
+// DISABLED: Event images removed to reduce bundle size
+// import pacifichemEventImage from "../../../public/images/pacifichem-event1.jpg?url";
+// import greenChemistryEventImage from "../../../public/images/green-chemistry-event2.jpg?url";
+// import acsSpringMeetingEventImage from "../../../public/images/acs-spring-meeting-event3.jpg?url";
 import logger from "../utils/logger.js";
 
 // Initialize event list item hover interactions with pinned images
@@ -15,8 +16,8 @@ export function initEventListItemHover() {
     return;
   }
 
-  // Map event items to their corresponding imported image URLs
-  const eventImageMap = [pacifichemEventImage, greenChemistryEventImage, acsSpringMeetingEventImage];
+  // DISABLED: Map event items to their corresponding imported image URLs
+  // const eventImageMap = [pacifichemEventImage, greenChemistryEventImage, acsSpringMeetingEventImage];
 
   // DISABLED: Mouse-following image feature
   /*

@@ -179,28 +179,28 @@ async function resumeBackgroundAudio() {
   // and returns a Promise we can handle
   try {
     await backgroundAudioInstance.play();
-    logger.log('[audio.js] Audio play confirmed, fading in to 0.22');
-    fadeBackgroundAudio(0.22, 1000);
+        logger.log('[audio.js] Audio play confirmed, fading in to 0.22');
+        fadeBackgroundAudio(0.22, 1000);
   } catch (error) {
-    logger.warn('[audio.js] Audio play blocked:', error);
-    
+        logger.warn('[audio.js] Audio play blocked:', error);
+        
     // SAFARI FIX: Safari is stricter about user gestures
     // Setup one-time click/touchend listener for fallback (touchend for iOS Safari)
     const resumeOnInteraction = async () => {
       logger.log('[audio.js] User interacted, retrying audio resume');
-      if (backgroundAudioInstance && !audioMuted) {
+          if (backgroundAudioInstance && !audioMuted) {
         try {
           // Resume AudioContext first (this is the user gesture)
           await resumeAudioContext();
           await backgroundAudioInstance.play();
-          fadeBackgroundAudio(0.22, 1000);
+                fadeBackgroundAudio(0.22, 1000);
         } catch (e) {
           logger.error('[audio.js] Retry failed:', e);
         }
       }
       document.removeEventListener('click', resumeOnInteraction);
       document.removeEventListener('touchend', resumeOnInteraction);
-    };
+        };
     document.addEventListener('click', resumeOnInteraction, { once: true });
     document.addEventListener('touchend', resumeOnInteraction, { once: true, passive: true });
   }
@@ -1191,7 +1191,7 @@ export function setupSoundToggle() {
                 if (enterButtonClicked) {
                   playBackgroundAudio(true);
                 }
-              }
+            }
             })();
           }
         }

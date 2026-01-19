@@ -434,7 +434,7 @@ export async function initShaderBackground() {
       return;
     }
     logger.log("[Background] #hero-travel-area found, creating color ScrollTriggers");
-    
+
     // Create a ScrollTrigger to transition from phase 0 to phase 1 colors when entering #hero-travel-area
     gsap.timeline({
       scrollTrigger: {
@@ -450,7 +450,7 @@ export async function initShaderBackground() {
           // Get the current progress from start to end (0 to 1)
           // Round to 3 decimal places to reduce micro-updates
           const progress = Math.round(self.progress * 1000) / 1000;
-          
+
           // PERFORMANCE: Skip if progress hasn't changed significantly
           if (progress === phase0to1_lastProgress) return;
           phase0to1_lastProgress = progress;
@@ -510,7 +510,7 @@ export async function initShaderBackground() {
     let phase1to2_coverAreaOverlay = null; // Cache DOM element
     let phase1to2_shaderBackground = null; // Cache DOM element
     let phase1to2_hueRotateCleared = false; // Track if we've already cleared hue-rotate
-    
+
     // Create a ScrollTrigger to transition from phase 1 to phase 2 colors during #hero-travel-area
     gsap.timeline({
       scrollTrigger: {
@@ -526,7 +526,7 @@ export async function initShaderBackground() {
           // Get the current progress from start to end (0 to 1)
           // Round to 3 decimal places to reduce micro-updates
           const progress = Math.round(self.progress * 1000) / 1000;
-          
+
           // PERFORMANCE: Skip if progress hasn't changed significantly
           if (progress === phase1to2_lastProgress) return;
           phase1to2_lastProgress = progress;
@@ -1136,8 +1136,8 @@ export async function initShaderBackground() {
     logger.log(`[Background Init] Mobile shader widening enabled: ${MOBILE_SHADER_SCALE_INIT}x width`);
     console.log(`%c[ShaderBackground] Mobile widening ACTIVE - CSS scaleX(${MOBILE_SHADER_SCALE_INIT})`, 'color: orange; font-weight: bold');
   } else {
-    // Force hardware acceleration to prevent address bar issues
-    canvas.style.transform = "translateZ(0)";
+  // Force hardware acceleration to prevent address bar issues
+  canvas.style.transform = "translateZ(0)";
     if (isSafari && isMobileWidthInit) {
       logger.log('[Background Init] Safari detected - mobile shader widening DISABLED to prevent stretch');
     }
@@ -4813,13 +4813,13 @@ export async function initShaderBackground() {
 
         // Skip float movement during scroll on mobile for performance
         if (!skipFloatUpdates) {
-          // Adjust float speed based on size - smaller particles move more slowly
-          const particleFloatSpeed = scrollObj.floatSpeed * (0.5 + sizeRatio * 0.5);
+        // Adjust float speed based on size - smaller particles move more slowly
+        const particleFloatSpeed = scrollObj.floatSpeed * (0.5 + sizeRatio * 0.5);
 
-          // Update positions with float speed applied
-          positions[i3] += particleVelocities[i3] * particleFloatSpeed;
-          positions[i3 + 1] += particleVelocities[i3 + 1] * particleFloatSpeed;
-          positions[i3 + 2] += particleVelocities[i3 + 2] * particleFloatSpeed;
+        // Update positions with float speed applied
+        positions[i3] += particleVelocities[i3] * particleFloatSpeed;
+        positions[i3 + 1] += particleVelocities[i3 + 1] * particleFloatSpeed;
+        positions[i3 + 2] += particleVelocities[i3 + 2] * particleFloatSpeed;
         }
 
         // Move particles up based on scroll with size-based parallax effect
@@ -4861,30 +4861,30 @@ export async function initShaderBackground() {
     
     if (shouldUpdateTwinkle) {
       twinkleSkipCounter = 0;
-      
-      // Always update colors for twinkle effect, even when movement is paused
-      // This ensures a smooth transition when particles become visible again
-      // Reuse the color object instead of creating new ones (critical for memory performance)
-      reusableBaseColor.set(particleColorObj.color);
-      
-      for (let i = 0; i < particleCount; i++) {
-        const i3 = i * 3;
 
-        // Get the size ratio for this particle (if sizes exist)
-        const sizeRatio = sizes ? (sizes[i] - scrollObj.sizeMin) / (scrollObj.sizeMax - scrollObj.sizeMin) : 0.5;
+    // Always update colors for twinkle effect, even when movement is paused
+    // This ensures a smooth transition when particles become visible again
+    // Reuse the color object instead of creating new ones (critical for memory performance)
+    reusableBaseColor.set(particleColorObj.color);
+    
+    for (let i = 0; i < particleCount; i++) {
+      const i3 = i * 3;
 
-        // Add twinkle effect - subtle brightness variation over time
+      // Get the size ratio for this particle (if sizes exist)
+      const sizeRatio = sizes ? (sizes[i] - scrollObj.sizeMin) / (scrollObj.sizeMax - scrollObj.sizeMin) : 0.5;
+
+      // Add twinkle effect - subtle brightness variation over time
         const twinkleFactor = 0.2 * Math.sin(twinkleTime + i * 0.1) + 0.9;
 
-        // Apply size-based brightness - larger particles are brighter
+      // Apply size-based brightness - larger particles are brighter
         const sizeBrightness = 0.8 + sizeRatio * 0.6;
 
-        colors[i3] = reusableBaseColor.r * twinkleFactor * sizeBrightness;
-        colors[i3 + 1] = reusableBaseColor.g * twinkleFactor * sizeBrightness;
-        colors[i3 + 2] = reusableBaseColor.b * twinkleFactor * sizeBrightness;
-      }
+      colors[i3] = reusableBaseColor.r * twinkleFactor * sizeBrightness;
+      colors[i3 + 1] = reusableBaseColor.g * twinkleFactor * sizeBrightness;
+      colors[i3 + 2] = reusableBaseColor.b * twinkleFactor * sizeBrightness;
+    }
 
-      particleGeometry.attributes.color.needsUpdate = true;
+    particleGeometry.attributes.color.needsUpdate = true;
     }
   }
 
@@ -4940,7 +4940,7 @@ export async function initShaderBackground() {
 
     // Update mouse particles (skip on mobile during scroll for performance)
     if (!(isMobileBackground && isBackgroundScrolling)) {
-      animateMouseParticles();
+    animateMouseParticles();
     }
 
     // Gradually fade in particles if needed - but only if not fully hidden by scrolling
@@ -4948,16 +4948,16 @@ export async function initShaderBackground() {
     const skipParticleOpacityUpdate = isMobileBackground && isBackgroundScrolling;
     
     if (!skipParticleOpacityUpdate) {
-      if (!window.particlesFullyHidden && customParticleMaterial.uniforms.opacity.value < targetParticleOpacity) {
-        customParticleMaterial.uniforms.opacity.value += 0.001; // Slower, more elegant fade in
-        if (customParticleMaterial.uniforms.opacity.value > targetParticleOpacity) {
-          customParticleMaterial.uniforms.opacity.value = targetParticleOpacity;
-        }
+    if (!window.particlesFullyHidden && customParticleMaterial.uniforms.opacity.value < targetParticleOpacity) {
+      customParticleMaterial.uniforms.opacity.value += 0.001; // Slower, more elegant fade in
+      if (customParticleMaterial.uniforms.opacity.value > targetParticleOpacity) {
+        customParticleMaterial.uniforms.opacity.value = targetParticleOpacity;
       }
+    }
 
-      // Ensure particles stay hidden when they should be
-      if (window.particlesFullyHidden && customParticleMaterial.uniforms.opacity.value > 0) {
-        customParticleMaterial.uniforms.opacity.value = 0;
+    // Ensure particles stay hidden when they should be
+    if (window.particlesFullyHidden && customParticleMaterial.uniforms.opacity.value > 0) {
+      customParticleMaterial.uniforms.opacity.value = 0;
       }
     }
 

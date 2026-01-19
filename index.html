@@ -189,6 +189,10 @@
       <span class="sr-only">Loading experience...</span>
     </div>
     <style>
+      /* 
+       * CRITICAL: Loader styles are inline to render BEFORE any JS parses.
+       * The loader fades in via CSS animation, no JS required.
+       */
       #initial-loader {
         position: fixed;
         top: 0;
@@ -198,13 +202,15 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: transparent;
-        z-index: 9998;
+        background: #2c2c2c;
+        z-index: 9999;
         pointer-events: none;
-        transition: opacity 0.4s ease-out;
+        /* Fade in the loader itself */
+        opacity: 0;
+        animation: loader-fade-in 0.3s ease-out 0.1s forwards;
       }
       #initial-loader.hidden {
-        opacity: 0;
+        animation: loader-fade-out 0.4s ease-out forwards;
       }
       .loader-spinner {
         width: 60px;
@@ -216,6 +222,14 @@
       }
       .loader-dot {
         animation: loader-pulse 1.2s ease-in-out infinite;
+      }
+      @keyframes loader-fade-in {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes loader-fade-out {
+        from { opacity: 1; }
+        to { opacity: 0; }
       }
       @keyframes loader-rotate {
         0% { transform: rotate(0deg); }
@@ -242,6 +256,10 @@
         .loader-ring {
           stroke-dasharray: none;
           stroke-dashoffset: 0;
+        }
+        #initial-loader {
+          animation: none;
+          opacity: 1;
         }
       }
     </style>
@@ -943,7 +961,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="./public/images/timeline/1876-CharlesFrederickChandler.jpg" alt="Portrait of Charles Frederick Chandler, founder and organizer of the American Chemical Society" />
+                          <img data-src="./public/images/timeline/1876-CharlesFrederickChandler.jpg" alt="Portrait of Charles Frederick Chandler, founder and organizer of the American Chemical Society" />
                         </div>
                       </div>
                     </div>
@@ -964,7 +982,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="./public/images/timeline/1876-JohnWilliamDraper.jpg" alt="Portrait of John William Draper, first President of the American Chemical Society" />
+                          <img data-src="./public/images/timeline/1876-JohnWilliamDraper.jpg" alt="Portrait of John William Draper, first President of the American Chemical Society" />
                         </div>
                       </div>
                     </div>
@@ -985,7 +1003,7 @@
                           </div>
                         </div>
                         <div class="event-image first-acs-meeting">
-                          <img src="./public/images/timeline/1876-FirstAcsMeeting.jpg" alt="Historical photograph of the first regular meeting of the American Chemical Society" />
+                          <img data-src="./public/images/timeline/1876-FirstAcsMeeting.jpg" alt="Historical photograph of the first regular meeting of the American Chemical Society" />
                         </div>
                       </div>
                     </div>
@@ -1006,7 +1024,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="./public/images/timeline/1876-Endemann.jpg" alt="Dr. H. Endemann presenting the first scientific paper before the American Chemical Society" />
+                          <img data-src="./public/images/timeline/1876-Endemann.jpg" alt="Dr. H. Endemann presenting the first scientific paper before the American Chemical Society" />
                         </div>
                       </div>
                     </div>
@@ -1085,7 +1103,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="./public/images/timeline/1891-rachel-lloyd.jpg" alt="Rachel Lloyd, the first American woman to earn a Ph.D. in chemistry" />
+                          <img data-src="./public/images/timeline/1891-rachel-lloyd.jpg" alt="Rachel Lloyd, the first American woman to earn a Ph.D. in chemistry" />
                         </div>
                       </div>
                     </div>
@@ -1108,7 +1126,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="./public/images/timeline/1901-25Anniversary.jpg" alt="Celebration of ACS 25th anniversary with over 1,900 members" />
+                          <img data-src="./public/images/timeline/1901-25Anniversary.jpg" alt="Celebration of ACS 25th anniversary with over 1,900 members" />
                         </div>
                       </div>
                     </div>
@@ -1130,7 +1148,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/1907-ChemicalAbstracts.jpg" alt="First issue of Chemical Abstracts journal showing comprehensive scientific abstracts" />
+                          <img data-src="/public/images/timeline/1907-ChemicalAbstracts.jpg" alt="First issue of Chemical Abstracts journal showing comprehensive scientific abstracts" />
                         </div>
                       </div>
                     </div>
@@ -1156,7 +1174,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/1908-IEC.jpg" alt="Industrial and Engineering Chemistry publication, the first official ACS Division" />
+                          <img data-src="/public/images/timeline/1908-IEC.jpg" alt="Industrial and Engineering Chemistry publication, the first official ACS Division" />
                         </div>
                       </div>
                     </div>
@@ -1181,7 +1199,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/1916-WoodrowWilson.jpg" alt="President Woodrow Wilson meeting with ACS members to mobilize American manufacturing" />
+                          <img data-src="/public/images/timeline/1916-WoodrowWilson.jpg" alt="President Woodrow Wilson meeting with ACS members to mobilize American manufacturing" />
                         </div>
                       </div>
                     </div>
@@ -1223,7 +1241,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/1923-PriestleyMedal.jpg" alt="First Priestley Medal awarded in September 1923" />
+                          <img data-src="/public/images/timeline/1923-PriestleyMedal.jpg" alt="First Priestley Medal awarded in September 1923" />
                         </div>
                       </div>
                     </div>
@@ -1264,7 +1282,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/1924-CalvinCoolidge.jpg" alt="President Calvin Coolidge meeting with ACS members on the White House Lawn" />
+                          <img data-src="/public/images/timeline/1924-CalvinCoolidge.jpg" alt="President Calvin Coolidge meeting with ACS members on the White House Lawn" />
                         </div>
                       </div>
                     </div>
@@ -1288,7 +1306,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/1930-DivisionOfChemEd.jpg" alt="Division of Chemical Education establishing the Examinations Committee" />
+                          <img data-src="/public/images/timeline/1930-DivisionOfChemEd.jpg" alt="Division of Chemical Education establishing the Examinations Committee" />
                         </div>
                       </div>
                     </div>
@@ -1309,7 +1327,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/1937-FDR.jpg" alt="President Franklin D. Roosevelt signing Public Act No. 358, granting ACS a federal charter" />
+                          <img data-src="/public/images/timeline/1937-FDR.jpg" alt="President Franklin D. Roosevelt signing Public Act No. 358, granting ACS a federal charter" />
                         </div>
                       </div>
                     </div>
@@ -1356,7 +1374,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/1954-PetroleumResearchFund.jpg" alt="First Petroleum Research Fund grants awarded by ACS" />
+                          <img data-src="/public/images/timeline/1954-PetroleumResearchFund.jpg" alt="First Petroleum Research Fund grants awarded by ACS" />
                         </div>
                       </div>
                     </div>
@@ -1377,7 +1395,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/1956-CAS.jpg" alt="Chemical Abstracts Service (CAS) becoming an official operating division of ACS" />
+                          <img data-src="/public/images/timeline/1956-CAS.jpg" alt="Chemical Abstracts Service (CAS) becoming an official operating division of ACS" />
                         </div>
                       </div>
                     </div>
@@ -1420,7 +1438,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/1968-ProjectSEED.jpg" alt="Project SEED students working alongside scientists in summer research opportunities" />
+                          <img data-src="/public/images/timeline/1968-ProjectSEED.jpg" alt="Project SEED students working alongside scientists in summer research opportunities" />
                         </div>
                       </div>
                     </div>
@@ -1465,7 +1483,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/1980-casonline.jpg" alt="CAS Online" />
+                          <img data-src="/public/images/timeline/1980-casonline.jpg" alt="CAS Online" />
                         </div>
                       </div>
                     </div>
@@ -1486,7 +1504,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/1984-ChemistryOlympiad.jpg" alt="U.S. National Chemistry Olympiad competition sponsored by ACS" />
+                          <img data-src="/public/images/timeline/1984-ChemistryOlympiad.jpg" alt="U.S. National Chemistry Olympiad competition sponsored by ACS" />
                         </div>
                       </div>
                     </div>
@@ -1529,7 +1547,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/1992-NationalHistoricChemicalLandmarksProgram.jpg" alt="National Historic Chemical Landmarks Program plaque and ceremony" />
+                          <img data-src="/public/images/timeline/1992-NationalHistoricChemicalLandmarksProgram.jpg" alt="National Historic Chemical Landmarks Program plaque and ceremony" />
                         </div>
                       </div>
                     </div>
@@ -1550,7 +1568,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/1993-Bakelizer.jpg" alt="The Bakelizer steam pressure vessel, first National Historical Chemical Landmark" />
+                          <img data-src="/public/images/timeline/1993-Bakelizer.jpg" alt="The Bakelizer steam pressure vessel, first National Historical Chemical Landmark" />
                         </div>
                       </div>
                     </div>
@@ -1590,7 +1608,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/1993-NationalChemistryWeek.jpg" alt="National Chemistry Week celebration and outreach activities" />
+                          <img data-src="/public/images/timeline/1993-NationalChemistryWeek.jpg" alt="National Chemistry Week celebration and outreach activities" />
                         </div>
                       </div>
                     </div>
@@ -1611,7 +1629,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/1995-SciFinder.jpg" alt="CAS SciFinder interface providing scientists access to chemical databases" />
+                          <img data-src="/public/images/timeline/1995-SciFinder.jpg" alt="CAS SciFinder interface providing scientists access to chemical databases" />
                         </div>
                       </div>
                     </div>
@@ -1632,7 +1650,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/1998-CEN.jpg" alt="Chemical and Engineering News Online website debut" />
+                          <img data-src="/public/images/timeline/1998-CEN.jpg" alt="Chemical and Engineering News Online website debut" />
                         </div>
                       </div>
                     </div>
@@ -1675,7 +1693,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/2001-GreenChemistryInstitute.jpg" alt="Green Chemistry Institute joining ACS to promote sustainable chemistry" />
+                          <img data-src="/public/images/timeline/2001-GreenChemistryInstitute.jpg" alt="Green Chemistry Institute joining ACS to promote sustainable chemistry" />
                         </div>
                       </div>
                     </div>
@@ -1696,7 +1714,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/2003-CCEW.jpg" alt="Chemists Celebrate Earth Week educational activities and events" />
+                          <img data-src="/public/images/timeline/2003-CCEW.jpg" alt="Chemists Celebrate Earth Week educational activities and events" />
                         </div>
                       </div>
                     </div>
@@ -1717,7 +1735,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/2006-EverydayChemistryEPCOT.jpg" alt="Everyday Chemistry exhibit at EPCOT created by ACS and Disney Institute" />
+                          <img data-src="/public/images/timeline/2006-EverydayChemistryEPCOT.jpg" alt="Everyday Chemistry exhibit at EPCOT created by ACS and Disney Institute" />
                         </div>
                       </div>
                     </div>
@@ -1738,7 +1756,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/2007-AAGC.jpg" style="width:500px; max-width:100%;" alt="Award for Affordable Green Chemistry recognizing eco-friendly chemical innovations" />
+                          <img data-src="/public/images/timeline/2007-AAGC.jpg" style="width:500px; max-width:100%;" alt="Award for Affordable Green Chemistry recognizing eco-friendly chemical innovations" />
                         </div>
                       </div>
                     </div>
@@ -1778,7 +1796,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/2009-HatchBuilding.jpg" alt="ACS headquarters building renamed in honor of Clifford and Kathryn Hach" />
+                          <img data-src="/public/images/timeline/2009-HatchBuilding.jpg" alt="ACS headquarters building renamed in honor of Clifford and Kathryn Hach" />
                         </div>
                       </div>
                     </div>
@@ -1802,7 +1820,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/2010-FutureLeaders.jpg" alt="CAS Future Leaders Program participants and mentors" />
+                          <img data-src="/public/images/timeline/2010-FutureLeaders.jpg" alt="CAS Future Leaders Program participants and mentors" />
                         </div>
                       </div>
                     </div>
@@ -1823,7 +1841,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/2014-AACT.jpg" alt="American Association of Chemistry Teachers (AACT) supporting K-12 educators" />
+                          <img data-src="/public/images/timeline/2014-AACT.jpg" alt="American Association of Chemistry Teachers (AACT) supporting K-12 educators" />
                         </div>
                       </div>
                     </div>
@@ -1884,7 +1902,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/2025-CTP.jpg" alt="Chemical Technical Professionals Day celebrating professionals across the chemical industry" />
+                          <img data-src="/public/images/timeline/2025-CTP.jpg" alt="Chemical Technical Professionals Day celebrating professionals across the chemical industry" />
                         </div>
                       </div>
                     </div>
@@ -1908,7 +1926,7 @@
                           </div>
                         </div>
                         <div class="event-image">
-                          <img src="/public/images/timeline/150.jpg" alt="American Chemical Society 150th Anniversary celebration" />
+                          <img data-src="/public/images/timeline/150.jpg" alt="American Chemical Society 150th Anniversary celebration" />
                         </div>
                       </div>
                     </div>

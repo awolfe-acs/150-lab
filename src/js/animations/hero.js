@@ -259,7 +259,7 @@ export function initCoverArea() {
   // DELAY: Wait for shader background to fade in first (CSS takes ~0.8s)
   // This ensures: Shader -> App -> Logo -> Countdown -> Button
   const tl = gsap.timeline({ delay: 0.6 });
-  
+
   // Get the initial loader to hide it when app fades in
   const initialLoader = document.querySelector("#initial-loader");
 
@@ -827,7 +827,7 @@ export function initHeroAnimation() {
         // PERFORMANCE: Only update if scale actually changed
         if (scale !== lastScale) {
           lastScale = scale;
-          heroNumber.style.transform = `scale(${scale})`;
+        heroNumber.style.transform = `scale(${scale})`;
         }
       },
       onLeave: () => {
@@ -850,7 +850,7 @@ export function initHeroAnimation() {
     // PERFORMANCE: Cache last fade-out values to avoid redundant style updates
     let lastFadeOpacity = null;
     let lastBlurAmount = null;
-    
+
     // Fade-out animation (at end of hero pinned state) - optimized for fast scrolling
     ScrollTrigger.create({
       trigger: "#hero-travel-area",
@@ -878,11 +878,11 @@ export function initHeroAnimation() {
         // Calculate blur based on fade progress - blur increases as opacity decreases
         // Round to 1 decimal place to reduce style updates
         const blurAmount = Math.round(progress * 160) / 10; // 0px to 16px blur
-        
+
         // PERFORMANCE: Only update if values actually changed
         if (opacity !== lastFadeOpacity) {
           lastFadeOpacity = opacity;
-          heroNumber.style.setProperty("--digit-opacity", opacity);
+        heroNumber.style.setProperty("--digit-opacity", opacity);
         }
         
         // PERFORMANCE: Only update blur if it changed by at least 0.5px
@@ -960,29 +960,29 @@ export function initHeroNumberCountdown() {
             const newDigits = yearValue.split("");
 
             // Update digits only if year changed (which we know it did since we passed the check above)
-            if (currentDigits.length !== newDigits.length) {
-              heroNumber.innerHTML = "";
-              newDigits.forEach((digit) => {
-                const digitSpan = document.createElement("span");
-                digitSpan.className = "digit";
-                digitSpan.textContent = digit;
-                digitSpan.setAttribute("data-digit", digit);
-                heroNumber.appendChild(digitSpan);
-              });
-            } else {
-              // Update existing digits with new content
-              currentDigits.forEach((digitSpan, index) => {
-                if (digitSpan.textContent !== newDigits[index]) {
-                  digitSpan.textContent = newDigits[index];
-                  digitSpan.setAttribute("data-digit", newDigits[index]);
-                }
-              });
+              if (currentDigits.length !== newDigits.length) {
+                heroNumber.innerHTML = "";
+                newDigits.forEach((digit) => {
+                  const digitSpan = document.createElement("span");
+                  digitSpan.className = "digit";
+                  digitSpan.textContent = digit;
+                  digitSpan.setAttribute("data-digit", digit);
+                  heroNumber.appendChild(digitSpan);
+                });
+              } else {
+                // Update existing digits with new content
+                currentDigits.forEach((digitSpan, index) => {
+                  if (digitSpan.textContent !== newDigits[index]) {
+                    digitSpan.textContent = newDigits[index];
+                    digitSpan.setAttribute("data-digit", newDigits[index]);
+                  }
+                });
             }
 
             // PERFORMANCE: Only update opacity if it actually changed
             if (opacity !== lastOpacity) {
               lastOpacity = opacity;
-              heroNumber.style.setProperty("--digit-opacity", opacity);
+            heroNumber.style.setProperty("--digit-opacity", opacity);
             }
             // REMOVED: filter: blur(0px) - this was being called every frame and is expensive
             // Blur is only needed during fade-out phase, not during countdown
@@ -990,7 +990,7 @@ export function initHeroNumberCountdown() {
 
           onLeave: function (self) {
             // Ensure opacity is at 1.0 when leaving (completed countdown)
-            heroNumber.style.setProperty("--digit-opacity", "1.0");
+              heroNumber.style.setProperty("--digit-opacity", "1.0");
             lastOpacity = 1.0;
             lastYear = 1876;
           },
@@ -1009,7 +1009,7 @@ export function initHeroNumberCountdown() {
                   digitSpan.setAttribute("data-digit", newDigits[index]);
                 }
               });
-              heroNumber.style.setProperty("--digit-opacity", "1.0");
+                heroNumber.style.setProperty("--digit-opacity", "1.0");
               lastOpacity = 1.0;
               lastYear = 1876;
             }
@@ -1028,7 +1028,7 @@ export function initHeroNumberCountdown() {
                   digitSpan.setAttribute("data-digit", newDigits[index]);
                 }
               });
-              heroNumber.style.setProperty("--digit-opacity", "0.44");
+                heroNumber.style.setProperty("--digit-opacity", "0.44");
               lastOpacity = 0.44;
               lastYear = 2026;
             }
@@ -1036,7 +1036,7 @@ export function initHeroNumberCountdown() {
           onRefresh: (self) => {
             // Force update opacity after refresh based on current progress
             const opacity = Math.round((0.44 + self.progress * 0.56) * 100) / 100;
-            heroNumber.style.setProperty("--digit-opacity", opacity);
+              heroNumber.style.setProperty("--digit-opacity", opacity);
             lastOpacity = opacity;
             // Recalculate year on refresh
             lastYear = Math.round(2026 - self.progress * 150);
