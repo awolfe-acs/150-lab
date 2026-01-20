@@ -961,8 +961,82 @@ export function initVideo() {
     }
   };
 
+  // Helper function to actually play the video (after ensuring it's loaded)
+  const attemptPlay = () => {
+    // Set volume based on global audio state BEFORE playing
+    if (window.audioMuted) {
+      videoElement.volume = 0;
+      videoElement.muted = true;
+    } else {
+      videoElement.muted = false;
+      videoElement.volume = originalVideoVolume;
+    }
+
+    // Play the video and handle the promise properly
+    // Safari REQUIRES proper promise handling or it will fail silently
+    const playPromise = videoElement.play();
+    
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          // Playback started successfully
+          logger.log('[video.js] Video playback started successfully');
+          overlay.classList.add("hidden");
+          updateSlider();
+          startSmoothUpdates();
+        })
+        .catch((error) => {
+          logger.warn('[video.js] Play failed:', error.name, error.message);
+          
+          // SAFARI FALLBACK: Try playing muted first, then unmute
+          // Safari often requires muted playback to start
+          logger.log('[video.js] Trying muted playback fallback...');
+          videoElement.muted = true;
+          videoElement.volume = 0;
+          
+          const mutedPlayPromise = videoElement.play();
+          if (mutedPlayPromise !== undefined) {
+            mutedPlayPromise
+              .then(() => {
+                logger.log('[video.js] Muted playback started, video is now playing');
+                overlay.classList.add("hidden");
+                updateSlider();
+                startSmoothUpdates();
+                
+                // If user hasn't muted globally, try to unmute after a short delay
+                // This sometimes works on Safari once the video is playing
+                if (!window.audioMuted) {
+                  setTimeout(() => {
+                    try {
+                      videoElement.muted = false;
+                      videoElement.volume = originalVideoVolume;
+                      updateSlider();
+                      logger.log('[video.js] Successfully unmuted video');
+                    } catch (e) {
+                      logger.warn('[video.js] Could not unmute:', e);
+                    }
+                  }, 100);
+                }
+              })
+              .catch((mutedError) => {
+                logger.error('[video.js] Even muted playback failed:', mutedError.name, mutedError.message);
+                // Show overlay again since we couldn't play
+                overlay.classList.remove("hidden");
+              });
+          }
+        });
+    } else {
+      // Old browser without promise support - just assume it worked
+      overlay.classList.add("hidden");
+      updateSlider();
+      startSmoothUpdates();
+    }
+  };
+
   // Handle play/pause
   const handlePlayPause = () => {
+    logger.log('[video.js] handlePlayPause called, paused:', videoElement.paused, 'readyState:', videoElement.readyState);
+    
     if (videoElement.paused) {
       // Clear any existing fade timeout
       if (scrollAwayFadeTimeout) {
@@ -975,74 +1049,41 @@ export function initVideo() {
         fadeAudio(window.backgroundAudio, 0);
       }
       
-      // Set volume based on global audio state BEFORE playing
-      if (window.audioMuted) {
-        videoElement.volume = 0;
-        videoElement.muted = true;
-      } else {
-        videoElement.muted = false;
-        videoElement.volume = originalVideoVolume;
+      // SAFARI FIX: Check if video has actually loaded
+      // readyState: 0=HAVE_NOTHING, 1=HAVE_METADATA, 2=HAVE_CURRENT_DATA, 3=HAVE_FUTURE_DATA, 4=HAVE_ENOUGH_DATA
+      // We need at least HAVE_FUTURE_DATA (3) or ideally HAVE_ENOUGH_DATA (4) to play
+      if (videoElement.readyState < 3) {
+        logger.log('[video.js] Video not loaded yet (readyState:', videoElement.readyState, '), loading within user gesture...');
+        
+        // CRITICAL FOR SAFARI: Call load() WITHIN the user gesture
+        // Safari mobile ignores load() calls outside of user gestures
+        videoElement.load();
+        
+        // Wait for video to be playable, then play
+        const onCanPlay = () => {
+          logger.log('[video.js] Video canplay fired, attempting playback');
+          videoElement.removeEventListener('canplay', onCanPlay);
+          videoElement.removeEventListener('canplaythrough', onCanPlay);
+          attemptPlay();
+        };
+        
+        // Listen for both canplay and canplaythrough
+        videoElement.addEventListener('canplay', onCanPlay, { once: true });
+        videoElement.addEventListener('canplaythrough', onCanPlay, { once: true });
+        
+        // Also set a timeout fallback in case events don't fire
+        setTimeout(() => {
+          if (videoElement.paused && videoElement.readyState >= 2) {
+            logger.log('[video.js] Timeout fallback: attempting play with readyState:', videoElement.readyState);
+            attemptPlay();
+          }
+        }, 500);
+        
+        return;
       }
-
-      // Play the video and handle the promise properly
-      // Safari REQUIRES proper promise handling or it will fail silently
-      const playPromise = videoElement.play();
       
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            // Playback started successfully
-            logger.log('[video.js] Video playback started successfully');
-            overlay.classList.add("hidden");
-            updateSlider();
-            startSmoothUpdates();
-          })
-          .catch((error) => {
-            logger.warn('[video.js] Play failed:', error.name, error.message);
-            
-            // SAFARI FALLBACK: Try playing muted first, then unmute
-            // Safari often requires muted playback to start
-            logger.log('[video.js] Trying muted playback fallback...');
-            videoElement.muted = true;
-            videoElement.volume = 0;
-            
-            const mutedPlayPromise = videoElement.play();
-            if (mutedPlayPromise !== undefined) {
-              mutedPlayPromise
-                .then(() => {
-                  logger.log('[video.js] Muted playback started, video is now playing');
-                  overlay.classList.add("hidden");
-                  updateSlider();
-                  startSmoothUpdates();
-                  
-                  // If user hasn't muted globally, try to unmute after a short delay
-                  // This sometimes works on Safari once the video is playing
-                  if (!window.audioMuted) {
-                    setTimeout(() => {
-                      try {
-                        videoElement.muted = false;
-                        videoElement.volume = originalVideoVolume;
-                        updateSlider();
-                        logger.log('[video.js] Successfully unmuted video');
-                      } catch (e) {
-                        logger.warn('[video.js] Could not unmute:', e);
-                      }
-                    }, 100);
-                  }
-                })
-                .catch((mutedError) => {
-                  logger.error('[video.js] Even muted playback failed:', mutedError.name, mutedError.message);
-                  // Show overlay again since we couldn't play
-                  overlay.classList.remove("hidden");
-                });
-            }
-          });
-      } else {
-        // Old browser without promise support - just assume it worked
-        overlay.classList.add("hidden");
-        updateSlider();
-        startSmoothUpdates();
-      }
+      // Video is already loaded, play immediately
+      attemptPlay();
     } else {
       pauseVideoAndShowOverlay();
     }

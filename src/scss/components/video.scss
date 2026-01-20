@@ -6,6 +6,7 @@
     align-self: flex-end;
     position: relative;
     pointer-events:none!important;
+    z-index:9999;
     .video-progress-bar {
         .progress-bar-fill {
             transition: width 0.1s linear;
@@ -32,6 +33,7 @@
         overflow: hidden;
         transition: opacity 0.4s ease;
         pointer-events:auto!important;
+        z-index:9999;
         *, *::before, *::after {
             pointer-events:auto!important;
         }
