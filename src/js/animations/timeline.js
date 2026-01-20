@@ -385,6 +385,8 @@ export function initTimelineAnimation() {
     start: 'top bottom', // When message enters bottom of viewport
     end: 'bottom top', // When message exits top of viewport
     onEnter: () => {
+      // CRITICAL: Skip if timeline has been dismissed
+      if (isTimelineDismissed || window._isTimelineDismissed) return;
       // CRITICAL: When entering the tracking zone, immediately sync position
       // This ensures we have valid position data before any animations start
       syncBgToSpanImmediate();
@@ -394,6 +396,11 @@ export function initTimelineAnimation() {
       // Don't stop tracking when leaving downward - we need it for the handoff
     },
     onEnterBack: () => {
+      // CRITICAL: Skip if timeline has been dismissed - prevents scroll issues on mobile
+      if (isTimelineDismissed || window._isTimelineDismissed) {
+        logger.log('[Tracking] onEnterBack blocked - timeline is dismissed');
+        return;
+      }
       // Also sync immediately on re-entry
       syncBgToSpanImmediate();
       startContinuousTracking();
@@ -444,21 +451,32 @@ export function initTimelineAnimation() {
       start: 'top 80%', // Start pausing slightly before timeline enters
       end: 'bottom 20%', // Resume slightly before timeline exits
       onEnter: () => {
+        // CRITICAL: Skip if timeline has been dismissed
+        if (isTimelineDismissed || window._isTimelineDismissed) return;
         logger.log('[Timeline] Mobile: Pausing background elements for performance');
         window.backgroundPaused = true;
         hideFilmGrain();
       },
       onLeave: () => {
+        // CRITICAL: Skip if timeline has been dismissed
+        if (isTimelineDismissed || window._isTimelineDismissed) return;
         logger.log('[Timeline] Mobile: Resuming background elements');
         window.backgroundPaused = false;
         showFilmGrain();
       },
       onEnterBack: () => {
+        // CRITICAL: Skip if timeline has been dismissed - prevents scroll jump on mobile
+        if (isTimelineDismissed || window._isTimelineDismissed) {
+          logger.log('[Timeline] Mobile onEnterBack blocked - timeline is dismissed');
+          return;
+        }
         logger.log('[Timeline] Mobile: Pausing background elements (scrolled back)');
         window.backgroundPaused = true;
         hideFilmGrain();
       },
       onLeaveBack: () => {
+        // CRITICAL: Skip if timeline has been dismissed
+        if (isTimelineDismissed || window._isTimelineDismissed) return;
         logger.log('[Timeline] Mobile: Resuming background elements (scrolled back up)');
         window.backgroundPaused = false;
         showFilmGrain();
@@ -1760,6 +1778,12 @@ export function initTimelineAnimation() {
       anticipatePin: 1,
       invalidateOnRefresh: true, // Force recalculation on resize
       onRefresh: (self) => {
+        // CRITICAL: Skip if timeline has been dismissed
+        if (isTimelineDismissed || window._isTimelineDismissed) {
+          logger.log('[Expansion] onRefresh blocked - timeline is dismissed');
+          return;
+        }
+        
         // If re-entering, DO NOT touch the background
         if (isReEntering) {
           logger.log('[Re-entry] onRefresh blocked by isReEntering flag');
@@ -1813,6 +1837,9 @@ export function initTimelineAnimation() {
         }
       },
       onUpdate: (self) => {
+        // CRITICAL: Skip ALL updates if timeline has been dismissed
+        if (isTimelineDismissed || window._isTimelineDismissed) return;
+        
         // If dismissing or re-entering, DO NOT touch the background
         if (isDismissing || window._isDismissing || isReEntering) return;
         
@@ -2304,6 +2331,12 @@ export function initTimelineAnimation() {
       anticipatePin: 1,
       invalidateOnRefresh: true,
       onRefresh: (self) => {
+        // CRITICAL: Skip ALL refresh logic if timeline has been dismissed
+        if (isTimelineDismissed || window._isTimelineDismissed) {
+          logger.log('[Timeline] Timeline onRefresh blocked - timeline is dismissed');
+          return;
+        }
+        
         // If dismissing or re-entering, DO NOT touch the background
         if (isDismissing || window._isDismissing || isReEntering) return;
         
@@ -2337,6 +2370,10 @@ export function initTimelineAnimation() {
         }
       },
       onUpdate: (self) => {
+        // CRITICAL: Skip ALL updates if timeline has been dismissed
+        // This prevents scroll position manipulation and rendering when user is outside timeline
+        if (isTimelineDismissed || window._isTimelineDismissed) return;
+        
         // PERFORMANCE: Early exit for dismissing/re-entering states (no DOM operations)
         if (isDismissing || window._isDismissing || isReEntering) return;
         
@@ -2391,42 +2428,46 @@ export function initTimelineAnimation() {
         }
       },
       onEnter: () => {
-        // Add .in-timeline class to body (only if not dismissed)
-        if (!isTimelineDismissed && !window._isTimelineDismissed) {
-          document.body.classList.add('in-timeline');
-          
-          // Force theme-color to black to prevent Android system bars from switching to light mode
-          // This overrides any automatic color extraction from the blue timeline background
-          const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-          if (metaThemeColor) {
-              metaThemeColor.setAttribute('content', '#000000');
-          }
+        // CRITICAL: If timeline has been dismissed, DO NOT activate timeline
+        // This prevents issues where scrolling down after dismissal reactivates the timeline
+        if (isTimelineDismissed || window._isTimelineDismissed) {
+          logger.log('[Timeline] onEnter blocked - timeline is dismissed');
+          return;
+        }
+        
+        // Add .in-timeline class to body
+        document.body.classList.add('in-timeline');
+        
+        // Force theme-color to black to prevent Android system bars from switching to light mode
+        // This overrides any automatic color extraction from the blue timeline background
+        const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+        if (metaThemeColor) {
+            metaThemeColor.setAttribute('content', '#000000');
+        }
 
-          // Pause regular background shader immediately when entering timeline
-
-          if (!window.backgroundPaused) {
-            window.backgroundPaused = true;
-            window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: true } }));
-          }
-          
-          // Notify adaptive renderer we're entering timeline (switch canvas monitoring)
-          if (window.shaderBackgroundRenderer && window.shaderBackgroundRenderer.setInTimeline) {
-            window.shaderBackgroundRenderer.setInTimeline(true);
-          }
-          
-          // Resume timeline canvases (coverOrb and shader)
-          if (window.coverOrbControls && window.coverOrbControls.resume) {
-            window.coverOrbControls.resume();
-          }
-          if (window.timelineShaderControls && window.timelineShaderControls.resume) {
-            window.timelineShaderControls.resume();
-          }
-          
-          // Clear any pending pause timeout to prevent canvases from being paused
-          if (window._timelinePauseTimeout) {
-            clearTimeout(window._timelinePauseTimeout);
-            window._timelinePauseTimeout = null;
-          }
+        // Pause regular background shader immediately when entering timeline
+        if (!window.backgroundPaused) {
+          window.backgroundPaused = true;
+          window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: true } }));
+        }
+        
+        // Notify adaptive renderer we're entering timeline (switch canvas monitoring)
+        if (window.shaderBackgroundRenderer && window.shaderBackgroundRenderer.setInTimeline) {
+          window.shaderBackgroundRenderer.setInTimeline(true);
+        }
+        
+        // Resume timeline canvases (coverOrb and shader)
+        if (window.coverOrbControls && window.coverOrbControls.resume) {
+          window.coverOrbControls.resume();
+        }
+        if (window.timelineShaderControls && window.timelineShaderControls.resume) {
+          window.timelineShaderControls.resume();
+        }
+        
+        // Clear any pending pause timeout to prevent canvases from being paused
+        if (window._timelinePauseTimeout) {
+          clearTimeout(window._timelinePauseTimeout);
+          window._timelinePauseTimeout = null;
         }
 
         // Safety: force timeline container visible when entering timeline
@@ -2636,35 +2677,39 @@ export function initTimelineAnimation() {
         }
       },
       onEnterBack: () => {
+        // CRITICAL: If timeline has been dismissed, DO NOT activate timeline on scroll up
+        // This prevents the bug where scrolling up from below the timeline causes a jump back
+        if (isTimelineDismissed || window._isTimelineDismissed) {
+          logger.log('[Timeline] onEnterBack blocked - timeline is dismissed');
+          return;
+        }
         
-        // Add .in-timeline class to body (only if not dismissed)
-        if (!isTimelineDismissed && !window._isTimelineDismissed) {
-          document.body.classList.add('in-timeline');
-          
-          // Pause regular background shader when re-entering timeline
-          if (!window.backgroundPaused) {
-            window.backgroundPaused = true;
-            window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: true } }));
-          }
-          
-          // Notify adaptive renderer we're re-entering timeline (switch canvas monitoring)
-          if (window.shaderBackgroundRenderer && window.shaderBackgroundRenderer.setInTimeline) {
-            window.shaderBackgroundRenderer.setInTimeline(true);
-          }
-          
-          // Resume timeline canvases (coverOrb and shader)
-          if (window.coverOrbControls && window.coverOrbControls.resume) {
-            window.coverOrbControls.resume();
-          }
-          if (window.timelineShaderControls && window.timelineShaderControls.resume) {
-            window.timelineShaderControls.resume();
-          }
-          
-          // Clear any pending pause timeout to prevent canvases from being paused
-          if (window._timelinePauseTimeout) {
-            clearTimeout(window._timelinePauseTimeout);
-            window._timelinePauseTimeout = null;
-          }
+        // Add .in-timeline class to body
+        document.body.classList.add('in-timeline');
+        
+        // Pause regular background shader when re-entering timeline
+        if (!window.backgroundPaused) {
+          window.backgroundPaused = true;
+          window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: true } }));
+        }
+        
+        // Notify adaptive renderer we're re-entering timeline (switch canvas monitoring)
+        if (window.shaderBackgroundRenderer && window.shaderBackgroundRenderer.setInTimeline) {
+          window.shaderBackgroundRenderer.setInTimeline(true);
+        }
+        
+        // Resume timeline canvases (coverOrb and shader)
+        if (window.coverOrbControls && window.coverOrbControls.resume) {
+          window.coverOrbControls.resume();
+        }
+        if (window.timelineShaderControls && window.timelineShaderControls.resume) {
+          window.timelineShaderControls.resume();
+        }
+        
+        // Clear any pending pause timeout to prevent canvases from being paused
+        if (window._timelinePauseTimeout) {
+          clearTimeout(window._timelinePauseTimeout);
+          window._timelinePauseTimeout = null;
         }
 
         // Safety: force timeline container visible when re-entering timeline
