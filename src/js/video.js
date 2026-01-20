@@ -21,13 +21,16 @@ const videoUrl = `${assetBasePath}/video/${videoFileName}`;
 const posterUrl = `${assetBasePath}/images/ACS150-promo-cover.jpg`;
 import logger from "./utils/logger.js";
 
+// VERY EARLY LOG - if this doesn't appear, module failed to load
+console.log('[video.js] Module loading...');
+
 // SAFARI DETECTION: Safari has unique audio/video behavior
 const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 const isSafariOrIOS = isSafari || isIOS;
 
 // Log browser/device detection for debugging
-console.log('[video.js] Device detection:', { isMobile, isSafariOrIOS, videoFileName });
+console.log('[video.js] Device detection:', { isMobile, isSafariOrIOS, isSafari, isIOS, videoFileName, videoUrl });
 
 // Flag to indicate when sound toggle is triggered by video slider
 let videoSliderTriggeredUnmute = false;
@@ -504,14 +507,20 @@ export function initVideo() {
   
   // Set video source immediately - this is critical for Safari
   // The old working code did: videoElement.src = videoUrl; right at init
-  videoElement.src = videoUrl;
-  videoElement.poster = posterUrl;
-  
-  // Explicitly call load() to ensure video starts loading
-  // This is important for Safari to properly initialize the video
-  videoElement.load();
-  
-  logger.log("[video.js] Video source set:", videoUrl, "| Mobile:", isMobile);
+  try {
+    videoElement.src = videoUrl;
+    videoElement.poster = posterUrl;
+    
+    // Explicitly call load() to ensure video starts loading
+    // This is important for Safari to properly initialize the video
+    // Wrap in try-catch as Safari can throw errors here
+    videoElement.load();
+    
+    logger.log("[video.js] Video source set:", videoUrl, "| Mobile:", isMobile);
+  } catch (loadError) {
+    console.error('[video.js] Error setting video source or loading:', loadError);
+    // Continue anyway - handlers should still be attached
+  }
 
   // Add error event listener to check if the video file can be loaded
   videoElement.addEventListener("error", (e) => {
@@ -1092,6 +1101,25 @@ export function initVideo() {
   // Add click handlers - simple and direct, matching old working code
   overlay.addEventListener("click", handlePlayPause);
   videoElement.addEventListener("click", handlePlayPause);
+  
+  // SAFARI MOBILE FIX: Also add touchend handlers
+  // Safari mobile sometimes doesn't fire click events properly on video elements
+  // Using touchend ensures we capture user taps
+  if (isSafariOrIOS) {
+    console.log('[video.js] Adding Safari touchend handlers');
+    
+    const handleTouchEnd = (e) => {
+      console.log('[video.js] touchend fired on', e.target.className || e.target.tagName);
+      // Prevent default to avoid double-firing with click
+      e.preventDefault();
+      handlePlayPause();
+    };
+    
+    overlay.addEventListener("touchend", handleTouchEnd, { passive: false });
+    videoElement.addEventListener("touchend", handleTouchEnd, { passive: false });
+  }
+  
+  console.log('[video.js] Event handlers attached to overlay and video element');
 
   // Handle video end
   videoElement.addEventListener("ended", () => {
