@@ -319,21 +319,18 @@ export function initTimelineShader() {
     // Always update opacity (needed for fade transitions)
     material.uniforms.uOpacity.value = params.opacity;
     
-    // Apply ocean bobbing (entire plane Y-axis movement)
-    // On mobile during scroll, skip bobbing entirely for performance
-    let bobbingOffset = 0;
-    if (!isMobile || !isScrolling) {
-      bobbingOffset = Math.sin(elapsedTime * params.bobbingSpeed) * params.bobbingAmplitude;
-    }
-    points.position.set(
-      params.positionX,
-      params.positionY + bobbingOffset,
-      params.positionZ
-    );
-    
-    // MOBILE OPTIMIZATION: Only update rotation/scale when not scrolling
-    // These rarely change during scroll anyway
-    if (!isMobile || !isScrolling) {
+    // MOBILE: Skip ALL position/rotation/scale updates to prevent nudging during scroll
+    // Position is set once at initialization and never touched again on mobile
+    if (!isMobile) {
+      // Apply ocean bobbing (entire plane Y-axis movement) - DESKTOP ONLY
+      const bobbingOffset = Math.sin(elapsedTime * params.bobbingSpeed) * params.bobbingAmplitude;
+      points.position.set(
+        params.positionX,
+        params.positionY + bobbingOffset,
+        params.positionZ
+      );
+      
+      // Update rotation/scale - DESKTOP ONLY
       points.rotation.x = params.rotationX;
       points.rotation.y = params.rotationY;
       points.rotation.z = params.rotationZ;
@@ -378,8 +375,11 @@ export function initTimelineShader() {
         isPaused = false;
         // Re-add resize listener
         window.addEventListener('resize', onWindowResize);
-        // Force resize update to ensure proportionality
-        onWindowResize();
+        // Force resize update to ensure proportionality - but NOT on mobile
+        // On mobile, forced resize causes position nudging
+        if (!isMobile) {
+          onWindowResize();
+        }
         
         clock.start(); // Reset clock on resume
         lastFrameTime = performance.now(); // Reset frame timing

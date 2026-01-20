@@ -5,6 +5,7 @@ import { initCoverOrb } from '../threejs/coverOrb.js';
 import { initTimelineShader } from './timelineShader.js';
 import performanceDetector from '../utils/performanceDetector.js';
 import logger from '../utils/logger.js';
+import mobileFilmGrain from '../utils/mobileFilmGrain.js';
 
 // GSAP Ticker Optimization for smoother animations when competing with WebGL
 // Disable lag smoothing - prevents "catch up" jitter when frames are dropped
@@ -401,6 +402,69 @@ export function initTimelineAnimation() {
       stopContinuousTracking();
     }
   });
+
+  // ==========================================================================
+  // MOBILE PERFORMANCE: Pause background elements when inside timeline
+  // This reduces GPU/CPU load by pausing:
+  // - Main shader background (#shaderBackground)
+  // - Mobile film grain overlay
+  // - Particle animations
+  // ==========================================================================
+  const isMobileDevice = window.matchMedia("(max-width: 1024px)").matches;
+  
+  if (isMobileDevice && timeline) {
+    // Helper to forcefully hide mobile film grain
+    const hideFilmGrain = () => {
+      mobileFilmGrain.hide();
+      mobileFilmGrain.setOpacity(0);
+      // Direct DOM fallback
+      const grainEl = document.getElementById('mobile-film-grain');
+      if (grainEl) {
+        grainEl.style.opacity = '0';
+        grainEl.style.display = 'none';
+        grainEl.style.visibility = 'hidden';
+      }
+    };
+    
+    // Helper to restore mobile film grain
+    const showFilmGrain = () => {
+      mobileFilmGrain.setOpacity(0.25);
+      mobileFilmGrain.show();
+      // Direct DOM restore
+      const grainEl = document.getElementById('mobile-film-grain');
+      if (grainEl) {
+        grainEl.style.visibility = 'visible';
+        grainEl.style.display = 'block';
+        grainEl.style.opacity = '0.25';
+      }
+    };
+    
+    ScrollTrigger.create({
+      trigger: timeline,
+      start: 'top 80%', // Start pausing slightly before timeline enters
+      end: 'bottom 20%', // Resume slightly before timeline exits
+      onEnter: () => {
+        logger.log('[Timeline] Mobile: Pausing background elements for performance');
+        window.backgroundPaused = true;
+        hideFilmGrain();
+      },
+      onLeave: () => {
+        logger.log('[Timeline] Mobile: Resuming background elements');
+        window.backgroundPaused = false;
+        showFilmGrain();
+      },
+      onEnterBack: () => {
+        logger.log('[Timeline] Mobile: Pausing background elements (scrolled back)');
+        window.backgroundPaused = true;
+        hideFilmGrain();
+      },
+      onLeaveBack: () => {
+        logger.log('[Timeline] Mobile: Resuming background elements (scrolled back up)');
+        window.backgroundPaused = false;
+        showFilmGrain();
+      }
+    });
+  }
 
   // Calculate total horizontal scroll distance
   const events = gsap.utils.toArray('.timeline-event');
@@ -2287,11 +2351,13 @@ export function initTimelineAnimation() {
         updateScrubber(progress);
 
         // --- Timeline Shader Interpolation ---
-        // PERFORMANCE: Only interpolate when in the final 25% of timeline
+        // MOBILE: Disabled entirely to prevent nudging/jitter during scroll
+        // DESKTOP: Only interpolate when in the final 25% of timeline
         // This avoids unnecessary calculations for 75% of the scroll
         const interpolationStart = 0.75;
         
-        if (progress > interpolationStart && window.timelineShaderControls && window.timelineShaderControls.updateParams) {
+        // Skip shader parameter interpolation on mobile - causes animation timing issues
+        if (!isMobile() && progress > interpolationStart && window.timelineShaderControls && window.timelineShaderControls.updateParams) {
           // MOBILE OPTIMIZATION: Throttle shader interpolation updates
           // Skip every other frame on mobile, but still update when progress changes significantly
           shaderInterpolationFrameCount++;

@@ -4784,6 +4784,11 @@ export async function initShaderBackground() {
       return;
     }
     
+    // Skip updates if background is paused (e.g., during timeline on mobile)
+    if (window.backgroundPaused) {
+      return;
+    }
+    
     lastParticleFrameTime = currentTime - (deltaTime % particleFrameInterval);
     
     const positions = particleGeometry.attributes.position.array;
