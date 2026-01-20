@@ -9,7 +9,15 @@ const assetBasePath = isAEMBuild
   : isGitHubPages 
     ? "/150-lab/assets"
     : "";
-const videoUrl = `${assetBasePath}/video/acs-150-compressed-3.mp4`;
+
+// Mobile detection - use smaller video file on mobile devices
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+  (navigator.maxTouchPoints && navigator.maxTouchPoints > 2) ||
+  window.matchMedia('(max-width: 768px)').matches;
+
+// Use smaller compressed video on mobile for better performance
+const videoFileName = isMobile ? 'acs-150-compressed-4.mp4' : 'acs-150-compressed-3.mp4';
+const videoUrl = `${assetBasePath}/video/${videoFileName}`;
 const posterUrl = `${assetBasePath}/images/ACS150-promo-cover.jpg`;
 import logger from "./utils/logger.js";
 
@@ -18,10 +26,8 @@ const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 const isSafariOrIOS = isSafari || isIOS;
 
-// Log browser detection for debugging
-if (isSafariOrIOS) {
-  console.log('[video.js] Safari/iOS detected - will use Safari-specific video handling');
-}
+// Log browser/device detection for debugging
+console.log('[video.js] Device detection:', { isMobile, isSafariOrIOS, videoFileName });
 
 // Flag to indicate when sound toggle is triggered by video slider
 let videoSliderTriggeredUnmute = false;
@@ -489,12 +495,23 @@ export function initVideo() {
   // Set video source IMMEDIATELY on init (like the old code that worked on Safari)
   // ============================================================================
   
+  // Ensure Safari-friendly attributes are set
+  videoElement.setAttribute('playsinline', '');
+  videoElement.setAttribute('webkit-playsinline', '');
+  if (isSafariOrIOS) {
+    videoElement.setAttribute('x-webkit-airplay', 'allow');
+  }
+  
   // Set video source immediately - this is critical for Safari
   // The old working code did: videoElement.src = videoUrl; right at init
   videoElement.src = videoUrl;
   videoElement.poster = posterUrl;
   
-  logger.log("[video.js] Video source and poster set immediately");
+  // Explicitly call load() to ensure video starts loading
+  // This is important for Safari to properly initialize the video
+  videoElement.load();
+  
+  logger.log("[video.js] Video source set:", videoUrl, "| Mobile:", isMobile);
 
   // Add error event listener to check if the video file can be loaded
   videoElement.addEventListener("error", (e) => {
@@ -944,8 +961,7 @@ export function initVideo() {
     }
   };
 
-  // Handle play/pause - SIMPLIFIED to match old working code
-  // The old code just called videoElement.play() directly - no async/await, no loading states
+  // Handle play/pause
   const handlePlayPause = () => {
     if (videoElement.paused) {
       // Clear any existing fade timeout
@@ -954,30 +970,79 @@ export function initVideo() {
         scrollAwayFadeTimeout = null;
       }
 
-      // DIRECT PLAY - matching old working code exactly
-      // No async/await, no loading states - just play() directly
-      videoElement.play();
-      overlay.classList.add("hidden");
-      
-      // Fade out background music and ensure video audio is playing
+      // Fade out background music
       if (window.backgroundAudio) {
         fadeAudio(window.backgroundAudio, 0);
       }
       
-      // Restore original volume or set based on global audio state
+      // Set volume based on global audio state BEFORE playing
       if (window.audioMuted) {
         videoElement.volume = 0;
         videoElement.muted = true;
       } else {
-        // Restore the original volume that was set before scroll-away fade
         videoElement.muted = false;
         videoElement.volume = originalVideoVolume;
       }
+
+      // Play the video and handle the promise properly
+      // Safari REQUIRES proper promise handling or it will fail silently
+      const playPromise = videoElement.play();
       
-      // Update slider after setting volume
-      updateSlider();
-      // Ensure smooth updates are started
-      startSmoothUpdates();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            // Playback started successfully
+            logger.log('[video.js] Video playback started successfully');
+            overlay.classList.add("hidden");
+            updateSlider();
+            startSmoothUpdates();
+          })
+          .catch((error) => {
+            logger.warn('[video.js] Play failed:', error.name, error.message);
+            
+            // SAFARI FALLBACK: Try playing muted first, then unmute
+            // Safari often requires muted playback to start
+            logger.log('[video.js] Trying muted playback fallback...');
+            videoElement.muted = true;
+            videoElement.volume = 0;
+            
+            const mutedPlayPromise = videoElement.play();
+            if (mutedPlayPromise !== undefined) {
+              mutedPlayPromise
+                .then(() => {
+                  logger.log('[video.js] Muted playback started, video is now playing');
+                  overlay.classList.add("hidden");
+                  updateSlider();
+                  startSmoothUpdates();
+                  
+                  // If user hasn't muted globally, try to unmute after a short delay
+                  // This sometimes works on Safari once the video is playing
+                  if (!window.audioMuted) {
+                    setTimeout(() => {
+                      try {
+                        videoElement.muted = false;
+                        videoElement.volume = originalVideoVolume;
+                        updateSlider();
+                        logger.log('[video.js] Successfully unmuted video');
+                      } catch (e) {
+                        logger.warn('[video.js] Could not unmute:', e);
+                      }
+                    }, 100);
+                  }
+                })
+                .catch((mutedError) => {
+                  logger.error('[video.js] Even muted playback failed:', mutedError.name, mutedError.message);
+                  // Show overlay again since we couldn't play
+                  overlay.classList.remove("hidden");
+                });
+            }
+          });
+      } else {
+        // Old browser without promise support - just assume it worked
+        overlay.classList.add("hidden");
+        updateSlider();
+        startSmoothUpdates();
+      }
     } else {
       pauseVideoAndShowOverlay();
     }
