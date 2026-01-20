@@ -1,8 +1,14 @@
-// Video and poster URLs from public folder
-// In Vite, public folder assets are served from root path
-// For AEM builds, they're under /content/dam/acsorg/150/assets/
+// Video and poster URLs - detect environment at runtime
+// AEM builds: /content/dam/acsorg/150/assets/
+// GitHub Pages: /150-lab/assets/
+// Local dev: /video/ (served from public folder)
 const isAEMBuild = document.querySelector('script[src*="/content/dam/acsorg/150/"]') !== null;
-const assetBasePath = isAEMBuild ? "/content/dam/acsorg/150/assets" : "";
+const isGitHubPages = window.location.hostname.includes('github.io') || window.location.pathname.startsWith('/150-lab/');
+const assetBasePath = isAEMBuild 
+  ? "/content/dam/acsorg/150/assets" 
+  : isGitHubPages 
+    ? "/150-lab/assets"
+    : "";
 const videoUrl = `${assetBasePath}/video/acs-150-compressed-3.mp4`;
 const posterUrl = `${assetBasePath}/images/ACS150-promo-cover.jpg`;
 import logger from "./utils/logger.js";
@@ -479,111 +485,86 @@ export function initVideo() {
   };
 
   // ============================================================================
-  // SMART LAZY LOADING STRATEGY
-  // Priority: Cover area/shader first, then video loads in background when idle
+  // VIDEO LOADING STRATEGY
+  // Safari/iOS needs video source set early. Other browsers can use lazy loading.
   // ============================================================================
   
   // Track if video source has been loaded
   let videoSourceLoaded = false;
   
   // Function to actually load the video source
-  // skipLoad parameter: if true, don't call load() - caller will do it after adding event listeners
-  const loadVideoSource = (skipLoad = false) => {
+  const loadVideoSource = () => {
     if (videoSourceLoaded) return;
     videoSourceLoaded = true;
     
-    logger.log("[video.js] Loading video source..." + (skipLoad ? " (skip load, caller will trigger)" : "") + (isSafariOrIOS ? " [Safari/iOS mode]" : ""));
-    
-    // SAFARI/iOS BEST PRACTICE: Ensure these attributes are set before loading
-    if (isSafariOrIOS) {
-      videoElement.setAttribute('playsinline', '');
-      videoElement.setAttribute('webkit-playsinline', '');
-      // Safari sometimes needs muted to start, we'll unmute after play starts
-      // But only if not already set by user preference
-      if (!window.audioMuted) {
-        // Don't set muted here - we'll handle it in playVideo
-      }
-    }
+    logger.log("[video.js] Loading video source..." + (isSafariOrIOS ? " [Safari/iOS mode]" : ""));
     
     // Set the video source - this triggers the actual download
     videoElement.src = videoUrl;
     
-    // Change preload to metadata to start buffering
-    videoElement.preload = "metadata";
+    // Trigger load
+    videoElement.load();
     
-    // SAFARI FIX: Only call load() if skipLoad is false
-    // When called from handlePlayPause, we need to add event listeners BEFORE calling load()
-    // Safari is strict about this timing - events may fire before listeners are attached otherwise
-    if (!skipLoad) {
-      videoElement.load();
-    }
-    
-    // After a short delay, upgrade to auto for smoother playback
-    setTimeout(() => {
-      if (videoElement && !videoElement.paused) return; // Don't change if playing
-      videoElement.preload = "auto";
-      logger.log("[video.js] Upgraded preload to auto for buffering");
-    }, 2000);
+    logger.log("[video.js] Video source set and load() called");
   };
   
   // Set poster immediately (small image, doesn't block paint)
   videoElement.poster = posterUrl;
   
-  // SAFARI/iOS: Ensure required attributes are set on the video element
+  // Ensure required attributes are set on the video element
+  videoElement.setAttribute('playsinline', '');
+  videoElement.setAttribute('webkit-playsinline', '');
   if (isSafariOrIOS) {
-    videoElement.setAttribute('playsinline', '');
-    videoElement.setAttribute('webkit-playsinline', '');
     // Safari hint for better loading
     videoElement.setAttribute('x-webkit-airplay', 'allow');
     logger.log("[video.js] Safari/iOS: Set required video attributes");
   }
   
-  // STRATEGY 1: Use requestIdleCallback to load video when browser is idle
-  // This ensures cover area and shader have priority
-  const scheduleVideoLoad = () => {
-    // SAFARI/iOS: Load sooner on Safari since it needs more initialization time
-    const safariDelay = isSafariOrIOS ? 1500 : 4000;
-    
-    if (typeof requestIdleCallback !== 'undefined' && !isSafariOrIOS) {
-      // Modern browsers (not Safari): load when browser is idle
-      requestIdleCallback(() => {
-        loadVideoSource();
-      }, { timeout: safariDelay });
-      logger.log("[video.js] Scheduled video load via requestIdleCallback");
-    } else {
-      // Safari or fallback: load after a delay to allow critical content to render
-      setTimeout(() => {
-        loadVideoSource();
-      }, isSafariOrIOS ? 1500 : 2000);
-      logger.log("[video.js] Scheduled video load via setTimeout" + (isSafariOrIOS ? " (Safari/iOS)" : " (fallback)"));
-    }
-  };
-  
-  // STRATEGY 2: Intersection Observer as safety net
-  // If user scrolls toward video before idle load, trigger immediately
-  // Note: videoSection is already defined at top of initVideo()
-  if (videoSection) {
-    const preloadObserver = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          // Start loading when video section is within 50% viewport distance
-          if (entry.isIntersecting && !videoSourceLoaded) {
-            logger.log("[video.js] Video section approaching viewport, loading immediately");
-            loadVideoSource();
-            preloadObserver.disconnect();
-          }
-        });
-      },
-      {
-        rootMargin: '50% 0px', // Start loading when within 50% of viewport
-        threshold: 0
+  // SAFARI/iOS CRITICAL: Load video source IMMEDIATELY
+  // Safari requires the video to be in a ready state before the user gesture expires.
+  // The old working code used preload="auto" and set src on init - we replicate that.
+  if (isSafariOrIOS) {
+    logger.log("[video.js] Safari/iOS detected - loading video source immediately");
+    loadVideoSource();
+  } else {
+    // Non-Safari browsers: Use lazy loading for better initial page performance
+    const scheduleVideoLoad = () => {
+      if (typeof requestIdleCallback !== 'undefined') {
+        requestIdleCallback(() => {
+          loadVideoSource();
+        }, { timeout: 4000 });
+        logger.log("[video.js] Scheduled video load via requestIdleCallback");
+      } else {
+        setTimeout(() => {
+          loadVideoSource();
+        }, 2000);
+        logger.log("[video.js] Scheduled video load via setTimeout (fallback)");
       }
-    );
-    preloadObserver.observe(videoSection);
+    };
+    
+    // Intersection Observer as safety net - load if user scrolls toward video
+    if (videoSection) {
+      const preloadObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting && !videoSourceLoaded) {
+              logger.log("[video.js] Video section approaching viewport, loading immediately");
+              loadVideoSource();
+              preloadObserver.disconnect();
+            }
+          });
+        },
+        {
+          rootMargin: '50% 0px',
+          threshold: 0
+        }
+      );
+      preloadObserver.observe(videoSection);
+    }
+    
+    // Start the idle-based loading
+    scheduleVideoLoad();
   }
-  
-  // Start the idle-based loading
-  scheduleVideoLoad();
 
   // Add error event listener to check if the video file can be loaded
   videoElement.addEventListener("error", (e) => {
@@ -1050,121 +1031,41 @@ export function initVideo() {
         scrollAwayFadeTimeout = null;
       }
 
-      // SAFARI/iOS SPECIFIC PATH
-      // Safari needs a simpler, more direct approach
-      if (isSafariOrIOS) {
-        logger.log("[video.js] Safari/iOS: User clicked play");
-        overlay.classList.add("loading");
-        
-        // For Safari, we take a more direct approach:
-        // 1. Set source if not set
-        // 2. Call load() and wait briefly
-        // 3. Then call playVideo() which handles Safari-specific playback
-        
-        if (!videoSourceLoaded) {
-          logger.log("[video.js] Safari/iOS: Loading video source...");
-          loadVideoSource(true); // skipLoad = true, we'll call load() ourselves
-        }
-        
-        // Safari: trigger load and give it time to initialize
-        videoElement.load();
-        
-        // Safari needs a moment after load() before play() will work
-        // Use a short timeout rather than events (more reliable on Safari)
-        setTimeout(() => {
-          logger.log("[video.js] Safari/iOS: Proceeding to playVideo after load delay, readyState: " + videoElement.readyState);
-          playVideo();
-        }, 500); // 500ms is usually enough for Safari to initialize
-        
-        return;
-      }
-
-      // NON-SAFARI PATH: Standard event-based approach
-      // Ensure video source is loaded before playing
+      // Ensure video source is loaded
       if (!videoSourceLoaded) {
         logger.log("[video.js] User clicked play before lazy load, loading immediately");
-        
-        // Show loading state on overlay
+        loadVideoSource();
+      }
+
+      // Check readyState - if video isn't ready, show loading and wait
+      // readyState: 0=HAVE_NOTHING, 1=HAVE_METADATA, 2=HAVE_CURRENT_DATA, 3=HAVE_FUTURE_DATA, 4=HAVE_ENOUGH_DATA
+      if (videoElement.readyState < 1) {
+        logger.log("[video.js] Video not ready (readyState: " + videoElement.readyState + "), waiting for metadata...");
         overlay.classList.add("loading");
         
-        // Add event listeners BEFORE calling load()
-        const onCanPlayThrough = () => {
-          logger.log("[video.js] canplaythrough event fired");
-          videoElement.removeEventListener('canplaythrough', onCanPlayThrough);
-          videoElement.removeEventListener('canplay', onCanPlay);
-          videoElement.removeEventListener('loadeddata', onLoadedData);
-          clearTimeout(playTimeout);
-          playVideo();
-        };
-        const onCanPlay = () => {
-          logger.log("[video.js] canplay event fired");
-          videoElement.removeEventListener('canplaythrough', onCanPlayThrough);
-          videoElement.removeEventListener('canplay', onCanPlay);
-          videoElement.removeEventListener('loadeddata', onLoadedData);
-          clearTimeout(playTimeout);
-          playVideo();
-        };
-        const onLoadedData = () => {
-          logger.log("[video.js] loadeddata event fired");
-          videoElement.removeEventListener('canplaythrough', onCanPlayThrough);
-          videoElement.removeEventListener('canplay', onCanPlay);
-          videoElement.removeEventListener('loadeddata', onLoadedData);
-          clearTimeout(playTimeout);
+        const onReady = () => {
+          logger.log("[video.js] Video ready event fired, readyState: " + videoElement.readyState);
+          videoElement.removeEventListener('loadedmetadata', onReady);
+          videoElement.removeEventListener('canplay', onReady);
+          clearTimeout(readyTimeout);
           playVideo();
         };
         
-        // Add ALL event listeners FIRST (before load)
-        videoElement.addEventListener('canplaythrough', onCanPlayThrough);
-        videoElement.addEventListener('canplay', onCanPlay);
-        videoElement.addEventListener('loadeddata', onLoadedData);
+        videoElement.addEventListener('loadedmetadata', onReady);
+        videoElement.addEventListener('canplay', onReady);
         
-        // Fallback timeout (3 seconds)
-        const playTimeout = setTimeout(() => {
-          videoElement.removeEventListener('canplaythrough', onCanPlayThrough);
-          videoElement.removeEventListener('canplay', onCanPlay);
-          videoElement.removeEventListener('loadeddata', onLoadedData);
+        // Fallback timeout
+        const readyTimeout = setTimeout(() => {
+          videoElement.removeEventListener('loadedmetadata', onReady);
+          videoElement.removeEventListener('canplay', onReady);
           logger.log("[video.js] Timeout reached, attempting to play anyway (readyState: " + videoElement.readyState + ")");
           playVideo();
         }, 3000);
         
-        // NOW set src and call load() - AFTER listeners are attached
-        loadVideoSource(true); // skipLoad = true
-        videoElement.load(); // Explicitly trigger load after listeners are ready
-        
-        logger.log("[video.js] Video load triggered, waiting for events...");
         return;
       }
 
-      // Check if video has enough data to play
-      // readyState: 0=HAVE_NOTHING, 1=HAVE_METADATA, 2=HAVE_CURRENT_DATA, 3=HAVE_FUTURE_DATA, 4=HAVE_ENOUGH_DATA
-      if (videoElement.readyState < 2) {
-        logger.log("[video.js] Video not ready (readyState: " + videoElement.readyState + "), waiting for data...");
-        overlay.classList.add("loading");
-        
-        const onDataReady = () => {
-          logger.log("[video.js] Data ready event fired");
-          videoElement.removeEventListener('canplay', onDataReady);
-          videoElement.removeEventListener('loadeddata', onDataReady);
-          clearTimeout(dataTimeout);
-          playVideo();
-        };
-        
-        videoElement.addEventListener('canplay', onDataReady);
-        videoElement.addEventListener('loadeddata', onDataReady);
-        
-        // Add timeout fallback for this case too
-        const dataTimeout = setTimeout(() => {
-          videoElement.removeEventListener('canplay', onDataReady);
-          videoElement.removeEventListener('loadeddata', onDataReady);
-          logger.log("[video.js] Data timeout reached, attempting to play anyway (readyState: " + videoElement.readyState + ")");
-          playVideo();
-        }, 3000);
-        
-        // Also try to trigger load
-        videoElement.load();
-        return;
-      }
-
+      // Video is ready, play it
       playVideo();
     } else {
       pauseVideoAndShowOverlay();
@@ -1172,125 +1073,17 @@ export function initVideo() {
   };
   
   // Extracted play logic for reuse
-  // SAFARI FIX: Handle play() promise properly - Safari requires this
+  // Simplified approach that works on all browsers including Safari
   const playVideo = async () => {
-    logger.log("[video.js] playVideo called - readyState: " + videoElement.readyState + ", paused: " + videoElement.paused + ", networkState: " + videoElement.networkState);
+    logger.log("[video.js] playVideo called - readyState: " + videoElement.readyState + ", paused: " + videoElement.paused);
     overlay.classList.remove("loading");
     
-    // Fade out background music and ensure video audio is playing
+    // Fade out background music
     if (window.backgroundAudio) {
       fadeAudio(window.backgroundAudio, 0);
     }
     
-    // SAFARI/iOS SPECIFIC APPROACH
-    // Safari is very strict about video playback. Best practice:
-    // 1. Start muted (guaranteed to work)
-    // 2. Play successfully
-    // 3. Then unmute if user hasn't muted audio globally
-    if (isSafariOrIOS) {
-      logger.log("[video.js] Safari/iOS detected - using Safari-specific playback sequence");
-      
-      try {
-        // STEP 1: Ensure video is ready - Safari needs this
-        if (videoElement.readyState < 1) {
-          logger.log("[video.js] Safari: Video not ready, triggering load...");
-          videoElement.load();
-          // Wait for loadedmetadata
-          await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-              logger.log("[video.js] Safari: loadedmetadata timeout, proceeding anyway");
-              resolve();
-            }, 5000);
-            
-            const onLoaded = () => {
-              clearTimeout(timeout);
-              videoElement.removeEventListener('loadedmetadata', onLoaded);
-              videoElement.removeEventListener('loadeddata', onLoaded);
-              logger.log("[video.js] Safari: Video metadata loaded");
-              resolve();
-            };
-            
-            videoElement.addEventListener('loadedmetadata', onLoaded);
-            videoElement.addEventListener('loadeddata', onLoaded);
-          });
-        }
-        
-        // STEP 2: Start MUTED - Safari allows muted autoplay
-        logger.log("[video.js] Safari: Starting video muted first...");
-        videoElement.muted = true;
-        videoElement.volume = 0;
-        
-        const playPromise = videoElement.play();
-        if (playPromise !== undefined) {
-          await playPromise;
-        }
-        
-        logger.log("[video.js] Safari: Muted playback started successfully");
-        overlay.classList.add("hidden");
-        startSmoothUpdates();
-        
-        // STEP 3: Now unmute (if user hasn't globally muted)
-        // This works because we're in a user interaction context
-        if (!window.audioMuted) {
-          // Small delay to ensure playback is stable
-          setTimeout(() => {
-            if (videoElement && !videoElement.paused) {
-              logger.log("[video.js] Safari: Unmuting video...");
-              videoElement.muted = false;
-              videoElement.volume = originalVideoVolume;
-              updateSlider();
-              logger.log("[video.js] Safari: Video unmuted successfully, volume: " + originalVideoVolume);
-            }
-          }, 100);
-        } else {
-          updateSlider();
-        }
-        
-        return; // Success - exit early
-        
-      } catch (safariError) {
-        logger.error("[video.js] Safari playback failed:", safariError.name, safariError.message);
-        
-        // FALLBACK: Try with controls attribute (some Safari versions need this)
-        try {
-          logger.log("[video.js] Safari: Trying fallback with controls attribute...");
-          videoElement.setAttribute('controls', '');
-          videoElement.muted = true;
-          
-          const fallbackPromise = videoElement.play();
-          if (fallbackPromise !== undefined) {
-            await fallbackPromise;
-          }
-          
-          // Remove controls after playback starts
-          setTimeout(() => {
-            videoElement.removeAttribute('controls');
-          }, 500);
-          
-          overlay.classList.add("hidden");
-          startSmoothUpdates();
-          
-          if (!window.audioMuted) {
-            setTimeout(() => {
-              videoElement.muted = false;
-              videoElement.volume = originalVideoVolume;
-              updateSlider();
-            }, 100);
-          }
-          
-          return;
-          
-        } catch (fallbackError) {
-          logger.error("[video.js] Safari fallback also failed:", fallbackError);
-          overlay.classList.remove("hidden");
-          overlay.classList.remove("loading");
-          return;
-        }
-      }
-    }
-    
-    // NON-SAFARI BROWSERS: Standard approach
-    // Restore original volume or set based on global audio state
+    // Set volume based on global audio state
     if (window.audioMuted) {
       videoElement.volume = 0;
       videoElement.muted = true;
@@ -1314,10 +1107,11 @@ export function initVideo() {
     } catch (error) {
       logger.warn("[video.js] Play failed:", error.name, error.message);
       
-      // Standard fallback: try muted
+      // Fallback: try muted (for autoplay policy)
       try {
         logger.log("[video.js] Retrying with muted video...");
         videoElement.muted = true;
+        videoElement.volume = 0;
         const mutedPlayPromise = videoElement.play();
         
         if (mutedPlayPromise !== undefined) {

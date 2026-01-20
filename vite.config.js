@@ -202,16 +202,34 @@ export default defineConfig(({ mode, command }) => {
       {
         name: "html-transform-timeline-images",
         transformIndexHtml(html, ctx) {
-          // Only transform for AEM standard build
-          if (mode !== "standard") return html;
-          
-          // Transform data-src paths for timeline images
+          // Transform data-src paths for timeline images based on build mode
           // From: data-src="./public/images/timeline/..." or data-src="/public/images/timeline/..."
-          // To: data-src="/content/dam/acsorg/150/assets/images/timeline/..."
-          html = html.replace(
-            /data-src="\.?\/public\/images\/timeline\//g,
-            'data-src="/content/dam/acsorg/150/assets/images/timeline/'
-          );
+          
+          if (mode === "standard") {
+            // AEM build: /content/dam/acsorg/150/assets/images/timeline/...
+            html = html.replace(
+              /data-src="\.?\/public\/images\/timeline\//g,
+              'data-src="/content/dam/acsorg/150/assets/images/timeline/'
+            );
+          } else if (mode === "github") {
+            // GitHub Pages build: /150-lab/assets/images/timeline/...
+            html = html.replace(
+              /data-src="\.?\/public\/images\/timeline\//g,
+              'data-src="/150-lab/assets/images/timeline/'
+            );
+          } else if (mode === "assets") {
+            // Assets build: /150/assets/images/timeline/...
+            html = html.replace(
+              /data-src="\.?\/public\/images\/timeline\//g,
+              'data-src="/150/assets/images/timeline/'
+            );
+          } else {
+            // Default/dev build: relative path for local development
+            html = html.replace(
+              /data-src="\.?\/public\/images\/timeline\//g,
+              'data-src="./assets/images/timeline/'
+            );
+          }
           
           return html;
         },
