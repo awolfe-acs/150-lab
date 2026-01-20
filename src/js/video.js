@@ -15,8 +15,9 @@ const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/
   (navigator.maxTouchPoints && navigator.maxTouchPoints > 2) ||
   window.matchMedia('(max-width: 768px)').matches;
 
-// Use smaller compressed video on mobile for better performance
-const videoFileName = isMobile ? 'acs-150-compressed-4.mp4' : 'acs-150-compressed-3.mp4';
+// Use Safari-compatible videos (re-encoded for better compatibility)
+// ACS-150-720.mp4 = 720p for mobile, ACS-150.mp4 = full resolution for desktop
+const videoFileName = isMobile ? 'ACS-150-720.mp4' : 'ACS-150.mp4';
 const videoUrl = `${assetBasePath}/video/${videoFileName}`;
 const posterUrl = `${assetBasePath}/images/ACS150-promo-cover.jpg`;
 import logger from "./utils/logger.js";

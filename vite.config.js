@@ -224,10 +224,11 @@ export default defineConfig(({ mode, command }) => {
               'data-src="/150/assets/images/timeline/'
             );
           } else {
-            // Default/dev build: relative path for local development
+            // Default/dev build: Vite serves public folder at root
+            // So public/images/timeline/... becomes /images/timeline/...
             html = html.replace(
               /data-src="\.?\/public\/images\/timeline\//g,
-              'data-src="./assets/images/timeline/'
+              'data-src="/images/timeline/'
             );
           }
           

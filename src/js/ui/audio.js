@@ -582,6 +582,27 @@ function setupVideoElementClickHandler(videoElement) {
     }
   });
   
+  // Also setup click sound for the video overlay (created by video.js)
+  // The overlay is positioned over the video and catches clicks before they reach the video
+  const videoWrapper = videoElement.closest('.video-wrapper');
+  if (videoWrapper) {
+    const overlay = videoWrapper.querySelector('.video-overlay');
+    if (overlay && !overlay.dataset.clickSoundHandlerAdded) {
+      overlay.dataset.clickSoundHandlerAdded = "true";
+      overlay.addEventListener("click", () => {
+        if (!audioMuted) {
+          playUIClickSound();
+        }
+      });
+      // Also handle touchend for Safari mobile
+      overlay.addEventListener("touchend", (e) => {
+        if (!audioMuted) {
+          playUIClickSound();
+        }
+      }, { passive: true });
+    }
+  }
+  
   // Listen for play event to pause background audio
   videoElement.addEventListener("play", () => {
     // Pause background audio when video starts
@@ -608,6 +629,28 @@ function setupVideoElementClickHandler(videoElement) {
       });
     }
   });
+}
+
+// Setup document-level click handler for .video-overlay elements
+// This uses event delegation to catch clicks on dynamically created overlays
+function setupVideoOverlayClickSound() {
+  // Use event delegation on document to catch all .video-overlay clicks
+  document.addEventListener("click", (e) => {
+    const overlay = e.target.closest('.video-overlay');
+    if (overlay && !audioMuted) {
+      playUIClickSound();
+    }
+  });
+  
+  // Also handle touchend for Safari mobile
+  document.addEventListener("touchend", (e) => {
+    const overlay = e.target.closest('.video-overlay');
+    if (overlay && !audioMuted) {
+      playUIClickSound();
+    }
+  }, { passive: true });
+  
+  console.log('[audio.js] Video overlay click sound handler registered');
 }
 
 // Setup audio observer for dynamically added elements
@@ -1047,6 +1090,9 @@ export const setupUIClickSounds = () => {
 
   // Setup audio observer for dynamically added elements
   setupAudioObserver();
+  
+  // Setup click sound for video overlay (uses event delegation for dynamic elements)
+  setupVideoOverlayClickSound();
 };
 
 // Handle audio playback on user interaction
