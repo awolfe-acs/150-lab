@@ -7,8 +7,14 @@ import logger from "../utils/logger.js";
 // Audio URLs from public folder
 // In Vite, public folder assets are served from root path
 // For AEM builds, they're under /content/dam/acsorg/150/assets/
+// For GitHub Pages, they're under /150-lab/assets/
 const isAEMBuild = document.querySelector('script[src*="/content/dam/acsorg/150/"]') !== null;
-const assetBasePath = isAEMBuild ? "/content/dam/acsorg/150/assets" : "";
+const isGitHubPages = window.location.hostname.includes('github.io') || window.location.pathname.startsWith('/150-lab/');
+const assetBasePath = isAEMBuild
+  ? "/content/dam/acsorg/150/assets"
+  : isGitHubPages
+    ? "/150-lab/assets"
+    : "";
 const uiClickAudioUrl = `${assetBasePath}/audio/ui-click.mp3`;
 const backgroundAudioUrl = `${assetBasePath}/audio/chemistry-3-final.mp3`;
 

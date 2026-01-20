@@ -1296,10 +1296,9 @@ export function initTimelineAnimation() {
         // Clamp to valid range
         activeMinorNodeIndex = Math.max(0, Math.min(activeMinorNodeIndex, minorNodes.length - 1));
         
-        // Ensure year element is visible
-        ensureYearVisible();
-        
         // Update year display from the event's data-year attribute
+        // Note: Don't call ensureYearVisible() here - showNewYear() already handles
+        // making the container visible, calling both causes a double fade-in animation
         const eventYear = closestEvent.getAttribute('data-year');
         if (eventYear) {
           updateCurrentYear(eventYear);
