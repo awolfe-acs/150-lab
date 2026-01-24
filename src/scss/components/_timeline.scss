@@ -119,14 +119,15 @@ body.timeline-resizing {
 // Timeline close button
 .timeline-close {
   position: fixed;
-  top: calc(2vw + 2.5px);
+  top: calc(2vw + 4.5px);
   right: 2vw;
   z-index: 100;
   //background: rgba(0, 0, 0, 0.3);
   //border: 1px solid rgba(255, 255, 255, 0.2);
   //border-radius: 50%;
-  width: 40px;
-  height: 40px;
+  //width: 40px;
+  //height: 40px;
+  height:36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -136,12 +137,17 @@ body.timeline-resizing {
   opacity: 0; // Will fade in with ScrollTrigger
   border:none;
   border-radius:8px;
+  font-size:12px;
+  letter-spacing:1px;
+  font-weight:450;
+  padding:0 16px;
   @media (max-width:$desktop-viewport) {
-    top: calc(2vw + 6px);
+    top: calc(2vw + 9px);
     right: 2vw;
+    transform: translateX(2px);
   }
   &:hover {
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(0, 0, 0, 0.16);
     transform: scale(1.1);
   }
 
@@ -155,7 +161,14 @@ body.timeline-resizing {
     height: 24px;
   }
 }
-
+body.in-timeline {
+  .timeline-close {
+    filter:opacity(0.75);
+    &:hover {
+      filter:opacity(1);
+    }
+  }
+}
 // Three.js container
 .timeline-threejs-container {
   position: fixed;
@@ -543,8 +556,8 @@ body.timeline-resizing {
   .timeline-close {
     //top: 24px;
     right: 16px;
-    width: 32px;
-    height: 32px;
+    //width: 32px;
+    //height: 32px;
   }
 
   .timeline-event {

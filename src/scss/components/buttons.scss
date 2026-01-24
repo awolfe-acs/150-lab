@@ -163,6 +163,19 @@
     }
 }
 
+.re-enter-timeline {
+    user-select:none;
+    pointer-events:none;
+    opacity:0;
+    position:relative;
+    transition: all 0.7s cubic-bezier(0.2, 0.1, 0.2, 1),
+    box-shadow 0.7s cubic-bezier(0.2, 0.1, 0.2, 1),
+    border-color 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
+    &.active {
+        pointer-events:auto;
+        opacity:1;
+    }
+}
 /* Keyframe animations for more subtle gradient effects */
 @keyframes subtleGradientShift {
     0% {

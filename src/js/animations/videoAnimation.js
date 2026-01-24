@@ -29,9 +29,7 @@ export function animateVideoScale() {
     });
 
     // Initially disable pointer events on video section
-    gsap.set(videoSection, {
-      pointerEvents: "none",
-    });
+    videoSection.classList.remove("active");
 
     // Create a timeline for the video animations - coordinate with intro-text fade out
     const videoTl = gsap.timeline({
@@ -71,15 +69,11 @@ export function animateVideoScale() {
       ...getScrollerConfig(), // Mobile scroll container support
       onEnter: () => {
         // Enable pointer events after video is mostly revealed
-        gsap.set(videoSection, {
-          pointerEvents: "auto",
-        });
+        videoSection.classList.add("active");
       },
       onLeaveBack: () => {
         // Disable pointer events when scrolling back up
-        gsap.set(videoSection, {
-          pointerEvents: "none",
-        });
+        videoSection.classList.remove("active");
       },
     });
 

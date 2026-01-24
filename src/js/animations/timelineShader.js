@@ -14,7 +14,7 @@ export function initTimelineShader() {
   const isMobile = performanceDetector.isMobile();
   
   // Use performance-based dot counts for mobile
-  const dotCounts = perfSettings.timelineShaderDotCount || { x: 98, y: 54 };
+  const dotCounts = perfSettings.timelineShaderDotCount || { x: 62, y: 36 };
 
   // Configuration Parameters
   const params = {
@@ -48,7 +48,7 @@ export function initTimelineShader() {
   
   // Add Scale parameter - responsive based on viewport width
   // Use larger scale for wide viewports (> 1440px) to maintain visual density
-  params.scale = window.innerWidth > 1440 ? 6.0 : 3.4;
+  params.scale = window.innerWidth > 1440 ? 3.4 : 3.4;
 
   // Add to dat.GUI if available
   // Wait a moment for GUI to be initialized if it's not yet available
@@ -353,7 +353,7 @@ export function initTimelineShader() {
     
     // Update scale based on viewport width
     // Use larger scale for wide viewports (> 1440px) to maintain visual density
-    params.scale = window.innerWidth > 1440 ? 6.0 : 3.4;
+    params.scale = window.innerWidth > 1440 ? 3.4 : 3.4;
     points.scale.set(params.scale, params.scale, params.scale);
   }
 

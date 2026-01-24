@@ -920,9 +920,18 @@ export function initHeroAnimation() {
 export function initHeroNumberCountdown() {
   const heroNumber = document.querySelector("#hero-number");
   if (heroNumber) {
-    // PERFORMANCE: Cache last values to avoid redundant DOM updates
+    // PERFORMANCE: Cache DOM references and pre-compute values ONCE
+    let cachedDigitSpans = null;
     let lastYear = null;
     let lastOpacity = null;
+    
+    // Pre-cache digit spans after initial render
+    const cacheDigitSpans = () => {
+      cachedDigitSpans = heroNumber.querySelectorAll(".digit");
+    };
+    
+    // Initial cache (may need to be called again if digits are recreated)
+    requestAnimationFrame(cacheDigitSpans);
     
     // Create the tween ONLY if it doesn't exist
     if (!animationState.heroNumberTween) {
@@ -945,7 +954,7 @@ export function initHeroNumberCountdown() {
             // Progress 0 = 2026, Progress 1 = 1876
             const currentYear = Math.round(2026 - self.progress * 150); // 2026 - 150 = 1876
             
-            // PERFORMANCE: Skip if nothing changed
+            // PERFORMANCE: Skip if year hasn't changed
             if (currentYear === lastYear) return;
             lastYear = currentYear;
             
@@ -955,42 +964,41 @@ export function initHeroNumberCountdown() {
             // Round to 2 decimal places to reduce style updates
             const opacity = Math.round((0.44 + self.progress * 0.56) * 100) / 100;
 
-            const yearValue = currentYear.toString();
-            const currentDigits = heroNumber.querySelectorAll(".digit");
-            const newDigits = yearValue.split("");
-
-            // Update digits only if year changed (which we know it did since we passed the check above)
-              if (currentDigits.length !== newDigits.length) {
-                heroNumber.innerHTML = "";
-                newDigits.forEach((digit) => {
-                  const digitSpan = document.createElement("span");
-                  digitSpan.className = "digit";
-                  digitSpan.textContent = digit;
-                  digitSpan.setAttribute("data-digit", digit);
-                  heroNumber.appendChild(digitSpan);
-                });
-              } else {
-                // Update existing digits with new content
-                currentDigits.forEach((digitSpan, index) => {
-                  if (digitSpan.textContent !== newDigits[index]) {
-                    digitSpan.textContent = newDigits[index];
-                    digitSpan.setAttribute("data-digit", newDigits[index]);
-                  }
-                });
+            // PERFORMANCE: Use cached digit spans, only re-query if cache is invalid
+            if (!cachedDigitSpans || cachedDigitSpans.length === 0) {
+              cacheDigitSpans();
+            }
+            
+            // PERFORMANCE: Direct digit updates without string split or array creation
+            // Years are always 4 digits (1876-2026), so we can extract digits directly
+            const d0 = Math.floor(currentYear / 1000);
+            const d1 = Math.floor((currentYear % 1000) / 100);
+            const d2 = Math.floor((currentYear % 100) / 10);
+            const d3 = currentYear % 10;
+            
+            // Update each digit span directly - only if content differs
+            if (cachedDigitSpans && cachedDigitSpans.length === 4) {
+              const digits = [d0, d1, d2, d3];
+              for (let i = 0; i < 4; i++) {
+                const digitStr = String(digits[i]);
+                const span = cachedDigitSpans[i];
+                if (span.textContent !== digitStr) {
+                  span.textContent = digitStr;
+                  span.setAttribute("data-digit", digitStr);
+                }
+              }
             }
 
             // PERFORMANCE: Only update opacity if it actually changed
             if (opacity !== lastOpacity) {
               lastOpacity = opacity;
-            heroNumber.style.setProperty("--digit-opacity", opacity);
+              heroNumber.style.setProperty("--digit-opacity", opacity);
             }
-            // REMOVED: filter: blur(0px) - this was being called every frame and is expensive
-            // Blur is only needed during fade-out phase, not during countdown
           },
 
           onLeave: function (self) {
             // Ensure opacity is at 1.0 when leaving (completed countdown)
-              heroNumber.style.setProperty("--digit-opacity", "1.0");
+            heroNumber.style.setProperty("--digit-opacity", "1.0");
             lastOpacity = 1.0;
             lastYear = 1876;
           },
@@ -998,45 +1006,41 @@ export function initHeroNumberCountdown() {
           onComplete: function () {
             // Ensure the number stays at 1876 after countdown completes
             animationState.heroYearObj.year = 1876;
-            const heroNumber = document.querySelector("#hero-number");
-            if (heroNumber) {
-              const currentDigits = heroNumber.querySelectorAll(".digit");
-              const newDigits = "1876".split("");
-
-              currentDigits.forEach((digitSpan, index) => {
-                if (digitSpan.textContent !== newDigits[index]) {
-                  digitSpan.textContent = newDigits[index];
-                  digitSpan.setAttribute("data-digit", newDigits[index]);
+            if (cachedDigitSpans && cachedDigitSpans.length === 4) {
+              const finalDigits = ["1", "8", "7", "6"];
+              cachedDigitSpans.forEach((span, i) => {
+                if (span.textContent !== finalDigits[i]) {
+                  span.textContent = finalDigits[i];
+                  span.setAttribute("data-digit", finalDigits[i]);
                 }
               });
-                heroNumber.style.setProperty("--digit-opacity", "1.0");
-              lastOpacity = 1.0;
-              lastYear = 1876;
             }
+            heroNumber.style.setProperty("--digit-opacity", "1.0");
+            lastOpacity = 1.0;
+            lastYear = 1876;
           },
           onLeaveBack: function (self) {
             // Ensure we reset to 2026 when scrolling back up
             animationState.heroYearObj.year = 2026;
-            const heroNumber = document.querySelector("#hero-number");
-            if (heroNumber) {
-              const currentDigits = heroNumber.querySelectorAll(".digit");
-              const newDigits = "2026".split("");
-
-              currentDigits.forEach((digitSpan, index) => {
-                if (digitSpan.textContent !== newDigits[index]) {
-                  digitSpan.textContent = newDigits[index];
-                  digitSpan.setAttribute("data-digit", newDigits[index]);
+            if (cachedDigitSpans && cachedDigitSpans.length === 4) {
+              const initialDigits = ["2", "0", "2", "6"];
+              cachedDigitSpans.forEach((span, i) => {
+                if (span.textContent !== initialDigits[i]) {
+                  span.textContent = initialDigits[i];
+                  span.setAttribute("data-digit", initialDigits[i]);
                 }
               });
-                heroNumber.style.setProperty("--digit-opacity", "0.44");
-              lastOpacity = 0.44;
-              lastYear = 2026;
             }
+            heroNumber.style.setProperty("--digit-opacity", "0.44");
+            lastOpacity = 0.44;
+            lastYear = 2026;
           },
           onRefresh: (self) => {
+            // Re-cache digit spans after refresh (layout may have changed)
+            cacheDigitSpans();
             // Force update opacity after refresh based on current progress
             const opacity = Math.round((0.44 + self.progress * 0.56) * 100) / 100;
-              heroNumber.style.setProperty("--digit-opacity", opacity);
+            heroNumber.style.setProperty("--digit-opacity", opacity);
             lastOpacity = opacity;
             // Recalculate year on refresh
             lastYear = Math.round(2026 - self.progress * 150);

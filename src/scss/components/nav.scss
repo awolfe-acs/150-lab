@@ -74,14 +74,15 @@ nav {
         a {
             font-family: 'Open Sans', sans-serif;
             font-size: 13.5px;
-            font-weight: 400;
-            text-transform: uppercase;
+            font-weight: 450;
+            text-transform: capitalize;
             color: #767676;
             //font-family: 'Poppins', sans-serif;
             //font-size:14px;
             //font-weight:500;
             //letter-spacing:0.54px;
             //color: #111;
+            margin-top:8px;
             white-space: nowrap;
 
             &:hover {

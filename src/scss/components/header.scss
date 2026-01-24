@@ -3,7 +3,7 @@
 
 body.in-timeline {
     header.anniversary {
-        padding-right:8vw;
+        padding-right:calc(8vw + 24px);
         @media (max-width:$desktop-viewport) {
             padding-right: 10vw;
         }
@@ -187,6 +187,7 @@ button.sound-toggle {
     @media (max-width:$mobile-viewport) {
         margin: 0 auto;
         gap:8px;
+        transform:translateX(-32px);
     }
     @media (max-width:$small-mobile-viewport) {
         font-size:12px;

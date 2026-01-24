@@ -3,8 +3,8 @@
 // Timeline Scrubber Styles
 
 $timeline-active: #FFFFFF;
-$timeline-inactive: #4DBAFF;
-$timeline-inactive: #6BB8F9;
+$timeline-inactive: #79C8FD;
+$timeline-inactive-dark: hsl(204, 60%, 60%);
 $timeline-scrubber-height: 80px;
 
 .timeline-scrubber {
@@ -59,12 +59,12 @@ body.in-timeline {
 
 // Navigation arrows
 .scrubber-nav {
-  position: absolute;
-  top: 40px;
+  //position: absolute;
+  //top: 40px;
   transform: translateY(-50%) translateZ(0);
   width: 40px;
   height: 40px;
-  border:1px solid rgba(255,255,255,0.3);
+  border:1px solid rgba(255,255,255,0.25);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -77,19 +77,24 @@ body.in-timeline {
   will-change: backdrop-filter; // Hint browser for layer creation (simplified)
   contain: layout; // Help browser optimize rendering
   backface-visibility: hidden; // Force hardware acceleration
-  
-  // Direct application (no pseudo-element)
+  position:fixed;
+  top:auto;
+  bottom:64px;
+  opacity:0;
   background: rgba(0, 0, 0, 0.3);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(4px) saturate(110%);
+  backdrop-filter: blur(4px) saturate(110%);
   
   @media (max-width: $mobile-viewport) {
-    top: 30px;
+    //top: 30px;
+    bottom:54px;
   }
-  
+  &.disabled {
+    opacity:0!important;
+  }
   &:hover {
     background: rgba(0, 0, 0, 0.5);
-    border:1px solid rgba(255,255,255,0.66);
+    border:1px solid rgba(255,255,255,0.5);
   }
   
   &:active {
@@ -144,7 +149,7 @@ body.in-timeline {
   right: -65px;
   transform: translateY(-50%);
   height: 3px;
-  background: $timeline-inactive;
+  background: $timeline-inactive-dark;
   border-radius: 2px;
   pointer-events: none;
 }
@@ -252,7 +257,7 @@ body.in-timeline {
 .marker-dot {
   width: 14px;
   height: 14px;
-  background: $timeline-inactive;
+  background: $timeline-inactive-dark;
   //border: 2px solid rgba(255, 255, 255, 0.8);
   border-radius: 50%;
   transition: all 0.3s ease;
@@ -366,7 +371,7 @@ body.in-timeline {
 .minor-node-dot {
   width: 8px;
   height: 8px;
-  background: rgba(107, 184, 249, 1);
+  background: $timeline-inactive-dark;
   border-radius: 50%;
   transition: all 0.2s ease;
   position: relative;

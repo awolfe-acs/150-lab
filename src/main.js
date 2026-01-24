@@ -399,16 +399,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     await yieldToMain();
     
     // ==========================================================================
-    // HIDE LOADER - Cover-area is now ready!
+    // PHASE 2: DEFERRED MODULES - Load all non-video modules
     // ==========================================================================
-    hideLoader();
-    
-    // ==========================================================================
-    // PHASE 2: DEFERRED MODULES - Load after cover-area visible
-    // Small delay to ensure cover-area fade-in starts smoothly
-    // ==========================================================================
-    await yieldWithDelay(50);
-    
     if (aemSettings.enableAnimations) {
       // Load all deferred modules in parallel
       const deferred = await loadModules([
@@ -462,10 +454,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     
     // ==========================================================================
-    // VIDEO (deferred, heavy)
+    // HIDE LOADER - All non-video content is now ready!
+    // Wait 400ms before revealing the page
+    // ==========================================================================
+    await yieldWithDelay(800);
+    hideLoader();
+    
+    // ==========================================================================
+    // VIDEO (deferred, heavy) - Load AFTER page is revealed
     // ==========================================================================
     if (aemSettings.enableVideo) {
-      await yieldWithDelay(100);
+      await yieldWithDelay(3000);
       const videoModule = await loadModule('video');
       await yieldToMain();
       videoModule.initVideo();

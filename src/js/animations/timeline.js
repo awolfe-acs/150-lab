@@ -1186,6 +1186,30 @@ export function initTimelineAnimation() {
     timelineWindowStart.style.pointerEvents = 'auto';
   }
   
+  // Add click/touch listener to .re-enter-timeline button for re-entry
+  const reEnterButton = document.querySelector('.re-enter-timeline');
+  if (reEnterButton) {
+    const handleReEnterButton = (e) => {
+      // Only handle re-entry if timeline has been dismissed
+      const isDismissed = isTimelineDismissed || window._isTimelineDismissed;
+      if (isDismissed) {
+        // Play UI click sound before preventing default and stopping propagation
+        if (window.playUIClickSound && !window.audioMuted) {
+          window.playUIClickSound();
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        // Remove .active class when re-entering
+        reEnterButton.classList.remove('active');
+        reEnterTimeline();
+      }
+    };
+    
+    // Add both click and touchend for mobile support
+    reEnterButton.addEventListener('click', handleReEnterButton, { capture: true });
+    reEnterButton.addEventListener('touchend', handleReEnterButton, { passive: false, capture: true });
+  }
+  
   // Helper function to show the year element (ensure it's visible)
   const ensureYearVisible = () => {
     if (!currentYearElement) {
@@ -1752,6 +1776,12 @@ export function initTimelineAnimation() {
             // Reset dismissing flag (both local and global)
             isDismissing = false;
             window._isDismissing = false;
+            
+            // Add .active class to .re-enter-timeline button
+            const reEnterButton = document.querySelector('.re-enter-timeline');
+            if (reEnterButton) {
+              reEnterButton.classList.add('active');
+            }
           }
         });
         }, 100); // Small delay to ensure scroll completes
@@ -2278,7 +2308,7 @@ export function initTimelineAnimation() {
   // PERFORMANCE: Define shader interpolation params ONCE outside the scroll loop
   // Avoids object recreation on every frame
   const shaderStartParams = {
-    waveSpeed: 0.32,
+    waveSpeed: 0.26,
     waveAmplitude: 1.9,
     waveFrequencyX: 0.16,
     waveFrequencyY: 0.32,
@@ -2294,7 +2324,7 @@ export function initTimelineAnimation() {
   };
   
   const shaderEndParams = {
-    waveSpeed: 0.2,
+    waveSpeed: 0.18,
     waveAmplitude: 5.0,
     waveFrequencyX: 0.6,
     waveFrequencyY: 1.0,
@@ -2302,7 +2332,7 @@ export function initTimelineAnimation() {
     bobbingSpeed: 0.24,
     fadeIntensity: 0.39,
     opacity: 1.0,
-    scale: 3.3,
+    scale: 5,
     rotationX: -1.6,
     rotationZ: -1.44,
     positionY: -20.0,
@@ -2766,6 +2796,18 @@ export function initTimelineAnimation() {
     {
       opacity: 1,
       y: 0,
+      duration: 0.05,
+      ease: 'power2.out',
+      force3D: true
+    },
+    0
+  );
+
+  // Fade in scrubber nav elements at the same time
+  tl.to(
+    '.scrubber-nav',
+    {
+      opacity: 1,
       duration: 0.05,
       ease: 'power2.out',
       force3D: true

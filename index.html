@@ -699,7 +699,6 @@
           </div>
         </div>
       </div>
-
       <!-- New! Phase 0 Cover Section Goes Here -->
       <section id="cover-travel-area" class="height-100svh">
         <section
@@ -918,6 +917,7 @@
           <h4 class="split-lines text-align-center" id="get-involved-heading">
             Explore <span id="timeline-window-start">150 years</span> of milestones that shaped chemistry and ACS. Join us in building the next 150 years together.
           </h4>
+          <button class="re-enter-timeline fancy-btn align-self-center scroll-reveal" data-reveal-delay="800"><span>RE-ENTER TIMELINE</span></button>
         </div>
         <!------ Start of ACS Timeline Section ------>
         <section id="acs-timeline">
@@ -925,9 +925,11 @@
             
             <!-- Timeline close button -->
             <button class="timeline-close" aria-label="Close timeline">
+              LEAVE TIMELINE
+              <!--
               <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M24 8L8 24M8 8L24 24" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+              </svg>-->
             </button>
             
             <div id="current-timeline-year"><!--dynamically set the active .timeline-event data-year="" here, with a per character reveal animation--></div>
@@ -1938,17 +1940,6 @@
 
               <!-- Timeline Scrubber -->
               <div class="timeline-scrubber">
-                <!-- Navigation Arrows -->
-                <button class="scrubber-nav scrubber-nav-prev" aria-label="Previous decade">
-                  <svg viewBox="0 0 24 24">
-                    <polyline points="15 18 9 12 15 6"></polyline>
-                  </svg>
-                </button>
-                <button class="scrubber-nav scrubber-nav-next" aria-label="Next decade">
-                  <svg viewBox="0 0 24 24">
-                    <polyline points="9 18 15 12 9 6"></polyline>
-                  </svg>
-                </button>
                 
                 <!-- Scrollable Wrapper -->
                 <div class="scrubber-scroll-wrapper">
@@ -2083,6 +2074,18 @@
 
             
           </div>
+
+                <!-- Navigation Arrows -->
+                <button class="scrubber-nav scrubber-nav-prev" aria-label="Previous decade">
+                  <svg viewBox="0 0 24 24">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
+                <button class="scrubber-nav scrubber-nav-next" aria-label="Next decade">
+                  <svg viewBox="0 0 24 24">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
         </section>
         
         <!-- Expanding background element (sits behind everything via z-index) -->

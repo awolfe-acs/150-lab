@@ -63,10 +63,10 @@ export function createScrollDownIcon(referenceElement) {
     `;
   }
 
-  // Get the parent container of the reference button to position the icon in the same location
-  const parentContainer = referenceElement.parentElement;
-  if (parentContainer) {
-    parentContainer.appendChild(scrollIcon);
+  // Append the icon to #hero-travel-area
+  const heroTravelArea = document.querySelector("#hero-travel-area");
+  if (heroTravelArea) {
+    heroTravelArea.appendChild(scrollIcon);
   } else {
     document.body.appendChild(scrollIcon);
   }
@@ -102,14 +102,14 @@ export function createScrollDownIcon(referenceElement) {
   // Use ScrollTrigger to match cover area SVG fade timing (but faster)
   ScrollTrigger.create({
     trigger: "#cover-travel-area",
-    start: "top top", // Start when cover-travel-area reaches top
-    end: "bottom 70%", // End earlier than cover SVG (70% vs center) for faster fade-out
+    start: "top top",
+    end: "bottom 0%",
     scrub: 0.5, // Faster scrub than cover SVG (0.5 vs 1) for quicker response
     markers: false,
     onUpdate: (self) => {
       // Fade out based on scroll progress - same as cover SVG but faster
-      const opacity = 1 - self.progress;
-      gsap.set(scrollIcon, { opacity: opacity, overwrite: true });
+      //const opacity = 1 - self.progress;
+      //gsap.set(scrollIcon, { opacity: opacity, overwrite: true });
     },
     onLeave: () => {
       // Ensure icon is hidden when leaving the trigger area

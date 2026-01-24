@@ -3,6 +3,17 @@ import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import logger from "../utils/logger.js";
 
+// Helper to get mobile scroll container config for ScrollTrigger
+// On mobile, #app is the scroll container; on desktop, use default (window)
+const getScrollerConfig = () => {
+  if (window.isMobileScrollMode && window.mobileScrollContainer) {
+    return {
+      scroller: window.mobileScrollContainer,
+    };
+  }
+  return {}; // Empty = use defaults (window scroller)
+};
+
 // Initialize simple scroll reveal animation without text splitting
 export function initScrollRevealAnimation() {
   // Get all elements with reveal classes
@@ -49,6 +60,7 @@ export function initScrollRevealAnimation() {
         once: false, // Allow the animation to run multiple times if scrolled past
         markers: false, // Set to true for debugging
         id: `scroll-reveal-button-${index}`,
+        ...getScrollerConfig(), // Mobile scroll container support
         onEnter: () => {
           // Animate when element enters the viewport
           gsap.to(element, {
@@ -86,6 +98,7 @@ export function initScrollRevealAnimation() {
         once: false, // Allow the animation to run multiple times if scrolled past
         markers: false, // Set to true for debugging
         id: `scroll-reveal-${index}`,
+        ...getScrollerConfig(), // Mobile scroll container support
         onEnter: () => {
           // Animate when element enters the viewport
           gsap.to(element, {
