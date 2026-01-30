@@ -51,32 +51,74 @@ function interpolateColor(color1, color2, progress) {
 }
 
 export function initTimelineAnimation() {
+  // ==========================================================================
+  // INITIALIZATION TELEMETRY: Track init state for debugging failures
+  // ==========================================================================
+  const initState = {
+    timestamp: Date.now(),
+    elements: {},
+    shaderInit: false,
+    orbInit: false,
+    positionCaptured: false,
+    attempts: 0,
+    errors: []
+  };
+  
+  // CRITICAL: Reset global state flags on fresh init to prevent stale state
+  // This fixes issues where previous session state blocks timeline entry
+  window._isTimelineDismissed = false;
+  window._isDismissing = false;
+  
   const timeline = document.querySelector('#acs-timeline');
   const timelineWindowStart = document.querySelector('#timeline-window-start');
   const timelineWindowBg = document.querySelector('#timeline-window-bg');
   const getInvolvedMessage = document.querySelector('.get-involved-message');
   
-  // Initialize Shader Background
+  // Track element availability for telemetry
+  initState.elements.timeline = !!timeline;
+  initState.elements.windowStart = !!timelineWindowStart;
+  initState.elements.windowBg = !!timelineWindowBg;
+  initState.elements.getInvolvedMessage = !!getInvolvedMessage;
+  
+  // Initialize Shader Background with error boundary
   if (document.querySelector('#timeline-shader-bg') && !window.timelineShaderControls) {
-    window.timelineShaderControls = initTimelineShader();
-    // Start paused since we're not in timeline initially
-    if (window.timelineShaderControls && window.timelineShaderControls.stop) {
-      window.timelineShaderControls.stop();
+    try {
+      window.timelineShaderControls = initTimelineShader();
+      initState.shaderInit = !!window.timelineShaderControls;
+      // Start paused since we're not in timeline initially
+      if (window.timelineShaderControls && window.timelineShaderControls.stop) {
+        window.timelineShaderControls.stop();
+      }
+    } catch (e) {
+      logger.warn('[Timeline] Shader initialization failed:', e.message);
+      initState.errors.push({ type: 'shader', message: e.message });
+      // Timeline can continue without shader
     }
   }
   
-  // Initialize Cover Orb
+  // Initialize Cover Orb with error boundary
   if (document.querySelector('#timeline-cover-canvas') && !window.coverOrbControls) {
-    window.coverOrbControls = initCoverOrb();
-    // Start paused since we're not in timeline initially
-    if (window.coverOrbControls && window.coverOrbControls.pause) {
-      window.coverOrbControls.pause();
+    try {
+      window.coverOrbControls = initCoverOrb();
+      initState.orbInit = !!window.coverOrbControls;
+      // Start paused since we're not in timeline initially
+      if (window.coverOrbControls && window.coverOrbControls.pause) {
+        window.coverOrbControls.pause();
+      }
+    } catch (e) {
+      logger.warn('[Timeline] Cover orb initialization failed:', e.message);
+      initState.errors.push({ type: 'coverOrb', message: e.message });
+      // Timeline can continue without cover orb
     }
   }
   
   // Check if required elements exist
   if (!timeline || !timelineWindowStart || !timelineWindowBg || !getInvolvedMessage) {
-    logger.warn('Timeline: Required elements not found. Skipping timeline initialization.');
+    logger.warn('Timeline: Required elements not found. Skipping timeline initialization.', initState.elements);
+    // Dispatch failure event for analytics
+    window.dispatchEvent(new CustomEvent('timeline:init-failed', { 
+      detail: { reason: 'missing-elements', state: initState }
+    }));
     return;
   }
   
@@ -127,12 +169,34 @@ export function initTimelineAnimation() {
   
   // Helper to get the current position of timeline-window-start with adjustments
   const getSpanPosition = () => {
-    if (!timelineWindowStart) return null;
+    if (!timelineWindowStart) {
+      logger.warn('[Timeline] getSpanPosition: timelineWindowStart element is null');
+      return null;
+    }
     
     const rect = timelineWindowStart.getBoundingClientRect();
     
     // Validate that we got real dimensions (not 0x0 from off-screen element)
     if (rect.width === 0 || rect.height === 0) {
+      // Log detailed diagnostics for zero-dimension elements
+      // This helps identify why ~3% of users may have position capture failures
+      try {
+        const computedStyle = window.getComputedStyle(timelineWindowStart);
+        logger.warn('[Timeline] Zero-dimension element detected:', {
+          width: rect.width,
+          height: rect.height,
+          top: rect.top,
+          left: rect.left,
+          display: computedStyle.display,
+          visibility: computedStyle.visibility,
+          opacity: computedStyle.opacity,
+          position: computedStyle.position,
+          parentVisible: timelineWindowStart.parentElement ? 
+            window.getComputedStyle(timelineWindowStart.parentElement).display : 'no-parent'
+        });
+      } catch (e) {
+        logger.warn('[Timeline] Zero-dimension element - could not get computed style:', e.message);
+      }
       return null;
     }
     
@@ -288,7 +352,12 @@ export function initTimelineAnimation() {
 
   // Position the BG element once, but keep it invisible
   // Use multiple attempts to ensure we get a valid position (handles async layout)
+  // Track attempts for telemetry
+  let bgPositionAttempts = 0;
+  const MAX_BG_POSITION_ATTEMPTS = 6;
+  
   const initBgPosition = () => {
+    bgPositionAttempts++;
     const pos = getSpanPosition();
     if (pos) {
       // Update caches
@@ -304,21 +373,52 @@ export function initTimelineAnimation() {
       timelineWindowBg.style.height = `${pos.height}px`;
       timelineWindowBg.style.background = 'linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164))';
       timelineWindowBg.style.borderRadius = '4px';
+      
+      logger.log(`[Timeline] Background position captured on attempt ${bgPositionAttempts}:`, pos);
       return true;
     }
     return false;
   };
   
+  // Extended retry window: 0 + 50 + 100 + 200 + 300 + 400 = 1050ms total
+  // This handles slow devices, font loading, and complex CSS layouts
   requestAnimationFrame(() => {
     // Try immediately
     if (!initBgPosition()) {
-      // If element not ready, try again after short delay
+      // Attempt 2: 50ms delay
       setTimeout(() => {
         if (!initBgPosition()) {
-          // One more attempt after longer delay (for slow mobile layouts)
-          setTimeout(initBgPosition, 200);
+          // Attempt 3: 100ms delay
+          setTimeout(() => {
+            if (!initBgPosition()) {
+              // Attempt 4: 200ms delay
+              setTimeout(() => {
+                if (!initBgPosition()) {
+                  // Attempt 5: 300ms delay
+                  setTimeout(() => {
+                    if (!initBgPosition()) {
+                      // Attempt 6 (final): 400ms delay
+                      setTimeout(() => {
+                        if (!initBgPosition()) {
+                          // All attempts failed - log for telemetry
+                          logger.warn(`[Timeline] Failed to capture background position after ${MAX_BG_POSITION_ATTEMPTS} attempts over 1050ms`);
+                          window.dispatchEvent(new CustomEvent('timeline:init-failed', { 
+                            detail: { 
+                              reason: 'position-capture-failed', 
+                              attempts: bgPositionAttempts,
+                              elementExists: !!timelineWindowStart
+                            }
+                          }));
+                        }
+                      }, 400);
+                    }
+                  }, 300);
+                }
+              }, 200);
+            }
+          }, 100);
         }
-      }, 100);
+      }, 50);
     }
   });
 
@@ -380,35 +480,53 @@ export function initTimelineAnimation() {
   };
   
   // Set up ScrollTrigger to start aggressive tracking when .get-involved-message enters viewport
-  ScrollTrigger.create({
+  // Wrap callbacks in try-catch to prevent silent failures from breaking timeline
+  const trackingScrollTrigger = ScrollTrigger.create({
     trigger: getInvolvedMessage,
     start: 'top bottom', // When message enters bottom of viewport
     end: 'bottom top', // When message exits top of viewport
     onEnter: () => {
-      // CRITICAL: Skip if timeline has been dismissed
-      if (isTimelineDismissed || window._isTimelineDismissed) return;
-      // CRITICAL: When entering the tracking zone, immediately sync position
-      // This ensures we have valid position data before any animations start
-      syncBgToSpanImmediate();
-      startContinuousTracking();
+      try {
+        // CRITICAL: Skip if timeline has been dismissed
+        if (isTimelineDismissed || window._isTimelineDismissed) return;
+        // CRITICAL: When entering the tracking zone, immediately sync position
+        // This ensures we have valid position data before any animations start
+        syncBgToSpanImmediate();
+        startContinuousTracking();
+      } catch (e) {
+        logger.warn('[Timeline] Error in tracking onEnter:', e.message);
+      }
     },
     onLeave: () => {
       // Don't stop tracking when leaving downward - we need it for the handoff
     },
     onEnterBack: () => {
-      // CRITICAL: Skip if timeline has been dismissed - prevents scroll issues on mobile
-      if (isTimelineDismissed || window._isTimelineDismissed) {
-        logger.log('[Tracking] onEnterBack blocked - timeline is dismissed');
-        return;
+      try {
+        // CRITICAL: Skip if timeline has been dismissed - prevents scroll issues on mobile
+        if (isTimelineDismissed || window._isTimelineDismissed) {
+          logger.log('[Tracking] onEnterBack blocked - timeline is dismissed');
+          return;
+        }
+        // Also sync immediately on re-entry
+        syncBgToSpanImmediate();
+        startContinuousTracking();
+      } catch (e) {
+        logger.warn('[Timeline] Error in tracking onEnterBack:', e.message);
       }
-      // Also sync immediately on re-entry
-      syncBgToSpanImmediate();
-      startContinuousTracking();
     },
     onLeaveBack: () => {
-      stopContinuousTracking();
+      try {
+        stopContinuousTracking();
+      } catch (e) {
+        logger.warn('[Timeline] Error in tracking onLeaveBack:', e.message);
+      }
     }
   });
+  
+  // Validate ScrollTrigger was created successfully
+  if (!trackingScrollTrigger) {
+    logger.warn('[Timeline] Failed to create tracking ScrollTrigger');
+  }
 
   // ==========================================================================
   // MOBILE PERFORMANCE: Pause background elements when inside timeline
@@ -1506,6 +1624,41 @@ export function initTimelineAnimation() {
     return Math.min(timelinePosition / timelineTotalDuration, 0.99); // Cap at 99% to avoid edge cases
   };
 
+  // ==========================================================================
+  // HELPER: Robust pseudo-element style update function
+  // Centralizes style updates to avoid fragile regex replacements
+  // ==========================================================================
+  const updatePseudoElementStyle = (opacity, transition = false) => {
+    const styleEl = document.getElementById('timeline-window-start-bg-style');
+    if (!styleEl) {
+      logger.warn('[Timeline] Pseudo-element style element not found');
+      return false;
+    }
+    
+    try {
+      styleEl.textContent = `
+        #timeline-window-start::before {
+          content: '';
+          position: absolute;
+          top: -2px;
+          left: -6px;
+          right: -6px;
+          bottom: -2px;
+          background: linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164));
+          border-radius: 4px;
+          opacity: ${opacity};
+          z-index: -1;
+          pointer-events: none;
+          ${transition ? 'transition: opacity 0.3s ease;' : 'transition: none !important;'}
+        }
+      `;
+      return true;
+    } catch (e) {
+      logger.warn('[Timeline] Failed to update pseudo-element style:', e.message);
+      return false;
+    }
+  };
+  
   // Phase 0: Fade in background highlight after get-involved-message text is visible
   // Store reference to kill it during handoff
   const pseudoFadeTl = gsap.timeline({
@@ -1516,10 +1669,8 @@ export function initTimelineAnimation() {
       scrub: 1,
       onLeaveBack: () => {
         // Fade back out the pseudo-element when scrolling up
-        const styleEl = document.getElementById('timeline-window-start-bg-style');
-        if (styleEl) {
-          styleEl.textContent = styleEl.textContent.replace(/opacity: [0-9.]+/, 'opacity: 0');
-        }
+        // Use helper function instead of fragile regex replacement
+        updatePseudoElementStyle(0, false);
       }
     }
   }).to({}, {
@@ -1527,27 +1678,15 @@ export function initTimelineAnimation() {
     duration: 1,
     ease: 'power2.out',
     onUpdate: function() {
-      const progress = this.progress();
-      const opacity = progress * 0.5; // 0 to 0.5
-      
-      // Update pseudo-element opacity via style element
-      const styleEl = document.getElementById('timeline-window-start-bg-style');
-      if (styleEl) {
-        styleEl.textContent = `
-          #timeline-window-start::before {
-            content: '';
-            position: absolute;
-            top: -2px;
-            left: -6px;
-            right: -6px;
-            bottom: -2px;
-            background: linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164));
-            border-radius: 4px;
-            opacity: ${opacity};
-            z-index: -1;
-            pointer-events: none;
-          }
-        `;
+      try {
+        const progress = this.progress();
+        const opacity = progress * 0.5; // 0 to 0.5
+        
+        // Update pseudo-element opacity via style element
+        // Use helper function for more robust updates
+        updatePseudoElementStyle(opacity);
+      } catch (e) {
+        logger.warn('[Timeline] Error updating pseudo-element style:', e.message);
       }
     }
   });
@@ -1560,14 +1699,10 @@ export function initTimelineAnimation() {
   
   // Track if timeline has been dismissed
   // Store in window for global access (survives resize operations)
-  if (typeof window._isTimelineDismissed === 'undefined') {
-    window._isTimelineDismissed = false;
-  }
-  if (typeof window._isDismissing === 'undefined') {
-    window._isDismissing = false;
-  }
-  let isTimelineDismissed = window._isTimelineDismissed;
-  let isDismissing = window._isDismissing;
+  // NOTE: Global flags are reset at the top of initTimelineAnimation() to prevent stale state
+  // We always start fresh - the flags were already cleared above
+  let isTimelineDismissed = false;
+  let isDismissing = false;
   let isReEntering = false; // Track re-entry in progress
   let isBgLockedFullscreen = false; // Track when background is locked at fullscreen during re-entry
   
@@ -1912,6 +2047,37 @@ export function initTimelineAnimation() {
         // Add a small buffer of 1% of the expansion phase
         const handoffThreshold = expansionStartPosition + (0.01 * (1 - expansionStartPosition));
         
+        // ==========================================================================
+        // CRITICAL HANDOFF CHECK (NOT THROTTLED)
+        // This check runs every frame near the handoff point to ensure seamless transition
+        // The ~3% failure rate may be caused by missing the exact handoff moment
+        // ==========================================================================
+        const isNearHandoff = Math.abs(progress - handoffThreshold) < 0.03; // Within 3% of handoff
+        if (isNearHandoff) {
+          // Ensure captured position is valid before handoff
+          if (!capturedPosition || capturedPosition.width === 0 || capturedPosition.height === 0) {
+            const freshPos = getSpanPosition();
+            if (freshPos) {
+              capturedPosition = { ...freshPos };
+              logger.log('[Timeline] Critical handoff: Captured fresh position');
+            } else {
+              logger.warn('[Timeline] Critical handoff: Could not get fresh position');
+            }
+          }
+          
+          // At exact handoff moment, force visibility states
+          if (progress >= handoffThreshold && progress < handoffThreshold + 0.02) {
+            // Just crossed handoff - ensure BG is visible
+            if (timelineWindowBg.style.visibility === 'hidden' || timelineWindowBg.style.opacity === '0') {
+              timelineWindowBg.style.visibility = 'visible';
+              timelineWindowBg.style.opacity = '0.5';
+              logger.log('[Timeline] Critical handoff: Forced BG visible');
+            }
+            // Ensure pseudo is hidden
+            updatePseudoElementStyle(0, false);
+          }
+        }
+        
         // CRITICAL: Resume timeline visuals EARLY AND AGGRESSIVELY
         // But only AFTER the hold period - start when expansion begins
         // This ensures they're playing even during very slow scrolling
@@ -2026,24 +2192,8 @@ export function initTimelineAnimation() {
               capturedPosition = { ...pos };
             }
             
-            if (styleEl) {
-              styleEl.textContent = `
-                #timeline-window-start::before {
-                  content: '';
-                  position: absolute;
-                  top: -2px;
-                  left: -6px;
-                  right: -6px;
-                  bottom: -2px;
-                  background: linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164));
-                  border-radius: 4px;
-                  opacity: 0.5 !important;
-                  z-index: -1;
-                  pointer-events: none;
-                  transition: none !important;
-                }
-              `;
-            }
+            // Use helper function for robust pseudo-element updates
+            updatePseudoElementStyle(0.5, false);
           }
         } else {
           // AFTER handoff: BG visible, Pseudo hidden
@@ -2059,31 +2209,13 @@ export function initTimelineAnimation() {
             }
           }
           
-          // Hide pseudo-element
-          if (styleEl) {
-            styleEl.textContent = `
-              #timeline-window-start::before {
-                content: '';
-                position: absolute;
-                top: -2px;
-                left: -6px;
-                right: -6px;
-                bottom: -2px;
-                background: linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164));
-                border-radius: 4px;
-                opacity: 0 !important;
-                z-index: -1;
-                pointer-events: none;
-                transition: none !important;
-              }
-            `;
-          }
+          // Hide pseudo-element using helper function
+          updatePseudoElementStyle(0, false);
           
-          // Make BG visible in after-handoff phase
-          // BUT: Don't reduce opacity if we're already in timeline (from re-entry)
-          // Note: We're past handoff threshold so pseudo should already be hidden
-          if (!document.body.classList.contains('in-timeline')) {
-            timelineWindowBg.style.opacity = '0.5';
+          // REMOVED: Manual opacity setting was competing with GSAP's fromTo animation
+          // The GSAP timeline handles opacity from 0.5 to 1 via scrub - don't interfere
+          // Only ensure visibility is set so GSAP opacity animation is visible
+          if (timelineWindowBg.style.visibility !== 'visible') {
             timelineWindowBg.style.visibility = 'visible';
           }
         }
@@ -2103,25 +2235,8 @@ export function initTimelineAnimation() {
         // Set initial state - pseudo-element visible, BG hidden but positioned
         // The onUpdate will handle continuous positioning during hold period
         // and the handoff will happen at handoffThreshold
-        const styleEl = document.getElementById('timeline-window-start-bg-style');
-        if (styleEl) {
-          styleEl.textContent = `
-            #timeline-window-start::before {
-              content: '';
-              position: absolute;
-              top: -2px;
-              left: -6px;
-              right: -6px;
-              bottom: -2px;
-              background: linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164));
-              border-radius: 4px;
-              opacity: 0.5 !important;
-              z-index: -1;
-              pointer-events: none;
-              transition: none !important;
-            }
-          `;
-        }
+        // Use helper function for robust updates
+        updatePseudoElementStyle(0.5, false);
         
         // Initial positioning of BG using helper function (validates dimensions)
         // This is critical for mobile where fast scrolling might cause issues
@@ -2160,26 +2275,8 @@ export function initTimelineAnimation() {
         timelineWindowBg.style.opacity = '0';
         timelineWindowBg.style.visibility = 'hidden';
         
-        // 2. INSTANTLY restore the pseudo-element background
-        const styleEl = document.getElementById('timeline-window-start-bg-style');
-        if (styleEl) {
-          styleEl.textContent = `
-            #timeline-window-start::before {
-              content: '';
-              position: absolute;
-              top: -2px;
-              left: -6px;
-              right: -6px;
-              bottom: -2px;
-              background: linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164));
-              border-radius: 4px;
-              opacity: 0.5;
-              z-index: -1;
-              pointer-events: none;
-              transition: opacity 0.3s ease;
-            }
-          `;
-        }
+        // 2. INSTANTLY restore the pseudo-element background using helper function
+        updatePseudoElementStyle(0.5, true); // With transition for smooth fade
         
         // 3. Keep captured position for potential re-entry, but allow fresh capture on next enter
         // Don't reset to null - keep the valid position in case of quick scroll back
@@ -2225,7 +2322,24 @@ export function initTimelineAnimation() {
       }
       
       // Last resort fallback - should never happen if element is visible
+      // This is a critical failure point - log detailed telemetry
       logger.warn('[Timeline] No valid position for expansion animation - using viewport center fallback');
+      
+      // Dispatch telemetry event for analytics
+      window.dispatchEvent(new CustomEvent('timeline:init-failed', { 
+        detail: { 
+          reason: 'expansion-fallback-used', 
+          capturedPosition: capturedPosition,
+          elementExists: !!timelineWindowStart,
+          elementDimensions: timelineWindowStart ? {
+            width: timelineWindowStart.offsetWidth,
+            height: timelineWindowStart.offsetHeight,
+            display: window.getComputedStyle(timelineWindowStart).display
+          } : null,
+          timestamp: Date.now()
+        }
+      }));
+      
       const fallbackWidth = 200;
       const fallbackHeight = 40;
       return {
@@ -2290,10 +2404,34 @@ export function initTimelineAnimation() {
   );
 
   // Ensure ScrollTrigger refreshes after fonts load to prevent layout shifts affecting positions
+  // Add timeout fallback in case fonts.ready never resolves (failed font load)
   if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(() => {
+    let fontRefreshDone = false;
+    
+    const doFontRefresh = () => {
+      if (fontRefreshDone) return;
+      fontRefreshDone = true;
       ScrollTrigger.refresh();
-    });
+    };
+    
+    // Primary: wait for fonts
+    document.fonts.ready
+      .then(doFontRefresh)
+      .catch((e) => {
+        logger.warn('[Timeline] Font loading failed, refreshing ScrollTrigger anyway:', e);
+        doFontRefresh();
+      });
+    
+    // Fallback: refresh after 3 seconds regardless of font state
+    setTimeout(() => {
+      if (!fontRefreshDone) {
+        logger.warn('[Timeline] Font loading timeout after 3s, forcing ScrollTrigger refresh');
+        doFontRefresh();
+      }
+    }, 3000);
+  } else {
+    // No font API available - refresh after short delay
+    setTimeout(() => ScrollTrigger.refresh(), 500);
   }
 
   // Fade out the get-involved-message
@@ -3532,6 +3670,21 @@ export function initTimelineAnimation() {
     stopTracking: stopContinuousTracking
   };
   
+  // Store all ScrollTriggers for proper cleanup
+  window._timelineScrollTriggers = scrollTriggers.slice(); // Copy array
+  if (trackingScrollTrigger) {
+    window._timelineScrollTriggers.push(trackingScrollTrigger);
+  }
+  if (pseudoFadeTl && pseudoFadeTl.scrollTrigger) {
+    window._timelineScrollTriggers.push(pseudoFadeTl.scrollTrigger);
+  }
+  if (expansionTl && expansionTl.scrollTrigger) {
+    window._timelineScrollTriggers.push(expansionTl.scrollTrigger);
+  }
+  if (tl && tl.scrollTrigger) {
+    window._timelineScrollTriggers.push(tl.scrollTrigger);
+  }
+  
   // Expose positioning function and state for resize handling
   window._timelinePositioning = {
     positionBgToSpan: positionBgToSpan,
@@ -4028,32 +4181,91 @@ function updateTimelineScrubber(progress) {
 
 // Export cleanup function
 export function disposeTimeline() {
-  // Clean up RAF, resize observer, and scroll listeners
-  if (window._timelineCleanup) {
-    if (window._timelineCleanup.rafId) {
-      cancelAnimationFrame(window._timelineCleanup.rafId);
+  try {
+    // Clean up RAF, resize observer, and scroll listeners
+    if (window._timelineCleanup) {
+      if (window._timelineCleanup.rafId) {
+        cancelAnimationFrame(window._timelineCleanup.rafId);
+      }
+      if (window._timelineCleanup.resizeObserver) {
+        try {
+          window._timelineCleanup.resizeObserver.disconnect();
+        } catch (e) {
+          logger.warn('[Timeline] Error disconnecting resize observer:', e.message);
+        }
+      }
+      if (window._timelineCleanup.lenisCallback && window.lenis) {
+        try {
+          window.lenis.off('scroll', window._timelineCleanup.lenisCallback);
+        } catch (e) {
+          logger.warn('[Timeline] Error removing lenis listener:', e.message);
+        }
+      }
+      if (window._timelineCleanup.scrollCallback) {
+        window.removeEventListener('scroll', window._timelineCleanup.scrollCallback);
+      }
+      // Stop continuous tracking if active
+      if (window._timelineCleanup.stopTracking) {
+        try {
+          window._timelineCleanup.stopTracking();
+        } catch (e) {
+          logger.warn('[Timeline] Error stopping tracking:', e.message);
+        }
+      }
+      window._timelineCleanup = null;
     }
-    if (window._timelineCleanup.resizeObserver) {
-      window._timelineCleanup.resizeObserver.disconnect();
+    
+    // Kill all timeline ScrollTriggers
+    if (window._timelineScrollTriggers) {
+      window._timelineScrollTriggers.forEach(trigger => {
+        try {
+          if (trigger && trigger.kill) trigger.kill();
+        } catch (e) {
+          logger.warn('[Timeline] Error killing ScrollTrigger:', e.message);
+        }
+      });
+      window._timelineScrollTriggers = null;
     }
-    if (window._timelineCleanup.lenisCallback && window.lenis) {
-      window.lenis.off('scroll', window._timelineCleanup.lenisCallback);
+    
+    // Dispose timeline shader
+    if (window.timelineShaderControls) {
+      try {
+        if (window.timelineShaderControls.stop) {
+          window.timelineShaderControls.stop();
+        }
+        if (window.timelineShaderControls.dispose) {
+          window.timelineShaderControls.dispose();
+        }
+      } catch (e) {
+        logger.warn('[Timeline] Error disposing shader:', e.message);
+      }
+      window.timelineShaderControls = null;
     }
-    if (window._timelineCleanup.scrollCallback) {
-      window.removeEventListener('scroll', window._timelineCleanup.scrollCallback);
+    
+    // Dispose cover orb
+    if (window.coverOrbControls) {
+      try {
+        if (window.coverOrbControls.dispose) {
+          window.coverOrbControls.dispose();
+        }
+      } catch (e) {
+        logger.warn('[Timeline] Error disposing cover orb:', e.message);
+      }
+      window.coverOrbControls = null;
     }
-    window._timelineCleanup = null;
-  }
-  
-  // Dispose timeline shader
-  if (window.timelineShaderControls) {
-    window.timelineShaderControls.stop();
-    window.timelineShaderControls = null;
-  }
-  
-  // Ensure background is resumed when timeline is disposed
-  if (window.backgroundPaused) {
-    window.backgroundPaused = false;
-    window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: false } }));
+    
+    // Reset global state flags
+    window._isTimelineDismissed = false;
+    window._isDismissing = false;
+    
+    // Ensure background is resumed when timeline is disposed
+    if (window.backgroundPaused) {
+      window.backgroundPaused = false;
+      window.dispatchEvent(new CustomEvent('timeline:backgroundPaused', { detail: { paused: false } }));
+    }
+    
+    logger.log('[Timeline] Disposed successfully');
+  } catch (e) {
+    logger.warn('[Timeline] Error during dispose:', e.message);
   }
 }

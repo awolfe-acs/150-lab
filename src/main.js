@@ -399,76 +399,102 @@ document.addEventListener("DOMContentLoaded", async () => {
     await yieldToMain();
     
     // ==========================================================================
-    // PHASE 2: DEFERRED MODULES - Load all non-video modules
+    // PHASE 2: DEFERRED MODULES - Sequential loading with 250ms between each
+    // Each module loads separately to ensure all content is ready before reveal
     // ==========================================================================
     if (aemSettings.enableAnimations) {
-      // Load all deferred modules in parallel
-      const deferred = await loadModules([
-        'introText',
-        'videoAnimation',
-        'getInvolved',
-        'marquee',
-        'timeline',
-        'pageNavigation',
-        'share',
-        // 'eventListHover', // DISABLED
-      ]);
+      console.log('[main.js] Starting Phase 2: Sequential module loading...');
       
-      await yieldToMain();
+      // --- Load each module individually with 250ms between each ---
+      const introText = await loadModule('introText');
+      console.log('[main.js] Loaded: introText');
+      await yieldWithDelay(120);
       
-      // Initialize deferred modules
-      deferred.introText.initIntroTextAnimation();
+      const videoAnimation = await loadModule('videoAnimation');
+      console.log('[main.js] Loaded: videoAnimation');
+      await yieldWithDelay(120);
       
-      await yieldToMain();
+      const getInvolved = await loadModule('getInvolved');
+      console.log('[main.js] Loaded: getInvolved');
+      await yieldWithDelay(120);
       
-      deferred.videoAnimation.animateVideoScale();
+      const marquee = await loadModule('marquee');
+      console.log('[main.js] Loaded: marquee');
+      await yieldWithDelay(120);
       
-      await yieldToMain();
+      const timeline = await loadModule('timeline');
+      console.log('[main.js] Loaded: timeline');
+      await yieldWithDelay(120);
       
-      // Get Involved section
-      deferred.getInvolved.animateGetInvolvedText();
-      deferred.getInvolved.animateSlidingCards();
-      deferred.getInvolved.initGetInvolvedLogoAnimation();
+      const pageNavigation = await loadModule('pageNavigation');
+      console.log('[main.js] Loaded: pageNavigation');
+      await yieldWithDelay(120);
       
-      await yieldToMain();
+      const share = await loadModule('share');
+      console.log('[main.js] Loaded: share');
+      await yieldWithDelay(120);
       
-      // Marquee
-      deferred.marquee.initInfiniteMarqueeAnimation();
+      const video = await loadModule('video');
+      console.log('[main.js] Loaded: video');
+      await yieldWithDelay(120);
       
-      await yieldToMain();
+      console.log('[main.js] All modules loaded! Starting initialization...');
       
-      // Timeline (heavy)
-      deferred.timeline.initTimelineAnimation();
+      // --- Now initialize all modules ---
+      await yieldWithDelay(120);
       
-      await yieldToMain();
+      // --- Phase 2.2: Intro text animations ---
+      introText.initIntroTextAnimation();
       
-      // UI Components
-      deferred.pageNavigation.updatePageNavigation();
+      await yieldWithDelay(250);
       
-      await yieldToMain();
+      // --- Phase 2.3: Video animation setup ---
+      videoAnimation.animateVideoScale();
       
-      // Share panel
-      deferred.share.initShareButtonOverlapDetection();
-      deferred.share.initSharePanel();
-      // deferred.eventListHover.initEventListItemHover(); // DISABLED
+      await yieldWithDelay(250);
+      
+      // --- Phase 2.4: Get Involved section ---
+      getInvolved.animateGetInvolvedText();
+      getInvolved.animateSlidingCards();
+      getInvolved.initGetInvolvedLogoAnimation();
+      
+      await yieldWithDelay(250);
+      
+      // --- Phase 2.5: Marquee ---
+      marquee.initInfiniteMarqueeAnimation();
+      
+      await yieldWithDelay(250);
+      
+      // --- Phase 2.6: Timeline (heavy) ---
+      timeline.initTimelineAnimation();
+      
+      await yieldWithDelay(250);
+      
+      // --- Phase 2.7: UI Components ---
+      pageNavigation.updatePageNavigation();
+      
+      await yieldWithDelay(250);
+      
+      // --- Phase 2.8: Share panel ---
+      share.initShareButtonOverlapDetection();
+      share.initSharePanel();
+      
+      await yieldWithDelay(250);
+      
+      // --- Phase 2.9: Video initialization ---
+      if (aemSettings.enableVideo) {
+        video.initVideo();
+      }
+      
+      console.log('[main.js] All modules initialized!');
     }
     
     // ==========================================================================
-    // HIDE LOADER - All non-video content is now ready!
-    // Wait 400ms before revealing the page
+    // REVEAL PAGE - ALL content (including video) is now ready!
+    // All phases complete - play cover area animation to fade out loader
     // ==========================================================================
-    await yieldWithDelay(800);
-    hideLoader();
-    
-    // ==========================================================================
-    // VIDEO (deferred, heavy) - Load AFTER page is revealed
-    // ==========================================================================
-    if (aemSettings.enableVideo) {
-      await yieldWithDelay(3000);
-      const videoModule = await loadModule('video');
-      await yieldToMain();
-      videoModule.initVideo();
-    }
+    console.log('[main.js] All loading complete - revealing page...');
+    essential.hero.playCoverAreaAnimation();
     
   } else {
     // Non-main page: just hide loader

@@ -88,14 +88,26 @@ export function setupHeroHeadingFadeAnimation() {
       paused: true,
     });
 
-    // Animate each character to fade out and move back in Z space
+    // PERFORMANCE: Animate characters with opacity only (no per-character blur)
+    // Blur is now applied to the parent container to avoid expensive per-element filter operations
     fadeOutTl.to(
       shuffledChars,
       {
         opacity: 0,
-        z: -50,
-        filter: "blur(16px)", // Add blur effect to match entry animation
+        // REMOVED: z and filter - these cause massive frame drops with many elements
+        // Each element with 3D transform + blur creates expensive compositing layers
         stagger: 0.02,
+        ease: "power1.in",
+      },
+      0
+    );
+    
+    // PERFORMANCE: Apply blur to the parent container (single element) instead of per-character
+    // This is much cheaper as only one element needs blur compositing
+    fadeOutTl.to(
+      heroHeading,
+      {
+        filter: "blur(8px)", // Reduced from 16px, applied to container
         ease: "power1.in",
       },
       0
@@ -107,32 +119,11 @@ export function setupHeroHeadingFadeAnimation() {
       trigger: "#hero-travel-area",
       start: "16% top", // Adjusted to 50% of previous change - when 17% of hero-travel-area has passed top of viewport
       end: "36% top", // Reduced end point by 50% - when 50% of hero-travel-area has passed the top of viewport
-      scrub: true, // Use true for smoother scrubbing without lag
+      scrub: 1, // PERFORMANCE: Increased from true (0) - smoother scrubbing
       markers: false, // Set to true for debugging
       invalidateOnRefresh: true, // **CRITICAL** Recalculate positions on refresh
-      onUpdate: (self) => {
-        // Let the timeline handle the animation naturally - this prevents conflicts
-        // The timeline is already linked to scroll progress via scrub: true
-
-        // Only intervene if we detect the animation getting stuck
-        if (self.progress === 0) {
-          // Ensure characters are fully visible at start
-          gsap.set(shuffledChars, {
-            opacity: 1,
-            z: 0,
-            scale: 1,
-            filter: "blur(0px)",
-            clearProps: "transform", // Clear any stuck transforms
-          });
-        } else if (self.progress === 1) {
-          // Ensure characters are fully faded at end
-          gsap.set(shuffledChars, {
-            opacity: 0,
-            z: -50,
-            filter: "blur(16px)",
-          });
-        }
-      },
+      fastScrollEnd: true, // PERFORMANCE: Enable fast scroll optimization
+      // REMOVED onUpdate: The timeline handles animation via scrub - no need for per-frame gsap.set() calls
       onRefresh: (self) => {
         // When ScrollTrigger refreshes, sync the timeline progress
         if (fadeOutTl) {
@@ -143,8 +134,9 @@ export function setupHeroHeadingFadeAnimation() {
         // Ensure all characters are fully faded when leaving
         gsap.set(shuffledChars, {
           opacity: 0,
-          z: -50,
-          filter: "blur(16px)",
+        });
+        gsap.set(heroHeading, {
+          filter: "blur(8px)",
         });
       },
       onEnterBack: () => {
@@ -160,10 +152,10 @@ export function setupHeroHeadingFadeAnimation() {
         // Reset to fully visible when scrolling back up
         gsap.set(shuffledChars, {
           opacity: 1,
-          z: 0,
-          scale: 1,
-          filter: "blur(0px)",
           clearProps: "transform", // Clear any stuck transforms
+        });
+        gsap.set(heroHeading, {
+          filter: "blur(0px)",
         });
         if (fadeOutTl) {
           fadeOutTl.progress(0);
@@ -176,6 +168,19 @@ export function setupHeroHeadingFadeAnimation() {
 }
 
 // New function to initialize the cover area
+/**
+ * Play the cover area animation after all modules are loaded.
+ * This should only be called once all loading is complete.
+ */
+export function playCoverAreaAnimation() {
+  if (window._coverAreaTimeline) {
+    console.log('[hero.js] Playing cover area animation - all modules loaded');
+    window._coverAreaTimeline.play();
+  } else {
+    console.warn('[hero.js] Cover area timeline not initialized');
+  }
+}
+
 export function initCoverArea() {
   const coverLogo = document.querySelector("#cover-area .cover-logo");
   const countdown = document.querySelector("#countdown");
@@ -256,9 +261,12 @@ export function initCoverArea() {
   });
 
   // Create a timeline for the cover area animation
-  // DELAY: Wait for shader background to fade in first (CSS takes ~0.8s)
-  // This ensures: Shader -> App -> Logo -> Countdown -> Button
-  const tl = gsap.timeline({ delay: 0.6 });
+  // PAUSED: Will be played by playCoverAreaAnimation() after all modules are loaded
+  // This ensures: All modules loaded -> Shader -> App -> Logo -> Countdown -> Button
+  const tl = gsap.timeline({ paused: true });
+
+  // Store the timeline globally so it can be played later
+  window._coverAreaTimeline = tl;
 
   // Get the initial loader to hide it when app fades in
   const initialLoader = document.querySelector("#initial-loader");
@@ -791,7 +799,7 @@ export function initHeroAnimation() {
     start: "top 90%", // Extended start - when hero-travel-area is 83% into viewport (longer fade-in distance)
     end: "top 0%",
     animation: heroAnimationTl,
-    scrub: 0.5, // Faster scrubbing for better fast scroll responsiveness
+    scrub: 1, // PERFORMANCE: Increased from 0.5 - smoother scrubbing reduces update frequency
     markers: false,
     invalidateOnRefresh: true,
     fastScrollEnd: true, // Enable fast scroll optimization
@@ -806,28 +814,34 @@ export function initHeroAnimation() {
 
   // Initialize the hero animation
 
-  // Create the hero number animation (size/scale/opacity)
+  // PERFORMANCE: Consolidated hero number animations into single ScrollTrigger
+  // Previously had separate triggers for scale, countdown, and fade - now combined
   if (heroNumber) {
-    // PERFORMANCE: Cache last scale value to avoid redundant style updates
+    // PERFORMANCE: Cache all last values to avoid redundant style updates
     let lastScale = null;
+    let lastCountdownYear = null;
+    let lastCountdownOpacity = null;
     
-    // Scale animation - optimized for fast scrolling
+    // Pre-cache digit spans
+    let cachedDigitSpans = heroNumber.querySelectorAll(".digit");
+    
+    // CONSOLIDATED: Single ScrollTrigger handles scale animation
+    // The countdown is handled by a separate trigger with different timing
     ScrollTrigger.create({
       trigger: "#hero-travel-area",
       start: "15% top",
       end: "bottom bottom",
-      scrub: 0.3, // Faster scrubbing for better responsiveness
+      scrub: 1, // PERFORMANCE: Increased from 0.3 - smoother scrubbing
       markers: false,
       invalidateOnRefresh: true,
       fastScrollEnd: true,
       onUpdate: (self) => {
-        // Round to 3 decimal places to reduce micro-updates
-        const scale = Math.round((1 - self.progress * 0.5) * 1000) / 1000;
+        // PERFORMANCE: Batch scale calculation with reduced precision
+        const scale = Math.round((1 - self.progress * 0.5) * 100) / 100; // 2 decimal places is enough
         
-        // PERFORMANCE: Only update if scale actually changed
         if (scale !== lastScale) {
           lastScale = scale;
-        heroNumber.style.transform = `scale(${scale})`;
+          heroNumber.style.transform = `scale(${scale})`;
         }
       },
       onLeave: () => {
@@ -835,7 +849,6 @@ export function initHeroAnimation() {
         lastScale = 0.5;
       },
       onEnterBack: () => {
-        // Reset cache so next update will apply
         lastScale = null;
       },
       onLeaveBack: () => {
@@ -847,16 +860,17 @@ export function initHeroAnimation() {
 
     // Remove the separate opacity animation - we'll handle it in the countdown animation
 
-    // PERFORMANCE: Cache last fade-out values to avoid redundant style updates
+    // PERFORMANCE: Cache last fade-out value to avoid redundant style updates
     let lastFadeOpacity = null;
-    let lastBlurAmount = null;
 
     // Fade-out animation (at end of hero pinned state) - optimized for fast scrolling
+    // PERFORMANCE: Removed blur animation entirely - CSS blur is very expensive even on single elements
+    // Using opacity + scale reduction for visual depth instead
     ScrollTrigger.create({
       trigger: "#hero-travel-area",
       start: "bottom 90%", // Start fading just before unpinning
       end: "bottom 80%", // Complete fade right at unpinning point
-      scrub: 0.3, // Faster scrubbing for better responsiveness
+      scrub: 1, // PERFORMANCE: Increased from 0.3 - smoother scrubbing
       markers: false,
       invalidateOnRefresh: true, // Ensure this recalculates
       fastScrollEnd: true, // Enable fast scroll optimization
@@ -871,43 +885,26 @@ export function initHeroAnimation() {
           baseOpacity = 0.44 + countdownProgress * 0.56;
         }
 
-        // Fade from current countdown opacity to 0
-        // Round to avoid micro-updates
-        const opacity = Math.round(baseOpacity * (1 - progress) * 100) / 100;
+        // PERFORMANCE: Reduce precision - 1 decimal place is visually sufficient
+        const opacity = Math.round(baseOpacity * (1 - progress) * 10) / 10;
 
-        // Calculate blur based on fade progress - blur increases as opacity decreases
-        // Round to 1 decimal place to reduce style updates
-        const blurAmount = Math.round(progress * 160) / 10; // 0px to 16px blur
-
-        // PERFORMANCE: Only update if values actually changed
+        // PERFORMANCE: Only update if opacity actually changed
         if (opacity !== lastFadeOpacity) {
           lastFadeOpacity = opacity;
-        heroNumber.style.setProperty("--digit-opacity", opacity);
-        }
-        
-        // PERFORMANCE: Only update blur if it changed by at least 0.5px
-        if (lastBlurAmount === null || Math.abs(blurAmount - lastBlurAmount) >= 0.5) {
-          lastBlurAmount = blurAmount;
-          heroNumber.style.filter = `blur(${blurAmount}px)`;
+          heroNumber.style.setProperty("--digit-opacity", opacity);
         }
       },
       onLeave: () => {
         // Ensure number is fully faded when leaving
         heroNumber.style.setProperty("--digit-opacity", "0");
-        heroNumber.style.filter = "blur(16px)";
         lastFadeOpacity = 0;
-        lastBlurAmount = 16;
       },
       onEnterBack: () => {
         // Reset cache so next update will apply
         lastFadeOpacity = null;
-        lastBlurAmount = null;
       },
       onLeaveBack: () => {
-        // Reset filter when scrolling back up into countdown area
-        heroNumber.style.filter = "blur(0px)";
         lastFadeOpacity = null;
-        lastBlurAmount = 0;
       },
       id: "hero-fade-out",
     });
@@ -935,6 +932,9 @@ export function initHeroNumberCountdown() {
     
     // Create the tween ONLY if it doesn't exist
     if (!animationState.heroNumberTween) {
+      // PERFORMANCE: Pre-compute digit strings to avoid runtime string conversion
+      const digitStrings = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+      
       animationState.heroNumberTween = gsap.to(animationState.heroYearObj, {
         // Assign to module-scope variable
         year: 1876,
@@ -944,7 +944,7 @@ export function initHeroNumberCountdown() {
           trigger: "#hero-travel-area",
           start: "15% top",
           end: "75% bottom", // Reach 1876 earlier - at 75% through hero-travel-area
-          scrub: 0.5, // Faster scrubbing for better fast scroll responsiveness
+          scrub: 1, // PERFORMANCE: Increased from 0.5 - smoother scrubbing reduces callback frequency
           markers: false,
           invalidateOnRefresh: true, // **CRITICAL**
           fastScrollEnd: true, // Enable fast scroll optimization
@@ -960,10 +960,6 @@ export function initHeroNumberCountdown() {
             
             animationState.heroYearObj.year = currentYear; // Update the state object
 
-            // Calculate opacity based on progress: 0.44 at start (2026) to 1.0 at end (1876)
-            // Round to 2 decimal places to reduce style updates
-            const opacity = Math.round((0.44 + self.progress * 0.56) * 100) / 100;
-
             // PERFORMANCE: Use cached digit spans, only re-query if cache is invalid
             if (!cachedDigitSpans || cachedDigitSpans.length === 0) {
               cacheDigitSpans();
@@ -976,20 +972,17 @@ export function initHeroNumberCountdown() {
             const d2 = Math.floor((currentYear % 100) / 10);
             const d3 = currentYear % 10;
             
-            // Update each digit span directly - only if content differs
+            // PERFORMANCE: Update digit spans with pre-computed strings, skip data-digit attribute
+            // The data-digit attribute is only used for CSS styling - unnecessary to update every frame
             if (cachedDigitSpans && cachedDigitSpans.length === 4) {
-              const digits = [d0, d1, d2, d3];
-              for (let i = 0; i < 4; i++) {
-                const digitStr = String(digits[i]);
-                const span = cachedDigitSpans[i];
-                if (span.textContent !== digitStr) {
-                  span.textContent = digitStr;
-                  span.setAttribute("data-digit", digitStr);
-                }
-              }
+              if (cachedDigitSpans[0].textContent !== digitStrings[d0]) cachedDigitSpans[0].textContent = digitStrings[d0];
+              if (cachedDigitSpans[1].textContent !== digitStrings[d1]) cachedDigitSpans[1].textContent = digitStrings[d1];
+              if (cachedDigitSpans[2].textContent !== digitStrings[d2]) cachedDigitSpans[2].textContent = digitStrings[d2];
+              if (cachedDigitSpans[3].textContent !== digitStrings[d3]) cachedDigitSpans[3].textContent = digitStrings[d3];
             }
 
-            // PERFORMANCE: Only update opacity if it actually changed
+            // PERFORMANCE: Batch opacity update with reduced precision (1 decimal place is visually sufficient)
+            const opacity = Math.round((0.44 + self.progress * 0.56) * 10) / 10;
             if (opacity !== lastOpacity) {
               lastOpacity = opacity;
               heroNumber.style.setProperty("--digit-opacity", opacity);

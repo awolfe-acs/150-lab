@@ -441,17 +441,18 @@ export async function initShaderBackground() {
         trigger: heroTravelArea, // Use DOM element reference instead of selector string
         start: "top bottom", // Start when hero-travel-area enters the bottom of viewport
         end: "top top", // End when hero-travel-area reaches the top of viewport
-        scrub: true, // Bidirectional scrubbing effect, tied to scroll position
+        scrub: 1, // PERFORMANCE: Increased from true (0) - smoother scrubbing reduces callback frequency
         markers: false, // Set to true for debugging
+        fastScrollEnd: true, // PERFORMANCE: Skip updates during fast scrolling
         onUpdate: (self) => {
           // Only proceed if we have uniforms
           if (!uniforms || !uniforms.color1 || !uniforms.color2) return;
 
           // Get the current progress from start to end (0 to 1)
-          // Round to 3 decimal places to reduce micro-updates
-          const progress = Math.round(self.progress * 1000) / 1000;
+          // PERFORMANCE: Round to 2 decimal places (100 steps is visually sufficient)
+          const progress = Math.round(self.progress * 100) / 100;
 
-          // PERFORMANCE: Skip if progress hasn't changed significantly
+          // PERFORMANCE: Skip if progress hasn't changed
           if (progress === phase0to1_lastProgress) return;
           phase0to1_lastProgress = progress;
 
@@ -484,13 +485,13 @@ export async function initShaderBackground() {
             phase0to1_coverAreaOverlay = document.querySelector("#cover-area-overlay");
           }
           if (phase0to1_coverAreaOverlay) {
-            // Fade from opacity 1 to 0 as we progress
-            const overlayOpacity = 1 - progress;
-            // Increase saturation from 1 to 2.2 as we progress
-            const saturation = 1 + progress * 1.2; // 1 + (1 * 1.2) = 2.2
+            // PERFORMANCE: Reduce precision for overlay opacity (10 steps is visually sufficient)
+            const overlayOpacity = Math.round((1 - progress) * 10) / 10;
+            // PERFORMANCE: Reduce precision for saturation (1.0 to 2.2 in ~5 steps)
+            const saturation = Math.round((1 + progress * 1.2) * 5) / 5;
 
-            phase0to1_coverAreaOverlay.style.opacity = overlayOpacity;
-            phase0to1_coverAreaOverlay.style.filter = `saturate(${saturation})`;
+            // PERFORMANCE: Batch style updates
+            phase0to1_coverAreaOverlay.style.cssText = `opacity: ${overlayOpacity}; filter: saturate(${saturation})`;
           }
         },
       },
@@ -517,17 +518,18 @@ export async function initShaderBackground() {
         trigger: heroTravelArea, // Use DOM element reference instead of selector string
         start: "top top", // Start when hero-travel-area reaches the top of viewport
         end: "bottom bottom", // End when hero-travel-area bottom reaches bottom of viewport
-        scrub: true, // Bidirectional scrubbing effect, tied to scroll position
+        scrub: 1, // PERFORMANCE: Increased from true (0) - smoother scrubbing reduces callback frequency
         markers: false, // Set to true for debugging
+        fastScrollEnd: true, // PERFORMANCE: Skip updates during fast scrolling
         onUpdate: (self) => {
           // Only proceed if we have uniforms
           if (!uniforms || !uniforms.color1 || !uniforms.color2) return;
 
           // Get the current progress from start to end (0 to 1)
-          // Round to 3 decimal places to reduce micro-updates
-          const progress = Math.round(self.progress * 1000) / 1000;
+          // PERFORMANCE: Round to 2 decimal places (100 steps is visually sufficient for color lerp)
+          const progress = Math.round(self.progress * 100) / 100;
 
-          // PERFORMANCE: Skip if progress hasn't changed significantly
+          // PERFORMANCE: Skip if progress hasn't changed
           if (progress === phase1to2_lastProgress) return;
           phase1to2_lastProgress = progress;
 
@@ -4752,19 +4754,20 @@ export async function initShaderBackground() {
   let particleAnimationId = null;
   
   // FPS throttling for particle animation
-  const particleTargetFPS = isMobileForParticles ? 30 : 60;
-  const particleIdleFPS = isMobileForParticles ? 20 : 30; // Very low when not actively scrolling
+  // PERFORMANCE: Reduced FPS during scroll to lower RAF overhead
+  const particleTargetFPS = isMobileForParticles ? 20 : 40; // Reduced from 30/60
+  const particleIdleFPS = isMobileForParticles ? 15 : 20; // Very low when actively scrolling
   let particleFrameInterval = 1000 / particleTargetFPS;
   let lastParticleFrameTime = 0;
   let twinkleSkipCounter = 0;
-  const twinkleSkipInterval = isMobileForParticles ? 3 : 1; // Update twinkle every N frames on mobile
+  const twinkleSkipInterval = isMobileForParticles ? 4 : 2; // Update twinkle every N frames (increased)
   
   // Subscribe to scroll state changes for performance optimization
   performanceDetector.onScrollStateChange(({ isScrolling }) => {
     isCurrentlyScrolling = isScrolling;
     // Adjust particle FPS based on scroll state
-    // During scroll on mobile, prioritize main render loop, reduce particle updates
-    particleFrameInterval = 1000 / (isScrolling && isMobileForParticles ? particleIdleFPS : particleTargetFPS);
+    // During scroll, drastically reduce particle updates to free up CPU for scroll performance
+    particleFrameInterval = 1000 / (isScrolling ? particleIdleFPS : particleTargetFPS);
   });
   
   // Separate animation loop for particles with FPS throttling

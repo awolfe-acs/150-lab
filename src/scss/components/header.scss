@@ -205,6 +205,9 @@ button.sound-toggle {
 
     &:active {
         transform: scale(0.95);
+        @media (max-width:$mobile-viewport) {
+            transform: translateX(-32px) scale(0.95);
+        }
     }
 
     span {

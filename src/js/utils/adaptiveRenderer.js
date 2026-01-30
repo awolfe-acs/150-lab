@@ -58,17 +58,15 @@ export class AdaptiveRenderer {
     performanceDetector.onScrollStateChange(({ isScrolling }) => {
       this.isScrolling = isScrolling;
       
-      // On mobile, reduce FPS during scroll for better scrolling performance
-      // Also apply scroll throttling when degraded to 30fps (already at minimum)
-      if (this.isMobile) {
-        if (isScrolling) {
-          // Use the lower of scrollThrottleFPS and baseTargetFPS
-          const scrollFps = Math.min(this.scrollThrottleFPS, this.baseTargetFPS);
-          this.setTargetFPS(scrollFps);
-        } else {
-          // Restore to base target FPS (which may have been capped at 30)
-          this.setTargetFPS(this.baseTargetFPS);
-        }
+      // PERFORMANCE: Reduce FPS during scroll on ALL devices for better scrolling performance
+      // This reduces GPU work and allows smoother scroll physics
+      if (isScrolling) {
+        // Use the lower of scrollThrottleFPS and baseTargetFPS
+        const scrollFps = Math.min(this.scrollThrottleFPS, this.baseTargetFPS);
+        this.setTargetFPS(scrollFps);
+      } else {
+        // Restore to base target FPS (which may have been capped at 30)
+        this.setTargetFPS(this.baseTargetFPS);
       }
     });
   }
