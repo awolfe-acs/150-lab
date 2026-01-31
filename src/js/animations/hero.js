@@ -14,157 +14,78 @@ import logger from "../utils/logger.js";
 
 // Store SplitType instances for cleanup
 let heroHeadingSplitInstance = null;
-let heroHeadingFadeSplitInstance = null;
 
 // Function to set up hero heading character fade animations
 export function setupHeroHeadingFadeAnimation() {
   // Clean up existing ScrollTrigger if it exists
   if (animationState.heroHeadingFadeScrollTrigger) {
     animationState.heroHeadingFadeScrollTrigger.kill();
-    animationState.heroHeadingFadeScrollTrigger = null; // Ensure reference is cleared
+    animationState.heroHeadingFadeScrollTrigger = null;
   }
 
   const heroHeading = document.querySelector("#hero-area h1");
-  if (heroHeading) {
-    // Make sure we have the SplitType characters to animate
-    let splitTextChars = heroHeading.querySelectorAll(".char");
-
-    // If characters don't exist yet (e.g., if initial split failed or was reverted)
-    if (!splitTextChars || splitTextChars.length === 0) {
-      // Get original content if available, otherwise use current text
-      const originalContent = heroHeading.getAttribute("data-original-content") || heroHeading.textContent;
-
-      // Reset the heading to original content before splitting again
-      heroHeading.innerHTML = originalContent;
-
-      // Apply SplitType to create character elements
-      try {
-        // Clean up previous instance if it exists
-        if (heroHeadingFadeSplitInstance) {
-          heroHeadingFadeSplitInstance.revert();
-          heroHeadingFadeSplitInstance = null;
-        }
-        
-        heroHeadingFadeSplitInstance = new SplitType(heroHeading, {
-          types: "words,chars",
-          absolute: false,
-        });
-        splitTextChars = heroHeadingFadeSplitInstance.chars;
-
-        // Make all chars visible as a starting point after re-split
-        gsap.set(splitTextChars, {
-          opacity: 1,
-          z: 0,
-          scale: 1,
-          filter: "blur(0px)",
-          transformPerspective: 1000,
-          transformOrigin: "center center",
-        });
-      } catch (error) {
-        logger.error("Error re-splitting hero heading:", error);
-        return; // Exit if splitting fails
-      }
-    }
-
-    // Ensure we have characters to animate now
-    if (!splitTextChars || splitTextChars.length === 0) {
-      logger.warn("Still no hero heading characters found after attempting re-split. Aborting animation setup.");
-      return;
-    }
-
-    // Force a reflow *after* splitting to ensure proper positioning
-    heroHeading.offsetHeight;
-
-    // Randomize the characters for fade-out (different order than fade-in)
-    const shuffledChars = [...splitTextChars];
-    for (let i = shuffledChars.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffledChars[i], shuffledChars[j]] = [shuffledChars[j], shuffledChars[i]];
-    }
-
-    // Create a timeline for the scroll-triggered fade-out
-    const fadeOutTl = gsap.timeline({
-      // Ensure timeline pauses initially to prevent premature animation
-      paused: true,
-    });
-
-    // PERFORMANCE: Animate characters with opacity only (no per-character blur)
-    // Blur is now applied to the parent container to avoid expensive per-element filter operations
-    fadeOutTl.to(
-      shuffledChars,
-      {
-        opacity: 0,
-        // REMOVED: z and filter - these cause massive frame drops with many elements
-        // Each element with 3D transform + blur creates expensive compositing layers
-        stagger: 0.02,
-        ease: "power1.in",
-      },
-      0
-    );
-    
-    // PERFORMANCE: Apply blur to the parent container (single element) instead of per-character
-    // This is much cheaper as only one element needs blur compositing
-    fadeOutTl.to(
-      heroHeading,
-      {
-        filter: "blur(8px)", // Reduced from 16px, applied to container
-        ease: "power1.in",
-      },
-      0
-    );
-
-    // Create and store the ScrollTrigger instance
-    animationState.heroHeadingFadeScrollTrigger = ScrollTrigger.create({
-      animation: fadeOutTl,
-      trigger: "#hero-travel-area",
-      start: "16% top", // Adjusted to 50% of previous change - when 17% of hero-travel-area has passed top of viewport
-      end: "36% top", // Reduced end point by 50% - when 50% of hero-travel-area has passed the top of viewport
-      scrub: 1, // PERFORMANCE: Increased from true (0) - smoother scrubbing
-      markers: false, // Set to true for debugging
-      invalidateOnRefresh: true, // **CRITICAL** Recalculate positions on refresh
-      fastScrollEnd: true, // PERFORMANCE: Enable fast scroll optimization
-      // REMOVED onUpdate: The timeline handles animation via scrub - no need for per-frame gsap.set() calls
-      onRefresh: (self) => {
-        // When ScrollTrigger refreshes, sync the timeline progress
-        if (fadeOutTl) {
-          fadeOutTl.progress(self.progress);
-        }
-      },
-      onLeave: () => {
-        // Ensure all characters are fully faded when leaving
-        gsap.set(shuffledChars, {
-          opacity: 0,
-        });
-        gsap.set(heroHeading, {
-          filter: "blur(8px)",
-        });
-      },
-      onEnterBack: () => {
-        // Let the timeline handle the re-entry based on current progress
-        const progress = animationState.heroHeadingFadeScrollTrigger
-          ? animationState.heroHeadingFadeScrollTrigger.progress
-          : 0;
-        if (fadeOutTl) {
-          fadeOutTl.progress(progress);
-        }
-      },
-      onLeaveBack: () => {
-        // Reset to fully visible when scrolling back up
-        gsap.set(shuffledChars, {
-          opacity: 1,
-          clearProps: "transform", // Clear any stuck transforms
-        });
-        gsap.set(heroHeading, {
-          filter: "blur(0px)",
-        });
-        if (fadeOutTl) {
-          fadeOutTl.progress(0);
-        }
-      },
-    });
-  } else {
+  if (!heroHeading) {
     logger.warn("#hero-area h1 not found for fade animation setup.");
+    return;
   }
+
+  // PERFORMANCE: Instead of animating individual characters (expensive),
+  // animate the entire heading with opacity + blur.
+  // This reduces from ~40 animated elements to 1.
+  
+  // Cache last values to avoid redundant style updates
+  let lastOpacity = null;
+  let lastBlur = null;
+
+  // Create ScrollTrigger for simple opacity + blur fade
+  animationState.heroHeadingFadeScrollTrigger = ScrollTrigger.create({
+    trigger: "#hero-travel-area",
+    start: "16% top",
+    end: "36% top",
+    scrub: true, // Instant response
+    markers: false,
+    invalidateOnRefresh: true,
+    fastScrollEnd: true,
+    id: "hero-heading-fade",
+
+    onUpdate: (self) => {
+      const progress = self.progress;
+      
+      // Opacity: 1 to 0
+      const opacity = Math.round((1 - progress) * 10) / 10;
+      if (opacity !== lastOpacity) {
+        lastOpacity = opacity;
+        heroHeading.style.opacity = opacity;
+      }
+      
+      // Blur: 0 to 8px (only update if changed significantly)
+      const blur = Math.round(progress * 8);
+      if (blur !== lastBlur) {
+        lastBlur = blur;
+        heroHeading.style.filter = blur > 0 ? `blur(${blur}px)` : "none";
+      }
+    },
+
+    onLeave: () => {
+      heroHeading.style.opacity = "0";
+      heroHeading.style.filter = "blur(8px)";
+      lastOpacity = 0;
+      lastBlur = 8;
+    },
+
+    onEnterBack: () => {
+      // Let onUpdate handle it
+      lastOpacity = null;
+      lastBlur = null;
+    },
+
+    onLeaveBack: () => {
+      heroHeading.style.opacity = "1";
+      heroHeading.style.filter = "none";
+      lastOpacity = 1;
+      lastBlur = 0;
+    },
+  });
 }
 
 // New function to initialize the cover area
@@ -769,6 +690,11 @@ export function initHeroAnimation() {
     transformOrigin: "center center",
   });
 
+  // Set initial blur on hero number (will animate to 0)
+  gsap.set(heroNumber, {
+    filter: "blur(16px)",
+  });
+
   // Animate digits' 3D positioning
   heroAnimationTl.to(
     digits,
@@ -787,6 +713,7 @@ export function initHeroAnimation() {
     heroNumber,
     {
       "--digit-opacity": 0.44,
+      filter: "blur(0px)", // Reveal: blur 16px → 0
       duration: 2.5, // Same duration as 3D animation
       ease: "power3.out",
     },
@@ -812,252 +739,185 @@ export function initHeroAnimation() {
     // Calling heroAnimationTl.progress() on every frame was causing unnecessary overhead
   });
 
-  // Initialize the hero animation
-
-  // PERFORMANCE: Consolidated hero number animations into single ScrollTrigger
-  // Previously had separate triggers for scale, countdown, and fade - now combined
-  if (heroNumber) {
-    // PERFORMANCE: Cache all last values to avoid redundant style updates
-    let lastScale = null;
-    let lastCountdownYear = null;
-    let lastCountdownOpacity = null;
-    
-    // Pre-cache digit spans
-    let cachedDigitSpans = heroNumber.querySelectorAll(".digit");
-    
-    // CONSOLIDATED: Single ScrollTrigger handles scale animation
-    // The countdown is handled by a separate trigger with different timing
-    ScrollTrigger.create({
-      trigger: "#hero-travel-area",
-      start: "15% top",
-      end: "bottom bottom",
-      scrub: 1, // PERFORMANCE: Increased from 0.3 - smoother scrubbing
-      markers: false,
-      invalidateOnRefresh: true,
-      fastScrollEnd: true,
-      onUpdate: (self) => {
-        // PERFORMANCE: Batch scale calculation with reduced precision
-        const scale = Math.round((1 - self.progress * 0.5) * 100) / 100; // 2 decimal places is enough
-        
-        if (scale !== lastScale) {
-          lastScale = scale;
-          heroNumber.style.transform = `scale(${scale})`;
-        }
-      },
-      onLeave: () => {
-        heroNumber.style.transform = "scale(0.5)";
-        lastScale = 0.5;
-      },
-      onEnterBack: () => {
-        lastScale = null;
-      },
-      onLeaveBack: () => {
-        heroNumber.style.transform = "scale(1)";
-        lastScale = 1;
-      },
-      id: "hero-scale",
-    });
-
-    // Remove the separate opacity animation - we'll handle it in the countdown animation
-
-    // PERFORMANCE: Cache last fade-out value to avoid redundant style updates
-    let lastFadeOpacity = null;
-
-    // Fade-out animation (at end of hero pinned state) - optimized for fast scrolling
-    // PERFORMANCE: Removed blur animation entirely - CSS blur is very expensive even on single elements
-    // Using opacity + scale reduction for visual depth instead
-    ScrollTrigger.create({
-      trigger: "#hero-travel-area",
-      start: "bottom 90%", // Start fading just before unpinning
-      end: "bottom 80%", // Complete fade right at unpinning point
-      scrub: 1, // PERFORMANCE: Increased from 0.3 - smoother scrubbing
-      markers: false,
-      invalidateOnRefresh: true, // Ensure this recalculates
-      fastScrollEnd: true, // Enable fast scroll optimization
-      onUpdate: function (self) {
-        const progress = self.progress;
-
-        // Get the current countdown opacity (0.44 to 1.0 range)
-        let baseOpacity = 1.0; // Default to full opacity if countdown is complete
-
-        if (animationState.heroNumberTween && animationState.heroNumberTween.scrollTrigger) {
-          const countdownProgress = animationState.heroNumberTween.scrollTrigger.progress;
-          baseOpacity = 0.44 + countdownProgress * 0.56;
-        }
-
-        // PERFORMANCE: Reduce precision - 1 decimal place is visually sufficient
-        const opacity = Math.round(baseOpacity * (1 - progress) * 10) / 10;
-
-        // PERFORMANCE: Only update if opacity actually changed
-        if (opacity !== lastFadeOpacity) {
-          lastFadeOpacity = opacity;
-          heroNumber.style.setProperty("--digit-opacity", opacity);
-        }
-      },
-      onLeave: () => {
-        // Ensure number is fully faded when leaving
-        heroNumber.style.setProperty("--digit-opacity", "0");
-        lastFadeOpacity = 0;
-      },
-      onEnterBack: () => {
-        // Reset cache so next update will apply
-        lastFadeOpacity = null;
-      },
-      onLeaveBack: () => {
-        lastFadeOpacity = null;
-      },
-      id: "hero-fade-out",
-    });
-
-    // REMOVED: Backup fade-out trigger was redundant and caused extra style updates
-    // The main fade-out trigger handles everything needed
-  }
+  // PERFORMANCE: Hero number scale + fade-out now handled via CSS animations
+  // triggered by scroll position classes, eliminating ScrollTrigger overhead.
+  // See initHeroNumberCountdown() for the consolidated approach.
 }
 
 export function initHeroNumberCountdown() {
   const heroNumber = document.querySelector("#hero-number");
-  if (heroNumber) {
-    // PERFORMANCE: Cache DOM references and pre-compute values ONCE
-    let cachedDigitSpans = null;
-    let lastYear = null;
-    let lastOpacity = null;
-    
-    // Pre-cache digit spans after initial render
-    const cacheDigitSpans = () => {
-      cachedDigitSpans = heroNumber.querySelectorAll(".digit");
-    };
-    
-    // Initial cache (may need to be called again if digits are recreated)
-    requestAnimationFrame(cacheDigitSpans);
-    
-    // Create the tween ONLY if it doesn't exist
-    if (!animationState.heroNumberTween) {
-      // PERFORMANCE: Pre-compute digit strings to avoid runtime string conversion
-      const digitStrings = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-      
-      animationState.heroNumberTween = gsap.to(animationState.heroYearObj, {
-        // Assign to module-scope variable
-        year: 1876,
-        ease: "none",
-        paused: true, // Start paused, ScrollTrigger will control it
-        scrollTrigger: {
-          trigger: "#hero-travel-area",
-          start: "15% top",
-          end: "75% bottom", // Reach 1876 earlier - at 75% through hero-travel-area
-          scrub: 1, // PERFORMANCE: Increased from 0.5 - smoother scrubbing reduces callback frequency
-          markers: false,
-          invalidateOnRefresh: true, // **CRITICAL**
-          fastScrollEnd: true, // Enable fast scroll optimization
-          id: "hero-countdown", // Add ID for debugging
-          onUpdate: function (self) {
-            // Calculate the year value based on scroll progress
-            // Progress 0 = 2026, Progress 1 = 1876
-            const currentYear = Math.round(2026 - self.progress * 150); // 2026 - 150 = 1876
-            
-            // PERFORMANCE: Skip if year hasn't changed
-            if (currentYear === lastYear) return;
-            lastYear = currentYear;
-            
-            animationState.heroYearObj.year = currentYear; // Update the state object
-
-            // PERFORMANCE: Use cached digit spans, only re-query if cache is invalid
-            if (!cachedDigitSpans || cachedDigitSpans.length === 0) {
-              cacheDigitSpans();
-            }
-            
-            // PERFORMANCE: Direct digit updates without string split or array creation
-            // Years are always 4 digits (1876-2026), so we can extract digits directly
-            const d0 = Math.floor(currentYear / 1000);
-            const d1 = Math.floor((currentYear % 1000) / 100);
-            const d2 = Math.floor((currentYear % 100) / 10);
-            const d3 = currentYear % 10;
-            
-            // PERFORMANCE: Update digit spans with pre-computed strings, skip data-digit attribute
-            // The data-digit attribute is only used for CSS styling - unnecessary to update every frame
-            if (cachedDigitSpans && cachedDigitSpans.length === 4) {
-              if (cachedDigitSpans[0].textContent !== digitStrings[d0]) cachedDigitSpans[0].textContent = digitStrings[d0];
-              if (cachedDigitSpans[1].textContent !== digitStrings[d1]) cachedDigitSpans[1].textContent = digitStrings[d1];
-              if (cachedDigitSpans[2].textContent !== digitStrings[d2]) cachedDigitSpans[2].textContent = digitStrings[d2];
-              if (cachedDigitSpans[3].textContent !== digitStrings[d3]) cachedDigitSpans[3].textContent = digitStrings[d3];
-            }
-
-            // PERFORMANCE: Batch opacity update with reduced precision (1 decimal place is visually sufficient)
-            const opacity = Math.round((0.44 + self.progress * 0.56) * 10) / 10;
-            if (opacity !== lastOpacity) {
-              lastOpacity = opacity;
-              heroNumber.style.setProperty("--digit-opacity", opacity);
-            }
-          },
-
-          onLeave: function (self) {
-            // Ensure opacity is at 1.0 when leaving (completed countdown)
-            heroNumber.style.setProperty("--digit-opacity", "1.0");
-            lastOpacity = 1.0;
-            lastYear = 1876;
-          },
-
-          onComplete: function () {
-            // Ensure the number stays at 1876 after countdown completes
-            animationState.heroYearObj.year = 1876;
-            if (cachedDigitSpans && cachedDigitSpans.length === 4) {
-              const finalDigits = ["1", "8", "7", "6"];
-              cachedDigitSpans.forEach((span, i) => {
-                if (span.textContent !== finalDigits[i]) {
-                  span.textContent = finalDigits[i];
-                  span.setAttribute("data-digit", finalDigits[i]);
-                }
-              });
-            }
-            heroNumber.style.setProperty("--digit-opacity", "1.0");
-            lastOpacity = 1.0;
-            lastYear = 1876;
-          },
-          onLeaveBack: function (self) {
-            // Ensure we reset to 2026 when scrolling back up
-            animationState.heroYearObj.year = 2026;
-            if (cachedDigitSpans && cachedDigitSpans.length === 4) {
-              const initialDigits = ["2", "0", "2", "6"];
-              cachedDigitSpans.forEach((span, i) => {
-                if (span.textContent !== initialDigits[i]) {
-                  span.textContent = initialDigits[i];
-                  span.setAttribute("data-digit", initialDigits[i]);
-                }
-              });
-            }
-            heroNumber.style.setProperty("--digit-opacity", "0.44");
-            lastOpacity = 0.44;
-            lastYear = 2026;
-          },
-          onRefresh: (self) => {
-            // Re-cache digit spans after refresh (layout may have changed)
-            cacheDigitSpans();
-            // Force update opacity after refresh based on current progress
-            const opacity = Math.round((0.44 + self.progress * 0.56) * 100) / 100;
-            heroNumber.style.setProperty("--digit-opacity", opacity);
-            lastOpacity = opacity;
-            // Recalculate year on refresh
-            lastYear = Math.round(2026 - self.progress * 150);
-          },
-        },
-      });
-
-      // Debug: Check if ScrollTrigger was created successfully
-      if (animationState.heroNumberTween.scrollTrigger) {
-        // Force a refresh to ensure proper initialization
-        ScrollTrigger.refresh();
-      } else {
-        logger.error("Hero countdown: ScrollTrigger creation failed!");
-      }
-    } else {
-      // If the tween exists, ensure its ScrollTrigger is enabled (might be needed if killed previously)
-      if (animationState.heroNumberTween.scrollTrigger) {
-        animationState.heroNumberTween.scrollTrigger.enable();
-      }
-      animationState.heroNumberTween.resume(); // Ensure tween is not paused
-    }
-  } else {
+  if (!heroNumber) {
     logger.warn("#hero-number element not found for countdown animation.");
+    return;
   }
+
+  // PERFORMANCE: Cache all DOM references ONCE at initialization
+  const digitSpans = heroNumber.querySelectorAll(".digit");
+  if (digitSpans.length !== 4) {
+    logger.warn("Expected 4 digit spans in #hero-number, found:", digitSpans.length);
+    return;
+  }
+
+  // Get trigger element for calculations
+  const heroTravelArea = document.querySelector("#hero-travel-area");
+  if (!heroTravelArea) {
+    logger.warn("#hero-travel-area not found for countdown animation.");
+    return;
+  }
+
+  // PERFORMANCE: Pre-cache last known values to skip redundant DOM updates
+  let lastYear = 2026;
+  let lastDigits = [2, 0, 2, 6];
+  let lastOpacity = 0.44;
+  let lastScale = 1;
+  let lastFadeOpacity = null;
+  let lastBlur = 0;
+
+  // PERFORMANCE: Helper to update only changed digits
+  const updateDigits = (year) => {
+    const d0 = Math.floor(year / 1000);
+    const d1 = Math.floor((year % 1000) / 100);
+    const d2 = Math.floor((year % 100) / 10);
+    const d3 = year % 10;
+
+    if (d0 !== lastDigits[0]) { lastDigits[0] = d0; digitSpans[0].textContent = d0; }
+    if (d1 !== lastDigits[1]) { lastDigits[1] = d1; digitSpans[1].textContent = d1; }
+    if (d2 !== lastDigits[2]) { lastDigits[2] = d2; digitSpans[2].textContent = d2; }
+    if (d3 !== lastDigits[3]) { lastDigits[3] = d3; digitSpans[3].textContent = d3; }
+  };
+
+  // Kill existing ScrollTriggers if reinitializing
+  if (animationState.heroNumberTween?.scrollTrigger) {
+    animationState.heroNumberTween.scrollTrigger.kill();
+  }
+  ScrollTrigger.getById("hero-scale")?.kill();
+  ScrollTrigger.getById("hero-fade-out")?.kill();
+
+  // PERFORMANCE: CONSOLIDATED ScrollTrigger - handles countdown, scale, and fade-out
+  // Previously 3 separate triggers each with onUpdate callbacks = 3x overhead
+  // Now ONE trigger handles everything based on scroll position
+  const countdownTrigger = ScrollTrigger.create({
+    trigger: "#hero-travel-area",
+    start: "15% top",
+    end: "bottom bottom", // Extended to cover full range including fade-out
+    scrub: true, // Instant response - no interpolation overhead
+    markers: false,
+    invalidateOnRefresh: true,
+    fastScrollEnd: true,
+    id: "hero-countdown",
+
+    onUpdate: (self) => {
+      const progress = self.progress;
+      
+      // === COUNTDOWN (0% - 75% of travel area) ===
+      // Map 0-0.706 progress to 0-1 countdown progress (75% / 85% total range)
+      const countdownEnd = 0.706; // 75% of 85% total range = ~60% of total
+      const countdownProgress = Math.min(1, progress / countdownEnd);
+      
+      const year = Math.round(2026 - countdownProgress * 150);
+      if (year !== lastYear) {
+        lastYear = year;
+        animationState.heroYearObj.year = year;
+        updateDigits(year);
+      }
+
+      // === SCALE (0% - 100% of travel area) ===
+      // Scale from 1 to 0.5 as progress goes from 0 to 1
+      const scale = Math.round((1 - progress * 0.5) * 100) / 100;
+      if (scale !== lastScale) {
+        lastScale = scale;
+        heroNumber.style.transform = `scale(${scale})`;
+      }
+
+      // === OPACITY + BLUR (combines countdown opacity + fade-out with blur) ===
+      // Base opacity: 0.44 at start, 1.0 when countdown complete
+      const baseOpacity = 0.44 + countdownProgress * 0.56;
+      
+      // Fade-out: starts at ~88% progress (bottom 90%), ends at ~94% (bottom 80%)
+      const fadeStart = 0.88;
+      const fadeEnd = 0.94;
+      let fadeMultiplier = 1;
+      let blur = 0;
+      if (progress > fadeStart) {
+        const fadeProgress = Math.min(1, (progress - fadeStart) / (fadeEnd - fadeStart));
+        fadeMultiplier = 1 - fadeProgress;
+        blur = Math.round(fadeProgress * 16); // 0 → 16px blur during fade-out
+      }
+      
+      const finalOpacity = Math.round(baseOpacity * fadeMultiplier * 10) / 10;
+      if (finalOpacity !== lastFadeOpacity) {
+        lastFadeOpacity = finalOpacity;
+        heroNumber.style.setProperty("--digit-opacity", finalOpacity);
+      }
+      
+      // Update blur only when changed
+      if (blur !== lastBlur) {
+        lastBlur = blur;
+        heroNumber.style.filter = blur > 0 ? `blur(${blur}px)` : "none";
+      }
+    },
+
+    onLeave: () => {
+      // Final state: countdown complete, fully faded out, half scale, fully blurred
+      lastYear = 1876;
+      lastScale = 0.5;
+      lastFadeOpacity = 0;
+      lastBlur = 16;
+      animationState.heroYearObj.year = 1876;
+      updateDigits(1876);
+      heroNumber.style.transform = "scale(0.5)";
+      heroNumber.style.setProperty("--digit-opacity", "0");
+      heroNumber.style.filter = "blur(16px)";
+    },
+
+    onLeaveBack: () => {
+      // Reset to initial state (no blur - reveal animation completed)
+      lastYear = 2026;
+      lastScale = 1;
+      lastFadeOpacity = 0.44;
+      lastBlur = 0;
+      animationState.heroYearObj.year = 2026;
+      updateDigits(2026);
+      heroNumber.style.transform = "scale(1)";
+      heroNumber.style.setProperty("--digit-opacity", "0.44");
+      heroNumber.style.filter = "none";
+    },
+
+    onRefresh: (self) => {
+      // Force sync after layout changes
+      const progress = self.progress;
+      const countdownEnd = 0.706;
+      const countdownProgress = Math.min(1, progress / countdownEnd);
+      
+      const year = Math.round(2026 - countdownProgress * 150);
+      lastYear = year;
+      animationState.heroYearObj.year = year;
+      updateDigits(year);
+      
+      const scale = Math.round((1 - progress * 0.5) * 100) / 100;
+      lastScale = scale;
+      heroNumber.style.transform = `scale(${scale})`;
+      
+      const baseOpacity = 0.44 + countdownProgress * 0.56;
+      const fadeStart = 0.88;
+      const fadeEnd = 0.94;
+      let fadeMultiplier = 1;
+      let blur = 0;
+      if (progress > fadeStart) {
+        const fadeProgress = Math.min(1, (progress - fadeStart) / (fadeEnd - fadeStart));
+        fadeMultiplier = 1 - fadeProgress;
+        blur = Math.round(fadeProgress * 16);
+      }
+      lastFadeOpacity = Math.round(baseOpacity * fadeMultiplier * 10) / 10;
+      lastBlur = blur;
+      heroNumber.style.setProperty("--digit-opacity", lastFadeOpacity);
+      heroNumber.style.filter = blur > 0 ? `blur(${blur}px)` : "none";
+    },
+  });
+
+  animationState.heroNumberTween = {
+    scrollTrigger: countdownTrigger,
+  };
 }
 
 export function initHeroPinning() {

@@ -208,6 +208,9 @@ async function setupLenisWithModule(lenisModule) {
   
   window.lenis = new Lenis(lenisConfig);
   
+  // Stop Lenis initially - will be started when loader hides
+  window.lenis.stop();
+  
   if (isMobileOptimized) {
     window.addEventListener("resize", () => window.lenis?.resize());
   }
@@ -226,6 +229,14 @@ function hideLoader() {
     setTimeout(() => {
       loader.style.display = 'none';
     }, 400);
+  }
+  
+  // Unlock scrolling
+  document.body.style.overflow = '';
+  
+  // Start Lenis smooth scroll
+  if (window.lenis) {
+    window.lenis.start();
   }
 }
 
@@ -408,15 +419,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       // --- Load each module individually with 250ms between each ---
       const introText = await loadModule('introText');
       console.log('[main.js] Loaded: introText');
-      await yieldWithDelay(120);
+      await yieldWithDelay(50);
       
       const videoAnimation = await loadModule('videoAnimation');
       console.log('[main.js] Loaded: videoAnimation');
-      await yieldWithDelay(120);
+      await yieldWithDelay(50);
       
       const getInvolved = await loadModule('getInvolved');
       console.log('[main.js] Loaded: getInvolved');
-      await yieldWithDelay(120);
+      await yieldWithDelay(50);
       
       const marquee = await loadModule('marquee');
       console.log('[main.js] Loaded: marquee');
@@ -424,62 +435,62 @@ document.addEventListener("DOMContentLoaded", async () => {
       
       const timeline = await loadModule('timeline');
       console.log('[main.js] Loaded: timeline');
-      await yieldWithDelay(120);
+      await yieldWithDelay(50);
       
       const pageNavigation = await loadModule('pageNavigation');
       console.log('[main.js] Loaded: pageNavigation');
-      await yieldWithDelay(120);
+      await yieldWithDelay(50);
       
       const share = await loadModule('share');
       console.log('[main.js] Loaded: share');
-      await yieldWithDelay(120);
+      await yieldWithDelay(50);
       
       const video = await loadModule('video');
       console.log('[main.js] Loaded: video');
-      await yieldWithDelay(120);
+      await yieldWithDelay(50);
       
       console.log('[main.js] All modules loaded! Starting initialization...');
       
       // --- Now initialize all modules ---
-      await yieldWithDelay(120);
+      await yieldWithDelay(50);
       
       // --- Phase 2.2: Intro text animations ---
       introText.initIntroTextAnimation();
       
-      await yieldWithDelay(250);
+      await yieldWithDelay(50);
       
       // --- Phase 2.3: Video animation setup ---
       videoAnimation.animateVideoScale();
       
-      await yieldWithDelay(250);
+      await yieldWithDelay(50);
       
       // --- Phase 2.4: Get Involved section ---
       getInvolved.animateGetInvolvedText();
       getInvolved.animateSlidingCards();
       getInvolved.initGetInvolvedLogoAnimation();
       
-      await yieldWithDelay(250);
+      await yieldWithDelay(50);
       
       // --- Phase 2.5: Marquee ---
       marquee.initInfiniteMarqueeAnimation();
       
-      await yieldWithDelay(250);
+      await yieldWithDelay(50);
       
       // --- Phase 2.6: Timeline (heavy) ---
       timeline.initTimelineAnimation();
       
-      await yieldWithDelay(250);
+      await yieldWithDelay(50);
       
       // --- Phase 2.7: UI Components ---
       pageNavigation.updatePageNavigation();
       
-      await yieldWithDelay(250);
+      await yieldWithDelay(50);
       
       // --- Phase 2.8: Share panel ---
       share.initShareButtonOverlapDetection();
       share.initSharePanel();
       
-      await yieldWithDelay(250);
+      await yieldWithDelay(50);
       
       // --- Phase 2.9: Video initialization ---
       if (aemSettings.enableVideo) {
