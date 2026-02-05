@@ -509,18 +509,39 @@ export function initVideo() {
   // Set video source immediately - this is critical for Safari
   // The old working code did: videoElement.src = videoUrl; right at init
   try {
-    videoElement.src = videoUrl;
     videoElement.poster = posterUrl;
     
-    // Explicitly call load() to ensure video starts loading
-    // This is important for Safari to properly initialize the video
-    // Wrap in try-catch as Safari can throw errors here
-    videoElement.load();
+    // OPTIMIZATION: Progressive loading — defer .mp4 network I/O
+    // Set preload="none" and withhold the src until the user scrolls near
+    // the video section. This avoids competing with the 3D background and
+    // hero assets for bandwidth during the critical first seconds.
+    videoElement.preload = 'none';
     
-    logger.log("[video.js] Video source set:", videoUrl, "| Mobile:", isMobile);
+    // Use IntersectionObserver to start loading when user approaches
+    const videoObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          logger.log('[video.js] User approaching video section — setting src and buffering');
+          videoElement.src = videoUrl;
+          videoElement.preload = 'auto';
+          videoObserver.disconnect();
+        }
+      });
+    }, {
+      rootMargin: '800px 0px', // Start loading 800px before entering viewport
+      threshold: 0
+    });
+    
+    videoObserver.observe(videoWrapper);
+    
+    logger.log("[video.js] Progressive video loading configured:", videoUrl, "| Mobile:", isMobile);
   } catch (loadError) {
-    console.error('[video.js] Error setting video source or loading:', loadError);
-    // Continue anyway - handlers should still be attached
+    console.error('[video.js] Error configuring video source:', loadError);
+    // Fallback: set src directly if observer fails
+    try {
+      videoElement.src = videoUrl;
+      videoElement.preload = 'metadata';
+    } catch (e) { /* silent */ }
   }
 
   // Add error event listener to check if the video file can be loaded

@@ -108,7 +108,14 @@ export default defineConfig(({ mode, command }) => {
           // Dynamic imports work in author/preview but fail in published due to URL rewriting
           ...((mode === "banner" || mode === "standard") ? {
             inlineDynamicImports: true,
-          } : {}),
+          } : {
+            // Non-AEM builds: split heavy vendor libs into separate chunks
+            // so the entry JS is tiny and the spinner paints instantly
+            manualChunks(id) {
+              if (id.includes('node_modules/three')) return 'vendor-three';
+              if (id.includes('node_modules/gsap')) return 'vendor-gsap';
+            },
+          }),
           // For banner mode, output JS and CSS to root, otherwise to assets/
           entryFileNames: mode === "banner" ? "[name]-[hash].js" : "assets/[name]-[hash].js",
           chunkFileNames: mode === "banner" ? "[name]-[hash].js" : "assets/[name]-[hash].js",
@@ -151,24 +158,6 @@ export default defineConfig(({ mode, command }) => {
       },
     },
     plugins: [
-      {
-        name: "remove-gui-in-production",
-        apply: "build",
-        generateBundle(options, bundle) {
-          // Only run in build command (production builds) BUT NOT for banner mode
-          if (command === "build" && mode !== "banner") {
-            const jsFiles = Object.keys(bundle).filter((key) => key.endsWith(".js") && !key.includes("vendor"));
-            if (jsFiles.length > 0) {
-              const jsBundle = bundle[jsFiles[0]];
-              if (jsBundle && jsBundle.type === "chunk") {
-                // Minified dat.GUI removal code
-                const removeGuiCode = `(function(){var r=function(){[".dg.ac",".dg",'[class*="dg"]'].forEach(function(s){document.querySelectorAll(s).forEach(function(e){e&&e.parentNode&&e.parentNode.removeChild(e)})})};r();document.readyState==="loading"?document.addEventListener("DOMContentLoaded",r):r();setTimeout(r,100);setTimeout(r,500);setTimeout(r,1e3);typeof MutationObserver!="undefined"&&function(){var o=new MutationObserver(r);o.observe(document.body,{childList:!0,subtree:!0});setTimeout(function(){return o.disconnect()},5e3)}()})();`;
-                jsBundle.code = removeGuiCode + jsBundle.code;
-              }
-            }
-          }
-        },
-      },
       {
         name: "html-transform-preload",
         transformIndexHtml(html, ctx) {

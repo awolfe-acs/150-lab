@@ -1,9 +1,34 @@
-import * as THREE from "three";
+// import * as THREE from "three";
+// import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+// import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import * as dat from "dat.gui";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import globeModelUrl from "../../public/models/globe-hd.glb?url";
 import performanceDetector from "./utils/performanceDetector.js";
+
+let THREE;
+let GLTFLoader;
+let DRACOLoader;
+
+async function loadThreeDependencies() {
+  if (THREE) return;
+  
+  console.log('[background.js] Loading Three.js dependencies...');
+  try {
+    const [threeModule, gltfModule, dracoModule] = await Promise.all([
+      import('three'),
+      import('three/examples/jsm/loaders/GLTFLoader.js'),
+      import('three/examples/jsm/loaders/DRACOLoader.js'),
+    ]);
+    
+    THREE = threeModule;
+    GLTFLoader = gltfModule.GLTFLoader;
+    DRACOLoader = dracoModule.DRACOLoader;
+  } catch (err) {
+    console.error('[background.js] Failed to load Three.js dependencies:', err);
+    throw err;
+  }
+}
+
 import { AdaptiveRenderer } from "./utils/adaptiveRenderer.js";
 import { PerformanceMonitor } from "./utils/performanceMonitor.js";
 import memoryManager from "./utils/memoryManager.js";
@@ -30,6 +55,9 @@ export async function initShaderBackground() {
     logger.warn("Shader background already initialized. Skipping...");
     return;
   }
+
+  // Load Three.js dependencies first
+  await loadThreeDependencies();
 
   // Check AEM mode first
   const aemMode = aemModeDetector.detect();

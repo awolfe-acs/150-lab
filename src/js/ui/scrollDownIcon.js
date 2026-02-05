@@ -108,16 +108,17 @@ export function createScrollDownIcon(referenceElement) {
     markers: false,
     onUpdate: (self) => {
       // Fade out based on scroll progress - same as cover SVG but faster
-      //const opacity = 1 - self.progress;
-      //gsap.set(scrollIcon, { opacity: opacity, overwrite: true });
+      const opacity = 1 - self.progress;
+      gsap.set(scrollIcon, { opacity: opacity, overwrite: true });
     },
     onLeave: () => {
       // Ensure icon is hidden when leaving the trigger area
       gsap.set(scrollIcon, { opacity: 0 });
     },
-    onEnterBack: () => {
-      // When entering back, start with icon hidden and let scroll control it
-      gsap.set(scrollIcon, { opacity: 0 });
+    onEnterBack: (self) => {
+      // Fade icon back in when scrolling back up
+      const opacity = 1 - self.progress;
+      gsap.set(scrollIcon, { opacity: opacity });
     },
   });
 

@@ -225,7 +225,7 @@ export function initCoverArea() {
       duration: 1.2,
       ease: "power1.out",
     },
-    "-=0.3" // Slight overlap with app fade
+    "+=0.32" // 320ms delay after app fade completes
   );
 
   // Animate the countdown in (while logo is still animating)

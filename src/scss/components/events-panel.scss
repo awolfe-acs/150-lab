@@ -53,7 +53,7 @@
         //border-top-right-radius: 64px;
         z-index: 0;
         mix-blend-mode: difference;
-
+        pointer-events:none!important;
         @media (max-width:$mobile-viewport) {
             border-top-left-radius: 24px;
             border-top-right-radius: 24px;

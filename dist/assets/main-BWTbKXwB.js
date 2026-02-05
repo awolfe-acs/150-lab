@@ -360,10 +360,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const background = await loadModule('background');
         await background.initShaderBackground();
       } catch (error) {
-        // NOTE: do NOT use console.error here — esbuild drop:['console'] strips it
-        // in AEM builds, turning this into an empty catch{} that hides real errors.
-        // document.title is immune to stripping and makes failures visible.
-        document.title = '[BG Error] ' + (error && error.message ? error.message : String(error));
+        console.error("Failed to load shader background:", error);
         // Static background already visible as fallback
       }
     }
@@ -418,10 +415,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     await yieldToMain();
     
     // ==========================================================================
-    // REVEAL PAGE - Critical 3D background is ready, start #app fade-in.
-    // Logo and button will fade in after a few more modules load.
+    // REVEAL PAGE - Critical 3D background is ready, reveal immediately.
+    // Deferred modules (timeline, video, etc.) load AFTER the page is visible
+    // so the user sees the hero + background without waiting for everything.
     // ==========================================================================
-    console.log('[main.js] Critical path complete - starting page reveal...');
+    console.log('[main.js] Critical path complete - revealing page...');
+    essential.hero.playCoverAreaAnimation();
     
     // ==========================================================================
     // PHASE 3: DEFERRED MODULES - Load after page is visible
@@ -429,7 +428,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Ordered by visual priority: scroll animations first, then heavy 3D, then video.
     // ==========================================================================
     if (aemSettings.enableAnimations) {
-      // Small yield to let the #app start fading in
+      // Small yield to let the reveal animation start painting
       await yieldWithDelay(100);
 
       // Batch 1: Lightweight scroll-triggered animations (parallel)
@@ -440,12 +439,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         loadModule('marquee'),
       ]);
 
-      await yieldToMain();
-      
-      // NOW reveal logo and button after more modules are loaded
-      console.log('[main.js] Deferred modules loaded - revealing logo + button...');
-      essential.hero.playCoverAreaAnimation();
-      
       await yieldToMain();
 
       // Initialize lightweight animations immediately
