@@ -21,8 +21,14 @@ performanceDetector.onFpsCapChange((info) => {
 // Throttle state for expensive safety checks (getBoundingClientRect, getComputedStyle)
 // These cause layout thrashing if called every frame
 let lastSafetyCheckTime = 0;
+// Determine mobile breakpoint once to prevent redundant reflow evaluations
+export let isMobileBreakpoint = window.matchMedia("(max-width: 1024px)").matches;
+window.matchMedia("(max-width: 1024px)").addEventListener("change", (e) => {
+  isMobileBreakpoint = e.matches;
+});
+
 // MOBILE OPTIMIZATION: Increase interval on mobile to reduce layout thrashing
-const SAFETY_CHECK_INTERVAL = window.matchMedia("(max-width: 1024px)").matches ? 250 : 150;
+const SAFETY_CHECK_INTERVAL = isMobileBreakpoint ? 250 : 150;
 
 // Helper function to interpolate between two hex colors
 function interpolateColor(color1, color2, progress) {
@@ -439,7 +445,7 @@ export function initTimelineAnimation() {
   let trackingFrameCount = 0; // Frame counter for throttling
   
   // MOBILE OPTIMIZATION: More aggressive throttling on mobile (every 5th frame vs 3rd)
-  const trackingFrameSkip = window.matchMedia("(max-width: 1024px)").matches ? 5 : 3;
+  const trackingFrameSkip = isMobileBreakpoint ? 5 : 3;
   
   const startContinuousTracking = () => {
     if (isContinuouslyTracking) return; // Already tracking
@@ -535,7 +541,7 @@ export function initTimelineAnimation() {
   // - Mobile film grain overlay
   // - Particle animations
   // ==========================================================================
-  const isMobileDevice = window.matchMedia("(max-width: 1024px)").matches;
+  const isMobileDevice = isMobileBreakpoint;
   
   if (isMobileDevice && timeline) {
     // Helper to forcefully hide mobile film grain
@@ -622,8 +628,7 @@ export function initTimelineAnimation() {
   };
   
   // Define scroll durations as functions to get current viewport size on resize
-  // Use matchMedia to strictly match CSS breakpoint (1024px)
-  const isMobile = () => window.matchMedia("(max-width: 1024px)").matches;
+  const isMobile = () => isMobileBreakpoint;
   const getInitialPhaseDuration = () => window.innerHeight * 1.0;
   const getScrollPerEvent = () => window.innerHeight * (isMobile() ? 0.7 : 0.88); // Reduced: was 0.9/1.4, now 0.7/1.0
   const getTotalScrollDistance = () => getInitialPhaseDuration() + (remainingEventsCount * getScrollPerEvent());
@@ -941,47 +946,17 @@ export function initTimelineAnimation() {
           function lockBackgroundLoop() {
             if (!isBgLockedFullscreen) return; // Stop when flag is cleared
             
-            // Check both inline styles AND computed position
-            const rect = timelineWindowBg.getBoundingClientRect();
+            // Check only inline styles, skip expensive getBoundingClientRect
             const styleNeedsUpdate = (
               timelineWindowBg.style.top !== '0px' || 
               timelineWindowBg.style.left !== '0px' || 
               timelineWindowBg.style.width !== '100vw' || 
               timelineWindowBg.style.height !== '100vh'
             );
-            const positionMoved = (
-              Math.abs(rect.top) > 2 || 
-              Math.abs(rect.left) > 2 || 
-              Math.abs(rect.width - window.innerWidth) > 5 || 
-              Math.abs(rect.height - window.innerHeight) > 5
-            );
             
-            if (styleNeedsUpdate || positionMoved) {
-              logger.warn('[Re-entry] AGGRESSIVE LOCK: Background moved! Inline styles:', {
-                top: timelineWindowBg.style.top,
-                left: timelineWindowBg.style.left,
-                width: timelineWindowBg.style.width,
-                height: timelineWindowBg.style.height
-              }, 'Computed position:', {
-                top: rect.top,
-                left: rect.left,
-                width: rect.width,
-                height: rect.height
-              });
-              
-              // Force all positioning properties
-              timelineWindowBg.style.position = 'fixed';
-              timelineWindowBg.style.top = '0';
-              timelineWindowBg.style.left = '0';
-              timelineWindowBg.style.width = '100vw';
-              timelineWindowBg.style.height = '100vh';
-              timelineWindowBg.style.opacity = '1';
-              timelineWindowBg.style.visibility = 'visible';
-              timelineWindowBg.style.display = 'block';
-              timelineWindowBg.style.zIndex = '9999';
-              timelineWindowBg.style.transform = 'none'; // Clear any transforms
-              timelineWindowBg.style.margin = '0'; // Clear margins
-              timelineWindowBg.style.padding = '0'; // Clear padding
+            if (styleNeedsUpdate) {
+              logger.warn('[Re-entry] AGGRESSIVE LOCK: Background style modified! Forcing full viewport bounds...');
+              timelineWindowBg.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;opacity:1;visibility:visible;display:block;z-index:9999;transform:none;margin:0;padding:0;background:linear-gradient(rgb(4, 147, 171), rgb(6, 87, 164));border-radius:0px;';
             }
             
             requestAnimationFrame(lockBackgroundLoop);
@@ -1409,7 +1384,7 @@ export function initTimelineAnimation() {
     } else {
       // Detect which .timeline-event is actually visible/centered in viewport
       // This provides accurate synchronization with what's actually on screen
-      const isMobileView = window.matchMedia("(max-width: 1024px)").matches;
+      const isMobileView = isMobileBreakpoint;
       
       // Find the event that's most centered in the viewport
       // Note: getBoundingClientRect calls are already throttled via scrubber update throttling
@@ -1418,11 +1393,34 @@ export function initTimelineAnimation() {
       let closestDistance = Infinity;
       let closestEventGlobalIndex = -1;
       
+      // Find the track offset to determine element positions without reflow
+      const trackOffset = isMobileView
+        ? parseFloat(gsap.getProperty(timelineTrack, 'y') || 0)
+        : parseFloat(gsap.getProperty(timelineTrack, 'x') || 0);
+
+      const eventWidth = getEventWidth();
+      const coverWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
       events.forEach((event, globalIndex) => {
-        const rect = event.getBoundingClientRect();
-        const eventCenter = isMobileView 
-          ? rect.top + (rect.height / 2) 
-          : rect.left + (rect.width / 2);
+        let eventCenterBase;
+        
+        if (isMobileView) {
+          // Mobile positions: 0, 100vh, 200vh...
+          eventCenterBase = globalIndex * viewportHeight + (viewportHeight / 2);
+        } else {
+          // Desktop positions: cover width, then event widths
+          if (globalIndex === 0) {
+            // Cover event
+            eventCenterBase = coverWidth / 2;
+          } else {
+            // Regular events
+            eventCenterBase = coverWidth + ((globalIndex - 1) * eventWidth) + (eventWidth / 2);
+          }
+        }
+        
+        // Final position relative to viewport (incorporating animated track shift)
+        const eventCenter = eventCenterBase + trackOffset;
         const distanceFromCenter = Math.abs(eventCenter - viewportCenter);
         
         // Check if this event is closer to center than previous closest
@@ -3012,7 +3010,7 @@ export function initTimelineAnimation() {
       // Event i starts at (100vw + sum of previous event widths), center at that + (eventWidth / 2)
       // To center at viewport center (50vw): calculate accumulated width offset
       // Mobile: Move Y (vertical)
-      const isMobile = () => window.matchMedia("(max-width: 1024px)").matches;
+      const isMobile = () => isMobileBreakpoint;
       
       const getTargetX = () => {
         if (isMobile()) return 0;

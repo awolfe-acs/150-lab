@@ -625,7 +625,7 @@ export function initHeroAnimation() {
     scale: 1.2, // Slightly larger scale to enhance the effect
     transformPerspective: 1000, // Increase perspective for more dramatic 3D effect
     transformOrigin: "center center",
-    filter: "blur(16px)", // Add initial blur effect
+    filter: "blur(6px)", // Add initial blur effect
   });
 
   // Randomize the characters for reveal
@@ -692,7 +692,7 @@ export function initHeroAnimation() {
 
   // Set initial blur on hero number (will animate to 0)
   gsap.set(heroNumber, {
-    filter: "blur(16px)",
+    filter: "blur(6px)",
   });
 
   // Animate digits' 3D positioning
@@ -713,7 +713,7 @@ export function initHeroAnimation() {
     heroNumber,
     {
       "--digit-opacity": 0.44,
-      filter: "blur(0px)", // Reveal: blur 16px → 0
+      filter: "blur(0px)", // Reveal: blur 6px → 0
       duration: 2.5, // Same duration as 3D animation
       ease: "power3.out",
     },
@@ -841,7 +841,7 @@ export function initHeroNumberCountdown() {
       if (progress > fadeStart) {
         const fadeProgress = Math.min(1, (progress - fadeStart) / (fadeEnd - fadeStart));
         fadeMultiplier = 1 - fadeProgress;
-        blur = Math.round(fadeProgress * 16); // 0 → 16px blur during fade-out
+        blur = Math.round(fadeProgress * 6); // 0 → 6px blur during fade-out
       }
       
       const finalOpacity = Math.round(baseOpacity * fadeMultiplier * 10) / 10;
@@ -862,12 +862,12 @@ export function initHeroNumberCountdown() {
       lastYear = 1876;
       lastScale = 0.5;
       lastFadeOpacity = 0;
-      lastBlur = 16;
+      lastBlur = 6;
       animationState.heroYearObj.year = 1876;
       updateDigits(1876);
       heroNumber.style.transform = "scale(0.5)";
       heroNumber.style.setProperty("--digit-opacity", "0");
-      heroNumber.style.filter = "blur(16px)";
+      heroNumber.style.filter = "blur(6px)";
     },
 
     onLeaveBack: () => {
@@ -906,7 +906,7 @@ export function initHeroNumberCountdown() {
       if (progress > fadeStart) {
         const fadeProgress = Math.min(1, (progress - fadeStart) / (fadeEnd - fadeStart));
         fadeMultiplier = 1 - fadeProgress;
-        blur = Math.round(fadeProgress * 16);
+        blur = Math.round(fadeProgress * 6);
       }
       lastFadeOpacity = Math.round(baseOpacity * fadeMultiplier * 10) / 10;
       lastBlur = blur;

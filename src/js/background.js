@@ -94,20 +94,20 @@ export async function initShaderBackground() {
   let phase1StartTime = Date.now();
   const PHASE1_RESET_TIMEOUT = 6000000000;
 
-  // Helper function to check if we're above the Phase 3 trigger point
-  function isAbovePhase3Trigger() {
-    const eventsElement = document.querySelector("#events");
-    if (!eventsElement) return true; // If we can't find events element, assume we're above it
+  // Cache the Phase 3 trigger state to prevent layout thrashing in animation loop
+  const eventsElement = document.querySelector("#events");
+  let _abovePhase3 = true;
 
-    const rect = eventsElement.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
+  if (eventsElement) {
+    // Initial check
+    const initialRect = eventsElement.getBoundingClientRect();
+    _abovePhase3 = initialRect.top > window.innerHeight * 1.2;
 
-    // Phase 3 trigger starts when events top is at 120% (20% below viewport)
-    // So we're "above" the trigger when events top is > 120% from viewport top
-    const triggerPoint = viewportHeight * 1.2; // 120% of viewport height
-    const eventsTopPosition = rect.top;
-
-    return eventsTopPosition > triggerPoint;
+    // Update on scroll with passive listener
+    window.addEventListener('scroll', () => {
+      const rect = eventsElement.getBoundingClientRect();
+      _abovePhase3 = rect.top > window.innerHeight * 1.2;
+    }, { passive: true });
   }
 
   // Get the canvas element
@@ -274,12 +274,17 @@ export async function initShaderBackground() {
 
             // Update opacity on all materials
             if (globeModel.visible) {
-              globeModel.traverse((child) => {
-                if (child.isMesh && child.material) {
-                  child.material.transparent = true;
-                  child.material.opacity = progress;
-                }
-              });
+              if (!globeModel._cachedMeshes) {
+                globeModel._cachedMeshes = [];
+                globeModel.traverse((child) => {
+                  if (child.isMesh && child.material) globeModel._cachedMeshes.push(child);
+                });
+              }
+
+              for (const child of globeModel._cachedMeshes) {
+                child.material.transparent = true;
+                child.material.opacity = progress;
+              }
 
               // Update globeParams for reference
               globeParams.opacity = progress;
@@ -822,29 +827,34 @@ export async function initShaderBackground() {
             globeModel.visible = true;
 
             // Set the opacity on all materials with proper transparency settings
-            globeModel.traverse((child) => {
-              if (child.isMesh && child.material) {
-                if (Array.isArray(child.material)) {
-                  child.material.forEach((mat) => {
-                    // Ensure proper material settings for transparency
-                    mat.transparent = true;
-                    mat.opacity = curvedProgress;
-                    mat.depthWrite = curvedProgress > 0.1; // Only write to depth buffer when mostly opaque
-                    // Set blending mode for smoother transparency
-                    mat.blending = THREE.NormalBlending;
-                    mat.needsUpdate = true;
-                  });
-                } else {
+            if (!globeModel._cachedMeshes) {
+              globeModel._cachedMeshes = [];
+              globeModel.traverse((child) => {
+                if (child.isMesh && child.material) globeModel._cachedMeshes.push(child);
+              });
+            }
+
+            for (const child of globeModel._cachedMeshes) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach((mat) => {
                   // Ensure proper material settings for transparency
-                  child.material.transparent = true;
-                  child.material.opacity = curvedProgress;
-                  child.material.depthWrite = curvedProgress > 0.1; // Only write to depth buffer when mostly opaque
+                  mat.transparent = true;
+                  mat.opacity = curvedProgress;
+                  mat.depthWrite = curvedProgress > 0.1; // Only write to depth buffer when mostly opaque
                   // Set blending mode for smoother transparency
-                  child.material.blending = THREE.NormalBlending;
-                  child.material.needsUpdate = true;
-                }
+                  mat.blending = THREE.NormalBlending;
+                  mat.needsUpdate = true;
+                });
+              } else {
+                // Ensure proper material settings for transparency
+                child.material.transparent = true;
+                child.material.opacity = curvedProgress;
+                child.material.depthWrite = curvedProgress > 0.1; // Only write to depth buffer when mostly opaque
+                // Set blending mode for smoother transparency
+                child.material.blending = THREE.NormalBlending;
+                child.material.needsUpdate = true;
               }
-            });
+            }
 
             // Handle the extreme case where opacity is near zero
             if (curvedProgress < 0.01) {
@@ -1964,7 +1974,7 @@ export async function initShaderBackground() {
       float frequency = 1.0;
       
       // Loop of octaves with more iterations for smoother detail
-      for (int i = 0; i < 6; i++) {
+      for (int i = 0; i < 4; i++) {
         value += amplitude * noise(st * frequency);
         st += st * 0.2; // Domain warping for more organic patterns
         frequency *= 2.0;
@@ -2099,11 +2109,10 @@ export async function initShaderBackground() {
     }
     
     // Function to calculate normal based on wave height field
-    vec3 calculateNormal(vec2 uv, vec3 localColor) {
+    vec3 calculateNormal(vec2 uv, float center, vec3 localColor) {
       float epsilon = 0.01;
       
       // Sample wave heights at nearby points
-      float center = wavePattern(uv, 0.5, localColor);
       float right = wavePattern(uv + vec2(epsilon, 0.0), 0.5, localColor);
       float top = wavePattern(uv + vec2(0.0, epsilon), 0.5, localColor);
       
@@ -2185,7 +2194,7 @@ export async function initShaderBackground() {
       float distanceField = mix(verticalDist, radialDist, cornerBlend * cornerRoundness);
       
       // Apply noise to the edge for a more organic, burn-in look
-      float edgeNoise = fbm((uv + time * 0.01) * edgeNoiseScale) * edgeNoiseAmount;
+      float edgeNoise = noise((uv + time * 0.01) * edgeNoiseScale) * edgeNoiseAmount;
       distanceField = distanceField + (edgeNoise - edgeNoiseAmount * 0.5) * 0.2;
       
       // Apply contrast to the edge
@@ -2335,7 +2344,7 @@ export async function initShaderBackground() {
       baseColor = mix(baseColor, vec3(0.0, 0.0, 0.0), darknessVariation);
       
       // Calculate lighting based on wave normal with consistent color influence
-      vec3 waveNormal = calculateNormal(uv, initialColor);
+      vec3 waveNormal = calculateNormal(uv, middleWave, initialColor);
       
       // Blend between the wave normal and the surface normal for subtle effect
       // Make the normal blend more dynamic with time and directly tied to the wave depth
@@ -2359,9 +2368,10 @@ export async function initShaderBackground() {
       lightDir.y += cos(time * 0.25) * 0.025 * middleWave;
       // Add a subtle rotation to the light direction based on the wave pattern
       float lightRotation = (foregroundWave - 0.5) * waveDepthFactor * 0.2;
+      // Small-angle optimization: cos(x)≈1, sin(x)≈x for |x| < 0.2
       vec3 rotatedLightDir = vec3(
-          lightDir.x * cos(lightRotation) - lightDir.y * sin(lightRotation),
-          lightDir.x * sin(lightRotation) + lightDir.y * cos(lightRotation),
+          lightDir.x - lightDir.y * lightRotation,
+          lightDir.x * lightRotation + lightDir.y,
           lightDir.z
       );
       lightDir = normalize(rotatedLightDir);
@@ -2444,7 +2454,7 @@ export async function initShaderBackground() {
       }
       
       // Add subtle noise to alpha for a more organic edge (keep using time for wave-related motion)
-      float edgeNoise = fbm(uv * noiseScale * 2.0 + time * 0.05 * noiseSpeed);
+      float edgeNoise = noise(uv * noiseScale * 2.0 + time * 0.05 * noiseSpeed);
       alpha *= 0.95 + edgeNoise * 0.05;
 
       gl_FragColor = vec4(color, alpha);
@@ -2455,8 +2465,8 @@ export async function initShaderBackground() {
   const geometry = new THREE.PlaneGeometry(
     window.innerWidth,
     window.innerHeight,
-    window.innerWidth / 10, // More segments for smoother wave patterns
-    window.innerHeight / 10
+    32, // More segments for smoother wave patterns
+    18
   );
 
   const material = new THREE.ShaderMaterial({
@@ -3932,8 +3942,10 @@ export async function initShaderBackground() {
   let initialMovementThreshold = 250; // Pixels of cumulative movement needed to start particles
 
   // Track recent mouse movement for dynamic spawn offset
-  let recentMovements = [];
   let maxRecentMovements = 10; // Number of recent movements to track
+  let recentMovements = new Float32Array(maxRecentMovements);
+  let recentMovementsCount = 0;
+  let movementHead = 0;
   let currentSpawnOffset; // Will be initialized after mouseParticleParams is defined
 
   // Drawing mode tracking
@@ -4268,14 +4280,15 @@ export async function initShaderBackground() {
     }
 
     // Track recent movements for dynamic spawn offset calculation
-    recentMovements.push(movement);
-    if (recentMovements.length > maxRecentMovements) {
-      recentMovements.shift(); // Remove oldest movement
-    }
+    recentMovements[movementHead] = movement;
+    movementHead = (movementHead + 1) % maxRecentMovements;
+    if (recentMovementsCount < maxRecentMovements) recentMovementsCount++;
 
     // Calculate average movement intensity over recent frames
-    if (recentMovements.length > 0) {
-      const avgMovement = recentMovements.reduce((sum, mov) => sum + mov, 0) / recentMovements.length;
+    if (recentMovementsCount > 0) {
+      let sum = 0;
+      for (let i = 0; i < recentMovementsCount; i++) sum += recentMovements[i];
+      const avgMovement = sum / recentMovementsCount;
       const maxMovement = 20; // Maximum expected movement per frame for normalization
       const movementIntensity = Math.min(avgMovement / maxMovement, 1.0); // Normalize to 0-1
 
@@ -4423,14 +4436,15 @@ export async function initShaderBackground() {
       }
 
       // Track recent movements for dynamic spawn offset calculation
-      recentMovements.push(movement);
-      if (recentMovements.length > maxRecentMovements) {
-        recentMovements.shift(); // Remove oldest movement
-      }
+      recentMovements[movementHead] = movement;
+      movementHead = (movementHead + 1) % maxRecentMovements;
+      if (recentMovementsCount < maxRecentMovements) recentMovementsCount++;
 
       // Calculate average movement intensity over recent frames
-      if (recentMovements.length > 0) {
-        const avgMovement = recentMovements.reduce((sum, mov) => sum + mov, 0) / recentMovements.length;
+      if (recentMovementsCount > 0) {
+        let sum = 0;
+        for (let i = 0; i < recentMovementsCount; i++) sum += recentMovements[i];
+        const avgMovement = sum / recentMovementsCount;
         const maxMovement = 20; // Maximum expected movement per frame for normalization
         const movementIntensity = Math.min(avgMovement / maxMovement, 1.0); // Normalize to 0-1
 
@@ -4618,7 +4632,8 @@ export async function initShaderBackground() {
         // Reset activation system
         isMouseParticleSystemActive = false;
         cumulativeMovement = 0;
-        recentMovements = [];
+        recentMovementsCount = 0;
+        movementHead = 0;
         currentSpawnOffset = mouseParticleParams.spawnOffsetMin;
         isDrawing = false;
       }
@@ -4728,7 +4743,8 @@ export async function initShaderBackground() {
         resetActivation: function () {
           isMouseParticleSystemActive = false;
           cumulativeMovement = 0;
-          recentMovements = [];
+          recentMovementsCount = 0;
+          movementHead = 0;
           currentSpawnOffset = mouseParticleParams.spawnOffsetMin;
           mouseParticles = [];
           drawnParticles = [];
@@ -4930,14 +4946,7 @@ export async function initShaderBackground() {
   // Main shader animation loop using adaptive renderer
   // Mobile-specific: track scroll state for additional optimizations
   const isMobileBackground = performanceDetector.isMobile();
-  let isBackgroundScrolling = false;
-  
-  if (isMobileBackground) {
-    performanceDetector.onScrollStateChange(({ isScrolling }) => {
-      isBackgroundScrolling = isScrolling;
-    });
-  }
-  
+
   function animate(deltaTime) {
     // Check if timeline has paused the background for performance
     if (window.backgroundPaused) {
@@ -4956,13 +4965,13 @@ export async function initShaderBackground() {
     // On mobile during scroll, use minimal animation for better performance
     // Shader time drives wave animations - slower = less GPU work
     const timeIncrement = isMobileBackground 
-      ? (isBackgroundScrolling ? 0.00005 : 0.0005) // Nearly frozen during scroll on mobile
+      ? (isCurrentlyScrolling ? 0.00005 : 0.0005) // Nearly frozen during scroll on mobile
       : 0.001;
     uniforms.time.value += timeIncrement;
 
     // Check if we've been above Phase 3 trigger too long and stabilize effects to prevent weird behavior
     // This applies when we're above the #events section trigger point (Phase 1 or Phase 2)
-    if (isAbovePhase3Trigger()) {
+    if (_abovePhase3) {
       const timeInPhase1 = Date.now() - phase1StartTime;
       if (timeInPhase1 > PHASE1_RESET_TIMEOUT) {
         // Instead of resetting time, adjust the colorCycleOffset to maintain perfect continuity
@@ -4975,13 +4984,13 @@ export async function initShaderBackground() {
     }
 
     // Update mouse particles (skip on mobile during scroll for performance)
-    if (!(isMobileBackground && isBackgroundScrolling)) {
+    if (!(isMobileBackground && isCurrentlyScrolling)) {
     animateMouseParticles();
     }
 
     // Gradually fade in particles if needed - but only if not fully hidden by scrolling
     // MOBILE PERFORMANCE: Skip fade updates during scroll (instant updates are fine)
-    const skipParticleOpacityUpdate = isMobileBackground && isBackgroundScrolling;
+    const skipParticleOpacityUpdate = isMobileBackground && isCurrentlyScrolling;
     
     if (!skipParticleOpacityUpdate) {
     if (!window.particlesFullyHidden && customParticleMaterial.uniforms.opacity.value < targetParticleOpacity) {
@@ -4999,7 +5008,7 @@ export async function initShaderBackground() {
 
     // Update globe model rotation if auto-rotate is enabled
     // MOBILE PERFORMANCE: Skip globe rotation during scroll to reduce CPU/GPU work
-    const skipGlobeRotation = isMobileBackground && isBackgroundScrolling;
+    const skipGlobeRotation = isMobileBackground && isCurrentlyScrolling;
     
     if (globeModel && globeParams.autoRotate && !globeParams.rotationPaused && !skipGlobeRotation) {
       // Always use base rotation speed (no faster spinning during scroll)
@@ -5011,7 +5020,7 @@ export async function initShaderBackground() {
 
     // Update overlay position to keep it in front of the camera
     // MOBILE PERFORMANCE: Skip overlay updates during scroll (position doesn't change much)
-    if (overlayMesh && !(isMobileBackground && isBackgroundScrolling)) {
+    if (overlayMesh && !(isMobileBackground && isCurrentlyScrolling)) {
       // Always ensure overlay remains perfectly flat
       overlayMesh.rotation.set(0, 0, 0);
       updateOverlayPosition();
@@ -5139,7 +5148,7 @@ export async function initShaderBackground() {
 
     // Update the plane geometry to match the new window size
     mesh.geometry.dispose(); // Clean up old geometry
-    mesh.geometry = new THREE.PlaneGeometry(width, height, width / 10, height / 10);
+    mesh.geometry = new THREE.PlaneGeometry(width, height, 32, 18);
 
     // Update vertical and horizontal distribution based on new window dimensions
     verticalDistribution = height * scrollObj.verticalSpread;
@@ -5284,7 +5293,7 @@ export async function initShaderBackground() {
 
     // Update the plane geometry to match the new window size
     mesh.geometry.dispose(); // Clean up old geometry
-    mesh.geometry = new THREE.PlaneGeometry(width, height, width / 10, height / 10);
+    mesh.geometry = new THREE.PlaneGeometry(width, height, 32, 18);
 
     // Update vertical and horizontal distribution based on new window dimensions
     verticalDistribution = height * scrollObj.verticalSpread;

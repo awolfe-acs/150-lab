@@ -10,7 +10,7 @@ body.in-timeline {
         @media (max-width:$mobile-viewport) {
             padding-right: 64px;
         }
-        button.toggle-menu {
+        button.toggle-menu, a.content-hub-btn {
             @media (max-width:$mobile-viewport) {
                 display:none!important;
             }
@@ -138,6 +138,7 @@ header.anniversary {
             font-weight: 450;
             transform: translateY(1px);
             display: block;
+            user-select:none;
         }
 
         &:before,
@@ -185,7 +186,7 @@ button.sound-toggle {
         margin-right: 48px;
     }
     @media (max-width:$mobile-viewport) {
-        margin: 0 auto;
+        margin: 0 0 0 auto;
         gap:8px;
         transform:translateX(-32px);
     }
@@ -276,6 +277,7 @@ header.anniversary a.content-hub-btn {
     z-index:1;
     position:relative;
     margin-right:80px;
+    user-select:none;
     @media (min-width:$mobile-viewport) and (max-width:$desktop-viewport) {
         margin-right: 48px;
     }

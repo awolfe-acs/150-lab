@@ -9,6 +9,7 @@
     "build:gh": "vite build --mode github",
     "build:assets": "vite build --mode assets --outDir dist-assets",
     "build:banner": "vite build --mode banner --outDir dist-banner",
+    "build:aem": "pwsh -Command \"if (Test-Path dist-aem) { Remove-Item -Recurse -Force dist-aem -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 500 }\" && npm run build && pwsh -File copy-to-clientlib.ps1",
     "preview": "vite preview"
   },
   "devDependencies": {

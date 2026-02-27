@@ -220,6 +220,16 @@ window.resumeBackgroundAudio = resumeBackgroundAudio;
 
 // Export a utility function to handle dynamically added audio elements
 export function handleNewAudioElement(element) {
+  // Do not mute video elements or .mp4 files, as they should play even when page audio is muted
+  if (
+    element.tagName === "VIDEO" || 
+    element.nodeName === "VIDEO" || 
+    (element.src && element.src.toLowerCase().includes(".mp4")) ||
+    (element.currentSrc && element.currentSrc.toLowerCase().includes(".mp4"))
+  ) {
+    return;
+  }
+
   // Check if the sound is currently muted
   if (audioMuted) {
     // If muted, set volume to 0 and mute

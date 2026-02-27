@@ -404,6 +404,10 @@
         right:8px;
         bottom:8px;
     }
+    @media (max-width:$mobile-viewport) {
+        opacity:0!important;
+        pointer-events:none!important;
+    }
 }
 
 body.in-timeline {
@@ -485,7 +489,7 @@ body.in-timeline {
     justify-content: center;
     gap: 8px;
     height: 36px;
-    padding:0 16px;
+    padding:0 14px 0 16px;
     border-radius: 32px;
     border: 1px solid rgba(255, 255, 255, 1);
     font-family: $stolzl-light!important;
@@ -502,7 +506,17 @@ body.in-timeline {
         border-color 0.7s cubic-bezier(0.2, 0.1, 0.2, 1);
     box-shadow: 0 0 15px rgba(251, 225, 57, 0.05),
         0 0 25px rgba(128, 0, 255, 0.03);
-    display:none!important; //for now
+    @media (min-width:1025px) {
+        br {
+            display:none;
+        }
+    }
+    @media (max-width:$mobile-viewport) {
+        padding:6px 12px 6px 14px;
+        height:auto;
+        font-size:12px;
+        gap:6px;
+    }
     /* Create gradient border effect */
     &::before {
         content: '';
@@ -574,6 +588,10 @@ body.in-timeline {
         height: 16px;
         position: relative;
         z-index: 2;
+        @media (max-width:$mobile-viewport) {
+            width:12px;
+            height:12px;
+        }
         path {
             fill: #fff;
             stroke: #fff;

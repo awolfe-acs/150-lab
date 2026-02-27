@@ -58,6 +58,7 @@ const deferredModules = {
   share: () => import("./js/ui/share.js"),
   // eventListHover: () => import("./js/ui/eventListHover.js"), // DISABLED
   video: () => import("./js/video.js"),
+  lazyLoadCardImages: () => import("./js/utils/lazyLoadCardImages.js"),
   // morphSVG: () => import("gsap/MorphSVGPlugin"), // DISABLED
   splitType: () => import("split-type"),
 };
@@ -512,6 +513,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ==========================================================================
   await yieldToMain();
   loadTimelineImages();
+  
+  // ==========================================================================
+  // CARD BACKGROUND IMAGES - Lazy load when near viewport
+  // ==========================================================================
+  requestIdleCallback(async () => {
+    const lazyCardImages = await loadModule('lazyLoadCardImages');
+    lazyCardImages.initLazyCardImages();
+  }, { timeout: 2000 });
   
   // ==========================================================================
   // GSAP PLUGINS (background, non-critical)

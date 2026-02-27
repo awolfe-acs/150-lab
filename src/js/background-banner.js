@@ -153,8 +153,8 @@ export async function initBannerBackground(options = {}) {
   const planeGeometry = new THREE.PlaneGeometry(
     viewportWidth,
     viewportHeight,
-    Math.floor(viewportWidth / 10),
-    Math.floor(viewportHeight / 10)
+    32,
+    18
   );
   memoryManager.track(planeGeometry, "geometry");
   const wavePlaneScale = { x: 1.75, y: 1.5, z: 1.0 };
@@ -259,7 +259,7 @@ export async function initBannerBackground(options = {}) {
       float amplitude = 0.5;
       float frequency = 1.0;
 
-      for (int i = 0; i < 6; i++) {
+      for (int i = 0; i < 4; i++) {
         value += amplitude * noise(st * frequency);
         st += st * 0.2;
         frequency *= 2.0;
@@ -350,9 +350,8 @@ export async function initBannerBackground(options = {}) {
       return clamp(wave, 0.0, 1.0);
     }
 
-    vec3 calculateNormal(vec2 uv, vec3 localColor) {
+    vec3 calculateNormal(vec2 uv, float center, vec3 localColor) {
       float epsilon = 0.01;
-      float center = wavePattern(uv, 0.5, localColor);
       float right = wavePattern(uv + vec2(epsilon, 0.0), 0.5, localColor);
       float top = wavePattern(uv + vec2(0.0, epsilon), 0.5, localColor);
 
@@ -395,7 +394,7 @@ export async function initBannerBackground(options = {}) {
       }
 
       float distanceField = mix(verticalDist, radialDist, cornerBlend * cornerRoundness);
-      float edgeNoise = fbm((uv + time * 0.01) * edgeNoiseScale) * edgeNoiseAmount;
+      float edgeNoise = noise((uv + time * 0.01) * edgeNoiseScale) * edgeNoiseAmount;
       distanceField = distanceField + (edgeNoise - edgeNoiseAmount * 0.5) * 0.2;
       distanceField = pow(distanceField, edgeContrast);
       return distanceField;
@@ -480,7 +479,7 @@ export async function initBannerBackground(options = {}) {
       float darknessVariation = colorDarkness * (1.0 + sin(time * 0.2) * 0.025 + middleWave * 0.05);
       baseColor = mix(baseColor, vec3(0.0, 0.0, 0.0), darknessVariation);
 
-      vec3 waveNormal = calculateNormal(uv, initialColor);
+      vec3 waveNormal = calculateNormal(uv, middleWave, initialColor);
       float normalBlendFactor = waveDepthFactor * (0.5 + middleWave * 0.5);
       vec3 modifiedWaveNormal = waveNormal;
       modifiedWaveNormal.xy += vec2(sin(foregroundWave * 6.28) * 0.1, cos(backgroundWave * 6.28) * 0.1) * waveDepthFactor;
@@ -492,9 +491,10 @@ export async function initBannerBackground(options = {}) {
       lightDir.x += sin(time * 0.2) * 0.025 * middleWave;
       lightDir.y += cos(time * 0.25) * 0.025 * middleWave;
       float lightRotation = (foregroundWave - 0.5) * waveDepthFactor * 0.2;
+      // Small-angle optimization: cos(x)≈1, sin(x)≈x for |x| < 0.2
       vec3 rotatedLightDir = vec3(
-          lightDir.x * cos(lightRotation) - lightDir.y * sin(lightRotation),
-          lightDir.x * sin(lightRotation) + lightDir.y * cos(lightRotation),
+          lightDir.x - lightDir.y * lightRotation,
+          lightDir.x * lightRotation + lightDir.y,
           lightDir.z
       );
       lightDir = normalize(rotatedLightDir);
@@ -545,7 +545,7 @@ export async function initBannerBackground(options = {}) {
         alpha *= 1.0 - smoothInterpolation(1.0 - leftEdgeSoftness, 1.0, normalizedDist);
       }
 
-      float edgeNoiseValue = fbm(uv * noiseScale * 2.0 + time * 0.05 * noiseSpeed);
+      float edgeNoiseValue = noise(uv * noiseScale * 2.0 + time * 0.05 * noiseSpeed);
       alpha *= 0.95 + edgeNoiseValue * 0.05;
 
       gl_FragColor = vec4(color, alpha);
@@ -715,8 +715,8 @@ export async function initBannerBackground(options = {}) {
     wavePlane.geometry = new THREE.PlaneGeometry(
       width,
       height,
-      Math.floor(width / 10),
-      Math.floor(height / 10)
+      32,
+      18
     );
     wavePlane.scale.set(wavePlaneScale.x, wavePlaneScale.y, wavePlaneScale.z);
 
