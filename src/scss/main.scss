@@ -70,7 +70,6 @@ html, body {
     }
 
     &:focus, &:hover, &:active {
-      outline: none !important;
 
       &:not(:focus-visible) {
         outline: none !important;

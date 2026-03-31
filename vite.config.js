@@ -63,8 +63,20 @@ export default defineConfig(({ mode, command }) => {
       ? "/content/dam/acsorg/150/assets/banner/"
       : "/";
 
+  const audioBasePath =
+    mode === "standard"
+      ? "/content/dam/acsorg/150/assets"
+      : mode === "github"
+      ? "/150-lab/assets"
+      : mode === "banner"
+      ? "/content/dam/acsorg/150/assets/banner"
+      : "";
+
   return {
     base: basePath,
+    define: {
+      __AUDIO_BASE_PATH__: JSON.stringify(audioBasePath),
+    },
     server: {
       host: true, // or use host: '0.0.0.0'
     },

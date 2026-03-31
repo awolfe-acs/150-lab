@@ -104,6 +104,7 @@ function isMainPage() {
     currentUrl.includes("index.html") ||
     currentUrl.includes("acs.org/150") ||
     currentUrl.includes("localhost:5173") ||
+    currentUrl.includes("localhost:4502") ||
     currentUrl.includes("192.168") ||
     currentUrl.includes("cmswwwdev.acs.org/150") ||
     (currentUrl.includes("adobeaemcloud.com") && pathname.includes("/150")) ||
