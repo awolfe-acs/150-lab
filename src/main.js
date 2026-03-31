@@ -348,126 +348,149 @@ document.addEventListener("DOMContentLoaded", async () => {
   // PHASE 1 INITIALIZATION: Cover-area essentials
   // ==========================================================================
   if (isMainPage()) {
-    // Initialize cover area first
+    // Initialize cover area (sets hidden states, creates paused timeline)
     essential.hero.initCoverArea();
-    
+
     await yieldToMain();
-    
-    // Shader background - CRITICAL PRIORITY
-    // Load and init synchronously (awaited) so the spinner hides only after
-    // the WebGL shader is compiled and the first frame has rendered.
-    // This masks the GPU compilation stutter behind the spinner.
-    if (aemSettings.enableBackground) {
-      try {
-        const background = await loadModule('background');
-        await background.initShaderBackground();
-      } catch (error) {
-        // NOTE: do NOT use console.error here — esbuild drop:['console'] strips it
-        // in AEM builds, turning this into an empty catch{} that hides real errors.
-        // document.title is immune to stripping and makes failures visible.
-        document.title = '[BG Error] ' + (error && error.message ? error.message : String(error));
-        // Static background already visible as fallback
-      }
-    }
-    
+
+    // ==========================================================================
+    // FAST FCP: Reveal #app background immediately — no waiting for shader.
+    // The dark cover background (#060E15) is visible while shader compiles.
+    // ==========================================================================
+    essential.hero.revealAppBackground();
+
+    // Fire shader init as a non-blocking promise.
+    // We'll await it only just before showing the logo, so compilation runs
+    // in parallel with hero animation setup below.
+    // NOTE: do NOT use console.error — esbuild drop:['console'] strips it in AEM builds.
+    const bgReadyPromise = aemSettings.enableBackground
+      ? loadModule('background')
+          .then(m => m.initShaderBackground())
+          .catch(e => {
+            document.title = '[BG Error] ' + (e && e.message ? e.message : String(e));
+          })
+      : Promise.resolve();
+
     await yieldToMain();
-    
-    // Essential initializations for cover-area
+
+    // Essential initializations for cover-area (run while shader compiles)
     if (aemSettings.enableAnimations) {
       essential.audio.preloadBackgroundAudio();
       essential.animationConfig.resetAnimationState();
-      
+
       await yieldToMain();
-      
+
       essential.hero.initHeroAnimation();
-      
+
       await yieldToMain();
-      
-      ScrollTrigger.refresh();
-      ScrollTrigger.clearMatchMedia();
-      
-      await yieldToMain();
-      
+
       // Hero number countdown animation (2026 → 1876)
       essential.hero.initHeroNumberCountdown();
-      
+
       await yieldToMain();
-      
+
       essential.hero.initHeroPinning();
       essential.hero.setupHeroHeadingFadeAnimation();
-      
+
       await yieldToMain();
-      
+
       // Essential UI for cover-area
       essential.fancyButtons.initFancyButtonEffects();
       essential.audio.setupUIClickSounds();
       essential.audio.setupSoundToggle();
-      
+
       await yieldToMain();
-      
+
       // Split text for hero
       essential.splitText.initSplitLinesAnimation(null);
       essential.splitText.initSplitCharsAnimation(null);
-      
+
       await yieldToMain();
-      
+
       // Global handlers & scroll reveal
       essential.globalHandlers.initGlobalResizeHandler();
       essential.androidNav.initAndroidNavAdjustments();
       essential.scrollReveal.initScrollRevealAnimation();
     }
-    
+
     await yieldToMain();
-    
+
     // ==========================================================================
-    // REVEAL PAGE - Critical 3D background is ready, start #app fade-in.
-    // Logo and button will fade in after a few more modules load.
+    // LOGO REVEAL — wait for shader so the logo appears over a rendered WebGL frame.
+    // By the time we reach here the shader is likely already done (ran in parallel).
+    // ScrollTrigger.refresh() fires once after ALL hero triggers are registered.
     // ==========================================================================
-    console.log('[main.js] Critical path complete - starting page reveal...');
-    
+    console.log('[main.js] Hero setup complete - awaiting shader...');
+    await bgReadyPromise;
+    await yieldToMain();
+
+    if (aemSettings.enableAnimations) {
+      ScrollTrigger.refresh();
+      ScrollTrigger.clearMatchMedia();
+      await yieldToMain();
+    }
+
+    console.log('[main.js] Shader ready - revealing logo + button...');
+
+    // Fallback: if background is disabled, the first-frame handler in background.js
+    // never fires, so #cover-area-overlay would stay at opacity 0. Fade it in here.
+    if (!aemSettings.enableBackground) {
+      const coverAreaOverlay = document.querySelector('#cover-area-overlay');
+      if (coverAreaOverlay) {
+        gsap.to(coverAreaOverlay, { opacity: 1, duration: 0.8, ease: 'power2.out' });
+      }
+    }
+
+    essential.hero.playCoverAreaAnimation();
+
     // ==========================================================================
-    // PHASE 3: DEFERRED MODULES - Load after page is visible
-    // These load in the background while the user sees the hero animation.
-    // Ordered by visual priority: scroll animations first, then heavy 3D, then video.
+    // DEFERRED MODULES — scheduled AFTER the cover animation window.
+    // User cannot scroll until "Enter" is clicked (~1.5s after logo appears),
+    // so scroll-triggered animations safely initialize 800ms after reveal.
     // ==========================================================================
     if (aemSettings.enableAnimations) {
-      // Small yield to let the #app start fading in
-      await yieldWithDelay(100);
+      // Batch 1: Scroll-triggered animations — deferred so they don't compete
+      // with the cover fade animation on the main thread. SplitType DOM splits
+      // and getBoundingClientRect() forced reflows happen here, not during reveal.
+      setTimeout(async () => {
+        const [introText, videoAnimation, getInvolved, marquee] = await Promise.all([
+          loadModule('introText'),
+          loadModule('videoAnimation'),
+          loadModule('getInvolved'),
+          loadModule('marquee'),
+        ]);
 
-      // Batch 1: Lightweight scroll-triggered animations (parallel)
-      const [introText, videoAnimation, getInvolved, marquee] = await Promise.all([
-        loadModule('introText'),
-        loadModule('videoAnimation'),
-        loadModule('getInvolved'),
-        loadModule('marquee'),
-      ]);
+        await yieldToMain();
+        introText.initIntroTextAnimation();
 
-      await yieldToMain();
-      
-      // NOW reveal logo and button after more modules are loaded
-      console.log('[main.js] Deferred modules loaded - revealing logo + button...');
-      essential.hero.playCoverAreaAnimation();
-      
-      await yieldToMain();
+        await yieldToMain();
+        videoAnimation.animateVideoScale();
 
-      // Initialize lightweight animations immediately
-      introText.initIntroTextAnimation();
-      videoAnimation.animateVideoScale();
-      getInvolved.animateGetInvolvedText();
-      getInvolved.animateSlidingCards();
-      getInvolved.initGetInvolvedLogoAnimation();
-      marquee.initInfiniteMarqueeAnimation();
+        await yieldToMain();
+        getInvolved.animateGetInvolvedText();
+        getInvolved.animateSlidingCards();
+        getInvolved.initGetInvolvedLogoAnimation();
 
-      await yieldToMain();
+        await yieldToMain();
+        marquee.initInfiniteMarqueeAnimation();
 
-      // Batch 2: Heavy 3D (timeline + coverOrb) - lower priority than background
-      const timeline = await loadModule('timeline');
-      await yieldToMain();
-      timeline.initTimelineAnimation();
+        await yieldToMain();
+        // Refresh after SplitType DOM mutations to fix scroll offset calculations
+        ScrollTrigger.refresh();
 
-      await yieldToMain();
+        console.log('[main.js] Scroll animations initialized.');
+      }, 800);
 
-      // Batch 3: UI utilities + Video (lowest priority, parallel)
+      // Batch 2: Heavy 3D timeline — user must scroll through hero + video + intro-text
+      // before reaching this section, giving ample time for initialization.
+      setTimeout(async () => {
+        const timeline = await loadModule('timeline');
+        await yieldToMain();
+        timeline.initTimelineAnimation();
+        console.log('[main.js] Timeline initialized.');
+      }, 2500);
+
+      // Batch 3: UI utilities + Video — lightweight, proceed immediately after reveal
       const [pageNavigation, share, video] = await Promise.all([
         loadModule('pageNavigation'),
         loadModule('share'),
@@ -487,7 +510,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       console.log('[main.js] All deferred modules initialized.');
     }
-    
+
   } else {
     // Non-main page: just hide loader
     hideLoader();

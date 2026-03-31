@@ -190,6 +190,9 @@ button.sound-toggle {
         gap:8px;
         transform:translateX(-32px);
     }
+    @media (max-width:480px){
+        transform:translateX(-12px);
+    }
     @media (max-width:$small-mobile-viewport) {
         font-size:12px;
         gap:6px;
@@ -208,6 +211,9 @@ button.sound-toggle {
         transform: scale(0.95);
         @media (max-width:$mobile-viewport) {
             transform: translateX(-32px) scale(0.95);
+        }
+        @media (max-width:480px){
+            transform:translateX(-12px) scale(0.95);
         }
     }
 
@@ -283,6 +289,10 @@ header.anniversary a.content-hub-btn {
     }
     @media (max-width:$mobile-viewport) {
         margin-right:20px;
+    }
+    @media (max-width:480px) {
+        margin-right:4px;
+        transform:scale(0.88);
     }
 }
 

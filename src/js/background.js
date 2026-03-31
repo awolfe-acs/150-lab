@@ -4947,6 +4947,10 @@ export async function initShaderBackground() {
   // Mobile-specific: track scroll state for additional optimizations
   const isMobileBackground = performanceDetector.isMobile();
 
+  // Tracks whether the first WebGL frame has been rendered.
+  // The canvas stays opacity:0 until this fires, preventing black-canvas flash.
+  let firstFrameRendered = false;
+
   function animate(deltaTime) {
     // Check if timeline has paused the background for performance
     if (window.backgroundPaused) {
@@ -5030,6 +5034,22 @@ export async function initShaderBackground() {
     // 1. First render main background shader
     renderer.autoClear = true; // Clear before first render
     renderer.render(scene, camera); // Render scene with background shader
+
+    // Fade in the canvas AND #cover-area-overlay simultaneously after the first real
+    // WebGL frame exists. The overlay uses mix-blend-mode:color so it must only
+    // appear once the shader background behind it is actually rendered.
+    // window.gsap is set by main.js before initShaderBackground() is ever called.
+    if (!firstFrameRendered) {
+      firstFrameRendered = true;
+      const coverAreaOverlay = document.querySelector('#cover-area-overlay');
+      if (window.gsap) {
+        const targets = coverAreaOverlay ? [canvas, coverAreaOverlay] : canvas;
+        window.gsap.to(targets, { opacity: 1, duration: 0.8, ease: 'power2.out' });
+      } else {
+        canvas.style.opacity = '1';
+        if (coverAreaOverlay) coverAreaOverlay.style.opacity = '1';
+      }
+    }
 
     // 2. Then render particles on top of background (only if visible)
     // Particles are always rendered (even during scroll) for visual continuity

@@ -284,7 +284,10 @@ html {
     height: auto;
     position: relative;
     pointer-events: none;
-    transition: opacity 0.4s ease;
+    // transition: opacity removed — GSAP controls all opacity changes on this element.
+    // The CSS transition was competing with GSAP's initial fade-in tween, causing
+    // a visible jump to ~0.3 opacity on page load. ScrollTrigger re-reveal uses
+    // direct style.opacity writes so it was unaffected; only page-load was broken.
 
     @media (max-height:$short-viewport-height) {
       width: 300px;
@@ -531,7 +534,7 @@ html {
     position: relative;
     z-index: 1; // Above timeline-window-bg highlight
     //padding-bottom: 64px;
-    text-shadow: 0 2px 2px rgba(0, 0, 0, 0.32), 0px 2px 6px rgba(2, 2, 2, 0.18), 0px 2px 20px rgba(2, 2, 2, 0.12), 0px 2px 24px rgba(2, 2, 2, 0.08), 0 2px 2px rgba(0, 0, 0, 0.24), 0px 2px 6px rgba(2, 2, 2, 0.12), 0px 2px 20px rgba(2, 2, 2, 0.08), 0px 2px 24px rgba(2, 2, 2, 0.04);
+    text-shadow: 0 2px 2px rgba(0, 0, 0, 0.52), 0px 2px 6px rgba(2, 2, 2, 0.48), 0px 2px 20px rgba(2, 2, 2, 0.32), 0px 2px 24px rgba(2, 2, 2, 0.28), 0 2px 2px rgba(0, 0, 0, 0.24), 0px 2px 6px rgba(2, 2, 2, 0.12), 0px 2px 20px rgba(2, 2, 2, 0.08), 0px 2px 24px rgba(2, 2, 2, 0.04);
 
     h4 {
       position: relative;
@@ -545,18 +548,18 @@ html {
       }
     }
 
-    &:after {
-      position: absolute;
-      content: "";
-      z-index: 0;
-      top: -40%;
-      left: 0;
-      right: 0;
-      bottom: -20%;
-      background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.4) 100%);
-      filter: blur(80px);
-      pointer-events:none;
-    }
+    //&:after {
+    //  position: absolute;
+    //  content: "";
+    //  z-index: 0;
+    //  top: -40%;
+    //  left: 0;
+    //  right: 0;
+    //  bottom: -20%;
+    //  background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.4) 100%);
+    //  filter: blur(80px);
+    //  pointer-events:none;
+    //}
   }
 
   .get-involved-header {

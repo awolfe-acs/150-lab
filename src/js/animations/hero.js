@@ -102,6 +102,33 @@ export function playCoverAreaAnimation() {
   }
 }
 
+/**
+ * Phase 1 of the cover reveal: fade in #app background immediately for fast FCP.
+ * Called right after initCoverArea() — does NOT wait for the shader.
+ * playCoverAreaAnimation() (Phase 2) handles logo + button once shader is ready.
+ */
+export function revealAppBackground() {
+  const app = document.querySelector('#app');
+  const initialLoader = document.querySelector('#initial-loader');
+  if (!app) return;
+
+  gsap.set(app, { willChange: 'opacity' });
+  gsap.to(app, {
+    opacity: 1,
+    duration: 0.4,
+    ease: 'power2.out',
+    onStart: () => {
+      if (initialLoader && initialLoader.parentNode) {
+        initialLoader.classList.add('hidden');
+        setTimeout(() => { initialLoader.remove(); }, 400);
+      }
+    },
+    onComplete: () => {
+      gsap.set(app, { willChange: 'auto' });
+    },
+  });
+}
+
 export function initCoverArea() {
   const coverLogo = document.querySelector("#cover-area .cover-logo");
   const countdown = document.querySelector("#countdown");
@@ -114,10 +141,11 @@ export function initCoverArea() {
   if (!coverLogo || !enterExperienceBtn) return;
 
   // === INITIAL STATES ===
-  // All cover elements start hidden, JS animates them in sequence
-  // Shader background fades in via CSS first (see background.scss)
-  
-  // Hide #app initially - will fade in after shader
+  // All cover elements start hidden, JS animates them in sequence.
+  // revealAppBackground() fades #app in immediately (FCP).
+  // playCoverAreaAnimation() fades in logo + button once shader is ready.
+
+  // Hide #app initially - revealAppBackground() will fade it in
   if (app) {
     gsap.set(app, {
       opacity: 0,
@@ -135,6 +163,13 @@ export function initCoverArea() {
     gsap.set(sectionTimeline, {
       opacity: 0,
     });
+  }
+
+  // Hide cover-area-overlay — synced to the shader canvas fade-in in background.js
+  // (mix-blend-mode: color only makes sense once the WebGL frame is visible behind it)
+  const coverAreaOverlay = document.querySelector("#cover-area-overlay");
+  if (coverAreaOverlay) {
+    gsap.set(coverAreaOverlay, { opacity: 0 });
   }
 
   // Hide the share button initially
@@ -182,39 +217,15 @@ export function initCoverArea() {
   });
 
   // Create a timeline for the cover area animation
-  // PAUSED: Will be played by playCoverAreaAnimation() after all modules are loaded
-  // This ensures: All modules loaded -> Shader -> App -> Logo -> Countdown -> Button
+  // PAUSED: Will be played by playCoverAreaAnimation() after bgReadyPromise resolves.
+  // #app background is revealed earlier by revealAppBackground() for fast FCP.
+  // This timeline only handles: Logo -> Countdown -> Enter Button
   const tl = gsap.timeline({ paused: true });
 
   // Store the timeline globally so it can be played later
   window._coverAreaTimeline = tl;
 
-  // Get the initial loader to hide it when app fades in
-  const initialLoader = document.querySelector("#initial-loader");
-
-  // First, fade in #app from opacity 0 to 1
-  if (app) {
-    tl.to(
-      app,
-      {
-        opacity: 1,
-        duration: 0.6,
-        ease: "power2.out",
-        onStart: () => {
-          // Hide the loader when app starts fading in
-          if (initialLoader) {
-            initialLoader.classList.add("hidden");
-            // Remove from DOM after fade transition
-            setTimeout(() => {
-              initialLoader.remove();
-            }, 400);
-          }
-        },
-      }
-    );
-  }
-
-  // Animate the logo in (after app is visible)
+  // Animate the logo in — 320ms settle after timeline plays, then 1.2s fade
   // Enable pointer-events when visible (will be disabled again when scrolled away)
   tl.to(
     coverLogo,
@@ -225,7 +236,7 @@ export function initCoverArea() {
       duration: 1.2,
       ease: "power1.out",
     },
-    "+=0.32" // 320ms delay after app fade completes
+    "+=0.57" // 320ms original settle + 250ms additional delay
   );
 
   // Animate the countdown in (while logo is still animating)
