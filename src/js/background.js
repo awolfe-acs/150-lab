@@ -244,6 +244,34 @@ export async function initShaderBackground() {
       return;
     }
 
+    // Rescue trigger: ensure background renderer is unpaused whenever #get-involved
+    // is in the viewport. On mobile the timeline performance pause (window.backgroundPaused)
+    // can still be active when #get-involved first enters from below because the
+    // timeline.js end threshold fires later than the globe opacity start threshold.
+    ScrollTrigger.create({
+      trigger: "#get-involved",
+      start: "top bottom",
+      end: "bottom top",
+      onEnter: () => {
+        if (window.backgroundPaused) {
+          window.backgroundPaused = false;
+        }
+        if (adaptiveRenderer) {
+          adaptiveRenderer.setPausedByTimeline(false);
+          adaptiveRenderer.isVisible = true;
+        }
+      },
+      onEnterBack: () => {
+        if (window.backgroundPaused) {
+          window.backgroundPaused = false;
+        }
+        if (adaptiveRenderer) {
+          adaptiveRenderer.setPausedByTimeline(false);
+          adaptiveRenderer.isVisible = true;
+        }
+      },
+    });
+
     // Create ScrollTrigger to animate both the globe and overlay
     gsap.timeline({
       scrollTrigger: {
@@ -1850,16 +1878,7 @@ export async function initShaderBackground() {
     mobileFilmGrain.setOpacity(0.8); // Reduced opacity for subtle effect
     mobileFilmGrain.start();
     
-    // PERFORMANCE: Pause film grain during scroll to reduce compositor work
-    performanceDetector.onScrollStateChange(({ isScrolling }) => {
-      if (isScrolling) {
-        mobileFilmGrain.pauseForScroll();
-      } else {
-        mobileFilmGrain.resumeAfterScroll();
-      }
-    });
-    
-    logger.log('[Background Init] Using lightweight mobile film grain with scroll-pause optimization');
+      logger.log('[Background Init] Using lightweight mobile film grain');
   }
 
   // Enhanced vertex shader with larger displacement
@@ -4791,28 +4810,16 @@ export async function initShaderBackground() {
   // Create reusable color object to avoid creating new objects in animation loop
   const reusableBaseColor = new THREE.Color();
   
-  // Mobile-optimized particle animation state
-  // Use performanceDetector's isMobile() result (already computed during detection)
+  // Particle animation state
   const isMobileForParticles = performanceDetector.isMobile();
-  let isCurrentlyScrolling = false;
   let particleAnimationId = null;
-  
+
   // FPS throttling for particle animation
-  // PERFORMANCE: Reduced FPS during scroll to lower RAF overhead
-  const particleTargetFPS = isMobileForParticles ? 20 : 40; // Reduced from 30/60
-  const particleIdleFPS = isMobileForParticles ? 15 : 20; // Very low when actively scrolling
+  const particleTargetFPS = isMobileForParticles ? 20 : 40;
   let particleFrameInterval = 1000 / particleTargetFPS;
   let lastParticleFrameTime = 0;
   let twinkleSkipCounter = 0;
-  const twinkleSkipInterval = isMobileForParticles ? 4 : 2; // Update twinkle every N frames (increased)
-  
-  // Subscribe to scroll state changes for performance optimization
-  performanceDetector.onScrollStateChange(({ isScrolling }) => {
-    isCurrentlyScrolling = isScrolling;
-    // Adjust particle FPS based on scroll state
-    // During scroll, drastically reduce particle updates to free up CPU for scroll performance
-    particleFrameInterval = 1000 / (isScrolling ? particleIdleFPS : particleTargetFPS);
-  });
+  const twinkleSkipInterval = 2;
   
   // Separate animation loop for particles with FPS throttling
   function animateParticles() {
@@ -4842,20 +4849,14 @@ export async function initShaderBackground() {
     const colors = particleGeometry.attributes.color.array;
     const sizes = particleGeometry.attributes.size ? particleGeometry.attributes.size.array : null;
 
-    // Update twinkle time (but skip actual twinkle calculation during scroll on mobile)
     twinkleTime += 0.01;
 
     // Calculate scroll delta for smooth movement with easing
     const scrollDelta = (scrollY - lastScrollY) * scrollObj.scrollSpeed;
 
     // Apply easing to the scroll movement with stronger damping
-    // This makes particles slow down and stop more quickly
     lastScrollY = scrollY * (1 - scrollObj.damping) + lastScrollY * scrollObj.damping;
 
-    // Only update particle positions if movement is not paused
-    // On mobile during scroll, skip position float updates (scroll parallax still works)
-    const skipFloatUpdates = isMobileForParticles && isCurrentlyScrolling && perfSettings.skipParticleUpdatesOnScroll;
-    
     if (!window.particlesMovementPaused) {
       for (let i = 0; i < particleCount; i++) {
         const i3 = i * 3;
@@ -4863,8 +4864,6 @@ export async function initShaderBackground() {
         // Get the size ratio for this particle (if sizes exist)
         const sizeRatio = sizes ? (sizes[i] - scrollObj.sizeMin) / (scrollObj.sizeMax - scrollObj.sizeMin) : 0.5;
 
-        // Skip float movement during scroll on mobile for performance
-        if (!skipFloatUpdates) {
         // Adjust float speed based on size - smaller particles move more slowly
         const particleFloatSpeed = scrollObj.floatSpeed * (0.5 + sizeRatio * 0.5);
 
@@ -4872,7 +4871,6 @@ export async function initShaderBackground() {
         positions[i3] += particleVelocities[i3] * particleFloatSpeed;
         positions[i3 + 1] += particleVelocities[i3 + 1] * particleFloatSpeed;
         positions[i3 + 2] += particleVelocities[i3 + 2] * particleFloatSpeed;
-        }
 
         // Move particles up based on scroll with size-based parallax effect
         // Larger particles (appearing closer) move faster
@@ -4906,12 +4904,9 @@ export async function initShaderBackground() {
       particleGeometry.attributes.position.needsUpdate = true;
     }
 
-    // Twinkle effect optimization: skip on mobile during scroll, or throttle updates
+    // Twinkle effect: throttle updates to every N frames
     twinkleSkipCounter++;
-    const shouldUpdateTwinkle = !isCurrentlyScrolling || !isMobileForParticles || 
-                                 (twinkleSkipCounter >= twinkleSkipInterval);
-    
-    if (shouldUpdateTwinkle) {
+    if (twinkleSkipCounter >= twinkleSkipInterval) {
       twinkleSkipCounter = 0;
 
     // Always update colors for twinkle effect, even when movement is paused
@@ -4944,7 +4939,6 @@ export async function initShaderBackground() {
   animateParticles();
 
   // Main shader animation loop using adaptive renderer
-  // Mobile-specific: track scroll state for additional optimizations
   const isMobileBackground = performanceDetector.isMobile();
 
   // Tracks whether the first WebGL frame has been rendered.
@@ -4965,12 +4959,8 @@ export async function initShaderBackground() {
       return;
     }
 
-    // Update shader uniforms with slower speed
-    // On mobile during scroll, use minimal animation for better performance
-    // Shader time drives wave animations - slower = less GPU work
-    const timeIncrement = isMobileBackground 
-      ? (isCurrentlyScrolling ? 0.00005 : 0.0005) // Nearly frozen during scroll on mobile
-      : 0.001;
+    // Update shader uniforms
+    const timeIncrement = isMobileBackground ? 0.0005 : 0.001;
     uniforms.time.value += timeIncrement;
 
     // Check if we've been above Phase 3 trigger too long and stabilize effects to prevent weird behavior
@@ -4987,18 +4977,11 @@ export async function initShaderBackground() {
       }
     }
 
-    // Update mouse particles (skip on mobile during scroll for performance)
-    if (!(isMobileBackground && isCurrentlyScrolling)) {
     animateMouseParticles();
-    }
 
-    // Gradually fade in particles if needed - but only if not fully hidden by scrolling
-    // MOBILE PERFORMANCE: Skip fade updates during scroll (instant updates are fine)
-    const skipParticleOpacityUpdate = isMobileBackground && isCurrentlyScrolling;
-    
-    if (!skipParticleOpacityUpdate) {
+    // Gradually fade in particles if needed
     if (!window.particlesFullyHidden && customParticleMaterial.uniforms.opacity.value < targetParticleOpacity) {
-      customParticleMaterial.uniforms.opacity.value += 0.001; // Slower, more elegant fade in
+      customParticleMaterial.uniforms.opacity.value += 0.001;
       if (customParticleMaterial.uniforms.opacity.value > targetParticleOpacity) {
         customParticleMaterial.uniforms.opacity.value = targetParticleOpacity;
       }
@@ -5007,14 +4990,10 @@ export async function initShaderBackground() {
     // Ensure particles stay hidden when they should be
     if (window.particlesFullyHidden && customParticleMaterial.uniforms.opacity.value > 0) {
       customParticleMaterial.uniforms.opacity.value = 0;
-      }
     }
 
     // Update globe model rotation if auto-rotate is enabled
-    // MOBILE PERFORMANCE: Skip globe rotation during scroll to reduce CPU/GPU work
-    const skipGlobeRotation = isMobileBackground && isCurrentlyScrolling;
-    
-    if (globeModel && globeParams.autoRotate && !globeParams.rotationPaused && !skipGlobeRotation) {
+    if (globeModel && globeParams.autoRotate && !globeParams.rotationPaused) {
       // Always use base rotation speed (no faster spinning during scroll)
       const rotationSpeed = globeParams.baseRotateSpeed;
 
@@ -5023,9 +5002,7 @@ export async function initShaderBackground() {
     }
 
     // Update overlay position to keep it in front of the camera
-    // MOBILE PERFORMANCE: Skip overlay updates during scroll (position doesn't change much)
-    if (overlayMesh && !(isMobileBackground && isCurrentlyScrolling)) {
-      // Always ensure overlay remains perfectly flat
+    if (overlayMesh) {
       overlayMesh.rotation.set(0, 0, 0);
       updateOverlayPosition();
     }
