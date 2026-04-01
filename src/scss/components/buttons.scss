@@ -179,8 +179,6 @@
         opacity:1;
     }
     @media (max-width:$mobile-viewport) {
-        opacity:1;
-        pointer-events:auto;
         margin-top:12px;
         transform:scale(0.88)!important;
     }
