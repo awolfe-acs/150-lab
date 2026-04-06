@@ -421,6 +421,7 @@ body.in-timeline {
             bottom:72px;
             //bottom:calc(64px + max(env(safe-area-inset-bottom), var(--js-detected-nav-height, 0px)));
             right:8px;
+            display:none;
         }
     }
 }

@@ -1,4 +1,4 @@
-import{g as a,S as m}from"./vendor-gsap-BYvdLAYj.js";import F from"./index-BbrXr4yz.js";import{animationState as g}from"./animationConfig-BcZmv9NB.js";import{setEnterButtonClicked as O,playBackgroundAudio as M,setHeroAnimationComplete as q}from"./audio-Bm-gWLX5.js";import{l as T}from"./logger-2Ii2FPkr.js";function P(t){if(window.scrollDownIcon&&document.contains(window.scrollDownIcon))return;const e=document.createElement("div");e.className="scroll-down-icon",e.innerHTML=`
+import{g as a,S as m}from"./vendor-gsap-B2uKOqL4.js";import F from"./index-BbrXr4yz.js";import{animationState as g}from"./animationConfig-BcZmv9NB.js";import{setEnterButtonClicked as O,playBackgroundAudio as M,setHeroAnimationComplete as q}from"./audio-DRFs2I6Q.js";import{l as T}from"./logger-2Ii2FPkr.js";function P(t){if(window.scrollDownIcon&&document.contains(window.scrollDownIcon))return;const e=document.createElement("div");e.className="scroll-down-icon",e.innerHTML=`
     <div class="scroll-text">SCROLL</div>
     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
       <title>mouse-scroll-down</title>
