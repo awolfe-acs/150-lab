@@ -517,10 +517,12 @@ body.in-timeline {
             display:none;
         }
     }
+    @media (max-width:$desktop-viewport) {
+        font-size:12px;
+    }
     @media (max-width:$mobile-viewport) {
         padding:6px 12px 6px 14px;
         height:auto;
-        font-size:12px;
         gap:6px;
     }
     /* Create gradient border effect */

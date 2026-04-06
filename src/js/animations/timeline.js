@@ -579,6 +579,7 @@ export function initTimelineAnimation() {
   let markerLock = {
     isLocked: false,
     targetIndex: -1,
+    targetMinorIndex: -1, // locked minor node index for click events
     unlockTimer: null,
     reason: '' // 'click' or 'resize'
   };
@@ -1306,56 +1307,59 @@ export function initTimelineAnimation() {
     // If marker is locked (click or resize), use the locked target index
     if (markerLock.isLocked && markerLock.targetIndex >= 0) {
       activeMarkerIndex = markerLock.targetIndex;
-      scrubberProgressValue = (2 * activeMarkerIndex + 1) / (2 * totalMarkers);
+      if (markerLock.targetMinorIndex >= 0) {
+        activeMinorNodeIndex = markerLock.targetMinorIndex;
+      }
+      // scrubberProgressValue is calculated below via node position
     } else {
-      // Detect which .timeline-event is actually visible/centered in viewport
-      // This provides accurate synchronization with what's actually on screen
+      // Detect which .timeline-event is active
       const isMobileView = isMobileBreakpoint;
-      
-      // Find the event that's most centered in the viewport
-      // Note: getBoundingClientRect calls are already throttled via scrubber update throttling
-      const viewportCenter = isMobileView ? window.innerHeight / 2 : window.innerWidth / 2;
+
       let closestEvent = null;
-      let closestDistance = Infinity;
       let closestEventGlobalIndex = -1;
-      
-      // Find the track offset to determine element positions without reflow
-      const trackOffset = isMobileView
-        ? parseFloat(gsap.getProperty(timelineTrack, 'y') || 0)
-        : parseFloat(gsap.getProperty(timelineTrack, 'x') || 0);
 
-      const eventWidth = getEventWidth();
-      const coverWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
+      if (isMobileView) {
+        // Mobile: derive active event directly from scroll position.
+        // gsap.getProperty(timelineTrack, 'y') lags behind by the scrub duration (1s),
+        // making states appear stuck. Raw scroll is always current.
+        const st = tl && tl.scrollTrigger;
+        if (st) {
+          const scrollInTimeline = window.scrollY - st.start;
+          const currentInitialPhase = getInitialPhaseDuration();
+          const currentScrollPerEvent = getScrollPerEvent();
 
-      events.forEach((event, globalIndex) => {
-        let eventCenterBase;
-        
-        if (isMobileView) {
-          // Mobile positions: 0, 100vh, 200vh...
-          eventCenterBase = globalIndex * viewportHeight + (viewportHeight / 2);
-        } else {
-          // Desktop positions: cover width, then event widths
+          if (scrollInTimeline <= currentInitialPhase) {
+            closestEventGlobalIndex = 0;
+          } else {
+            const rawIndex = 1 + Math.floor((scrollInTimeline - currentInitialPhase) / currentScrollPerEvent);
+            closestEventGlobalIndex = Math.max(1, Math.min(rawIndex, events.length - 1));
+          }
+          closestEvent = events[closestEventGlobalIndex] || null;
+        }
+      } else {
+        // Desktop: GSAP x-offset lag is minimal (scrub 0.2s) — existing math is fine
+        const viewportCenter = window.innerWidth / 2;
+        let closestDistance = Infinity;
+        const trackOffset = parseFloat(gsap.getProperty(timelineTrack, 'x') || 0);
+        const eventWidth = getEventWidth();
+        const coverWidth = window.innerWidth;
+
+        events.forEach((event, globalIndex) => {
+          let eventCenterBase;
           if (globalIndex === 0) {
-            // Cover event
             eventCenterBase = coverWidth / 2;
           } else {
-            // Regular events
             eventCenterBase = coverWidth + ((globalIndex - 1) * eventWidth) + (eventWidth / 2);
           }
-        }
-        
-        // Final position relative to viewport (incorporating animated track shift)
-        const eventCenter = eventCenterBase + trackOffset;
-        const distanceFromCenter = Math.abs(eventCenter - viewportCenter);
-        
-        // Check if this event is closer to center than previous closest
-        if (distanceFromCenter < closestDistance) {
-          closestDistance = distanceFromCenter;
-          closestEvent = event;
-          closestEventGlobalIndex = globalIndex;
-        }
-      });
+          const eventCenter = eventCenterBase + trackOffset;
+          const distanceFromCenter = Math.abs(eventCenter - viewportCenter);
+          if (distanceFromCenter < closestDistance) {
+            closestDistance = distanceFromCenter;
+            closestEvent = event;
+            closestEventGlobalIndex = globalIndex;
+          }
+        });
+      }
       
       // Update the tracked active index
       if (closestEventGlobalIndex !== -1) {
@@ -3187,6 +3191,8 @@ export function initTimelineAnimation() {
           
           // Lock the scrubber to prevent auto-updates during scroll
           markerLock.isLocked = true;
+          markerLock.targetIndex = decadeIndex;
+          markerLock.targetMinorIndex = minorNodeIndex;
           markerLock.reason = 'minor-node-click';
 
           // Clear any existing unlock timer
@@ -3256,6 +3262,7 @@ export function initTimelineAnimation() {
                 markerLock.unlockTimer = setTimeout(() => {
                   markerLock.isLocked = false;
                   markerLock.targetIndex = -1;
+                  markerLock.targetMinorIndex = -1;
                   markerLock.reason = '';
                 }, 500);
               }
@@ -3269,8 +3276,9 @@ export function initTimelineAnimation() {
             markerLock.unlockTimer = setTimeout(() => {
               markerLock.isLocked = false;
               markerLock.targetIndex = -1;
+              markerLock.targetMinorIndex = -1;
               markerLock.reason = '';
-            }, 1500);
+            }, 1800);
           }
         });
 
@@ -3288,6 +3296,41 @@ export function initTimelineAnimation() {
   
   // Store reference for resize handler
   window._generateMinorNodes = generateMinorNodes;
+
+  // Recalculate minor node left positions after resize without recreating nodes
+  function repositionMinorNodes() {
+    const allMarkers = gsap.utils.toArray('.marker');
+    const allMinorNodes = gsap.utils.toArray('.minor-node');
+    const viewportWidth = window.innerWidth;
+    const padding = viewportWidth > 768 ? 120 : 100;
+    const markersPerView = viewportWidth > 768 ? 5 : (viewportWidth < 640 ? 2 : 4);
+    const estimatedGap = (viewportWidth - padding) / markersPerView;
+    const offsetFromMarker = 30;
+    const leftPadding = 20;
+
+    requestAnimationFrame(() => {
+      allMinorNodes.forEach((node) => {
+        const di = parseInt(node.getAttribute('data-decade-index') || '0');
+        const yearPosition = parseFloat(node.getAttribute('data-year-position') || '0');
+        const markerEl = allMarkers[di];
+        if (!markerEl) return;
+
+        const nextMarker = allMarkers[di + 1];
+        if (nextMarker) {
+          const markerRect = markerEl.getBoundingClientRect();
+          const nextMarkerRect = nextMarker.getBoundingClientRect();
+          const gapWidth = nextMarkerRect.left - markerRect.right;
+          const availableWidth = gapWidth - offsetFromMarker - leftPadding;
+          node.style.left = `${offsetFromMarker + leftPadding + (availableWidth * yearPosition)}px`;
+        } else {
+          const availableWidth = estimatedGap - offsetFromMarker - leftPadding;
+          node.style.left = `${offsetFromMarker + leftPadding + (availableWidth * yearPosition)}px`;
+        }
+      });
+    });
+  }
+
+  window._repositionMinorNodes = repositionMinorNodes;
 
   // Function to initialize scrubber horizontal scrolling with nav arrows
   function initScrubberScrolling() {
@@ -3480,48 +3523,90 @@ export function initTimelineAnimation() {
   const markers = gsap.utils.toArray('.marker');
   markers.forEach((marker, index) => {
     marker.addEventListener('click', () => {
-      // Very short lock just to prevent interference during scroll start
-      markerLock.isLocked = true;
-      markerLock.targetIndex = index;
-      markerLock.reason = 'click';
-      
       // Clear any existing unlock timer
       if (markerLock.unlockTimer) {
         clearTimeout(markerLock.unlockTimer);
       }
-      
-      // Unlock quickly - let updateScrubber handle the state during scroll
-      markerLock.unlockTimer = setTimeout(() => {
-        markerLock.isLocked = false;
-        markerLock.targetIndex = -1;
-        markerLock.reason = '';
-      }, 100); // Very short delay
-      
+
+      // Find the first minor node belonging to this decade for lock + immediate state
+      const decadeMinorNodes = gsap.utils.toArray(`.minor-node[data-decade-index="${index}"]`);
+      let firstMinorIndex = -1;
+      decadeMinorNodes.forEach((n) => {
+        const mi = parseInt(n.getAttribute('data-minor-index') || '-1');
+        if (mi >= 0 && (firstMinorIndex === -1 || mi < firstMinorIndex)) {
+          firstMinorIndex = mi;
+        }
+      });
+
+      // Lock scrubber for the duration of the scroll to prevent stale re-detection
+      markerLock.isLocked = true;
+      markerLock.targetIndex = index;
+      markerLock.targetMinorIndex = firstMinorIndex;
+      markerLock.reason = 'click';
+
+      // Immediately update visual state — markers
+      const allMarkersNow = gsap.utils.toArray('.marker');
+      allMarkersNow.forEach((m, i) => {
+        m.classList.remove('active', 'complete');
+        if (i === index) {
+          m.classList.add('active');
+        } else if (i < index) {
+          m.classList.add('complete');
+        }
+      });
+
+      // Immediately update visual state — minor nodes
+      const allMinorNodesNow = gsap.utils.toArray('.minor-node');
+      allMinorNodesNow.forEach((n) => {
+        n.classList.remove('active', 'complete');
+        const mi = parseInt(n.getAttribute('data-minor-index') || '-1');
+        if (firstMinorIndex >= 0) {
+          if (mi === firstMinorIndex) {
+            n.classList.add('active');
+          } else if (mi < firstMinorIndex) {
+            n.classList.add('complete');
+          }
+        }
+      });
+
       // Calculate the target progress for this marker
       const targetProgress = calculateProgressForMarker(index);
-      
+
       // Get the ScrollTrigger instance
       const scrollTriggerInstance = tl.scrollTrigger;
       if (!scrollTriggerInstance) return;
-      
+
       // Calculate the scroll position from the progress
       const start = scrollTriggerInstance.start;
       const end = scrollTriggerInstance.end;
       const scrollDistance = end - start;
       const targetScroll = start + (scrollDistance * targetProgress);
-      
-      // Smooth scroll to the target position
-      // updateScrubber will handle all state updates during the scroll
+
+      // Smooth scroll to the target position; hold lock until scroll completes
       if (window.lenis) {
-        window.lenis.scrollTo(targetScroll, { 
+        window.lenis.scrollTo(targetScroll, {
           duration: 1.2,
-          easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) // easeOutExpo
+          easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+          onComplete: () => {
+            markerLock.unlockTimer = setTimeout(() => {
+              markerLock.isLocked = false;
+              markerLock.targetIndex = -1;
+              markerLock.targetMinorIndex = -1;
+              markerLock.reason = '';
+            }, 500);
+          }
         });
       } else {
         window.scrollTo({
           top: targetScroll,
           behavior: 'smooth'
         });
+        markerLock.unlockTimer = setTimeout(() => {
+          markerLock.isLocked = false;
+          markerLock.targetIndex = -1;
+          markerLock.targetMinorIndex = -1;
+          markerLock.reason = '';
+        }, 1800);
       }
     });
     
@@ -3561,6 +3646,9 @@ export function initTimelineAnimation() {
   });
 
   ScrollTrigger.addEventListener('refresh', () => {
+    // Recalculate minor node positions for new viewport dimensions
+    repositionMinorNodes();
+
     // Restore position to the active event
     if (currentActiveEventIndex > 0) {
         // Calculate scroll position for this event
@@ -3568,18 +3656,18 @@ export function initTimelineAnimation() {
         // The label is 'event-{index-1}' because remainingEvents starts at global index 1
         const labelIndex = currentActiveEventIndex - 1;
         const label = `event-${labelIndex}`;
-        
+
         if (tl.labels[label] !== undefined) {
              const labelTime = tl.labels[label];
              // Target the end of the move (start of hold) to center the event
              const targetTime = labelTime + moveDuration;
              const progress = targetTime / tl.duration();
-             
+
              // Calculate scroll position
              const st = tl.scrollTrigger;
              if (st) {
                const scrollPos = st.start + progress * (st.end - st.start);
-               
+
                // Scroll there immediately
                window.scrollTo(0, scrollPos);
              }
