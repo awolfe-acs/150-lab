@@ -575,6 +575,14 @@ export function initTimelineAnimation() {
   const phaseBDuration = remainingEventsCount * totalCycleDuration;
   const timelineTotalDuration = phaseADuration + phaseBDuration;
 
+  // Live getters — re-evaluate each call so breakpoint crossings (mobile ↔ desktop)
+  // and any post-resize recalculation always use the current moveDuration value.
+  // The snapshot consts above are kept for GSAP tween definitions that captured them as numbers.
+  const getMoveDuration = () => isMobile() ? 0.6 : 0.88;
+  const getTotalCycleDuration = () => getMoveDuration() + holdDuration;
+  const getPhaseADuration = () => 0.09 + holdDuration;
+  const getTimelineTotalDuration = () => getPhaseADuration() + (remainingEventsCount * getTotalCycleDuration());
+
   // Lock to prevent updateScrubber from overriding clicked/resized marker
   let markerLock = {
     isLocked: false,
@@ -1513,24 +1521,23 @@ export function initTimelineAnimation() {
   // Store reference for resize handler
   window._updateScrubber = updateScrubber;
 
-  // Helper to calculate the timeline progress for a given marker/decade index
+  // Helper to calculate the timeline progress for a given marker/decade index.
+  // Uses live getters so breakpoint crossings (mobile ↔ desktop) don't produce stale fractions.
   const calculateProgressForMarker = (markerIndex) => {
+    const ttd = getTimelineTotalDuration();
     if (markerIndex === 0) {
       // Jump to middle of first event's hold period (Phase A)
-      const phaseAMidpoint = 0.09 + (holdDuration * 0.5); // After fade-in, middle of hold
-      return phaseAMidpoint / timelineTotalDuration;
+      const phaseAMidpoint = 0.09 + (holdDuration * 0.5);
+      return phaseAMidpoint / ttd;
     }
     
-    // For subsequent decades, we need to count how many events come before this decade
-    // and calculate the timeline position accordingly
+    // Count how many events come before this decade
     let eventsBefore = 0;
-    
     for (let i = 0; i < markerIndex && i < decades.length; i++) {
       const decadeEvents = gsap.utils.toArray('.timeline-event', decades[i]);
       eventsBefore += decadeEvents.length;
     }
     
-    // Get the first event of the target decade
     const targetDecade = decades[markerIndex];
     const targetDecadeEvents = gsap.utils.toArray('.timeline-event', targetDecade);
     
@@ -1539,17 +1546,11 @@ export function initTimelineAnimation() {
       return 0;
     }
     
-    // The first event of this decade is at index (eventsBefore) in the overall events array
-    // After Phase A (which covers the first event), we're in Phase B
-    // Each remaining event takes totalCycleDuration time units
-    
-    // eventsBefore includes the first event (covered in Phase A), so we need eventsBefore - 1
+    // eventsBefore includes the first event (covered in Phase A), so -1 gives Phase B index
     const eventIndexInPhaseB = eventsBefore - 1;
+    const timelinePosition = getPhaseADuration() + (eventIndexInPhaseB * getTotalCycleDuration()) + getMoveDuration() + (holdDuration * 0.5);
     
-    // Timeline position: Phase A duration + (event cycles * cycle duration) + half of hold
-    const timelinePosition = phaseADuration + (eventIndexInPhaseB * totalCycleDuration) + moveDuration + (holdDuration * 0.5);
-    
-    return Math.min(timelinePosition / timelineTotalDuration, 0.99); // Cap at 99% to avoid edge cases
+    return Math.min(timelinePosition / ttd, 0.99);
   };
 
   // ==========================================================================
@@ -3126,6 +3127,7 @@ export function initTimelineAnimation() {
         minorNode.setAttribute('data-year', eventYearStr);
         minorNode.setAttribute('data-year-numeric', eventYear.toString());
         minorNode.setAttribute('data-year-position', yearPositionInDecade.toFixed(3));
+        minorNode.setAttribute('data-event-progress', eventProgress.toFixed(6));
 
         // Create dot
         const dot = document.createElement('div');
@@ -3251,7 +3253,10 @@ export function initTimelineAnimation() {
           const start = scrollTriggerInstance.start;
           const end = scrollTriggerInstance.end;
           const scrollDistance = end - start;
-          const targetScroll = start + (scrollDistance * eventProgress);
+          // Read the live attribute value so post-resize recalculations are honoured;
+          // fall back to the original closure value only if the attribute is missing.
+          const liveEventProgress = parseFloat(minorNode.getAttribute('data-event-progress') || String(eventProgress));
+          const targetScroll = start + (scrollDistance * liveEventProgress);
 
           // Smooth scroll to the target position
           if (window.lenis) {
@@ -3309,6 +3314,12 @@ export function initTimelineAnimation() {
     const leftPadding = 20;
 
     requestAnimationFrame(() => {
+      // Snapshot live duration values once for the whole batch
+      const md = getMoveDuration();
+      const cd = getTotalCycleDuration();
+      const pa = getPhaseADuration();
+      const ttd = getTimelineTotalDuration();
+
       allMinorNodes.forEach((node) => {
         const di = parseInt(node.getAttribute('data-decade-index') || '0');
         const yearPosition = parseFloat(node.getAttribute('data-year-position') || '0');
@@ -3326,7 +3337,18 @@ export function initTimelineAnimation() {
           const availableWidth = estimatedGap - offsetFromMarker - leftPadding;
           node.style.left = `${offsetFromMarker + leftPadding + (availableWidth * yearPosition)}px`;
         }
+
+        // Recalculate data-event-progress with current breakpoint's moveDuration
+        const globalIdx = parseInt(node.getAttribute('data-event-index') || '0');
+        const newEP = globalIdx === 0
+          ? (0.09 + holdDuration * 0.5) / ttd
+          : (pa + ((globalIdx - 1) * cd) + md + holdDuration * 0.5) / ttd;
+        node.setAttribute('data-event-progress', newEP.toFixed(6));
       });
+
+      // Force a scrubber repaint with freshly-laid-out node positions.
+      // Bypass the lastScrubberProgress threshold by passing 0 directly.
+      updateScrubberInternal(0);
     });
   }
 
