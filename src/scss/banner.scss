@@ -29,7 +29,7 @@ body:not(:has(.menu__link.open)):not(:has(.menu.showit)) div[data-testid="layout
   width: 100%;
   
   * {
-    font-family: "acs-clarity";
+    font-family: "stolzl";
   }
   
   .anniversary-banner-link {
@@ -177,7 +177,7 @@ body:not(:has(.menu__link.open)):not(:has(.menu.showit)) div[data-testid="layout
 
   .colon {
     opacity: 0.5;
-    font-family: "acs-clarity", "stolzl", sans-serif;
+    font-family: "stolzl", sans-serif;
     font-weight: 300;
     line-height: 1;
     font-size: 28px;

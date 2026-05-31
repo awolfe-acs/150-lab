@@ -1,14 +1,9 @@
-// Video and poster URLs - detect environment at runtime
-// AEM builds: /content/dam/acsorg/150/assets/
-// GitHub Pages: /150-lab/assets/
-// Local dev: /video/ (served from public folder)
-const isAEMBuild = document.querySelector('script[src*="/content/dam/acsorg/150/"]') !== null;
-const isGitHubPages = window.location.hostname.includes('github.io') || window.location.pathname.startsWith('/150-lab/');
-const assetBasePath = isAEMBuild 
-  ? "/content/dam/acsorg/150/assets" 
-  : isGitHubPages 
-    ? "/150-lab/assets"
-    : "";
+// Video and poster URLs - resolved at build time by Vite's define() injection.
+// __VIDEO_BASE_PATH__ is set per mode in vite.config.js:
+//   standard (AEM) → /content/dam/acsorg/150/assets
+//   github         → /150-lab/assets
+//   dev            → "" (public/ folder served at root)
+const assetBasePath = __VIDEO_BASE_PATH__;
 
 // Mobile detection - use smaller video file on mobile devices
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||

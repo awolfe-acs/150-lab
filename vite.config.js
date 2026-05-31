@@ -76,6 +76,7 @@ export default defineConfig(({ mode, command }) => {
     base: basePath,
     define: {
       __AUDIO_BASE_PATH__: JSON.stringify(audioBasePath),
+      __VIDEO_BASE_PATH__: JSON.stringify(audioBasePath),
     },
     server: {
       host: true, // or use host: '0.0.0.0'
@@ -202,38 +203,33 @@ export default defineConfig(({ mode, command }) => {
       },
       {
         name: "html-transform-timeline-images",
-        transformIndexHtml(html, ctx) {
-          // Transform data-src paths for timeline images based on build mode
-          // From: data-src="./public/images/timeline/..." or data-src="/public/images/timeline/..."
-          
-          if (mode === "standard") {
-            // AEM build: /content/dam/acsorg/150/assets/images/timeline/...
-            html = html.replace(
-              /data-src="\.?\/public\/images\/timeline\//g,
-              'data-src="/content/dam/acsorg/150/assets/images/timeline/'
-            );
-          } else if (mode === "github") {
-            // GitHub Pages build: /150-lab/assets/images/timeline/...
-            html = html.replace(
-              /data-src="\.?\/public\/images\/timeline\//g,
-              'data-src="/150-lab/assets/images/timeline/'
-            );
-          } else if (mode === "assets") {
-            // Assets build: /150/assets/images/timeline/...
-            html = html.replace(
-              /data-src="\.?\/public\/images\/timeline\//g,
-              'data-src="/150/assets/images/timeline/'
-            );
-          } else {
-            // Default/dev build: Vite serves public folder at root
-            // So public/images/timeline/... becomes /images/timeline/...
-            html = html.replace(
-              /data-src="\.?\/public\/images\/timeline\//g,
-              'data-src="/images/timeline/'
-            );
+        apply: "build",
+        async writeBundle() {
+          const htmlPath = path.join(resolve(__dirname, outDir), "index.html");
+          if (!fs.existsSync(htmlPath)) return;
+
+          let content = fs.readFileSync(htmlPath, "utf-8");
+          const originalContent = content;
+
+          const timelineImageBase =
+            mode === "standard"
+              ? "/content/dam/acsorg/150/assets/images/timeline/"
+              : mode === "github"
+              ? "/150-lab/assets/images/timeline/"
+              : mode === "assets"
+              ? "/150/assets/images/timeline/"
+              : "/images/timeline/";
+
+          // Replace both ./public/images/timeline/ and /public/images/timeline/ variants
+          content = content.replace(
+            /data-src="\.?\/public\/images\/timeline\//g,
+            `data-src="${timelineImageBase}`
+          );
+
+          if (content !== originalContent) {
+            fs.writeFileSync(htmlPath, content, "utf-8");
+            console.log(`✅ Transformed timeline image paths in index.html for ${mode} mode`);
           }
-          
-          return html;
         },
       },
       {
