@@ -55,7 +55,9 @@ body.timeline-resizing {
   visibility: hidden;
   z-index: 0; // Behind timeline content but visible
   pointer-events: none; // Don't block interactions
-  will-change: transform, width, height, opacity;
+  // will-change on width/height is an anti-pattern (those props can't be GPU
+  // accelerated and only inflate reserved memory). Keep only the compositable hints.
+  will-change: transform, opacity;
   // Initial state: highlight box (GSAP will position and animate)
   // background, dimensions, and opacity controlled by GSAP
   // Gradient background only (on main element)
@@ -225,8 +227,9 @@ body.in-timeline {
   position: relative;
   z-index: 20;
   pointer-events:none;
-  // GPU acceleration for smooth 60fps animations
-  will-change: transform, opacity;
+  // GPU acceleration for smooth 60fps horizontal scrolling. The layer is created by
+  // translateZ(0); a permanent will-change across all ~48 events is an anti-pattern
+  // that reserves extra memory at load (timeline is far below the fold), so it's omitted.
   transform: translateZ(0);
   backface-visibility: hidden;
   // Isolate layout/paint calculations - prevents cascading repaints
@@ -383,15 +386,13 @@ body.in-timeline {
     margin-bottom: 16px;
     color: #fff;
     pointer-events:auto;
-    // GPU acceleration for animations
-    will-change: transform, opacity;
+    // Layer via translateZ(0); permanent will-change omitted (repeated per event).
     transform: translateZ(0);
   }
 
   .event-description {
       pointer-events:auto;
-      // GPU acceleration for animations
-      will-change: transform, opacity;
+      // Layer via translateZ(0); permanent will-change omitted (repeated per event).
       transform: translateZ(0);
 
     p {
@@ -418,8 +419,7 @@ body.in-timeline {
 
   .event-image {
     margin-top: 32px;
-    // GPU acceleration for animations
-    will-change: transform, opacity;
+    // Layer via translateZ(0); permanent will-change omitted (repeated per event).
     transform: translateZ(0);
     &:not(:has(img)) {
       display:none;

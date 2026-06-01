@@ -189,8 +189,10 @@ async function setupLenisWithModule(lenisModule) {
   
   window.isMobileOptimized = isMobileOptimized;
   
+  // autoRaf is false because we drive Lenis from GSAP's ticker below, unifying
+  // smooth scroll + ScrollTrigger + tweens into a single RAF loop.
   const lenisConfig = isMobileOptimized ? {
-    autoRaf: true,
+    autoRaf: false,
     infinite: false,
     syncTouch: false,
     syncTouchLerp: 1,
@@ -200,7 +202,7 @@ async function setupLenisWithModule(lenisModule) {
     duration: 0,
     easing: (t) => t,
   } : {
-    autoRaf: true,
+    autoRaf: false,
     infinite: false,
     syncTouch: true,
     smoothWheel: true,
@@ -210,6 +212,14 @@ async function setupLenisWithModule(lenisModule) {
   };
   
   window.lenis = new Lenis(lenisConfig);
+
+  // Unify scroll into GSAP's single RAF loop: push Lenis scroll updates straight
+  // into ScrollTrigger, and advance Lenis from the GSAP ticker (time is in seconds,
+  // Lenis expects ms). This is the canonical GSAP + Lenis pairing and removes the
+  // uncoordinated dual-RAF that caused scrub desync/jank.
+  window.lenis.on('scroll', ScrollTrigger.update);
+  window._lenisTickerCallback = (time) => window.lenis.raf(time * 1000);
+  gsap.ticker.add(window._lenisTickerCallback);
   
   // Stop Lenis initially - will be started when loader hides
   window.lenis.stop();
@@ -302,6 +312,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   window.gsap = gsap;
   window.gsap.ScrollTrigger = ScrollTrigger;
   window.gsapReady = true;
+
+  // Disable GSAP lag smoothing globally at boot. With Lenis driving scroll through
+  // the GSAP ticker, lag smoothing can cause scrub jumps after a stalled frame.
+  // (Previously this was only set later, when the timeline module loaded at ~2.5s.)
+  gsap.ticker.lagSmoothing(0);
   
   await yieldToMain();
   
@@ -401,16 +416,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       await yieldToMain();
 
-      // Split text for hero
-      essential.splitText.initSplitLinesAnimation(null);
-      essential.splitText.initSplitCharsAnimation(null);
-
-      await yieldToMain();
-
-      // Global handlers & scroll reveal
+      // Global handlers (lightweight listeners; needed early for resize correctness).
+      // NOTE: SplitType (initSplitLines/CharsAnimation) and scrollReveal are
+      // intentionally NOT initialized here. They only target below-the-fold content,
+      // and their DOM surgery + ScrollTrigger registration are deferred to Batch 1 so
+      // they don't compete with the visible cover reveal on the main thread.
       essential.globalHandlers.initGlobalResizeHandler();
       essential.androidNav.initAndroidNavAdjustments();
-      essential.scrollReveal.initScrollRevealAnimation();
     }
 
     await yieldToMain();
@@ -459,6 +471,14 @@ document.addEventListener("DOMContentLoaded", async () => {
           loadModule('getInvolved'),
           loadModule('marquee'),
         ]);
+
+        // Below-the-fold scroll-reveal + split-text init, deferred out of the cover
+        // reveal path. Scroll is locked until "Enter", so these off-screen elements
+        // are never visible before they're initialized. The ScrollTrigger.refresh()
+        // at the end of this batch re-measures after the SplitType DOM mutations.
+        essential.scrollReveal.initScrollRevealAnimation();
+        essential.splitText.initSplitLinesAnimation(null);
+        essential.splitText.initSplitCharsAnimation(null);
 
         await yieldToMain();
         introText.initIntroTextAnimation();

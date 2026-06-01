@@ -5082,6 +5082,18 @@ export async function initShaderBackground() {
       if (adaptiveRenderer) {
         adaptiveRenderer.setPausedByTimeline(value);
       }
+      // Fully stop the standalone particle RAF while paused. It otherwise keeps
+      // scheduling a frame every ~16ms just to early-return, which prevents the
+      // main thread from idling. Restart it cleanly when the background resumes.
+      if (value) {
+        if (particleAnimationId) {
+          cancelAnimationFrame(particleAnimationId);
+          particleAnimationId = null;
+        }
+      } else if (!particleAnimationId) {
+        lastParticleFrameTime = performance.now();
+        animateParticles();
+      }
     }
   });
 
@@ -5418,9 +5430,21 @@ export async function initShaderBackground() {
     }
   });
 
-  // Special handler for mobile browsers where the address bar can appear/disappear
+  // Special handler for mobile browsers where the address bar can appear/disappear.
+  // Poll on a throttled cadence rather than every animation frame so we don't run a
+  // layout-reading viewport measurement ~60x/second. 250ms is plenty to catch the
+  // address bar showing/hiding, and we skip entirely while the tab is hidden.
   let lastHeight = getTrueViewportHeight();
-  function checkForAddressBarChange() {
+  let lastAddressBarCheck = 0;
+  const ADDRESS_BAR_CHECK_INTERVAL = 250;
+  function checkForAddressBarChange(now) {
+    requestAnimationFrame(checkForAddressBarChange);
+
+    if (document.hidden) return;
+
+    if (now - lastAddressBarCheck < ADDRESS_BAR_CHECK_INTERVAL) return;
+    lastAddressBarCheck = now;
+
     const currentHeight = getTrueViewportHeight();
 
     // If height changed significantly (address bar appeared/disappeared)
@@ -5428,13 +5452,10 @@ export async function initShaderBackground() {
       handleResize();
       lastHeight = currentHeight;
     }
-
-    // Continue checking periodically
-    requestAnimationFrame(checkForAddressBarChange);
   }
 
   // Start checking for address bar changes
-  checkForAddressBarChange();
+  requestAnimationFrame(checkForAddressBarChange);
 
   // Add keyboard controls for zoom
   window.addEventListener("keydown", (event) => {

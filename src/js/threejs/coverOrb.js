@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import logger from '../utils/logger.js';
 import performanceDetector from '../utils/performanceDetector.js';
+import debounce from '../utils/debounce.js';
 
 export function initCoverOrb() {
   const canvas = document.querySelector('#timeline-cover-canvas');
@@ -310,7 +311,19 @@ export function initCoverOrb() {
   let animationId;
   let isPaused = false;
   let isScrolling = false;
-  
+  let isVisible = true;
+
+  // Visibility gating: the cover orb only occupies the first timeline section.
+  // Once it scrolls offscreen we skip the (expensive) sphere render + uniform work,
+  // while keeping the RAF chain alive so it resumes instantly when scrolled back.
+  // rootMargin gives a head-start so it is already rendering before it enters view.
+  const visibilityObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      isVisible = entry.isIntersecting;
+    });
+  }, { threshold: 0, rootMargin: '200px' });
+  visibilityObserver.observe(canvas);
+
   // FPS throttling
   const targetFPS = isMobile ? 45 : 60;
   const scrollFPS = isMobile ? 30 : 45;
@@ -338,8 +351,9 @@ export function initCoverOrb() {
       return;
     }
     
-    // Skip rendering if page is hidden
-    if (document.hidden) {
+    // Skip rendering if page is hidden or the cover is scrolled out of view.
+    // RAF keeps scheduling (cheap) so it resumes instantly when visible again.
+    if (document.hidden || !isVisible) {
       return;
     }
     
@@ -348,21 +362,24 @@ export function initCoverOrb() {
     const elapsedTime = clock.getElapsedTime();
     material.uniforms.uTime.value = elapsedTime;
     
-    // Update uniforms from params (syncs GUI changes to shader)
-    material.uniforms.uNoiseStrength.value = params.noiseStrength;
-    material.uniforms.uNoiseSpeed.value = params.noiseSpeed;
-    material.uniforms.uNoiseDensity.value = params.noiseDensity;
-    material.uniforms.uColorDeep.value.set(params.colorDeep);
-    material.uniforms.uColorLight.value.set(params.colorLight);
-    material.uniforms.uColorHighlight.value.set(params.colorHighlight);
-    material.uniforms.uFresnelPower.value = params.fresnelPower;
-    material.uniforms.uFresnelIntensity.value = params.fresnelIntensity;
-    material.uniforms.uPulseSpeed.value = params.pulseSpeed;
-    material.uniforms.uPulseIntensity.value = params.pulseIntensity;
-    material.uniforms.uGlitterStrength.value = params.glitterStrength;
-    material.uniforms.uGlitterDensity.value = params.glitterDensity;
-    material.uniforms.uSpecularStrength.value = params.specularStrength;
-    material.uniforms.uGlossiness.value = params.glossiness;
+    // Sync params -> uniforms only when the debug GUI exists. In production the
+    // GUI is never created, so these 13 writes per frame are pure waste.
+    if (window.gui) {
+      material.uniforms.uNoiseStrength.value = params.noiseStrength;
+      material.uniforms.uNoiseSpeed.value = params.noiseSpeed;
+      material.uniforms.uNoiseDensity.value = params.noiseDensity;
+      material.uniforms.uColorDeep.value.set(params.colorDeep);
+      material.uniforms.uColorLight.value.set(params.colorLight);
+      material.uniforms.uColorHighlight.value.set(params.colorHighlight);
+      material.uniforms.uFresnelPower.value = params.fresnelPower;
+      material.uniforms.uFresnelIntensity.value = params.fresnelIntensity;
+      material.uniforms.uPulseSpeed.value = params.pulseSpeed;
+      material.uniforms.uPulseIntensity.value = params.pulseIntensity;
+      material.uniforms.uGlitterStrength.value = params.glitterStrength;
+      material.uniforms.uGlitterDensity.value = params.glitterDensity;
+      material.uniforms.uSpecularStrength.value = params.specularStrength;
+      material.uniforms.uGlossiness.value = params.glossiness;
+    }
     
     // Rotation
     orb.rotation.y = elapsedTime * params.rotationSpeed;
@@ -402,9 +419,12 @@ export function initCoverOrb() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   };
 
-  window.addEventListener('resize', handleResize);
+  // Debounce resize events so the renderer/camera are not rebuilt on every
+  // intermediate resize frame (matches background.js behaviour).
+  const debouncedResize = debounce(handleResize, 150);
+  window.addEventListener('resize', debouncedResize);
   
-  // Initial resize check
+  // Initial resize check (run immediately, not debounced)
   handleResize();
 
   const controls = {
@@ -425,7 +445,8 @@ export function initCoverOrb() {
       if (animationId) {
         cancelAnimationFrame(animationId);
       }
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('resize', debouncedResize);
+      visibilityObserver.disconnect();
       renderer.dispose();
       geometry.dispose();
       material.dispose();

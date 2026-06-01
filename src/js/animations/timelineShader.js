@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import logger from '../utils/logger.js';
 import performanceDetector from '../utils/performanceDetector.js';
+import debounce from '../utils/debounce.js';
 
 export function initTimelineShader() {
   const canvas = document.querySelector('#timeline-shader-bg');
@@ -357,7 +358,9 @@ export function initTimelineShader() {
     points.scale.set(params.scale, params.scale, params.scale);
   }
 
-  window.addEventListener('resize', onWindowResize);
+  // Debounce resize so renderer/uniform rebuilds don't run on every resize frame.
+  const debouncedResize = debounce(onWindowResize, 150);
+  window.addEventListener('resize', debouncedResize);
 
   // Start Animation with initial timestamp
   requestAnimationFrame(animate);
@@ -367,14 +370,14 @@ export function initTimelineShader() {
     stop: () => {
       isPaused = true;
       cancelAnimationFrame(animationId);
-      window.removeEventListener('resize', onWindowResize);
+      window.removeEventListener('resize', debouncedResize);
       visibilityObserver.disconnect();
     },
     resume: () => {
       if (isPaused) {
         isPaused = false;
         // Re-add resize listener
-        window.addEventListener('resize', onWindowResize);
+        window.addEventListener('resize', debouncedResize);
         // Force resize update to ensure proportionality - but NOT on mobile
         // On mobile, forced resize causes position nudging
         if (!isMobile) {

@@ -774,6 +774,13 @@ export function initTimelineAnimation() {
     // Reset get-involved-message opacity
     gsap.set(getInvolvedMessage, { opacity: 1 });
     
+    // Reset timeline shader bg params to their entry-state values so the
+    // end-of-scroll interpolation doesn't persist across re-entries.
+    if (window.timelineShaderControls && window.timelineShaderControls.updateParams) {
+      window.timelineShaderControls.updateParams(shaderStartParams);
+      logger.log('[Re-entry] Reset timeline shader params to shaderStartParams');
+    }
+    
     // IMPORTANT: Make sure timeline is still in collapsed state while we measure
     // This ensures #timeline-window-start is in its correct position
     if (!timeline.classList.contains('closed')) {
@@ -1796,9 +1803,10 @@ export function initTimelineAnimation() {
         // 7. Scroll to #get-involved-message (centered)
         if (window.lenis) {
             window.lenis.scrollTo(targetScrollPosition, { immediate: true, force: true, lock: true });
-            // Force Lenis to sync
+            // Force Lenis to sync. immediate:true applies the position synchronously;
+            // the GSAP-ticker-driven raf advances the transform on the next frame, so
+            // we no longer call lenis.raf() here (it would inject a wrong time base).
             window.lenis.resize();
-            window.lenis.raf(Date.now());
         } else {
             window.scrollTo(0, targetScrollPosition);
         }
@@ -2560,6 +2568,16 @@ export function initTimelineAnimation() {
         if (window.timelineShaderControls && window.timelineShaderControls.resume) {
           window.timelineShaderControls.resume();
         }
+
+        // Pause the mobile film grain while the timeline owns the screen. It's a
+        // fullscreen mix-blend-mode overlay repainting ~8fps; the timeline has its
+        // own look, so stop + hide it here and restore on exit. No-op on desktop
+        // (where the grain was never started).
+        if (mobileFilmGrain.isRunning) {
+          window._filmGrainPausedByTimeline = true;
+          mobileFilmGrain.stop();
+          mobileFilmGrain.hide();
+        }
         
         // Clear any pending pause timeout to prevent canvases from being paused
         if (window._timelinePauseTimeout) {
@@ -2697,6 +2715,13 @@ export function initTimelineAnimation() {
         if (window.shaderBackgroundRenderer && window.shaderBackgroundRenderer.setInTimeline) {
           window.shaderBackgroundRenderer.setInTimeline(false);
         }
+
+        // Restore the mobile film grain now that the main background is back.
+        if (window._filmGrainPausedByTimeline) {
+          window._filmGrainPausedByTimeline = false;
+          mobileFilmGrain.show();
+          mobileFilmGrain.start();
+        }
         
         // Pause timeline canvases logic removed from here to prevent premature freezing.
         // It is now handled by the fade-out trigger's onLeave callback.
@@ -2731,6 +2756,13 @@ export function initTimelineAnimation() {
         // Notify adaptive renderer we're leaving timeline (switch canvas monitoring)
         if (window.shaderBackgroundRenderer && window.shaderBackgroundRenderer.setInTimeline) {
           window.shaderBackgroundRenderer.setInTimeline(false);
+        }
+
+        // Restore the mobile film grain now that the main background is back.
+        if (window._filmGrainPausedByTimeline) {
+          window._filmGrainPausedByTimeline = false;
+          mobileFilmGrain.show();
+          mobileFilmGrain.start();
         }
         
         // Pause timeline canvases to save performance (with delay to prevent freeze during fade)
@@ -2801,6 +2833,13 @@ export function initTimelineAnimation() {
         }
         if (window.timelineShaderControls && window.timelineShaderControls.resume) {
           window.timelineShaderControls.resume();
+        }
+
+        // Pause the mobile film grain while the timeline owns the screen (see onEnter).
+        if (mobileFilmGrain.isRunning) {
+          window._filmGrainPausedByTimeline = true;
+          mobileFilmGrain.stop();
+          mobileFilmGrain.hide();
         }
         
         // Clear any pending pause timeout to prevent canvases from being paused
