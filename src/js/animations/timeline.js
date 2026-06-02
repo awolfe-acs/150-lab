@@ -2610,13 +2610,6 @@ export function initTimelineAnimation() {
           gsap.set(event, { visibility: 'visible', display: 'flex' });
         });
         
-        // Safety: ensure the first event (cover) is visible immediately
-        // This is a fallback in case GSAP animation doesn't trigger
-        const coverEvent = document.querySelector('.timeline-event.timeline-cover');
-        if (coverEvent) {
-          gsap.set(coverEvent, { opacity: 1, scale: 1, visibility: 'visible' });
-        }
-
         // Safety: ensure background is behind content (z-index 0)
         // This prevents the background from covering the timeline content
         timelineWindowBg.style.zIndex = '0';
