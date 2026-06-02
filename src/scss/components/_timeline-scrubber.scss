@@ -48,6 +48,7 @@ body.in-timeline {
   scroll-behavior: smooth;
   pointer-events: all;
   z-index: 10;
+  padding-top:2px;
   touch-action: pan-x; // Enable native horizontal scrolling
   //cursor: grab; // Indicate draggable/scrollable
   // Removed isolation: isolate - it creates compositing barrier blocking backdrop-filter
