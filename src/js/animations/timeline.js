@@ -589,7 +589,44 @@ export function initTimelineAnimation() {
     targetIndex: -1,
     targetMinorIndex: -1, // locked minor node index for click events
     unlockTimer: null,
+    safetyTimer: null, // guaranteed release even if scroll onComplete never fires
     reason: '' // 'click' or 'resize'
+  };
+
+  // Idempotent unlock. Clears BOTH timers so a stale lock can never persist.
+  const unlockMarker = () => {
+    if (markerLock.unlockTimer) {
+      clearTimeout(markerLock.unlockTimer);
+      markerLock.unlockTimer = null;
+    }
+    if (markerLock.safetyTimer) {
+      clearTimeout(markerLock.safetyTimer);
+      markerLock.safetyTimer = null;
+    }
+    markerLock.isLocked = false;
+    markerLock.targetIndex = -1;
+    markerLock.targetMinorIndex = -1;
+    markerLock.reason = '';
+  };
+
+  // Lock for a click-driven navigation. ALWAYS schedules a hard safety release,
+  // so an interrupted/cancelled smooth-scroll (where lenis' onComplete never
+  // fires) cannot freeze the scrubber fill + active markers + #current-timeline-year
+  // permanently — the original bug behind "it stops updating entirely".
+  const lockMarkerForClick = (targetIndex, targetMinorIndex, reason) => {
+    if (markerLock.unlockTimer) {
+      clearTimeout(markerLock.unlockTimer);
+      markerLock.unlockTimer = null;
+    }
+    if (markerLock.safetyTimer) {
+      clearTimeout(markerLock.safetyTimer);
+    }
+    markerLock.isLocked = true;
+    markerLock.targetIndex = targetIndex;
+    markerLock.targetMinorIndex = targetMinorIndex;
+    markerLock.reason = reason;
+    // Hard ceiling: release no matter what after the longest plausible scroll.
+    markerLock.safetyTimer = setTimeout(unlockMarker, 2500);
   };
 
   // Track previous marker for direction detection
@@ -600,6 +637,20 @@ export function initTimelineAnimation() {
   let currentYearSplit = null;
   let lastDisplayedYear = null;
   let isAnimatingYear = false; // Flag to prevent double animations
+  let pendingYear = null; // Most recent year requested while a transition was mid-flight
+  let yearAnimStartTime = 0; // Timestamp the current year transition began (watchdog)
+  const YEAR_ANIM_MAX_MS = 1500; // If "animating" longer than this, assume a dropped onComplete
+
+  // Reset the animating gate and apply any year that was requested while busy.
+  // Centralizing this guarantees a queued update is never silently dropped.
+  const finishYearAnim = () => {
+    isAnimatingYear = false;
+    const next = pendingYear;
+    pendingYear = null;
+    if (next && next !== lastDisplayedYear) {
+      updateCurrentYear(next);
+    }
+  };
   
   // Track active event index for resize handling
   let currentActiveEventIndex = 0;
@@ -682,31 +733,52 @@ export function initTimelineAnimation() {
         overwrite: true,
         force3D: true, // GPU acceleration
         onComplete: () => {
-          // Reset flag when animation completes
-          isAnimatingYear = false;
+          // Reset flag and flush any queued year request
+          finishYearAnim();
         }
       });
     } else {
-      isAnimatingYear = false;
+      finishYearAnim();
     }
   };
 
   // Helper to update the current year display with split text animation
   const updateCurrentYear = (year) => {
-    if (!year || year === lastDisplayedYear || isAnimatingYear) return;
-    
+    if (!year || year === lastDisplayedYear) return;
+
+    // If a transition is mid-flight, don't drop this request — remember the most
+    // recent year and apply it once the current animation settles (see finishYearAnim).
+    if (isAnimatingYear) {
+      // Watchdog: an interrupted/overwritten tween can leave its onComplete
+      // unfired, which would otherwise wedge isAnimatingYear=true forever and
+      // freeze #current-timeline-year. If we've been "animating" implausibly
+      // long, force-recover instead of latching the request.
+      if (performance.now() - yearAnimStartTime > YEAR_ANIM_MAX_MS) {
+        gsap.killTweensOf(currentYearElement);
+        if (currentYearSplit && currentYearSplit.chars) {
+          gsap.killTweensOf(currentYearSplit.chars);
+        }
+        isAnimatingYear = false;
+      } else {
+        pendingYear = year;
+        return;
+      }
+    }
+
     // Set flag to prevent overlapping animations
     isAnimatingYear = true;
-    
+    yearAnimStartTime = performance.now();
+    pendingYear = null;
+
     if (!currentYearElement) {
       currentYearElement = document.querySelector('#current-timeline-year');
     }
-    
+
     if (!currentYearElement) {
       isAnimatingYear = false;
       return;
     }
-    
+
     // Fade out old year first if it exists
     if (currentYearSplit && currentYearSplit.chars && currentYearSplit.chars.length > 0) {
       gsap.to(currentYearSplit.chars, {
@@ -716,12 +788,13 @@ export function initTimelineAnimation() {
         stagger: 0.01,
         ease: 'power2.in',
         force3D: true, // GPU acceleration
+        overwrite: true, // Supersede any lingering fade so it can't strand the gate
         onComplete: () => {
           // Clean up and show new year after fade out
           if (currentYearSplit && typeof currentYearSplit.revert === 'function') {
             currentYearSplit.revert();
           }
-          
+
           showNewYear(year);
         }
       });
@@ -752,11 +825,12 @@ export function initTimelineAnimation() {
         }
         currentYearElement.textContent = '';
         lastDisplayedYear = null;
+        pendingYear = null; // Don't let a queued year re-show after an intentional hide
         isAnimatingYear = false;
       }
     });
   };
-  
+
   // Function to re-enter timeline after dismissal
   function reEnterTimeline() {
     logger.log('[Re-entry] Starting timeline re-entry');
@@ -1324,6 +1398,16 @@ export function initTimelineAnimation() {
       activeMarkerIndex = markerLock.targetIndex;
       if (markerLock.targetMinorIndex >= 0) {
         activeMinorNodeIndex = markerLock.targetMinorIndex;
+
+        // Keep #current-timeline-year in sync with the locked target. While the
+        // lock is held (click-to-navigate), the detection branch below — the only
+        // other place that updates the year — never runs, so without this the year
+        // would not move during a click-driven jump.
+        const lockedNode = minorNodes[activeMinorNodeIndex];
+        const lockedYear = lockedNode ? lockedNode.getAttribute('data-year') : null;
+        if (lockedYear) {
+          updateCurrentYear(lockedYear);
+        }
       }
       // scrubberProgressValue is calculated below via node position
     } else {
@@ -3223,17 +3307,17 @@ export function initTimelineAnimation() {
         minorNode.addEventListener('click', (e) => {
           e.stopPropagation(); // Prevent marker click from firing
           
-          // Lock the scrubber to prevent auto-updates during scroll
-          markerLock.isLocked = true;
-          markerLock.targetIndex = decadeIndex;
-          markerLock.targetMinorIndex = minorNodeIndex;
-          markerLock.reason = 'minor-node-click';
+          // Lock the scrubber to prevent auto-updates during scroll. This also
+          // schedules a guaranteed safety release, so an interrupted smooth-scroll
+          // (onComplete never firing) can't freeze the scrubber + year forever.
+          lockMarkerForClick(decadeIndex, minorNodeIndex, 'minor-node-click');
 
-          // Clear any existing unlock timer
-          if (markerLock.unlockTimer) {
-            clearTimeout(markerLock.unlockTimer);
+          // Update the year immediately for responsive feedback on the jump.
+          const clickedYear = minorNode.getAttribute('data-year');
+          if (clickedYear) {
+            updateCurrentYear(clickedYear);
           }
-          
+
           // Immediately update the active state of all nodes
           const allMinorNodes = gsap.utils.toArray('.minor-node');
           allMinorNodes.forEach((node) => {
@@ -3296,12 +3380,9 @@ export function initTimelineAnimation() {
               duration: 1.0,
               easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
               onComplete: () => {
-                markerLock.unlockTimer = setTimeout(() => {
-                  markerLock.isLocked = false;
-                  markerLock.targetIndex = -1;
-                  markerLock.targetMinorIndex = -1;
-                  markerLock.reason = '';
-                }, 500);
+                // Brief settle delay, then release (safety timer is the backstop).
+                if (markerLock.unlockTimer) clearTimeout(markerLock.unlockTimer);
+                markerLock.unlockTimer = setTimeout(unlockMarker, 300);
               }
             });
           } else {
@@ -3310,12 +3391,7 @@ export function initTimelineAnimation() {
               behavior: 'smooth'
             });
 
-            markerLock.unlockTimer = setTimeout(() => {
-              markerLock.isLocked = false;
-              markerLock.targetIndex = -1;
-              markerLock.targetMinorIndex = -1;
-              markerLock.reason = '';
-            }, 1800);
+            markerLock.unlockTimer = setTimeout(unlockMarker, 1800);
           }
         });
 
@@ -3577,26 +3653,30 @@ export function initTimelineAnimation() {
   const markers = gsap.utils.toArray('.marker');
   markers.forEach((marker, index) => {
     marker.addEventListener('click', () => {
-      // Clear any existing unlock timer
-      if (markerLock.unlockTimer) {
-        clearTimeout(markerLock.unlockTimer);
-      }
-
       // Find the first minor node belonging to this decade for lock + immediate state
       const decadeMinorNodes = gsap.utils.toArray(`.minor-node[data-decade-index="${index}"]`);
       let firstMinorIndex = -1;
+      let firstMinorNode = null;
       decadeMinorNodes.forEach((n) => {
         const mi = parseInt(n.getAttribute('data-minor-index') || '-1');
         if (mi >= 0 && (firstMinorIndex === -1 || mi < firstMinorIndex)) {
           firstMinorIndex = mi;
+          firstMinorNode = n;
         }
       });
 
-      // Lock scrubber for the duration of the scroll to prevent stale re-detection
-      markerLock.isLocked = true;
-      markerLock.targetIndex = index;
-      markerLock.targetMinorIndex = firstMinorIndex;
-      markerLock.reason = 'click';
+      // Lock scrubber for the duration of the scroll to prevent stale re-detection.
+      // Schedules a guaranteed safety release so an interrupted smooth-scroll can't
+      // leave the scrubber + year permanently frozen.
+      lockMarkerForClick(index, firstMinorIndex, 'click');
+
+      // Update the year immediately for responsive feedback on the jump.
+      if (firstMinorNode) {
+        const clickedYear = firstMinorNode.getAttribute('data-year');
+        if (clickedYear) {
+          updateCurrentYear(clickedYear);
+        }
+      }
 
       // Immediately update visual state — markers
       const allMarkersNow = gsap.utils.toArray('.marker');
@@ -3642,12 +3722,9 @@ export function initTimelineAnimation() {
           duration: 1.2,
           easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
           onComplete: () => {
-            markerLock.unlockTimer = setTimeout(() => {
-              markerLock.isLocked = false;
-              markerLock.targetIndex = -1;
-              markerLock.targetMinorIndex = -1;
-              markerLock.reason = '';
-            }, 500);
+            // Brief settle delay, then release (safety timer is the backstop).
+            if (markerLock.unlockTimer) clearTimeout(markerLock.unlockTimer);
+            markerLock.unlockTimer = setTimeout(unlockMarker, 300);
           }
         });
       } else {
@@ -3655,12 +3732,7 @@ export function initTimelineAnimation() {
           top: targetScroll,
           behavior: 'smooth'
         });
-        markerLock.unlockTimer = setTimeout(() => {
-          markerLock.isLocked = false;
-          markerLock.targetIndex = -1;
-          markerLock.targetMinorIndex = -1;
-          markerLock.reason = '';
-        }, 1800);
+        markerLock.unlockTimer = setTimeout(unlockMarker, 1800);
       }
     });
     
