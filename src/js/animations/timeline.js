@@ -831,6 +831,35 @@ export function initTimelineAnimation() {
     });
   };
 
+  // Authoritatively set the year display, bypassing the in-progress /
+  // already-displayed guards in updateCurrentYear.
+  //
+  // Scrubber click navigation can't rely on updateCurrentYear alone: the normal
+  // detection branch is suppressed while the marker lock is held, and the lock's
+  // sync path is still subject to those guards. If isAnimatingYear or
+  // lastDisplayedYear is desynced from what's actually painted (e.g. a char
+  // animation that set lastDisplayedYear at its start but was interrupted before
+  // finishing), updateCurrentYear silently swallows the click update and the
+  // year stays stuck on the previous event until the next manual scroll.
+  // Tearing down any in-flight transition and clearing the cached value forces
+  // the requested year to render every time.
+  const forceYearUpdate = (year) => {
+    if (!year) return;
+    if (!currentYearElement) {
+      currentYearElement = document.querySelector('#current-timeline-year');
+    }
+    if (!currentYearElement) return;
+
+    gsap.killTweensOf(currentYearElement);
+    if (currentYearSplit && currentYearSplit.chars) {
+      gsap.killTweensOf(currentYearSplit.chars);
+    }
+    isAnimatingYear = false;
+    pendingYear = null;
+    lastDisplayedYear = null; // ensure updateCurrentYear treats this as a new value
+    updateCurrentYear(year);
+  };
+
   // Function to re-enter timeline after dismissal
   function reEnterTimeline() {
     logger.log('[Re-entry] Starting timeline re-entry');
@@ -3313,9 +3342,11 @@ export function initTimelineAnimation() {
           lockMarkerForClick(decadeIndex, minorNodeIndex, 'minor-node-click');
 
           // Update the year immediately for responsive feedback on the jump.
+          // forceYearUpdate (not updateCurrentYear) so a desynced animation gate
+          // can't swallow the update and leave the year stuck on the old event.
           const clickedYear = minorNode.getAttribute('data-year');
           if (clickedYear) {
-            updateCurrentYear(clickedYear);
+            forceYearUpdate(clickedYear);
           }
 
           // Immediately update the active state of all nodes
@@ -3671,10 +3702,12 @@ export function initTimelineAnimation() {
       lockMarkerForClick(index, firstMinorIndex, 'click');
 
       // Update the year immediately for responsive feedback on the jump.
+      // forceYearUpdate (not updateCurrentYear) so a desynced animation gate
+      // can't swallow the update and leave the year stuck on the old event.
       if (firstMinorNode) {
         const clickedYear = firstMinorNode.getAttribute('data-year');
         if (clickedYear) {
-          updateCurrentYear(clickedYear);
+          forceYearUpdate(clickedYear);
         }
       }
 
