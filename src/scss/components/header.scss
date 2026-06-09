@@ -36,7 +36,7 @@ header.anniversary {
     }
 
     // Re-enable pointer events for interactive elements
-    .logo, button, a {
+     button, a {
         pointer-events: auto;
         touch-action: manipulation;
     }
@@ -46,7 +46,7 @@ header.anniversary {
     }
 
     &.nav-active {
-        .logo, button, a {
+         button, a {
             opacity: 0 !important;
             pointer-events: none !important;
             transition: opacity 0.24s ease;
@@ -59,53 +59,7 @@ header.anniversary {
         }
     }
 
-    .logo {
-        cursor: pointer;
-        position: relative;
-        height: 44px;
 
-        svg {
-            width: 140px;
-            height: 44px;
-            transition: opacity 0.24s ease, transform 0.32s ease;
-            will-change: transform;
-
-            @media (max-width:$mobile-viewport) {
-                width: 132px;
-            }
-            @media (max-width:$small-mobile-viewport) {
-                width: 108px;
-            }
-            &:not(.main-logo) {
-                opacity: 1;
-            }
-        }
-
-        &:hover {
-            //svg:not(.main-logo) {
-            //    opacity: 0;
-            //}
-
-            .main-logo {
-                transition-delay: opacity 0.24s;
-                opacity: 1;
-                transform: scale(1.025);
-            }
-        }
-
-        .main-logo {
-            //position: absolute;
-            position: relative;
-            top: 0;
-            left: 0;
-            //opacity: 0;
-            opacity: 1;
-
-            &:active {
-                transform: scale(1);
-            }
-        }
-    }
 
     button.toggle-menu {
         font-size: 12px;

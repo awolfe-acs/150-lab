@@ -43,12 +43,24 @@ nav {
     }
 
     div.nav-logo {
+        display: flex;
+        align-items: center;
+
         height: 44px;
         cursor: pointer;
 
         svg {
             height: 100%;
             width: auto;
+        }
+
+        .acs-logo__outer-circle, 
+        .acs-logo__vertical-oval,
+        .acs-logo__hoval { 
+            stroke: #412bfd!important;
+        }
+        .acs-logo__diamond {
+            fill: #412bfd!important;
         }
     }
 
